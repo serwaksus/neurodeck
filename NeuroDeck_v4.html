@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroDeck</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c9a227;--blood:#8b1010;--parchment:#c8a86e;--text:#c4a87a;--dim:#5a4228;--border:#2a1a0a;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{min-height:100vh;font-family:"IM Fell English",serif;color:var(--text);overflow-x:hidden;background-color:#070604;
+  background-image:
+    radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(0,0,0,.88) 100%),
+    radial-gradient(ellipse at 3% 18%,rgba(255,106,0,.18) 0%,transparent 38%),
+    radial-gradient(ellipse at 97% 18%,rgba(255,106,0,.18) 0%,transparent 38%),
+    linear-gradient(to bottom,rgba(0,0,0,.7) 0%,transparent 20%),
+    linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 15%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Crect width='120' height='60' fill='%230d0b08'/%3E%3Crect x='1' y='1' width='57' height='27' fill='%23111009' rx='1'/%3E%3Crect x='62' y='1' width='57' height='27' fill='%230f0e09' rx='1'/%3E%3Crect x='-28' y='32' width='57' height='27' fill='%23100f08' rx='1'/%3E%3Crect x='32' y='32' width='57' height='27' fill='%23121008' rx='1'/%3E%3Crect x='92' y='32' width='57' height='27' fill='%230e0d08' rx='1'/%3E%3C/svg%3E");}
+
+/* COBWEBS */
+.cobweb{position:fixed;z-index:2;pointer-events:none;opacity:.48;}
+.cobweb.tl{top:0;left:0;}.cobweb.tr{top:0;right:0;transform:scaleX(-1);}
+.cobweb.bl{bottom:0;left:0;transform:scaleY(-1);}.cobweb.br{bottom:0;right:0;transform:scale(-1,-1);}
+
+/* SPIDERS */
+.spider-wrap{position:fixed;z-index:4;pointer-events:none;transform-origin:top center;}
+.spider-thread{position:absolute;left:50%;top:-9999px;width:1px;background:rgba(50,35,15,.55);transform-origin:top center;}
+
+/* TORCH */
+@keyframes flicker1{0%,100%{transform:scaleX(1) scaleY(1) rotate(-1deg);opacity:.9;}25%{transform:scaleX(.88) scaleY(1.08) rotate(2deg);opacity:.75;}50%{transform:scaleX(1.08) scaleY(.94) rotate(-2deg);opacity:.95;}75%{transform:scaleX(.94) scaleY(1.06) rotate(1deg);opacity:.8;}}
+@keyframes flicker2{0%,100%{transform:scaleX(1) scaleY(1) rotate(1deg);opacity:.8;}33%{transform:scaleX(.9) scaleY(1.1) rotate(-2deg);opacity:.65;}66%{transform:scaleX(1.1) scaleY(.9) rotate(2deg);opacity:.9;}}
+@keyframes glowPulse{0%,100%{box-shadow:0 -30px 60px 20px rgba(255,106,0,.18);}50%{box-shadow:0 -30px 80px 30px rgba(255,150,0,.28);}}
+.torch-wrap{position:relative;display:flex;flex-direction:column;align-items:center;width:28px;}
+.torch-glow{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;animation:glowPulse 1.6s ease-in-out infinite;pointer-events:none;z-index:0;}
+.flame-wrap{position:relative;width:22px;height:32px;display:flex;align-items:flex-end;justify-content:center;z-index:1;}
+.flame{position:absolute;bottom:0;border-radius:50% 50% 35% 35%;transform-origin:bottom center;}
+.fl-outer{width:18px;height:28px;background:radial-gradient(ellipse at 50% 80%,#ff6a00,#ff3300 60%,transparent 100%);animation:flicker1 .45s ease-in-out infinite alternate;}
+.fl-mid{width:12px;height:20px;background:radial-gradient(ellipse at 50% 80%,#ff9a00,#ff6a00 60%,transparent 100%);animation:flicker2 .38s ease-in-out infinite alternate;animation-delay:.07s;}
+.fl-inner{width:7px;height:13px;background:radial-gradient(ellipse at 50% 80%,#ffdd00,#ffaa00 60%,transparent 100%);animation:flicker1 .3s ease-in-out infinite alternate;animation-delay:.15s;}
+.torch-head{width:18px;height:12px;background:linear-gradient(to bottom,#5a3a10,#3a2208);border-radius:3px 3px 0 0;border:1px solid #2a1808;z-index:1;position:relative;}
+.torch-stick{width:6px;height:34px;background:linear-gradient(to bottom,#5a3a10,#2a1808);border-radius:0 0 3px 3px;border:1px solid #1a1005;z-index:1;}
+
+/* FOG */
+@keyframes fogDrift{0%,100%{transform:translateX(-3%);opacity:.55;}50%{transform:translateX(3%);opacity:.75;}}
+@keyframes drip{0%{transform:translateY(0) scaleY(1);opacity:.7;}85%{transform:translateY(180px) scaleY(2.5);opacity:.5;}100%{transform:translateY(185px) scaleY(.5);opacity:0;}}
+.fog-layer{position:fixed;bottom:0;left:0;right:0;height:160px;background:linear-gradient(to top,rgba(8,6,3,.9) 0%,rgba(8,6,3,.5) 40%,transparent 100%);pointer-events:none;z-index:1;animation:fogDrift 8s ease-in-out infinite;}
+.fog-layer2{position:fixed;bottom:0;left:0;right:0;height:100px;background:linear-gradient(to top,rgba(20,12,4,.6) 0%,transparent 100%);pointer-events:none;z-index:1;animation:fogDrift 12s ease-in-out infinite reverse;opacity:.7;}
+.drip-container{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:0;}
+.drip{position:absolute;top:0;width:2px;border-radius:0 0 2px 2px;background:linear-gradient(to bottom,transparent,rgba(80,60,30,.5));animation:drip linear infinite;}
+
+/* HEADER */
+.bars{position:absolute;top:0;left:0;right:0;display:flex;justify-content:center;height:100%;pointer-events:none;z-index:0;overflow:hidden;opacity:.1;}
+.bar{width:14px;background:linear-gradient(to right,#333,#555,#333);box-shadow:inset 2px 0 3px rgba(0,0,0,.5);flex-shrink:0;}
+header{text-align:center;padding:1.6rem 5rem 1.4rem;border-bottom:2px solid #1e1108;background:linear-gradient(to bottom,rgba(0,0,0,.75) 0%,rgba(5,3,1,.4) 100%);position:relative;z-index:10;}
+.header-inner{display:flex;align-items:center;justify-content:center;gap:2.5rem;position:relative;z-index:2;}
+.logo{font-family:"Cinzel Decorative",serif;font-size:2.3rem;color:var(--gold);text-shadow:0 0 30px rgba(201,162,39,.5),0 2px 8px rgba(0,0,0,.9);letter-spacing:.08em;}
+.logo span{color:var(--blood);}
+.tagline{font-style:italic;color:var(--dim);font-size:.78rem;margin-top:.3rem;letter-spacing:.06em;}
+
+/* STATS */
+.stats-bar{display:flex;justify-content:center;gap:2.5rem;padding:.5rem 2rem .3rem;border-bottom:1px solid #1a0f05;background:rgba(0,0,0,.35);position:relative;z-index:10;}
+.stat-chip{font-family:"Cinzel",serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);display:flex;align-items:center;gap:.4rem;}
+.stat-chip b{color:var(--gold);font-weight:700;font-size:.78rem;}
+
+/* LAYOUT */
+.container{max-width:1500px;margin:0 auto;padding:1.8rem 2rem;position:relative;z-index:5;}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:2rem;align-items:start;}
+
+/* PANEL */
+.panel{background:linear-gradient(150deg,rgba(16,11,5,.97) 0%,rgba(10,7,3,.97) 100%);border:1px solid #2a1a0a;border-radius:3px;padding:1.4rem;position:sticky;top:2rem;box-shadow:4px 4px 20px rgba(0,0,0,.8);}
+.panel-title{font-family:"Cinzel",serif;font-size:.82rem;color:var(--gold);text-transform:uppercase;letter-spacing:.2em;margin-bottom:1.3rem;padding-bottom:.45rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;}
+.field{margin-bottom:.8rem;}
+label{display:block;font-family:"Cinzel",serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.28rem;opacity:.7;}
+input,select,textarea{width:100%;background:#0a0704;border:1px solid #251608;color:var(--text);padding:.52rem .72rem;font-family:"IM Fell English",serif;font-size:.88rem;border-radius:2px;outline:none;transition:border-color .25s,box-shadow .25s;}
+input:focus,select:focus,textarea:focus{border-color:rgba(201,162,39,.5);box-shadow:0 0 12px rgba(201,162,39,.12);}
+select option{background:#0c0805;}
+textarea{resize:vertical;min-height:48px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;}
+.uploader{position:relative;border:2px dashed #251608;border-radius:3px;text-align:center;padding:1rem .8rem;cursor:pointer;transition:border-color .25s;}
+.uploader:hover{border-color:rgba(201,162,39,.4);}
+.uploader input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.up-prev{width:65px;height:65px;margin:0 auto .35rem;object-fit:cover;border-radius:2px;display:none;border:1px solid var(--border);}
+.up-icon{font-size:1.6rem;color:var(--dim);display:block;}
+.up-txt{font-size:.68rem;color:var(--dim);font-style:italic;}
+.btn-forge{width:100%;margin-top:.7rem;padding:.72rem;font-family:"Cinzel",serif;font-size:.76rem;text-transform:uppercase;letter-spacing:.16em;background:linear-gradient(to bottom,#6e1010,#3d0808);color:var(--parchment);border:1px solid #a02020;border-radius:2px;cursor:pointer;transition:all .3s;}
+.btn-forge:hover{background:linear-gradient(to bottom,#8a1515,#501010);box-shadow:0 0 20px rgba(139,16,16,.5);transform:translateY(-1px);}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:.8rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+.toolbar select,.toolbar button{font-family:"Cinzel",serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;background:#0a0704;border:1px solid #251608;color:var(--parchment);padding:.38rem .65rem;border-radius:2px;cursor:pointer;outline:none;transition:all .25s;}
+.toolbar select:hover,.toolbar button:hover{border-color:rgba(201,162,39,.4);box-shadow:0 0 8px rgba(201,162,39,.1);}
+.toolbar-lbl{font-family:"Cinzel",serif;font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;}
+.toolbar button.active{border-color:rgba(201,162,39,.6);color:var(--gold);}
+.section-hdr{font-family:"Cinzel",serif;font-size:.85rem;color:var(--gold);text-transform:uppercase;letter-spacing:.2em;margin-bottom:1.2rem;padding-bottom:.45rem;border-bottom:1px solid var(--border);}
+
+/* RANK COLORS */
+.r-C{--rc:#757575;--rg:#9e9e9e;}.r-CC{--rc:#9e9e9e;--rg:#bdbdbd;}.r-CCC{--rc:#bdbdbd;--rg:#e0e0e0;}
+.r-B{--rc:#2e7d32;--rg:#4caf50;}.r-BB{--rc:#4caf50;--rg:#81c784;}.r-BBB{--rc:#81c784;--rg:#a5d6a7;}
+.r-A{--rc:#1565c0;--rg:#42a5f5;}.r-AA{--rc:#2196f3;--rg:#64b5f6;}.r-AAA{--rc:#64b5f6;--rg:#90caf9;}
+.r-S{--rc:#6a1b9a;--rg:#ab47bc;}.r-SS{--rc:#9c27b0;--rg:#ce93d8;}.r-SSS{--rc:#e64a19;--rg:#ff7043;}.r-SSSp{--rc:#ffd700;--rg:#ffe066;}
+
+/* CARDS GRID */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1.4rem;}
+.empty{grid-column:1/-1;text-align:center;padding:3.5rem 2rem;color:var(--dim);font-style:italic;line-height:1.9;}
+.empty-icon{font-size:2.8rem;margin-bottom:.8rem;opacity:.3;}
+
+/* CARD */
+@keyframes cardIn{from{opacity:0;transform:scale(.82) rotateY(18deg) translateY(10px);}to{opacity:1;transform:scale(1) rotateY(0) translateY(0);}}
+.ncard{position:relative;background:linear-gradient(160deg,#1a1208 0%,#0d0905 100%);border-radius:4px;animation:cardIn .4s ease forwards;transition:transform .3s,box-shadow .3s;cursor:default;}
+.ncard:hover{transform:translateY(-7px) scale(1.01);box-shadow:0 20px 40px rgba(0,0,0,.8);}
+.ncard-glow{position:absolute;inset:-2px;border-radius:6px;border:2px solid var(--rc,#757575);box-shadow:0 0 14px var(--rg,#9e9e9e),inset 0 0 10px rgba(0,0,0,.6);pointer-events:none;z-index:2;transition:border-color .6s,box-shadow .6s;}
+.ncard-glow::before,.ncard-glow::after{content:"✦";position:absolute;font-size:.55rem;color:var(--rc,#757575);line-height:1;}
+.ncard-glow::before{top:3px;left:5px;}.ncard-glow::after{bottom:3px;right:5px;}
+@keyframes rainbow{0%{border-color:#ff4444;box-shadow:0 0 16px #ff4444,inset 0 0 10px rgba(0,0,0,.6);}16%{border-color:#ff9900;box-shadow:0 0 16px #ff9900,inset 0 0 10px rgba(0,0,0,.6);}33%{border-color:#ffee00;box-shadow:0 0 16px #ffee00,inset 0 0 10px rgba(0,0,0,.6);}50%{border-color:#44ff44;box-shadow:0 0 16px #44ff44,inset 0 0 10px rgba(0,0,0,.6);}66%{border-color:#4488ff;box-shadow:0 0 16px #4488ff,inset 0 0 10px rgba(0,0,0,.6);}83%{border-color:#cc44ff;box-shadow:0 0 16px #cc44ff,inset 0 0 10px rgba(0,0,0,.6);}100%{border-color:#ff4444;box-shadow:0 0 16px #ff4444,inset 0 0 10px rgba(0,0,0,.6);}}
+.r-SSSp .ncard-glow{animation:rainbow 2s linear infinite;}
+.card-del{position:absolute;top:-7px;right:-7px;width:19px;height:19px;background:var(--blood);border:1px solid #b03030;border-radius:50%;color:#fff;font-size:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;opacity:0;transition:opacity .2s;}
+.ncard:hover .card-del{opacity:1;}
+.card-body{padding:.7rem;position:relative;z-index:1;}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem;}
+.card-name{font-family:"Cinzel",serif;font-size:.75rem;font-weight:700;color:var(--parchment);line-height:1.2;flex:1;padding-right:.3rem;}
+.rank-badge{font-family:"Cinzel Decorative",serif;font-size:.58rem;color:var(--rc,#757575);border:1px solid var(--rc,#757575);padding:.08rem .22rem;border-radius:2px;white-space:nowrap;text-shadow:0 0 8px var(--rg,#9e9e9e);}
+
+/* 9:16 IMAGE — portrait card */
+.card-img-wrap{width:100%;aspect-ratio:9/16;border:1px solid var(--border);border-radius:2px;overflow:hidden;position:relative;background:#040302;margin-bottom:.4rem;}
+.card-img-wrap img{width:100%;height:100%;object-fit:cover;object-position:top center;filter:sepia(.2) contrast(1.1);}
+.card-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:2.5rem;}
+.time-badge{position:absolute;bottom:2px;right:4px;font-family:"Cinzel",serif;font-size:.5rem;color:var(--text);background:rgba(6,4,2,.82);padding:1px 4px;border-radius:2px;border:1px solid var(--border);}
+
+.div{height:1px;background:linear-gradient(to right,transparent,#2a1a0a,transparent);margin:.35rem 0;}
+.stat{display:flex;align-items:flex-start;gap:.3rem;margin-bottom:.24rem;font-size:.65rem;line-height:1.3;}
+.s-ico{flex-shrink:0;font-size:.65rem;opacity:.8;margin-top:.05rem;}
+.s-lbl{font-family:"Cinzel",serif;font-size:.52rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.04em;opacity:.62;min-width:48px;flex-shrink:0;}
+.s-val{color:var(--text);flex:1;}
+.edots{display:flex;gap:3px;align-items:center;padding-top:.1rem;}
+.edot{width:6px;height:6px;border-radius:50%;background:var(--border);}
+.edot.on{background:var(--gold);box-shadow:0 0 4px rgba(201,162,39,.55);}
+.progress{margin-top:.4rem;}
+.prog-lbl{font-family:"Cinzel",serif;font-size:.54rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;margin-bottom:.26rem;}
+.prog-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-bottom:.28rem;overflow:hidden;}
+.prog-bar{height:100%;border-radius:2px;background:var(--rc,#757575);transition:width .4s ease;box-shadow:0 0 6px var(--rg,#9e9e9e);}
+.boxes{display:flex;gap:3px;flex-wrap:wrap;}
+.cbox{width:14px;height:14px;border:1px solid var(--border);border-radius:2px;background:#080604;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0;}
+.cbox:hover{border-color:var(--rc,#757575);}
+.cbox.on{background:var(--rc,#757575);border-color:var(--rg,#9e9e9e);}
+.cbox.on::after{content:"✓";font-size:8px;color:#fff;line-height:1;}
+.rankup-btn{display:none;width:100%;margin-top:.4rem;padding:.33rem;font-family:"Cinzel",serif;font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;background:linear-gradient(to bottom,#2e1e00,#1a1000);color:var(--gold);border:1px solid rgba(201,162,39,.5);border-radius:2px;cursor:pointer;transition:all .3s;}
+.rankup-btn.show{display:block;}
+.rankup-btn:hover{background:linear-gradient(to bottom,#4a3200,#2e1e00);box-shadow:0 0 14px rgba(201,162,39,.35);}
+.max-rank{text-align:center;margin-top:.4rem;font-size:.58rem;color:var(--gold);font-family:"Cinzel",serif;letter-spacing:.12em;}
+
+/* OVERLAYS */
+@keyframes overlayIn{from{opacity:0}to{opacity:1}}
+@keyframes modalPop{from{opacity:0;transform:scale(.7) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes rankShake{0%,100%{transform:scale(1)}20%{transform:scale(1.15) rotate(-2deg)}40%{transform:scale(1.1) rotate(2deg)}60%{transform:scale(1.12) rotate(-1deg)}80%{transform:scale(1.08) rotate(1deg)}}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:999;display:none;align-items:center;justify-content:center;animation:overlayIn .3s ease;}
+.overlay.open{display:flex;}
+.rank-modal{text-align:center;padding:2.5rem 3rem;background:linear-gradient(135deg,#100c06,#0a0704);border-radius:5px;border:2px solid var(--mc,#ffd700);box-shadow:0 0 70px var(--mg,#ffe066),0 0 150px rgba(0,0,0,.9);max-width:420px;width:90%;animation:modalPop .4s cubic-bezier(.34,1.56,.64,1);}
+.rm-title{font-family:"Cinzel Decorative",serif;font-size:1.3rem;color:var(--gold);text-shadow:0 0 20px var(--gold);margin-bottom:.3rem;}
+.rm-sub{font-style:italic;color:var(--dim);font-size:.78rem;margin-bottom:.8rem;}
+.rm-rank{font-family:"Cinzel Decorative",serif;font-size:3.2rem;margin:.5rem 0;color:var(--mc,#ffd700);text-shadow:0 0 30px var(--mg,#ffe066);animation:rankShake .6s ease .3s;}
+.rm-card-name{color:var(--text);font-size:.82rem;margin-bottom:1.4rem;font-style:italic;}
+.btn-accept{font-family:"Cinzel",serif;font-size:.76rem;text-transform:uppercase;letter-spacing:.14em;padding:.62rem 2rem;background:linear-gradient(to bottom,#6e1010,#3d0808);color:var(--parchment);border:1px solid #a02020;border-radius:2px;cursor:pointer;transition:all .3s;}
+.btn-accept:hover{background:linear-gradient(to bottom,#8a1515,#501010);box-shadow:0 0 15px rgba(139,16,16,.5);}
+.edit-modal{background:linear-gradient(150deg,#100c06,#0a0704);border:1px solid #2a1a0a;border-radius:4px;padding:1.6rem;max-width:480px;width:90%;max-height:85vh;overflow-y:auto;animation:modalPop .35s cubic-bezier(.34,1.56,.64,1);position:relative;}
+.em-title{font-family:"Cinzel",serif;font-size:.9rem;color:var(--gold);text-align:center;margin-bottom:1.3rem;}
+.em-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--dim);font-size:1.1rem;cursor:pointer;line-height:1;}
+.em-close:hover{color:var(--text);}
+.btn-save{width:100%;margin-top:.7rem;padding:.65rem;font-family:"Cinzel",serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.15em;background:linear-gradient(to bottom,#2e1e00,#1a1000);color:var(--gold);border:1px solid rgba(201,162,39,.45);border-radius:2px;cursor:pointer;transition:all .3s;}
+.btn-save:hover{background:linear-gradient(to bottom,#4a3200,#2e1e00);box-shadow:0 0 12px rgba(201,162,39,.3);}
+
+/* SOUND SETTINGS MODAL */
+.sound-modal{background:linear-gradient(150deg,#100c06,#0a0704);border:1px solid #2a1a0a;border-radius:4px;padding:1.8rem;max-width:520px;width:90%;animation:modalPop .35s cubic-bezier(.34,1.56,.64,1);position:relative;}
+.snd-row{display:grid;grid-template-columns:1fr auto auto;gap:.6rem;align-items:center;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
+.snd-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.snd-lbl{font-family:"Cinzel",serif;font-size:.7rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.1em;}
+.snd-file-name{font-size:.68rem;color:var(--dim);font-style:italic;margin-top:.2rem;grid-column:1/4;}
+.snd-upload-btn{font-family:"Cinzel",serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;padding:.32rem .65rem;background:#0a0704;border:1px solid #251608;color:var(--parchment);border-radius:2px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.snd-upload-btn:hover{border-color:rgba(201,162,39,.4);color:var(--gold);}
+.snd-test-btn{font-family:"Cinzel",serif;font-size:.6rem;padding:.3rem .5rem;background:#0a0704;border:1px solid #251608;color:var(--dim);border-radius:2px;cursor:pointer;transition:all .2s;}
+.snd-test-btn:hover{color:var(--gold);}
+.vol-row{display:flex;align-items:center;gap:.8rem;margin-top:.4rem;grid-column:1/4;}
+.vol-lbl{font-family:"Cinzel",serif;font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;min-width:60px;}
+input[type=range]{-webkit-appearance:none;height:3px;background:#251608;border-radius:2px;outline:none;flex:1;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer;box-shadow:0 0 6px rgba(201,162,39,.4);}
+.bgm-controls{display:flex;gap:.5rem;grid-column:1/4;margin-top:.3rem;}
+.bgm-btn{font-family:"Cinzel",serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;padding:.3rem .7rem;background:linear-gradient(to bottom,#2e1e00,#1a1000);color:var(--gold);border:1px solid rgba(201,162,39,.4);border-radius:2px;cursor:pointer;transition:all .2s;}
+.bgm-btn:hover{background:linear-gradient(to bottom,#4a3200,#2e1e00);}
+.bgm-status{font-size:.65rem;color:var(--dim);font-style:italic;align-self:center;}
+
+
+/* ── STAT BOXES ── */
+.stat-box{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:3px;padding:.7rem .5rem;text-align:center;}
+.stat-box .sb-val{font-family:"Cinzel Decorative",serif;font-size:1.4rem;color:var(--gold);display:block;text-shadow:0 0 12px rgba(201,162,39,.35);}
+.stat-box .sb-lbl{font-family:"Cinzel",serif;font-size:.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:.2rem;display:block;}
+/* ── HEATMAP ── */
+.hm-cell{width:14px;height:14px;border-radius:2px;background:#0d0b08;border:1px solid #1a1208;transition:transform .15s;}
+.hm-cell:hover{transform:scale(1.4);}
+.hm-cell.hm1{background:#2e1e00;border-color:#4a3200;}
+.hm-cell.hm2{background:#5a3a00;border-color:#7a5200;}
+.hm-cell.hm3{background:#8a5c00;border-color:#b07800;}
+.hm-cell.hm4{background:var(--gold);border-color:#e8c040;box-shadow:0 0 6px rgba(201,162,39,.4);}
+/* ── TOP CARD ROWS ── */
+.tc-row{display:flex;align-items:center;gap:.8rem;padding:.4rem .5rem;border-bottom:1px solid var(--border);font-size:.72rem;}
+.tc-rank{font-family:"Cinzel Decorative",serif;font-size:.65rem;min-width:36px;}
+.tc-name{flex:1;color:var(--parchment);}
+.tc-streak{font-family:"Cinzel",serif;font-size:.62rem;color:var(--dim);}
+.tc-streak b{color:#ff6b35;}
+/* ── RANK BARS ── */
+.rb-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;}
+.rb-lbl{font-family:"Cinzel",serif;font-size:.6rem;min-width:36px;text-align:right;color:var(--parchment);}
+.rb-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+.rb-fill{height:100%;border-radius:4px;transition:width .5s ease;}
+.rb-cnt{font-family:"Cinzel",serif;font-size:.6rem;color:var(--dim);min-width:20px;}
+/* ── SYNC ── */
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:#555;}
+.sync-dot.green{background:#4caf50;box-shadow:0 0 6px #4caf50;}
+.sync-dot.yellow{background:#ffeb3b;box-shadow:0 0 6px #ffeb3b;}
+.sync-dot.red{background:#f44336;box-shadow:0 0 6px #f44336;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#060402;}::-webkit-scrollbar-thumb{background:#2a1a0a;border-radius:3px;}
+</style>
+
+<!-- Firebase compat SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+<script>
+  /* ── DEMO CONFIG ── replace with your own Firebase project for production ── */
+  const _fbCfg = {
+    apiKey:            "AIzaSyDemo_NeuroDeck_Phase3_Key000000000",
+    authDomain:        "neurodeck-demo-app.firebaseapp.com",
+    projectId:         "neurodeck-demo-app",
+    storageBucket:     "neurodeck-demo-app.appspot.com",
+    messagingSenderId: "123456789012",
+    appId:             "1:123456789012:web:abcdef1234567890"
+  };
+  try { firebase.initializeApp(_fbCfg); } catch(e) {}
+  const fbAuth = firebase.auth();
+  const fbDb   = firebase.firestore();
+</script>
+
+</head>
+<body>
+
+<!-- FOG + DRIPS -->
+<div class="fog-layer"></div>
+<div class="fog-layer2"></div>
+<div class="drip-container" id="drips"></div>
+
+<!-- COBWEBS -->
+<div class="cobweb tl"><svg width="200" height="160" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg"><g stroke="#2a1a0a" fill="none"><line x1="0" y1="0" x2="200" y2="0" stroke-width="1.4"/><line x1="0" y1="0" x2="0" y2="160" stroke-width="1.4"/><line x1="0" y1="0" x2="200" y2="160" stroke-width=".8"/><line x1="0" y1="0" x2="100" y2="160" stroke-width=".8"/><line x1="0" y1="0" x2="200" y2="80" stroke-width=".8"/><line x1="0" y1="0" x2="150" y2="160" stroke-width=".8"/><line x1="0" y1="0" x2="60" y2="160" stroke-width=".8"/><line x1="0" y1="0" x2="200" y2="45" stroke-width=".8"/><path d="M18 0 Q28 18 18 36 Q12 52 16 70 Q20 88 14 106" stroke-width=".9" opacity=".8"/><path d="M42 0 Q58 22 44 44 Q34 62 40 84 Q46 104 36 124" stroke-width=".9" opacity=".7"/><path d="M0 24 Q18 32 36 28 Q60 22 84 30 Q112 38 138 30" stroke-width=".9" opacity=".8"/><path d="M0 52 Q22 62 48 56 Q76 50 106 60 Q132 68 158 58" stroke-width=".9" opacity=".7"/><path d="M0 88 Q28 100 58 92 Q90 84 122 94" stroke-width=".9" opacity=".6"/></g></svg></div>
+<div class="cobweb tr"><svg width="200" height="160" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg"><g stroke="#2a1a0a" fill="none"><line x1="0" y1="0" x2="200" y2="0" stroke-width="1.4"/><line x1="200" y1="0" x2="200" y2="160" stroke-width="1.4"/><line x1="200" y1="0" x2="0" y2="160" stroke-width=".8"/><line x1="200" y1="0" x2="100" y2="160" stroke-width=".8"/><line x1="200" y1="0" x2="0" y2="80" stroke-width=".8"/><line x1="200" y1="0" x2="50" y2="160" stroke-width=".8"/><line x1="200" y1="0" x2="140" y2="160" stroke-width=".8"/><path d="M182 0 Q172 18 182 36 Q188 52 184 70" stroke-width=".9" opacity=".8"/><path d="M158 0 Q142 22 156 44 Q166 62 160 84" stroke-width=".9" opacity=".7"/><path d="M200 24 Q182 32 164 28 Q140 22 116 30 Q88 38 62 30" stroke-width=".9" opacity=".8"/><path d="M200 52 Q178 62 152 56 Q124 50 94 60 Q68 68 42 58" stroke-width=".9" opacity=".7"/><path d="M200 88 Q172 100 142 92 Q110 84 78 94" stroke-width=".9" opacity=".6"/></g></svg></div>
+<div class="cobweb bl"><svg width="200" height="160" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg"><g stroke="#2a1a0a" fill="none"><line x1="0" y1="160" x2="200" y2="160" stroke-width="1.4"/><line x1="0" y1="0" x2="0" y2="160" stroke-width="1.4"/><line x1="0" y1="160" x2="200" y2="0" stroke-width=".8"/><line x1="0" y1="160" x2="100" y2="0" stroke-width=".8"/><line x1="0" y1="160" x2="160" y2="0" stroke-width=".8"/><path d="M0 136 Q18 128 36 132 Q60 138 84 130" stroke-width=".9" opacity=".8"/><path d="M0 108 Q22 98 48 104 Q76 110 106 100" stroke-width=".9" opacity=".7"/><path d="M14 160 Q26 140 16 120 Q10 104 18 86" stroke-width=".9" opacity=".8"/><path d="M42 160 Q58 136 44 112 Q34 92 42 70" stroke-width=".9" opacity=".7"/></g></svg></div>
+<div class="cobweb br"><svg width="200" height="160" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg"><g stroke="#2a1a0a" fill="none"><line x1="0" y1="160" x2="200" y2="160" stroke-width="1.4"/><line x1="200" y1="0" x2="200" y2="160" stroke-width="1.4"/><line x1="200" y1="160" x2="0" y2="0" stroke-width=".8"/><line x1="200" y1="160" x2="100" y2="0" stroke-width=".8"/><line x1="200" y1="160" x2="40" y2="0" stroke-width=".8"/><path d="M200 136 Q182 128 164 132 Q140 138 116 130" stroke-width=".9" opacity=".8"/><path d="M200 108 Q178 98 152 104 Q124 110 94 100" stroke-width=".9" opacity=".7"/><path d="M186 160 Q174 140 184 120 Q190 104 182 86" stroke-width=".9" opacity=".8"/><path d="M158 160 Q142 136 156 112 Q166 92 158 70" stroke-width=".9" opacity=".7"/></g></svg></div>
+
+<!-- SPIDERS container -->
+<div id="spider-container"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="bars" aria-hidden="true">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  </div>
+  <div class="header-inner">
+    <div class="torch-wrap"><div class="torch-glow"></div><div class="flame-wrap"><div class="flame fl-outer"></div><div class="flame fl-mid"></div><div class="flame fl-inner"></div></div><div class="torch-head"></div><div class="torch-stick"></div></div>
+    <div><div class="logo">Neuro<span>Deck</span></div><div class="tagline">«Выкуй себя. Вырвись из тьмы.»</div></div>
+    <div class="torch-wrap"><div class="torch-glow"></div><div class="flame-wrap"><div class="flame fl-outer"></div><div class="flame fl-mid"></div><div class="flame fl-inner"></div></div><div class="torch-head"></div><div class="torch-stick"></div></div>
+  </div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-chip">⚔ Карточек: <b id="stat-total">0</b></div>
+  <div class="stat-chip">✅ Выполнений: <b id="stat-checks">0</b></div>
+  <div class="stat-chip">🏆 Лучший ранг: <b id="stat-best">—</b></div>
+  <div class="stat-chip">📈 Ранг-апов: <b id="stat-rankups">0</b></div>
+  <div class="stat-chip" id="sync-chip" style="cursor:pointer" onclick="openSyncModal()" title="Нажми для управления синхронизацией">🔗 Код: <b id="stat-code" style="font-family:monospace;letter-spacing:.08em">—</b></div>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-title">🔥 Выковать карточку</div>
+      <div class="field"><label>Название привычки</label><input id="f-name" type="text" placeholder="Напр.: Утренняя медитация" maxlength="40"></div>
+      <div class="field">
+        <label>Изображение (9:16 — портретный формат)</label>
+        <div class="uploader"><input type="file" id="f-img" accept="image/*"><img class="up-prev" id="up-prev" src="" alt=""><span class="up-icon" id="up-icon">🖼</span><div class="up-txt" id="up-txt">Загрузи фото 9:16</div></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Тип времени</label><select id="f-ttype"><option value="мин">Минуты</option><option value="действий">Действия</option></select></div>
+        <div class="field"><label>Значение</label><input id="f-tval" type="number" placeholder="7" min="1"></div>
+      </div>
+      <div class="field"><label>🕐 Триггер / Время</label><input id="f-trigger" type="text" placeholder="После кофе / 10:00"></div>
+      <div class="row2">
+        <div class="field"><label>⚡ Краткосрочный баф</label><textarea id="f-sbuff" placeholder="Бодрость..."></textarea></div>
+        <div class="field"><label>🌿 Долгосрочный баф</label><textarea id="f-lbuff" placeholder="Сила..."></textarea></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>🔥 Энергия</label><select id="f-energy"><option value="1">Низкая ☽</option><option value="2">Средняя ☀</option><option value="3">Высокая ⚡</option></select></div>
+        <div class="field"><label>Чекбоксов до ранг-апа</label><input id="f-cbcount" type="number" value="6" min="1" max="40"></div>
+      </div>
+      <div class="field"><label>🎁 Бонусы</label><input id="f-bonuses" type="text" placeholder="+10 XP..."></div>
+      <button class="btn-forge" onclick="createCard()">⚔ Выковать карточку</button>
+    </div>
+    <div>
+      <div class="section-hdr">🃏 Моя колода</div>
+      <div class="toolbar">
+        <span class="toolbar-lbl">Фильтр:</span>
+        <select id="tb-filter" onchange="render()"><option value="all">Все</option><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option></select>
+        <span class="toolbar-lbl">Сорт:</span>
+        <select id="tb-sort" onchange="render()"><option value="date_desc">Новые</option><option value="date_asc">Старые</option><option value="rank_desc">Высший ранг</option><option value="rank_asc">Низший ранг</option><option value="name">По имени</option></select>
+        <button onclick="openSoundModal()" id="sndSettingsBtn">🎵 Звук</button>
+        <button onclick="openStatsModal()">📊 Статистика</button>
+      </div>
+      <div class="cards-grid" id="grid">
+        <div class="empty"><div class="empty-icon">⛓</div>Тьма поглощает слабых.<br><em>Создай первую карточку.</em></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RANK-UP OVERLAY -->
+<div class="overlay" id="ru-overlay">
+  <div class="rank-modal" id="ru-modal">
+    <div class="rm-title">⚔ ПОВЫШЕНИЕ РАНГА ⚔</div>
+    <div class="rm-sub">Тьма отступает. Ты становишься сильнее.</div>
+    <div class="rm-rank" id="ru-rank-txt">S</div>
+    <div class="rm-card-name" id="ru-card-name"></div>
+    <button class="btn-accept" onclick="confirmRankUp()">Принять силу →</button>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="overlay" id="edit-overlay">
+  <div class="edit-modal">
+    <button class="em-close" onclick="closeEdit()">✕</button>
+    <div class="em-title" id="em-title">⚙ Настройка</div>
+    <div id="em-fields"></div>
+    <button class="btn-save" onclick="saveEdit()">Сохранить</button>
+  </div>
+</div>
+
+<!-- SOUND SETTINGS MODAL -->
+<div class="overlay" id="sound-overlay">
+  <div class="sound-modal">
+    <button class="em-close" onclick="closeSoundModal()">✕</button>
+    <div class="em-title">🎵 Настройка звука</div>
+
+    <!-- CHECKBOX SOUND -->
+    <div class="snd-row">
+      <div>
+        <div class="snd-lbl">✅ Звук выполнения</div>
+        <div class="snd-file-name" id="snd-check-name">Файл не загружен</div>
+        <div class="vol-row">
+          <span class="vol-lbl">Громкость</span>
+          <input type="range" id="vol-check" min="0" max="1" step="0.05" value="0.7" oninput="setVol('check',this.value)">
+        </div>
+      </div>
+      <label class="snd-upload-btn">📁 Загрузить<input type="file" accept="audio/*" style="display:none" onchange="loadSound('check',this)"></label>
+      <button class="snd-test-btn" onclick="playSound('check')">▶</button>
+    </div>
+
+    <!-- RANKUP SOUND -->
+    <div class="snd-row">
+      <div>
+        <div class="snd-lbl">⚔ Звук ранг-апа</div>
+        <div class="snd-file-name" id="snd-rankup-name">Файл не загружен</div>
+        <div class="vol-row">
+          <span class="vol-lbl">Громкость</span>
+          <input type="range" id="vol-rankup" min="0" max="1" step="0.05" value="0.8" oninput="setVol('rankup',this.value)">
+        </div>
+      </div>
+      <label class="snd-upload-btn">📁 Загрузить<input type="file" accept="audio/*" style="display:none" onchange="loadSound('rankup',this)"></label>
+      <button class="snd-test-btn" onclick="playSound('rankup')">▶</button>
+    </div>
+
+    <!-- BGM -->
+    <div class="snd-row">
+      <div>
+        <div class="snd-lbl">🎼 Фоновая музыка</div>
+        <div class="snd-file-name" id="snd-bgm-name">Файл не загружен</div>
+        <div class="vol-row">
+          <span class="vol-lbl">Громкость</span>
+          <input type="range" id="vol-bgm" min="0" max="1" step="0.05" value="0.3" oninput="setVol('bgm',this.value)">
+        </div>
+        <div class="bgm-controls">
+          <button class="bgm-btn" onclick="toggleBgm()">▶ Воспроизвести</button>
+          <span class="bgm-status" id="bgm-status">Остановлено</span>
+        </div>
+      </div>
+      <label class="snd-upload-btn">📁 Загрузить<input type="file" accept="audio/*" style="display:none" onchange="loadSound('bgm',this)"></label>
+    </div>
+
+    <div style="margin-top:1rem;font-size:.65rem;color:var(--dim);font-style:italic;text-align:center;">
+      Звуки хранятся в памяти — загружай снова после перезагрузки страницы.<br>
+      Поддержка: MP3, WAV, OGG, M4A
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const RANKS=['C','CC','CCC','B','BB','BBB','A','AA','AAA','S','SS','SSS','SSS+'];
+const RC={'C':'#757575','CC':'#9e9e9e','CCC':'#bdbdbd','B':'#2e7d32','BB':'#4caf50','BBB':'#81c784','A':'#1565c0','AA':'#2196f3','AAA':'#64b5f6','S':'#6a1b9a','SS':'#9c27b0','SSS':'#e64a19','SSS+':'#ffd700'};
+const RG={'C':'#9e9e9e','CC':'#bdbdbd','CCC':'#e0e0e0','B':'#4caf50','BB':'#81c784','BBB':'#a5d6a7','A':'#42a5f5','AA':'#64b5f6','AAA':'#90caf9','S':'#ab47bc','SS':'#ce93d8','SSS':'#ff7043','SSS+':'#ffe066'};
+const RCLS={'C':'r-C','CC':'r-CC','CCC':'r-CCC','B':'r-B','BB':'r-BB','BBB':'r-BBB','A':'r-A','AA':'r-AA','AAA':'r-AAA','S':'r-S','SS':'r-SS','SSS':'r-SSS','SSS+':'r-SSSp'};
+const TIER_KEY={'C':'C','CC':'C','CCC':'C','B':'B','BB':'B','BBB':'B','A':'A','AA':'A','AAA':'A','S':'S','SS':'S','SSS':'S','SSS+':'S'};
+let cards=JSON.parse(localStorage.getItem('nd_v3')||'[]');
+let pendingId=null,editId=null,editIsRankUp=false;
+
+/* ============ AUDIO ============ */
+const sounds={check:null,rankup:null,bgm:null};
+const volumes={check:.7,rankup:.8,bgm:.3};
+const audios={check:new Audio(),rankup:new Audio(),bgm:new Audio()};
+audios.bgm.loop=true;
+let bgmPlaying=false;
+
+function loadSound(key,input){
+  const f=input.files[0];if(!f)return;
+  const url=URL.createObjectURL(f);
+  sounds[key]=url;
+  audios[key].src=url;
+  audios[key].volume=volumes[key];
+  document.getElementById(`snd-${key}-name`).textContent=f.name;
+  if(key==='bgm'){document.querySelector('#bgm-status').textContent='Загружено, остановлено';}
+}
+function setVol(key,v){volumes[key]=parseFloat(v);audios[key].volume=volumes[key];}
+function playSound(key){if(!sounds[key]){alert('Сначала загрузи звук');return;}const a=new Audio(sounds[key]);a.volume=volumes[key];a.play();}
+function toggleBgm(){
+  if(!sounds.bgm){alert('Сначала загрузи музыку');return;}
+  if(bgmPlaying){audios.bgm.pause();bgmPlaying=false;document.querySelector('.bgm-btn').textContent='▶ Воспроизвести';document.getElementById('bgm-status').textContent='Остановлено';}
+  else{audios.bgm.play();bgmPlaying=true;document.querySelector('.bgm-btn').textContent='⏸ Пауза';document.getElementById('bgm-status').textContent='▶ Играет';}
+}
+function openSoundModal(){document.getElementById('sound-overlay').classList.add('open');}
+function closeSoundModal(){document.getElementById('sound-overlay').classList.remove('open');}
+
+function playCheckSound(){if(sounds.check){const a=new Audio(sounds.check);a.volume=volumes.check;a.play().catch(()=>{});}}
+function playRankUpSound(){if(sounds.rankup){const a=new Audio(sounds.rankup);a.volume=volumes.rankup;a.play().catch(()=>{});}}
+
+/* ============ SPIDERS ============ */
+const SPIDER_SVG=`<svg viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+<line x1="14" y1="15" x2="2" y2="7"  stroke="#1a1a16" stroke-width="1.3"/>
+<line x1="14" y1="15" x2="1" y2="13" stroke="#1a1a16" stroke-width="1.3"/>
+<line x1="14" y1="15" x2="2" y2="19" stroke="#1a1a16" stroke-width="1.3"/>
+<line x1="14" y1="15" x2="4" y2="24" stroke="#1a1a16" stroke-width="1.3"/>
+<line x1="14" y1="15" x2="26" y2="7"  stroke="#1a1a16" stroke-width="1.3"/>
+<line x1="14" y1="15" x2="27" y2="13" stroke="#1a1a16" stroke-width="1.3"/>
+<line x1="14" y1="15" x2="26" y2="19" stroke="#1a1a16" stroke-width="1.3"/>
+<line x1="14" y1="15" x2="24" y2="24" stroke="#1a1a16" stroke-width="1.3"/>
+<ellipse cx="14" cy="17" rx="4.5" ry="5.5" fill="#1e1e1a" stroke="#0d0d0b" stroke-width=".9"/>
+<ellipse cx="14" cy="10" rx="3.5" ry="3.5" fill="#1e1e1a" stroke="#0d0d0b" stroke-width=".9"/>
+<circle cx="12.3" cy="9.2" r="1.1" fill="#bb1111"/>
+<circle cx="15.7" cy="9.2" r="1.1" fill="#bb1111"/>
+<circle cx="12.3" cy="9.2" r=".45" fill="#ff4444"/>
+<circle cx="15.7" cy="9.2" r=".45" fill="#ff4444"/>
+</svg>`;
+
+const spiders=[];
+function initSpiders(){
+  const container=document.getElementById('spider-container');
+  for(let i=0;i<6;i++){
+    const wrap=document.createElement('div');
+    wrap.className='spider-wrap';
+    wrap.innerHTML=SPIDER_SVG+'<div class="spider-thread"></div>';
+    wrap.style.cssText='position:fixed;z-index:4;pointer-events:none;';
+    container.appendChild(wrap);
+    const side=i%3;
+    let x,y;
+    if(side===0){x=15+Math.random()*80;y=80+Math.random()*(window.innerHeight*.6);}
+    else if(side===1){x=window.innerWidth-95+Math.random()*80;y=80+Math.random()*(window.innerHeight*.6);}
+    else{x=200+Math.random()*(window.innerWidth-400);y=30+Math.random()*150;}
+    spiders.push({el:wrap,thread:wrap.querySelector('.spider-thread'),x,y,anchorX:x,anchorY:0,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,t:Math.random()*1000,pauseTimer:0,paused:false});
+  }
+}
+function animateSpiders(){
+  const W=window.innerWidth,H=window.innerHeight;
+  spiders.forEach(s=>{
+    s.t+=.016;
+    if(s.paused){s.pauseTimer--;if(s.pauseTimer<=0)s.paused=false;return;}
+    // Slow organic movement
+    s.vx+=Math.sin(s.t*.7)*.008;
+    s.vy+=Math.cos(s.t*.5)*.008;
+    const speed=Math.sqrt(s.vx*s.vx+s.vy*s.vy);
+    if(speed>.6){s.vx*=.6/speed;s.vy*=.6/speed;}
+    s.x+=s.vx;s.y+=s.vy;
+    // Bounce off walls with margin
+    if(s.x<10){s.x=10;s.vx=Math.abs(s.vx);}
+    if(s.x>W-38){s.x=W-38;s.vx=-Math.abs(s.vx);}
+    if(s.y<10){s.y=10;s.vy=Math.abs(s.vy);}
+    if(s.y>H*.75){s.y=H*.75;s.vy=-Math.abs(s.vy);}
+    // Occasional pause
+    if(Math.random()<.004){s.paused=true;s.pauseTimer=60+Math.floor(Math.random()*120);}
+    s.el.style.left=s.x+'px';
+    s.el.style.top=s.y+'px';
+    // Thread from top of screen to spider
+    const threadLen=s.y;
+    s.thread.style.top=(-threadLen)+'px';
+    s.thread.style.left='13px';
+    s.thread.style.height=threadLen+'px';
+  });
+  requestAnimationFrame(animateSpiders);
+}
+initSpiders();
+requestAnimationFrame(animateSpiders);
+
+/* ============ DRIPS ============ */
+(function(){const c=document.getElementById('drips');[8,22,38,55,72,88].forEach(p=>{const d=document.createElement('div');d.className='drip';const h=40+Math.random()*80,dur=4+Math.random()*8,delay=Math.random()*10;d.style.cssText=`left:${p}%;height:${h}px;animation-duration:${dur}s;animation-delay:${delay}s;`;c.appendChild(d);});})();
+
+/* ============ IMAGE UPLOAD ============ */
+document.getElementById('f-img').addEventListener('change',function(){
+  const f=this.files[0];if(!f)return;
+  const r=new FileReader();r.onload=e=>{const p=document.getElementById('up-prev');p.src=e.target.result;p.style.display='block';document.getElementById('up-icon').style.display='none';document.getElementById('up-txt').textContent=f.name;};r.readAsDataURL(f);
+});
+
+/* ============ FORM ============ */
+function fv(id){return document.getElementById(id).value.trim();}
+function fg(id){return document.getElementById(id).value;}
+function createCard(){
+  const name=fv('f-name');if(!name){alert('Введите название');return;}
+  const prev=document.getElementById('up-prev');
+  const card={id:Date.now()+'',name,img:prev.style.display!=='none'?prev.src:null,ttype:fg('f-ttype'),tval:fg('f-tval')||'7',trigger:fv('f-trigger'),sbuff:fv('f-sbuff'),lbuff:fv('f-lbuff'),energy:parseInt(fg('f-energy'))||1,cbcount:parseInt(fg('f-cbcount'))||6,bonuses:fv('f-bonuses'),ri:0,checked:[],rankups:0,streakDays:0,lastDone:null,history:[],createdAt:Date.now()};
+  cards.push(card);save();render();resetForm();
+}
+function resetForm(){
+  ['f-name','f-trigger','f-sbuff','f-lbuff','f-bonuses'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-img').value='';const p=document.getElementById('up-prev');p.src='';p.style.display='none';
+  document.getElementById('up-icon').style.display='block';document.getElementById('up-txt').textContent='Загрузи фото 9:16';
+  document.getElementById('f-tval').value='';document.getElementById('f-cbcount').value='6';document.getElementById('f-energy').value='1';
+}
+function save(){localStorage.setItem('nd_v3',JSON.stringify(cards));}
+
+/* ============ STATS ============ */
+function updateStats(){
+  document.getElementById('stat-total').textContent=cards.length;
+  document.getElementById('stat-checks').textContent=cards.reduce((s,c)=>s+c.checked.length,0);
+  let best=-1;cards.forEach(c=>{if(c.ri>best)best=c.ri;});
+  document.getElementById('stat-best').textContent=best>=0?RANKS[best]:'—';
+  document.getElementById('stat-rankups').textContent=cards.reduce((s,c)=>s+(c.rankups||0),0);
+}
+
+/* ============ RENDER ============ */
+function getSorted(){
+  const filter=fg('tb-filter')||'all',sort=fg('tb-sort')||'date_desc';
+  let list=[...cards];
+  if(filter!=='all')list=list.filter(c=>TIER_KEY[RANKS[c.ri]]===filter);
+  list.sort((a,b)=>sort==='date_desc'?b.createdAt-a.createdAt:sort==='date_asc'?a.createdAt-b.createdAt:sort==='rank_desc'?b.ri-a.ri:sort==='rank_asc'?a.ri-b.ri:a.name.localeCompare(b.name));
+  return list;
+}
+function render(){
+  updateStats();const grid=document.getElementById('grid');grid.innerHTML='';
+  const list=getSorted();
+  if(list.length===0){const msg=cards.length===0?'<div class="empty-icon">⛓</div>Тьма поглощает слабых.<br><em>Создай первую карточку.</em>':'<div class="empty-icon">🔍</div><em>Нет карточек.</em>';grid.innerHTML=`<div class="empty">${msg}</div>`;return;}
+  list.forEach(c=>grid.appendChild(buildCard(c)));
+}
+function buildCard(c){
+  const rank=RANKS[c.ri],rcls=RCLS[rank],rc=RC[rank],rg=RG[rank];
+  const all=c.checked.length>=c.cbcount,pct=Math.min(100,Math.round(c.checked.length/c.cbcount*100));
+  let boxes='';for(let i=0;i<c.cbcount;i++){const on=c.checked.includes(i)?'on':'';boxes+=`<div class="cbox ${on}" onclick="toggleCB('${c.id}',${i})"></div>`;}
+  const edots=`<div class="edot ${c.energy>=1?'on':''}"></div><div class="edot ${c.energy>=2?'on':''}"></div><div class="edot ${c.energy>=3?'on':''}"></div>`;
+  const w=document.createElement('div');w.className=`ncard ${rcls}`;w.style.cssText=`--rc:${rc};--rg:${rg};`;w.dataset.id=c.id;
+  w.innerHTML=`<div class="ncard-glow"></div><div class="card-del" onclick="delCard('${c.id}',event)">✕</div><div class="card-body"><div class="card-top"><div class="card-name">${c.name}</div><div class="rank-badge">${rank}</div></div><div class="card-img-wrap">${c.img?`<img src="${c.img}" alt="">`:'<div class="card-img-ph">⚔</div>'}<div class="time-badge">${c.tval} ${c.ttype}</div></div><div class="div"></div>${c.trigger?`<div class="stat"><span class="s-ico">🕐</span><span class="s-lbl">Триггер</span><span class="s-val">${c.trigger}</span></div>`:''}${c.sbuff?`<div class="stat"><span class="s-ico">⚡</span><span class="s-lbl">Баф</span><span class="s-val">${c.sbuff}</span></div>`:''}${c.lbuff?`<div class="stat"><span class="s-ico">🌿</span><span class="s-lbl">Прокачка</span><span class="s-val">${c.lbuff}</span></div>`:''}<div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Энергия</span><span class="s-val"><div class="edots">${edots}</div></span></div>${c.bonuses?`<div class="stat"><span class="s-ico">🎁</span><span class="s-lbl">Бонус</span><span class="s-val">${c.bonuses}</span></div>`:''}<div class="div"></div><div class="progress"><div class="prog-lbl"><span>Прогресс</span><span>${c.checked.length}/${c.cbcount}</span></div><div class="prog-bar-wrap"><div class="prog-bar" style="width:${pct}%"></div></div><div class="boxes">${boxes}</div></div>${all&&c.ri<RANKS.length-1?`<button class="rankup-btn show" onclick="startRankUp('${c.id}',event)">⬆ До ${RANKS[c.ri+1]}</button>`:''}${c.ri===RANKS.length-1?'<div class="max-rank">✦ МАКСИМАЛЬНЫЙ РАНГ ✦</div>':''}</div>`;
+  return w;
+}
+
+/* ============ INTERACTIONS ============ */
+function toggleCB(id,idx){const c=cards.find(x=>x.id===id);if(!c)return;const i=c.checked.indexOf(idx);if(i>-1)c.checked.splice(i,1);else{c.checked.push(idx);playCheckSound();}save();render();}
+function delCard(id,e){e.stopPropagation();if(!confirm('Уничтожить?'))return;cards=cards.filter(x=>x.id!==id);save();render();}
+
+/* ============ RANK-UP ============ */
+function startRankUp(id,e){
+  e.stopPropagation();const c=cards.find(x=>x.id===id);if(!c)return;pendingId=id;
+  const next=RANKS[c.ri+1],mc=RC[next],mg=RG[next];
+  const modal=document.getElementById('ru-modal');
+  modal.style.setProperty('--mc',mc);modal.style.setProperty('--mg',mg);modal.style.borderColor=mc;modal.style.boxShadow=`0 0 70px ${mg},0 0 150px rgba(0,0,0,.9)`;
+  document.getElementById('ru-rank-txt').style.color=mc;document.getElementById('ru-rank-txt').style.textShadow=`0 0 30px ${mg}`;
+  document.getElementById('ru-rank-txt').textContent=next;document.getElementById('ru-card-name').textContent=c.name;
+  document.getElementById('ru-overlay').classList.add('open');playRankUpSound();
+}
+function confirmRankUp(){document.getElementById('ru-overlay').classList.remove('open');const c=cards.find(x=>x.id===pendingId);if(!c)return;editId=pendingId;editIsRankUp=true;openEdit(c,true);}
+
+/* ============ EDIT ============ */
+function openEdit(c,isRankUp){
+  const nextRank=isRankUp?RANKS[c.ri+1]:RANKS[c.ri];
+  document.getElementById('em-title').textContent=isRankUp?`⚙ Ранг ${nextRank} — обнови карточку`:`⚙ Редактировать «${c.name}»`;
+  document.getElementById('em-fields').innerHTML=`<div class="field"><label>Название</label><input id="e-name" type="text" value="${c.name}" maxlength="40"></div><div class="row2"><div class="field"><label>Тип</label><select id="e-ttype"><option value="мин" ${c.ttype==='мин'?'selected':''}>Минуты</option><option value="действий" ${c.ttype==='действий'?'selected':''}>Действия</option></select></div><div class="field"><label>Значение</label><input id="e-tval" type="number" value="${c.tval}" min="1"></div></div><div class="field"><label>Триггер</label><input id="e-trigger" value="${c.trigger||''}"></div><div class="row2"><div class="field"><label>Краткосрочный баф</label><textarea id="e-sbuff">${c.sbuff||''}</textarea></div><div class="field"><label>Долгосрочный баф</label><textarea id="e-lbuff">${c.lbuff||''}</textarea></div></div><div class="row2"><div class="field"><label>Энергия</label><select id="e-energy"><option value="1" ${c.energy===1?'selected':''}>Низкая ☽</option><option value="2" ${c.energy===2?'selected':''}>Средняя ☀</option><option value="3" ${c.energy===3?'selected':''}>Высокая ⚡</option></select></div><div class="field"><label>Чекбоксов</label><input id="e-cbcount" type="number" value="${c.cbcount}" min="1" max="40"></div></div><div class="field"><label>Бонусы</label><input id="e-bonuses" value="${c.bonuses||''}"></div>`;
+  document.getElementById('edit-overlay').classList.add('open');
+}
+function closeEdit(){document.getElementById('edit-overlay').classList.remove('open');}
+function saveEdit(){
+  const c=cards.find(x=>x.id===editId);if(!c)return;
+  c.name=document.getElementById('e-name').value.trim()||c.name;c.ttype=document.getElementById('e-ttype').value;c.tval=document.getElementById('e-tval').value||c.tval;c.trigger=document.getElementById('e-trigger').value.trim();c.sbuff=document.getElementById('e-sbuff').value.trim();c.lbuff=document.getElementById('e-lbuff').value.trim();c.energy=parseInt(document.getElementById('e-energy').value)||1;c.cbcount=parseInt(document.getElementById('e-cbcount').value)||c.cbcount;c.bonuses=document.getElementById('e-bonuses').value.trim();
+  if(editIsRankUp){c.ri=Math.min(c.ri+1,RANKS.length-1);c.checked=[];c.rankups=(c.rankups||0)+1;}
+  editIsRankUp=false;closeEdit();save();render();
+}
+['ru-overlay','edit-overlay','sound-overlay'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});});
+
+render();
+
+/* ============================================================
+   PHASE 3 — Firebase sync + Streaks + Stats
+   ============================================================ */
+
+/* ── uid & code ── */
+let _uid   = null;
+let _code  = null;   // "AB-1234"
+let _unsub = null;
+let _syncReady = false;
+
+function _makeCode(uid){
+  /* first 2 + last 4 chars of uid → "AB-1234" */
+  const a = uid.slice(0,2).toUpperCase();
+  const b = uid.slice(-4).toUpperCase();
+  return a + '-' + b;
+}
+
+/* ── UI helpers ── */
+function _setSyncStatus(state, msg){
+  const dot = document.querySelector('.sync-dot');
+  if(dot){ dot.className='sync-dot '+(state==='ok'?'green':state==='warn'?'yellow':'red'); }
+  const el = document.getElementById('sync-status-msg');
+  if(el) el.innerHTML = msg;
+}
+
+function openSyncModal(){
+  document.getElementById('sync-overlay').classList.add('open');
+  _refreshSyncUI();
+}
+function _refreshSyncUI(){
+  const disp = document.getElementById('my-code-display');
+  if(disp) disp.textContent = _code || '…';
+  const codeChip = document.getElementById('stat-code');
+  if(codeChip) codeChip.textContent = _code || '…';
+}
+
+/* ── save to cloud ── */
+function _saveToCloud(){
+  if(!_uid || !_syncReady) return;
+  /* strip large base64 images so Firestore 1MB limit isn't hit */
+  const slim = cards.map(c=>({...c, img: c.img && c.img.startsWith('data:') ? '__local__' : (c.img||null)}));
+  fbDb.collection('decks').doc(_uid)
+    .set({ cards: slim, ts: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true})
+    .then(()=>{ _setSyncStatus('ok','<span class="sync-dot green"></span>Синхронизировано ✓'); })
+    .catch(e=>{ _setSyncStatus('warn','<span class="sync-dot yellow"></span>Ошибка: '+e.message); });
+}
+
+/* ── save to local ── */
+function saveToLocal(){ localStorage.setItem('nd_v3', JSON.stringify(cards)); }
+
+/* ── master save (local + cloud) ── */
+function save(){ saveToLocal(); _saveToCloud(); }
+
+/* ── subscribe to remote doc ── */
+function _subscribeRemote(uid){
+  if(_unsub) _unsub();
+  _unsub = fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
+    if(!snap.exists) return;
+    const remote = snap.data().cards || [];
+    /* merge: keep local img blobs, use cloud data for everything else */
+    const localMap = {};
+    cards.forEach(c=>{ localMap[c.id]=c; });
+    const merged = remote.map(rc=>{
+      const lc = localMap[rc.id];
+      return { ...rc, img: (lc && lc.img && !lc.img.startsWith('__local__')) ? lc.img : (rc.img==='__local__'? (lc&&lc.img)||null : rc.img) };
+    });
+    /* add cards that exist only locally */
+    merged.forEach(m=>{ delete localMap[m.id]; });
+    const extra = Object.values(localMap);
+    cards = [...merged, ...extra];
+    /* ensure streak fields */
+    cards.forEach(c=>{ if(!c.streakDays)c.streakDays=0; if(!c.lastDone)c.lastDone=null; });
+    saveToLocal();
+    render();
+    _setSyncStatus('ok','<span class="sync-dot green"></span>Синхронизировано ✓');
+  }, err=>{ _setSyncStatus('red','<span class="sync-dot red"></span>'+err.message); });
+}
+
+/* ── load deck by entering someone else's code ── */
+function loadByCode(){
+  const raw = (document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const msg = document.getElementById('load-code-msg');
+  if(raw.length < 6){ msg.textContent='Введи корректный код (напр. AB-1234)'; return; }
+  msg.textContent = 'Поиск…';
+  /* look for a doc whose id starts with matching chars: first 2 + last 4 */
+  fbDb.collection('decks').get().then(snap=>{
+    let found = null;
+    snap.forEach(doc=>{
+      if(_makeCode(doc.id) === raw.slice(0,2)+'-'+raw.slice(2)){
+        found = doc;
+      }
+    });
+    if(!found){ msg.style.color='#f44336'; msg.textContent='❌ Код не найден. Проверь правильность.'; return; }
+    const remote = found.data().cards||[];
+    if(confirm(`Найдено ${remote.length} карточек. Заменить текущую колоду?`)){
+      cards = remote;
+      cards.forEach(c=>{ if(!c.streakDays)c.streakDays=0; if(!c.lastDone)c.lastDone=null; });
+      /* switch live listener to that user's doc */
+      _subscribeRemote(found.id);
+      saveToLocal(); render();
+      msg.style.color='#4caf50'; msg.textContent='✓ Колода загружена!';
+    }
+  }).catch(e=>{ msg.style.color='#f44336'; msg.textContent='Ошибка: '+e.message; });
+}
+
+/* ── init Firebase auth ── */
+fbAuth.signInAnonymously()
+  .then(cred=>{
+    _uid = cred.user.uid;
+    _code = _makeCode(_uid);
+    _syncReady = true;
+    document.getElementById('stat-code').textContent = _code;
+    document.getElementById('my-code-display').textContent = _code;
+    _setSyncStatus('ok','<span class="sync-dot green"></span>Подключено');
+    _subscribeRemote(_uid);
+    /* push local data on first connect if cloud is empty */
+    fbDb.collection('decks').doc(_uid).get().then(snap=>{
+      if(!snap.exists || !(snap.data().cards||[]).length){
+        _saveToCloud();
+      }
+    });
+  })
+  .catch(e=>{
+    _setSyncStatus('red','<span class="sync-dot red"></span>Нет соединения — работаем offline');
+    console.warn('Firebase auth failed:', e.message);
+  });
+
+/* ============================================================
+   STREAKS
+   ============================================================ */
+function _sameDay(ts1, ts2){
+  if(!ts1||!ts2) return false;
+  const a=new Date(ts1), b=new Date(ts2);
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function _daysBetween(ts1, ts2){
+  const d1=new Date(new Date(ts1).toDateString()), d2=new Date(new Date(ts2).toDateString());
+  return Math.round((d2-d1)/(86400000));
+}
+function _updateStreak(c){
+  const now = Date.now();
+  if(!c.lastDone){ c.streakDays=1; }
+  else if(_sameDay(c.lastDone, now)){ /* already updated today */ return; }
+  else{
+    const diff = _daysBetween(c.lastDone, now);
+    c.streakDays = diff===1 ? (c.streakDays||0)+1 : 1;
+  }
+  c.lastDone = now;
+}
+
+/* ── patch toggleCB to include streak ── */
+const _origToggleCB = toggleCB;
+/* redefine: */
+window.toggleCB = function(id, idx){
+  const c = cards.find(x=>x.id===id); if(!c) return;
+  const i = c.checked.indexOf(idx);
+  if(i > -1){
+    c.checked.splice(i,1);
+  } else {
+    c.checked.push(idx);
+    _updateStreak(c);
+    playCheckSound();
+  }
+  save(); render();
+};
+
+/* ── daily streak check on load (reset if day missed) ── */
+function _dailyStreakAudit(){
+  const now = Date.now();
+  let changed = false;
+  cards.forEach(c=>{
+    if(c.lastDone && !_sameDay(c.lastDone, now)){
+      const diff = _daysBetween(c.lastDone, now);
+      if(diff > 1){ c.streakDays = 0; changed = true; }
+    }
+  });
+  if(changed){ saveToLocal(); }
+}
+_dailyStreakAudit();
+
+/* patch buildCard to show streak row */
+const _origBuildCard = buildCard;
+window.buildCard = function(c){
+  /* add streakDays defaults if missing */
+  if(!c.streakDays) c.streakDays=0;
+  const card = _origBuildCard(c);
+  /* inject streak stat after bonuses */
+  if(c.streakDays > 0){
+    const streakHtml = `<div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Стрик</span><span class="s-val" style="color:#ff6b35;font-weight:700">${c.streakDays} дн.${c.streakDays>=7?' ⚡':''}</span></div>`;
+    /* insert before the last .div inside card-body */
+    card.innerHTML = card.innerHTML.replace(/(<div class="div"><\/div>)(?!.*<div class="div">)/, streakHtml+'$1');
+  }
+  return card;
+};
+
+/* ============================================================
+   STATISTICS MODAL
+   ============================================================ */
+function openStatsModal(){
+  _buildStats();
+  document.getElementById('stats-overlay').classList.add('open');
+}
+document.getElementById('stats-overlay').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+
+function _buildStats(){
+  /* ── boxes ── */
+  const totalChecks = cards.reduce((s,c)=>s+c.checked.length,0);
+  const totalRankups= cards.reduce((s,c)=>s+(c.rankups||0),0);
+  const maxStreak   = cards.reduce((m,c)=>Math.max(m,c.streakDays||0),0);
+  let bestRi=-1; cards.forEach(c=>{if(c.ri>bestRi)bestRi=c.ri;});
+  const boxes=[
+    {val:cards.length,   lbl:'Карточек'},
+    {val:totalChecks,    lbl:'Выполнений'},
+    {val:totalRankups,   lbl:'Ранг-апов'},
+    {val:maxStreak+'д',  lbl:'Лучший стрик'},
+  ];
+  document.getElementById('stat-boxes').innerHTML=boxes.map(b=>`
+    <div class="stat-box"><span class="sb-val">${b.val}</span><span class="sb-lbl">${b.lbl}</span></div>`).join('');
+
+  /* ── heatmap (last 60 days) ── */
+  const dayMap={};
+  cards.forEach(c=>{
+    (c.history||[]).forEach(ts=>{
+      const key=new Date(ts).toISOString().slice(0,10);
+      dayMap[key]=(dayMap[key]||0)+1;
+    });
+    /* also count lastDone */
+    if(c.lastDone){
+      const key=new Date(c.lastDone).toISOString().slice(0,10);
+      dayMap[key]=(dayMap[key]||0)+1;
+    }
+  });
+  const cells=[];
+  for(let d=59;d>=0;d--){
+    const dt=new Date(Date.now()-d*86400000);
+    const key=dt.toISOString().slice(0,10);
+    const cnt=dayMap[key]||0;
+    const cls=cnt===0?'':cnt<2?'hm1':cnt<4?'hm2':cnt<7?'hm3':'hm4';
+    const dd=dt.getDate(), mm=dt.toLocaleString('ru',{month:'short'});
+    cells.push(`<div class="hm-cell ${cls}" title="${dd} ${mm}: ${cnt} выполн."></div>`);
+  }
+  document.getElementById('heatmap-wrap').innerHTML=cells.join('');
+
+  /* ── top 5 by streak ── */
+  const top=[...cards].sort((a,b)=>(b.streakDays||0)-(a.streakDays||0)).slice(0,5);
+  const RANKS_L=['C','CC','CCC','B','BB','BBB','A','AA','AAA','S','SS','SSS','SSS+'];
+  const RC_L={'C':'#757575','CC':'#9e9e9e','CCC':'#bdbdbd','B':'#2e7d32','BB':'#4caf50','BBB':'#81c784','A':'#1565c0','AA':'#2196f3','AAA':'#64b5f6','S':'#6a1b9a','SS':'#9c27b0','SSS':'#e64a19','SSS+':'#ffd700'};
+  document.getElementById('top-cards-list').innerHTML = top.length===0
+    ? '<div style="color:var(--dim);font-style:italic;font-size:.7rem;text-align:center;padding:.5rem">Нет данных</div>'
+    : top.map((c,i)=>{
+        const rank=RANKS_L[c.ri],rc=RC_L[rank];
+        return `<div class="tc-row">
+          <span style="color:var(--dim);font-size:.65rem">#${i+1}</span>
+          <span class="tc-rank" style="color:${rc}">${rank}</span>
+          <span class="tc-name">${c.name}</span>
+          <span class="tc-streak">Стрик: <b>${c.streakDays||0}д.</b></span>
+          <span style="font-size:.65rem;color:var(--dim)">${c.checked.length}/${c.cbcount}</span>
+        </div>`;
+      }).join('');
+
+  /* ── rank distribution bars ── */
+  const tiers=['C','B','A','S','SS','SSS','SSS+'];
+  const tierKeys={'C':['C','CC','CCC'],'B':['B','BB','BBB'],'A':['A','AA','AAA'],'S':['S'],'SS':['SS'],'SSS':['SSS'],'SSS+':['SSS+']};
+  const counts={};tiers.forEach(t=>counts[t]=0);
+  cards.forEach(c=>{
+    const rank=RANKS_L[c.ri];
+    for(const [tier,vals] of Object.entries(tierKeys)){if(vals.includes(rank)){counts[tier]++;break;}}
+  });
+  const maxCount=Math.max(1,...Object.values(counts));
+  const RC2={'C':'#757575','B':'#4caf50','A':'#42a5f5','S':'#ab47bc','SS':'#ce93d8','SSS':'#ff7043','SSS+':'#ffd700'};
+  document.getElementById('rank-bars').innerHTML=tiers.map(t=>{
+    const pct=Math.round(counts[t]/maxCount*100);
+    return `<div class="rb-row">
+      <span class="rb-lbl" style="color:${RC2[t]}">${t}</span>
+      <div class="rb-track"><div class="rb-fill" style="width:${pct}%;background:${RC2[t]}"></div></div>
+      <span class="rb-cnt">${counts[t]}</span>
+    </div>`;
+  }).join('');
+}
+
+/* expose openSyncModal globally (used in HTML onclick) */
+window.openSyncModal  = openSyncModal;
+window.openStatsModal = openStatsModal;
+window.loadByCode     = loadByCode;
+
+</script>
+<!-- SYNC MODAL -->
+<div class="overlay" id="sync-overlay">
+  <div class="sound-modal" style="max-width:460px">
+    <button class="em-close" onclick="document.getElementById('sync-overlay').classList.remove('open')">✕</button>
+    <div class="em-title">🔗 Синхронизация</div>
+    <div id="sync-status-msg" style="text-align:center;font-size:.72rem;color:var(--dim);font-style:italic;margin-bottom:1.2rem">Подключение…</div>
+    <div style="text-align:center;margin-bottom:1.4rem">
+      <div style="font-family:'Cinzel',serif;font-size:.6rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">Твой код устройства</div>
+      <div id="my-code-display" style="font-family:monospace;font-size:2rem;color:var(--gold);letter-spacing:.2em;text-shadow:0 0 16px rgba(201,162,39,.4)">—</div>
+      <div style="font-size:.65rem;color:var(--dim);margin-top:.3rem;font-style:italic">Введи этот код на другом устройстве, чтобы получить свои карточки</div>
+    </div>
+    <div class="div" style="margin:.8rem 0"></div>
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">Загрузить чужой код</div>
+    <div style="display:flex;gap:.6rem;margin-bottom:.4rem">
+      <input id="load-code-input" type="text" placeholder="AB-1234" maxlength="7" style="flex:1;font-family:monospace;font-size:1.1rem;text-transform:uppercase;letter-spacing:.1em">
+      <button class="snd-upload-btn" onclick="loadByCode()">Загрузить →</button>
+    </div>
+    <div id="load-code-msg" style="font-size:.65rem;color:var(--dim);font-style:italic;min-height:1.2rem"></div>
+    <div class="div" style="margin:.8rem 0"></div>
+    <div style="font-size:.62rem;color:var(--dim);font-style:italic;text-align:center;line-height:1.6">
+      ⚠ Демо-база: данные публичны. Не храни чувствительную информацию.<br>
+      Синхронизация происходит автоматически при каждом изменении.
+    </div>
+  </div>
+</div>
+
+<!-- STATS MODAL -->
+<div class="overlay" id="stats-overlay">
+  <div class="sound-modal" style="max-width:700px;width:95%">
+    <button class="em-close" onclick="document.getElementById('stats-overlay').classList.remove('open')">✕</button>
+    <div class="em-title">📊 Статистика подземелья</div>
+    <!-- totals row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.4rem" id="stat-boxes"></div>
+    <!-- heatmap -->
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">🔥 Активность за 60 дней</div>
+    <div id="heatmap-wrap" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:1.4rem"></div>
+    <!-- top cards -->
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem;opacity:.7">🏆 Топ-5 карточек по стрику</div>
+    <div id="top-cards-list"></div>
+    <!-- rank breakdown -->
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin:.9rem 0 .5rem;opacity:.7">📈 Распределение по рангам</div>
+    <div id="rank-bars"></div>
+  </div>
+</div>
+
+</body>
+</html>
