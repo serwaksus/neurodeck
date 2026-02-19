@@ -188,34 +188,34 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .bgm-status{font-size:.65rem;color:var(--dim);font-style:italic;align-self:center;}
 
 
-/* ── STAT BOXES ── */
+/* STAT BOXES */
 .stat-box{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:3px;padding:.7rem .5rem;text-align:center;}
 .stat-box .sb-val{font-family:"Cinzel Decorative",serif;font-size:1.4rem;color:var(--gold);display:block;text-shadow:0 0 12px rgba(201,162,39,.35);}
 .stat-box .sb-lbl{font-family:"Cinzel",serif;font-size:.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:.2rem;display:block;}
-/* ── HEATMAP ── */
-.hm-cell{width:14px;height:14px;border-radius:2px;background:#0d0b08;border:1px solid #1a1208;transition:transform .15s;}
+/* HEATMAP */
+.hm-cell{width:14px;height:14px;border-radius:2px;background:#0d0b08;border:1px solid #1a1208;transition:transform .15s;cursor:default;}
 .hm-cell:hover{transform:scale(1.4);}
 .hm-cell.hm1{background:#2e1e00;border-color:#4a3200;}
 .hm-cell.hm2{background:#5a3a00;border-color:#7a5200;}
 .hm-cell.hm3{background:#8a5c00;border-color:#b07800;}
 .hm-cell.hm4{background:var(--gold);border-color:#e8c040;box-shadow:0 0 6px rgba(201,162,39,.4);}
-/* ── TOP CARD ROWS ── */
+/* TOP CARDS */
 .tc-row{display:flex;align-items:center;gap:.8rem;padding:.4rem .5rem;border-bottom:1px solid var(--border);font-size:.72rem;}
 .tc-rank{font-family:"Cinzel Decorative",serif;font-size:.65rem;min-width:36px;}
 .tc-name{flex:1;color:var(--parchment);}
-.tc-streak{font-family:"Cinzel",serif;font-size:.62rem;color:var(--dim);}
-.tc-streak b{color:#ff6b35;}
-/* ── RANK BARS ── */
+/* RANK BARS */
 .rb-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;}
 .rb-lbl{font-family:"Cinzel",serif;font-size:.6rem;min-width:36px;text-align:right;color:var(--parchment);}
 .rb-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
-.rb-fill{height:100%;border-radius:4px;transition:width .5s ease;}
+.rb-fill{height:100%;border-radius:4px;transition:width .6s ease;}
 .rb-cnt{font-family:"Cinzel",serif;font-size:.6rem;color:var(--dim);min-width:20px;}
-/* ── SYNC ── */
-.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:#555;}
+/* SYNC DOT */
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;}
 .sync-dot.green{background:#4caf50;box-shadow:0 0 6px #4caf50;}
 .sync-dot.yellow{background:#ffeb3b;box-shadow:0 0 6px #ffeb3b;}
 .sync-dot.red{background:#f44336;box-shadow:0 0 6px #f44336;}
+/* STREAK ON CARD */
+.streak-val{color:#ff6b35;font-weight:700;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#060402;}::-webkit-scrollbar-thumb{background:#2a1a0a;border-radius:3px;}
 </style>
 
@@ -224,16 +224,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
 <script>
-  /* ── DEMO CONFIG ── replace with your own Firebase project for production ── */
   const _fbCfg = {
-    apiKey:            "AIzaSyDemo_NeuroDeck_Phase3_Key000000000",
-    authDomain:        "neurodeck-demo-app.firebaseapp.com",
-    projectId:         "neurodeck-demo-app",
-    storageBucket:     "neurodeck-demo-app.appspot.com",
-    messagingSenderId: "123456789012",
-    appId:             "1:123456789012:web:abcdef1234567890"
+    apiKey:            "AIzaSyB23h7K0ZR8WixlWJdibOG1CCfp2u3YyM4",
+    authDomain:        "neurodeck-ba4f1.firebaseapp.com",
+    projectId:         "neurodeck-ba4f1",
+    storageBucket:     "neurodeck-ba4f1.firebasestorage.app",
+    messagingSenderId: "282856627370",
+    appId:             "1:282856627370:web:b9947f11afb26291c9c4d3",
+    measurementId:     "G-H0X5LM366K"
   };
-  try { firebase.initializeApp(_fbCfg); } catch(e) {}
+  firebase.initializeApp(_fbCfg);
   const fbAuth = firebase.auth();
   const fbDb   = firebase.firestore();
 </script>
@@ -277,7 +277,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="stat-chip">✅ Выполнений: <b id="stat-checks">0</b></div>
   <div class="stat-chip">🏆 Лучший ранг: <b id="stat-best">—</b></div>
   <div class="stat-chip">📈 Ранг-апов: <b id="stat-rankups">0</b></div>
-  <div class="stat-chip" id="sync-chip" style="cursor:pointer" onclick="openSyncModal()" title="Нажми для управления синхронизацией">🔗 Код: <b id="stat-code" style="font-family:monospace;letter-spacing:.08em">—</b></div>
+  <div class="stat-chip" style="cursor:pointer" onclick="openSyncModal()" title="Синхронизация">🔗 Код: <b id="stat-code" style="font-family:monospace;letter-spacing:.08em">…</b></div>
 </div>
 
 <!-- MAIN -->
@@ -603,287 +603,208 @@ render();
 /* ============================================================
    PHASE 3 — Firebase sync + Streaks + Stats
    ============================================================ */
+let _uid=null, _code=null, _unsub=null, _syncReady=false;
 
-/* ── uid & code ── */
-let _uid   = null;
-let _code  = null;   // "AB-1234"
-let _unsub = null;
-let _syncReady = false;
+function _makeCode(uid){ return uid.slice(0,2).toUpperCase()+'-'+uid.slice(-4).toUpperCase(); }
 
-function _makeCode(uid){
-  /* first 2 + last 4 chars of uid → "AB-1234" */
-  const a = uid.slice(0,2).toUpperCase();
-  const b = uid.slice(-4).toUpperCase();
-  return a + '-' + b;
+function _setSyncDot(state){
+  const el=document.getElementById('sync-status-msg');
+  const cls=state==='ok'?'green':state==='warn'?'yellow':'red';
+  const label=state==='ok'?'Синхронизировано ✓':state==='warn'?'Синхронизация…':'Нет соединения (offline)';
+  if(el) el.innerHTML=`<span class="sync-dot ${cls}"></span>${label}`;
 }
 
-/* ── UI helpers ── */
-function _setSyncStatus(state, msg){
-  const dot = document.querySelector('.sync-dot');
-  if(dot){ dot.className='sync-dot '+(state==='ok'?'green':state==='warn'?'yellow':'red'); }
-  const el = document.getElementById('sync-status-msg');
-  if(el) el.innerHTML = msg;
-}
-
-function openSyncModal(){
-  document.getElementById('sync-overlay').classList.add('open');
-  _refreshSyncUI();
-}
+function openSyncModal(){document.getElementById('sync-overlay').classList.add('open');_refreshSyncUI();}
 function _refreshSyncUI(){
-  const disp = document.getElementById('my-code-display');
-  if(disp) disp.textContent = _code || '…';
-  const codeChip = document.getElementById('stat-code');
-  if(codeChip) codeChip.textContent = _code || '…';
+  document.getElementById('my-code-display').textContent=_code||'…';
+  document.getElementById('stat-code').textContent=_code||'…';
 }
 
-/* ── save to cloud ── */
+/* ── cloud save (strips local base64 images) ── */
 function _saveToCloud(){
-  if(!_uid || !_syncReady) return;
-  /* strip large base64 images so Firestore 1MB limit isn't hit */
-  const slim = cards.map(c=>({...c, img: c.img && c.img.startsWith('data:') ? '__local__' : (c.img||null)}));
+  if(!_uid||!_syncReady) return;
+  _setSyncDot('warn');
+  const slim=cards.map(c=>({...c,img:c.img&&c.img.startsWith('data:')?'__local__':(c.img||null)}));
   fbDb.collection('decks').doc(_uid)
-    .set({ cards: slim, ts: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true})
-    .then(()=>{ _setSyncStatus('ok','<span class="sync-dot green"></span>Синхронизировано ✓'); })
-    .catch(e=>{ _setSyncStatus('warn','<span class="sync-dot yellow"></span>Ошибка: '+e.message); });
+    .set({cards:slim,ts:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})
+    .then(()=>_setSyncDot('ok'))
+    .catch(e=>{ _setSyncDot('red'); console.warn('sync err',e); });
 }
 
-/* ── save to local ── */
-function saveToLocal(){ localStorage.setItem('nd_v3', JSON.stringify(cards)); }
-
-/* ── master save (local + cloud) ── */
+function saveToLocal(){ localStorage.setItem('nd_v3',JSON.stringify(cards)); }
 function save(){ saveToLocal(); _saveToCloud(); }
 
-/* ── subscribe to remote doc ── */
+/* ── subscribe to own remote doc ── */
 function _subscribeRemote(uid){
   if(_unsub) _unsub();
-  _unsub = fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
+  _unsub=fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
     if(!snap.exists) return;
-    const remote = snap.data().cards || [];
-    /* merge: keep local img blobs, use cloud data for everything else */
-    const localMap = {};
-    cards.forEach(c=>{ localMap[c.id]=c; });
-    const merged = remote.map(rc=>{
-      const lc = localMap[rc.id];
-      return { ...rc, img: (lc && lc.img && !lc.img.startsWith('__local__')) ? lc.img : (rc.img==='__local__'? (lc&&lc.img)||null : rc.img) };
+    const remote=snap.data().cards||[];
+    const localMap={};
+    cards.forEach(c=>{localMap[c.id]=c;});
+    const merged=remote.map(rc=>{
+      const lc=localMap[rc.id];
+      return {...rc,img:(lc&&lc.img&&!lc.img.startsWith('__local__'))?lc.img:(rc.img==='__local__'?(lc&&lc.img)||null:rc.img)};
     });
-    /* add cards that exist only locally */
-    merged.forEach(m=>{ delete localMap[m.id]; });
-    const extra = Object.values(localMap);
-    cards = [...merged, ...extra];
-    /* ensure streak fields */
-    cards.forEach(c=>{ if(!c.streakDays)c.streakDays=0; if(!c.lastDone)c.lastDone=null; });
-    saveToLocal();
-    render();
-    _setSyncStatus('ok','<span class="sync-dot green"></span>Синхронизировано ✓');
-  }, err=>{ _setSyncStatus('red','<span class="sync-dot red"></span>'+err.message); });
+    const usedIds=new Set(merged.map(m=>m.id));
+    const extra=cards.filter(c=>!usedIds.has(c.id));
+    cards=[...merged,...extra];
+    cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!c.history)c.history=[];});
+    saveToLocal(); render();
+    _setSyncDot('ok');
+  },e=>{ _setSyncDot('red'); console.warn('snapshot err',e); });
 }
 
-/* ── load deck by entering someone else's code ── */
+/* ── load someone else's deck by code ── */
 function loadByCode(){
-  const raw = (document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const msg = document.getElementById('load-code-msg');
-  if(raw.length < 6){ msg.textContent='Введи корректный код (напр. AB-1234)'; return; }
-  msg.textContent = 'Поиск…';
-  /* look for a doc whose id starts with matching chars: first 2 + last 4 */
+  const raw=(document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const msg=document.getElementById('load-code-msg');
+  if(raw.length<6){msg.textContent='Введи код формата AB-1234';return;}
+  msg.style.color='var(--dim)'; msg.textContent='Поиск…';
   fbDb.collection('decks').get().then(snap=>{
-    let found = null;
-    snap.forEach(doc=>{
-      if(_makeCode(doc.id) === raw.slice(0,2)+'-'+raw.slice(2)){
-        found = doc;
-      }
-    });
-    if(!found){ msg.style.color='#f44336'; msg.textContent='❌ Код не найден. Проверь правильность.'; return; }
-    const remote = found.data().cards||[];
-    if(confirm(`Найдено ${remote.length} карточек. Заменить текущую колоду?`)){
-      cards = remote;
-      cards.forEach(c=>{ if(!c.streakDays)c.streakDays=0; if(!c.lastDone)c.lastDone=null; });
-      /* switch live listener to that user's doc */
+    let found=null;
+    snap.forEach(doc=>{ if(_makeCode(doc.id)===raw.slice(0,2)+'-'+raw.slice(2)) found=doc; });
+    if(!found){msg.style.color='#f44336';msg.textContent='❌ Код не найден';return;}
+    const remote=found.data().cards||[];
+    if(confirm('Найдено '+remote.length+' карточек. Заменить текущую колоду?')){
+      cards=remote;
+      cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;});
       _subscribeRemote(found.id);
       saveToLocal(); render();
       msg.style.color='#4caf50'; msg.textContent='✓ Колода загружена!';
     }
-  }).catch(e=>{ msg.style.color='#f44336'; msg.textContent='Ошибка: '+e.message; });
+  }).catch(e=>{msg.style.color='#f44336';msg.textContent='Ошибка: '+e.message;});
 }
 
-/* ── init Firebase auth ── */
-fbAuth.signInAnonymously()
-  .then(cred=>{
-    _uid = cred.user.uid;
-    _code = _makeCode(_uid);
-    _syncReady = true;
-    document.getElementById('stat-code').textContent = _code;
-    document.getElementById('my-code-display').textContent = _code;
-    _setSyncStatus('ok','<span class="sync-dot green"></span>Подключено');
-    _subscribeRemote(_uid);
-    /* push local data on first connect if cloud is empty */
-    fbDb.collection('decks').doc(_uid).get().then(snap=>{
-      if(!snap.exists || !(snap.data().cards||[]).length){
-        _saveToCloud();
-      }
-    });
-  })
-  .catch(e=>{
-    _setSyncStatus('red','<span class="sync-dot red"></span>Нет соединения — работаем offline');
-    console.warn('Firebase auth failed:', e.message);
+/* ── init auth ── */
+fbAuth.signInAnonymously().then(cred=>{
+  _uid=cred.user.uid; _code=_makeCode(_uid); _syncReady=true;
+  _refreshSyncUI();
+  _setSyncDot('ok');
+  _subscribeRemote(_uid);
+  fbDb.collection('decks').doc(_uid).get().then(snap=>{
+    if(!snap.exists||(snap.data().cards||[]).length===0) _saveToCloud();
   });
+}).catch(e=>{
+  _setSyncDot('red');
+  console.warn('Firebase auth failed:',e.message);
+});
 
 /* ============================================================
    STREAKS
    ============================================================ */
-function _sameDay(ts1, ts2){
-  if(!ts1||!ts2) return false;
-  const a=new Date(ts1), b=new Date(ts2);
-  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+function _sameDay(ts1,ts2){
+  if(!ts1||!ts2)return false;
+  const a=new Date(ts1),b=new Date(ts2);
+  return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
 }
-function _daysBetween(ts1, ts2){
-  const d1=new Date(new Date(ts1).toDateString()), d2=new Date(new Date(ts2).toDateString());
-  return Math.round((d2-d1)/(86400000));
+function _daysBetween(ts1,ts2){
+  const a=new Date(new Date(ts1).toDateString()),b=new Date(new Date(ts2).toDateString());
+  return Math.round((b-a)/86400000);
 }
 function _updateStreak(c){
-  const now = Date.now();
-  if(!c.lastDone){ c.streakDays=1; }
-  else if(_sameDay(c.lastDone, now)){ /* already updated today */ return; }
-  else{
-    const diff = _daysBetween(c.lastDone, now);
-    c.streakDays = diff===1 ? (c.streakDays||0)+1 : 1;
-  }
-  c.lastDone = now;
+  const now=Date.now();
+  if(!c.lastDone){c.streakDays=1;}
+  else if(_sameDay(c.lastDone,now)){return;} // already updated today
+  else{ const diff=_daysBetween(c.lastDone,now); c.streakDays=diff===1?(c.streakDays||0)+1:1; }
+  c.lastDone=now;
+  if(!c.history)c.history=[];
+  c.history.push(now);
+  if(c.history.length>180)c.history=c.history.slice(-180); // keep last 180 entries
 }
-
-/* ── patch toggleCB to include streak ── */
-const _origToggleCB = toggleCB;
-/* redefine: */
-window.toggleCB = function(id, idx){
-  const c = cards.find(x=>x.id===id); if(!c) return;
-  const i = c.checked.indexOf(idx);
-  if(i > -1){
-    c.checked.splice(i,1);
-  } else {
-    c.checked.push(idx);
-    _updateStreak(c);
-    playCheckSound();
-  }
-  save(); render();
-};
-
-/* ── daily streak check on load (reset if day missed) ── */
-function _dailyStreakAudit(){
-  const now = Date.now();
-  let changed = false;
+function _dailyAudit(){
+  const now=Date.now(); let changed=false;
   cards.forEach(c=>{
-    if(c.lastDone && !_sameDay(c.lastDone, now)){
-      const diff = _daysBetween(c.lastDone, now);
-      if(diff > 1){ c.streakDays = 0; changed = true; }
+    if(c.lastDone&&!_sameDay(c.lastDone,now)&&_daysBetween(c.lastDone,now)>1){
+      c.streakDays=0; changed=true;
     }
   });
-  if(changed){ saveToLocal(); }
+  if(changed)saveToLocal();
 }
-_dailyStreakAudit();
+_dailyAudit();
 
-/* patch buildCard to show streak row */
-const _origBuildCard = buildCard;
-window.buildCard = function(c){
-  /* add streakDays defaults if missing */
-  if(!c.streakDays) c.streakDays=0;
-  const card = _origBuildCard(c);
-  /* inject streak stat after bonuses */
-  if(c.streakDays > 0){
-    const streakHtml = `<div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Стрик</span><span class="s-val" style="color:#ff6b35;font-weight:700">${c.streakDays} дн.${c.streakDays>=7?' ⚡':''}</span></div>`;
-    /* insert before the last .div inside card-body */
-    card.innerHTML = card.innerHTML.replace(/(<div class="div"><\/div>)(?!.*<div class="div">)/, streakHtml+'$1');
+/* patch toggleCB */
+const _origToggleCB=toggleCB;
+window.toggleCB=function(id,idx){
+  const c=cards.find(x=>x.id===id);if(!c)return;
+  const i=c.checked.indexOf(idx);
+  if(i>-1){c.checked.splice(i,1);}
+  else{c.checked.push(idx);_updateStreak(c);playCheckSound();}
+  save();render();
+};
+
+/* patch buildCard to inject streak row */
+const _origBuildCard=buildCard;
+window.buildCard=function(c){
+  if(!c.streakDays)c.streakDays=0;
+  const card=_origBuildCard(c);
+  if(c.streakDays>0){
+    const fire=c.streakDays>=7?'⚡':'';
+    const streakHtml=`<div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Стрик</span><span class="s-val streak-val">${c.streakDays} дн.${fire}</span></div>`;
+    card.innerHTML=card.innerHTML.replace(/(<div class="div"><\/div>)(?!.*<div class="div">)/,streakHtml+'$1');
   }
   return card;
 };
 
 /* ============================================================
-   STATISTICS MODAL
+   STATISTICS
    ============================================================ */
-function openStatsModal(){
-  _buildStats();
-  document.getElementById('stats-overlay').classList.add('open');
-}
+function openStatsModal(){_buildStats();document.getElementById('stats-overlay').classList.add('open');}
 document.getElementById('stats-overlay').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+document.getElementById('sync-overlay').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
 function _buildStats(){
-  /* ── boxes ── */
-  const totalChecks = cards.reduce((s,c)=>s+c.checked.length,0);
-  const totalRankups= cards.reduce((s,c)=>s+(c.rankups||0),0);
-  const maxStreak   = cards.reduce((m,c)=>Math.max(m,c.streakDays||0),0);
-  let bestRi=-1; cards.forEach(c=>{if(c.ri>bestRi)bestRi=c.ri;});
-  const boxes=[
-    {val:cards.length,   lbl:'Карточек'},
-    {val:totalChecks,    lbl:'Выполнений'},
-    {val:totalRankups,   lbl:'Ранг-апов'},
-    {val:maxStreak+'д',  lbl:'Лучший стрик'},
-  ];
-  document.getElementById('stat-boxes').innerHTML=boxes.map(b=>`
-    <div class="stat-box"><span class="sb-val">${b.val}</span><span class="sb-lbl">${b.lbl}</span></div>`).join('');
+  const RANKS_L=['C','CC','CCC','B','BB','BBB','A','AA','AAA','S','SS','SSS','SSS+'];
+  const RC_L={'C':'#757575','CC':'#9e9e9e','CCC':'#bdbdbd','B':'#2e7d32','BB':'#4caf50','BBB':'#81c784','A':'#1565c0','AA':'#2196f3','AAA':'#64b5f6','S':'#6a1b9a','SS':'#9c27b0','SSS':'#e64a19','SSS+':'#ffd700'};
 
-  /* ── heatmap (last 60 days) ── */
+  /* boxes */
+  const totalChecks=cards.reduce((s,c)=>s+c.checked.length,0);
+  const totalRankups=cards.reduce((s,c)=>s+(c.rankups||0),0);
+  const maxStreak=cards.reduce((m,c)=>Math.max(m,c.streakDays||0),0);
+  const boxes=[{val:cards.length,lbl:'Карточек'},{val:totalChecks,lbl:'Выполнений'},{val:totalRankups,lbl:'Ранг-апов'},{val:maxStreak+'д',lbl:'Макс. стрик'}];
+  document.getElementById('stat-boxes').innerHTML=boxes.map(b=>`<div class="stat-box"><span class="sb-val">${b.val}</span><span class="sb-lbl">${b.lbl}</span></div>`).join('');
+
+  /* heatmap */
   const dayMap={};
   cards.forEach(c=>{
-    (c.history||[]).forEach(ts=>{
-      const key=new Date(ts).toISOString().slice(0,10);
-      dayMap[key]=(dayMap[key]||0)+1;
-    });
-    /* also count lastDone */
-    if(c.lastDone){
-      const key=new Date(c.lastDone).toISOString().slice(0,10);
-      dayMap[key]=(dayMap[key]||0)+1;
-    }
+    (c.history||[]).forEach(ts=>{const k=new Date(ts).toISOString().slice(0,10);dayMap[k]=(dayMap[k]||0)+1;});
+    if(c.lastDone){const k=new Date(c.lastDone).toISOString().slice(0,10);dayMap[k]=(dayMap[k]||0)+1;}
   });
   const cells=[];
   for(let d=59;d>=0;d--){
     const dt=new Date(Date.now()-d*86400000);
-    const key=dt.toISOString().slice(0,10);
-    const cnt=dayMap[key]||0;
+    const k=dt.toISOString().slice(0,10);
+    const cnt=dayMap[k]||0;
     const cls=cnt===0?'':cnt<2?'hm1':cnt<4?'hm2':cnt<7?'hm3':'hm4';
-    const dd=dt.getDate(), mm=dt.toLocaleString('ru',{month:'short'});
-    cells.push(`<div class="hm-cell ${cls}" title="${dd} ${mm}: ${cnt} выполн."></div>`);
+    const dd=dt.getDate(),mm=dt.toLocaleString('ru',{month:'short'});
+    cells.push(`<div class="hm-cell ${cls}" title="${dd} ${mm}: ${cnt}"></div>`);
   }
   document.getElementById('heatmap-wrap').innerHTML=cells.join('');
 
-  /* ── top 5 by streak ── */
+  /* top 5 by streak */
   const top=[...cards].sort((a,b)=>(b.streakDays||0)-(a.streakDays||0)).slice(0,5);
-  const RANKS_L=['C','CC','CCC','B','BB','BBB','A','AA','AAA','S','SS','SSS','SSS+'];
-  const RC_L={'C':'#757575','CC':'#9e9e9e','CCC':'#bdbdbd','B':'#2e7d32','BB':'#4caf50','BBB':'#81c784','A':'#1565c0','AA':'#2196f3','AAA':'#64b5f6','S':'#6a1b9a','SS':'#9c27b0','SSS':'#e64a19','SSS+':'#ffd700'};
-  document.getElementById('top-cards-list').innerHTML = top.length===0
-    ? '<div style="color:var(--dim);font-style:italic;font-size:.7rem;text-align:center;padding:.5rem">Нет данных</div>'
-    : top.map((c,i)=>{
-        const rank=RANKS_L[c.ri],rc=RC_L[rank];
-        return `<div class="tc-row">
-          <span style="color:var(--dim);font-size:.65rem">#${i+1}</span>
-          <span class="tc-rank" style="color:${rc}">${rank}</span>
-          <span class="tc-name">${c.name}</span>
-          <span class="tc-streak">Стрик: <b>${c.streakDays||0}д.</b></span>
-          <span style="font-size:.65rem;color:var(--dim)">${c.checked.length}/${c.cbcount}</span>
-        </div>`;
-      }).join('');
+  document.getElementById('top-cards-list').innerHTML=top.length===0
+    ?'<div style="color:var(--dim);font-style:italic;font-size:.7rem;text-align:center;padding:.5rem">Нет данных</div>'
+    :top.map((c,i)=>{const rank=RANKS_L[c.ri],rc=RC_L[rank];
+      return `<div class="tc-row"><span style="color:var(--dim);font-size:.65rem">#${i+1}</span><span class="tc-rank" style="color:${rc}">${rank}</span><span class="tc-name">${c.name}</span><span style="font-size:.62rem;color:#ff6b35;font-weight:700">${c.streakDays||0}д.${(c.streakDays||0)>=7?' ⚡':''}</span><span style="font-size:.62rem;color:var(--dim)">${c.checked.length}/${c.cbcount}</span></div>`;
+    }).join('');
 
-  /* ── rank distribution bars ── */
+  /* rank bars */
   const tiers=['C','B','A','S','SS','SSS','SSS+'];
   const tierKeys={'C':['C','CC','CCC'],'B':['B','BB','BBB'],'A':['A','AA','AAA'],'S':['S'],'SS':['SS'],'SSS':['SSS'],'SSS+':['SSS+']};
-  const counts={};tiers.forEach(t=>counts[t]=0);
-  cards.forEach(c=>{
-    const rank=RANKS_L[c.ri];
-    for(const [tier,vals] of Object.entries(tierKeys)){if(vals.includes(rank)){counts[tier]++;break;}}
-  });
-  const maxCount=Math.max(1,...Object.values(counts));
   const RC2={'C':'#757575','B':'#4caf50','A':'#42a5f5','S':'#ab47bc','SS':'#ce93d8','SSS':'#ff7043','SSS+':'#ffd700'};
+  const counts={};tiers.forEach(t=>counts[t]=0);
+  cards.forEach(c=>{const rank=RANKS_L[c.ri];for(const[tier,vals]of Object.entries(tierKeys)){if(vals.includes(rank)){counts[tier]++;break;}}});
+  const maxC=Math.max(1,...Object.values(counts));
   document.getElementById('rank-bars').innerHTML=tiers.map(t=>{
-    const pct=Math.round(counts[t]/maxCount*100);
-    return `<div class="rb-row">
-      <span class="rb-lbl" style="color:${RC2[t]}">${t}</span>
-      <div class="rb-track"><div class="rb-fill" style="width:${pct}%;background:${RC2[t]}"></div></div>
-      <span class="rb-cnt">${counts[t]}</span>
-    </div>`;
+    const pct=Math.round(counts[t]/maxC*100);
+    return `<div class="rb-row"><span class="rb-lbl" style="color:${RC2[t]}">${t}</span><div class="rb-track"><div class="rb-fill" style="width:${pct}%;background:${RC2[t]}"></div></div><span class="rb-cnt">${counts[t]}</span></div>`;
   }).join('');
 }
 
-/* expose openSyncModal globally (used in HTML onclick) */
-window.openSyncModal  = openSyncModal;
-window.openStatsModal = openStatsModal;
-window.loadByCode     = loadByCode;
+window.openSyncModal=openSyncModal;
+window.openStatsModal=openStatsModal;
+window.loadByCode=loadByCode;
 
 </script>
 <!-- SYNC MODAL -->
@@ -893,40 +814,31 @@ window.loadByCode     = loadByCode;
     <div class="em-title">🔗 Синхронизация</div>
     <div id="sync-status-msg" style="text-align:center;font-size:.72rem;color:var(--dim);font-style:italic;margin-bottom:1.2rem">Подключение…</div>
     <div style="text-align:center;margin-bottom:1.4rem">
-      <div style="font-family:'Cinzel',serif;font-size:.6rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">Твой код устройства</div>
-      <div id="my-code-display" style="font-family:monospace;font-size:2rem;color:var(--gold);letter-spacing:.2em;text-shadow:0 0 16px rgba(201,162,39,.4)">—</div>
-      <div style="font-size:.65rem;color:var(--dim);margin-top:.3rem;font-style:italic">Введи этот код на другом устройстве, чтобы получить свои карточки</div>
+      <div style="font-family:'Cinzel',serif;font-size:.6rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">Твой код</div>
+      <div id="my-code-display" style="font-family:monospace;font-size:2.2rem;color:var(--gold);letter-spacing:.22em;text-shadow:0 0 16px rgba(201,162,39,.4)">…</div>
+      <div style="font-size:.65rem;color:var(--dim);margin-top:.4rem;font-style:italic">Введи этот код на другом устройстве чтобы получить свою колоду</div>
     </div>
     <div class="div" style="margin:.8rem 0"></div>
-    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">Загрузить чужой код</div>
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">Загрузить колоду по коду</div>
     <div style="display:flex;gap:.6rem;margin-bottom:.4rem">
       <input id="load-code-input" type="text" placeholder="AB-1234" maxlength="7" style="flex:1;font-family:monospace;font-size:1.1rem;text-transform:uppercase;letter-spacing:.1em">
       <button class="snd-upload-btn" onclick="loadByCode()">Загрузить →</button>
     </div>
     <div id="load-code-msg" style="font-size:.65rem;color:var(--dim);font-style:italic;min-height:1.2rem"></div>
-    <div class="div" style="margin:.8rem 0"></div>
-    <div style="font-size:.62rem;color:var(--dim);font-style:italic;text-align:center;line-height:1.6">
-      ⚠ Демо-база: данные публичны. Не храни чувствительную информацию.<br>
-      Синхронизация происходит автоматически при каждом изменении.
-    </div>
   </div>
 </div>
 
 <!-- STATS MODAL -->
 <div class="overlay" id="stats-overlay">
-  <div class="sound-modal" style="max-width:700px;width:95%">
+  <div class="sound-modal" style="max-width:680px;width:95%;max-height:88vh;overflow-y:auto">
     <button class="em-close" onclick="document.getElementById('stats-overlay').classList.remove('open')">✕</button>
     <div class="em-title">📊 Статистика подземелья</div>
-    <!-- totals row -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.4rem" id="stat-boxes"></div>
-    <!-- heatmap -->
-    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">🔥 Активность за 60 дней</div>
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">🔥 Активность — последние 60 дней</div>
     <div id="heatmap-wrap" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:1.4rem"></div>
-    <!-- top cards -->
-    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem;opacity:.7">🏆 Топ-5 карточек по стрику</div>
-    <div id="top-cards-list"></div>
-    <!-- rank breakdown -->
-    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin:.9rem 0 .5rem;opacity:.7">📈 Распределение по рангам</div>
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem;opacity:.7">🏆 Топ-5 по стрику</div>
+    <div id="top-cards-list" style="margin-bottom:1rem"></div>
+    <div style="font-family:'Cinzel',serif;font-size:.62rem;color:var(--parchment);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.5rem;opacity:.7">📈 Распределение по рангам</div>
     <div id="rank-bars"></div>
   </div>
 </div>
