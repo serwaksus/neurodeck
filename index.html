@@ -192,29 +192,24 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .stat-box{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:3px;padding:.7rem .5rem;text-align:center;}
 .stat-box .sb-val{font-family:"Cinzel Decorative",serif;font-size:1.4rem;color:var(--gold);display:block;text-shadow:0 0 12px rgba(201,162,39,.35);}
 .stat-box .sb-lbl{font-family:"Cinzel",serif;font-size:.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:.2rem;display:block;}
-/* HEATMAP */
 .hm-cell{width:14px;height:14px;border-radius:2px;background:#0d0b08;border:1px solid #1a1208;transition:transform .15s;cursor:default;}
 .hm-cell:hover{transform:scale(1.4);}
 .hm-cell.hm1{background:#2e1e00;border-color:#4a3200;}
 .hm-cell.hm2{background:#5a3a00;border-color:#7a5200;}
 .hm-cell.hm3{background:#8a5c00;border-color:#b07800;}
 .hm-cell.hm4{background:var(--gold);border-color:#e8c040;box-shadow:0 0 6px rgba(201,162,39,.4);}
-/* TOP CARDS */
 .tc-row{display:flex;align-items:center;gap:.8rem;padding:.4rem .5rem;border-bottom:1px solid var(--border);font-size:.72rem;}
 .tc-rank{font-family:"Cinzel Decorative",serif;font-size:.65rem;min-width:36px;}
 .tc-name{flex:1;color:var(--parchment);}
-/* RANK BARS */
 .rb-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;}
 .rb-lbl{font-family:"Cinzel",serif;font-size:.6rem;min-width:36px;text-align:right;color:var(--parchment);}
 .rb-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
 .rb-fill{height:100%;border-radius:4px;transition:width .6s ease;}
 .rb-cnt{font-family:"Cinzel",serif;font-size:.6rem;color:var(--dim);min-width:20px;}
-/* SYNC DOT */
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;}
 .sync-dot.green{background:#4caf50;box-shadow:0 0 6px #4caf50;}
 .sync-dot.yellow{background:#ffeb3b;box-shadow:0 0 6px #ffeb3b;}
 .sync-dot.red{background:#f44336;box-shadow:0 0 6px #f44336;}
-/* STREAK ON CARD */
 .streak-val{color:#ff6b35;font-weight:700;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#060402;}::-webkit-scrollbar-thumb{background:#2a1a0a;border-radius:3px;}
 </style>
@@ -511,9 +506,36 @@ requestAnimationFrame(animateSpiders);
 (function(){const c=document.getElementById('drips');[8,22,38,55,72,88].forEach(p=>{const d=document.createElement('div');d.className='drip';const h=40+Math.random()*80,dur=4+Math.random()*8,delay=Math.random()*10;d.style.cssText=`left:${p}%;height:${h}px;animation-duration:${dur}s;animation-delay:${delay}s;`;c.appendChild(d);});})();
 
 /* ============ IMAGE UPLOAD ============ */
+/* ── Image upload with Canvas compression (target ~80KB) ── */
+function _compressImage(file, callback){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      /* target max dimension 600px for 9:16 portrait; keeps file ~60-80KB */
+      const MAX=600;
+      let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){ if(w/h>1){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      /* JPEG quality 0.72 → typically 40-80KB */
+      callback(canvas.toDataURL('image/jpeg',0.72));
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 document.getElementById('f-img').addEventListener('change',function(){
   const f=this.files[0];if(!f)return;
-  const r=new FileReader();r.onload=e=>{const p=document.getElementById('up-prev');p.src=e.target.result;p.style.display='block';document.getElementById('up-icon').style.display='none';document.getElementById('up-txt').textContent=f.name;};r.readAsDataURL(f);
+  document.getElementById('up-txt').textContent='Обработка…';
+  _compressImage(f, function(compressed){
+    const p=document.getElementById('up-prev');
+    p.src=compressed; p.style.display='block';
+    document.getElementById('up-icon').style.display='none';
+    document.getElementById('up-txt').textContent=f.name+' (сжато)';
+  });
 });
 
 /* ============ FORM ============ */
@@ -611,7 +633,7 @@ function _setSyncDot(state){
   const el=document.getElementById('sync-status-msg');
   const cls=state==='ok'?'green':state==='warn'?'yellow':'red';
   const label=state==='ok'?'Синхронизировано ✓':state==='warn'?'Синхронизация…':'Нет соединения (offline)';
-  if(el) el.innerHTML=`<span class="sync-dot ${cls}"></span>${label}`;
+  if(el)el.innerHTML=`<span class="sync-dot ${cls}"></span>${label}`;
 }
 
 function openSyncModal(){document.getElementById('sync-overlay').classList.add('open');_refreshSyncUI();}
@@ -620,42 +642,33 @@ function _refreshSyncUI(){
   document.getElementById('stat-code').textContent=_code||'…';
 }
 
-/* ── cloud save (strips local base64 images) ── */
+/* ── save to cloud (images уже сжаты до ~80KB — влезают в Firestore) ── */
 function _saveToCloud(){
-  if(!_uid||!_syncReady) return;
+  if(!_uid||!_syncReady)return;
   _setSyncDot('warn');
-  const slim=cards.map(c=>({...c,img:c.img&&c.img.startsWith('data:')?'__local__':(c.img||null)}));
   fbDb.collection('decks').doc(_uid)
-    .set({cards:slim,ts:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})
+    .set({cards:cards, ts:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})
     .then(()=>_setSyncDot('ok'))
-    .catch(e=>{ _setSyncDot('red'); console.warn('sync err',e); });
+    .catch(e=>{ _setSyncDot('red'); console.warn('sync err',e.message); });
 }
 
 function saveToLocal(){ localStorage.setItem('nd_v3',JSON.stringify(cards)); }
 function save(){ saveToLocal(); _saveToCloud(); }
 
-/* ── subscribe to own remote doc ── */
+/* ── subscribe to remote doc ── */
 function _subscribeRemote(uid){
-  if(_unsub) _unsub();
+  if(_unsub)_unsub();
   _unsub=fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
-    if(!snap.exists) return;
+    if(!snap.exists)return;
     const remote=snap.data().cards||[];
-    const localMap={};
-    cards.forEach(c=>{localMap[c.id]=c;});
-    const merged=remote.map(rc=>{
-      const lc=localMap[rc.id];
-      return {...rc,img:(lc&&lc.img&&!lc.img.startsWith('__local__'))?lc.img:(rc.img==='__local__'?(lc&&lc.img)||null:rc.img)};
-    });
-    const usedIds=new Set(merged.map(m=>m.id));
-    const extra=cards.filter(c=>!usedIds.has(c.id));
-    cards=[...merged,...extra];
+    cards=remote;
     cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!c.history)c.history=[];});
     saveToLocal(); render();
     _setSyncDot('ok');
-  },e=>{ _setSyncDot('red'); console.warn('snapshot err',e); });
+  },e=>{ _setSyncDot('red'); console.warn('snapshot err',e.message); });
 }
 
-/* ── load someone else's deck by code ── */
+/* ── load deck by code ── */
 function loadByCode(){
   const raw=(document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   const msg=document.getElementById('load-code-msg');
@@ -663,7 +676,7 @@ function loadByCode(){
   msg.style.color='var(--dim)'; msg.textContent='Поиск…';
   fbDb.collection('decks').get().then(snap=>{
     let found=null;
-    snap.forEach(doc=>{ if(_makeCode(doc.id)===raw.slice(0,2)+'-'+raw.slice(2)) found=doc; });
+    snap.forEach(doc=>{if(_makeCode(doc.id)===raw.slice(0,2)+'-'+raw.slice(2))found=doc;});
     if(!found){msg.style.color='#f44336';msg.textContent='❌ Код не найден';return;}
     const remote=found.data().cards||[];
     if(confirm('Найдено '+remote.length+' карточек. Заменить текущую колоду?')){
@@ -679,16 +692,12 @@ function loadByCode(){
 /* ── init auth ── */
 fbAuth.signInAnonymously().then(cred=>{
   _uid=cred.user.uid; _code=_makeCode(_uid); _syncReady=true;
-  _refreshSyncUI();
-  _setSyncDot('ok');
+  _refreshSyncUI(); _setSyncDot('ok');
   _subscribeRemote(_uid);
   fbDb.collection('decks').doc(_uid).get().then(snap=>{
-    if(!snap.exists||(snap.data().cards||[]).length===0) _saveToCloud();
+    if(!snap.exists||(snap.data().cards||[]).length===0)_saveToCloud();
   });
-}).catch(e=>{
-  _setSyncDot('red');
-  console.warn('Firebase auth failed:',e.message);
-});
+}).catch(e=>{ _setSyncDot('red'); console.warn('Firebase auth failed:',e.message); });
 
 /* ============================================================
    STREAKS
@@ -705,25 +714,22 @@ function _daysBetween(ts1,ts2){
 function _updateStreak(c){
   const now=Date.now();
   if(!c.lastDone){c.streakDays=1;}
-  else if(_sameDay(c.lastDone,now)){return;} // already updated today
-  else{ const diff=_daysBetween(c.lastDone,now); c.streakDays=diff===1?(c.streakDays||0)+1:1; }
+  else if(_sameDay(c.lastDone,now)){return;}
+  else{const diff=_daysBetween(c.lastDone,now);c.streakDays=diff===1?(c.streakDays||0)+1:1;}
   c.lastDone=now;
   if(!c.history)c.history=[];
   c.history.push(now);
-  if(c.history.length>180)c.history=c.history.slice(-180); // keep last 180 entries
+  if(c.history.length>180)c.history=c.history.slice(-180);
 }
 function _dailyAudit(){
-  const now=Date.now(); let changed=false;
+  const now=Date.now();let changed=false;
   cards.forEach(c=>{
-    if(c.lastDone&&!_sameDay(c.lastDone,now)&&_daysBetween(c.lastDone,now)>1){
-      c.streakDays=0; changed=true;
-    }
+    if(c.lastDone&&!_sameDay(c.lastDone,now)&&_daysBetween(c.lastDone,now)>1){c.streakDays=0;changed=true;}
   });
   if(changed)saveToLocal();
 }
 _dailyAudit();
 
-/* patch toggleCB */
 const _origToggleCB=toggleCB;
 window.toggleCB=function(id,idx){
   const c=cards.find(x=>x.id===id);if(!c)return;
@@ -733,7 +739,6 @@ window.toggleCB=function(id,idx){
   save();render();
 };
 
-/* patch buildCard to inject streak row */
 const _origBuildCard=buildCard;
 window.buildCard=function(c){
   if(!c.streakDays)c.streakDays=0;
@@ -756,15 +761,12 @@ document.getElementById('sync-overlay').addEventListener('click',function(e){if(
 function _buildStats(){
   const RANKS_L=['C','CC','CCC','B','BB','BBB','A','AA','AAA','S','SS','SSS','SSS+'];
   const RC_L={'C':'#757575','CC':'#9e9e9e','CCC':'#bdbdbd','B':'#2e7d32','BB':'#4caf50','BBB':'#81c784','A':'#1565c0','AA':'#2196f3','AAA':'#64b5f6','S':'#6a1b9a','SS':'#9c27b0','SSS':'#e64a19','SSS+':'#ffd700'};
-
-  /* boxes */
   const totalChecks=cards.reduce((s,c)=>s+c.checked.length,0);
   const totalRankups=cards.reduce((s,c)=>s+(c.rankups||0),0);
   const maxStreak=cards.reduce((m,c)=>Math.max(m,c.streakDays||0),0);
-  const boxes=[{val:cards.length,lbl:'Карточек'},{val:totalChecks,lbl:'Выполнений'},{val:totalRankups,lbl:'Ранг-апов'},{val:maxStreak+'д',lbl:'Макс. стрик'}];
-  document.getElementById('stat-boxes').innerHTML=boxes.map(b=>`<div class="stat-box"><span class="sb-val">${b.val}</span><span class="sb-lbl">${b.lbl}</span></div>`).join('');
+  document.getElementById('stat-boxes').innerHTML=[{val:cards.length,lbl:'Карточек'},{val:totalChecks,lbl:'Выполнений'},{val:totalRankups,lbl:'Ранг-апов'},{val:maxStreak+'д',lbl:'Макс. стрик'}]
+    .map(b=>`<div class="stat-box"><span class="sb-val">${b.val}</span><span class="sb-lbl">${b.lbl}</span></div>`).join('');
 
-  /* heatmap */
   const dayMap={};
   cards.forEach(c=>{
     (c.history||[]).forEach(ts=>{const k=new Date(ts).toISOString().slice(0,10);dayMap[k]=(dayMap[k]||0)+1;});
@@ -772,16 +774,12 @@ function _buildStats(){
   });
   const cells=[];
   for(let d=59;d>=0;d--){
-    const dt=new Date(Date.now()-d*86400000);
-    const k=dt.toISOString().slice(0,10);
-    const cnt=dayMap[k]||0;
+    const dt=new Date(Date.now()-d*86400000),k=dt.toISOString().slice(0,10),cnt=dayMap[k]||0;
     const cls=cnt===0?'':cnt<2?'hm1':cnt<4?'hm2':cnt<7?'hm3':'hm4';
-    const dd=dt.getDate(),mm=dt.toLocaleString('ru',{month:'short'});
-    cells.push(`<div class="hm-cell ${cls}" title="${dd} ${mm}: ${cnt}"></div>`);
+    cells.push(`<div class="hm-cell ${cls}" title="${dt.getDate()} ${dt.toLocaleString('ru',{month:'short'})}: ${cnt}"></div>`);
   }
   document.getElementById('heatmap-wrap').innerHTML=cells.join('');
 
-  /* top 5 by streak */
   const top=[...cards].sort((a,b)=>(b.streakDays||0)-(a.streakDays||0)).slice(0,5);
   document.getElementById('top-cards-list').innerHTML=top.length===0
     ?'<div style="color:var(--dim);font-style:italic;font-size:.7rem;text-align:center;padding:.5rem">Нет данных</div>'
@@ -789,7 +787,6 @@ function _buildStats(){
       return `<div class="tc-row"><span style="color:var(--dim);font-size:.65rem">#${i+1}</span><span class="tc-rank" style="color:${rc}">${rank}</span><span class="tc-name">${c.name}</span><span style="font-size:.62rem;color:#ff6b35;font-weight:700">${c.streakDays||0}д.${(c.streakDays||0)>=7?' ⚡':''}</span><span style="font-size:.62rem;color:var(--dim)">${c.checked.length}/${c.cbcount}</span></div>`;
     }).join('');
 
-  /* rank bars */
   const tiers=['C','B','A','S','SS','SSS','SSS+'];
   const tierKeys={'C':['C','CC','CCC'],'B':['B','BB','BBB'],'A':['A','AA','AAA'],'S':['S'],'SS':['SS'],'SSS':['SSS'],'SSS+':['SSS+']};
   const RC2={'C':'#757575','B':'#4caf50','A':'#42a5f5','S':'#ab47bc','SS':'#ce93d8','SSS':'#ff7043','SSS+':'#ffd700'};
