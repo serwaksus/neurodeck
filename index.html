@@ -274,76 +274,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
 .sync-dot.green{background:#4caf50;box-shadow:0 0 6px #4caf50}.sync-dot.yellow{background:#ffeb3b}.sync-dot.red{background:#f44336}
 .streak-val{color:#ff6b35;font-weight:700}
-
-/* ===== TG MOBILE ===== */
-html,body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:pan-y;}
-input,textarea,select{user-select:auto;}
-::-webkit-scrollbar{display:none;}
-*{scrollbar-width:none;}
-.main-tabs{padding-top:env(safe-area-inset-top,0px);flex-wrap:wrap;justify-content:center;}
-.mtab{font-size:.52rem;padding:.35rem .5rem;flex:1 1 auto;min-width:0;text-align:center;}
-
-/* ===== PROFILE TAB ===== */
-#tab-profile{display:none;padding:1.5rem .8rem;}
-#tab-profile.active{display:block;}
-.profile-av-wrap{display:flex;justify-content:center;margin-bottom:1rem;}
-.profile-av-wrap #avatar-panel{position:relative!important;top:auto!important;right:auto!important;width:140px!important;margin:0 auto;filter:drop-shadow(0 8px 24px rgba(0,0,0,.9));}
-
-/* ===== QUESTS ===== */
-#tab-quests{display:none;padding:1.2rem .8rem}
-#tab-quests.active{display:block}
-.q-wrap{max-width:680px;margin:0 auto}
-.q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
-.q-title{font-family:"Cinzel Decorative",serif;font-size:.85rem;color:var(--gold);text-shadow:0 0 12px rgba(201,162,39,.4);letter-spacing:.1em}
-.q-stats{display:flex;gap:.8rem}
-.q-stat-chip{font-family:"Cinzel",serif;font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:2px;padding:.25rem .6rem}
-.q-stat-chip b{color:var(--gold)}
-.q-add-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem}
-.q-input{flex:1 1 200px;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.72rem;padding:.5rem .75rem;outline:none;transition:border-color .2s}
-.q-input:focus{border-color:rgba(201,162,39,.5)}
-.q-input::placeholder{color:var(--dim);font-style:italic}
-.q-priority{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.65rem;padding:.5rem .4rem;outline:none;cursor:pointer;flex:0 0 110px}
-.q-add-btn{flex:1 1 100%;font-family:"Cinzel",serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;padding:.5rem 1rem;background:linear-gradient(to bottom,#2e1e00,#180f00);color:var(--gold);border:1px solid rgba(201,162,39,.5);border-radius:2px;cursor:pointer;transition:all .2s;}
-.q-add-btn:hover{background:linear-gradient(to bottom,#4a3200,#2e1a00);border-color:var(--gold)}
-.q-filter-row{display:flex;gap:.4rem;margin-bottom:.8rem;flex-wrap:wrap}
-.q-filter-btn{font-family:"Cinzel",serif;font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;padding:.22rem .65rem;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:2px;color:var(--dim);cursor:pointer;transition:all .18s}
-.q-filter-btn.active{color:var(--gold);border-color:var(--gold);background:rgba(201,162,39,.08)}
-.q-list{display:flex;flex-direction:column;gap:.45rem}
-.q-empty{text-align:center;padding:2.5rem 1rem;color:var(--dim);font-style:italic;font-size:.72rem;border:1px dashed #1e1208;border-radius:3px}
-.q-empty-icon{font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4}
-@keyframes qSlideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
-.q-item{display:flex;align-items:center;gap:.6rem;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:3px;padding:.6rem .75rem;transition:border-color .2s,background .2s;animation:qSlideIn .2s ease;position:relative;overflow:hidden}
-.q-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
-.q-item.p-high::before{background:linear-gradient(to bottom,#c94040,#8a1a1a)}
-.q-item.p-mid::before{background:linear-gradient(to bottom,#c9a227,#7a5a00)}
-.q-item.p-low::before{background:linear-gradient(to bottom,#2e6e3e,#1a3e24)}
-.q-item:hover{border-color:rgba(201,162,39,.25);}
-.q-item-icon{font-size:1rem;flex-shrink:0;width:20px;text-align:center}
-.q-item-text{flex:1;font-family:"Cinzel",serif;font-size:.7rem;color:var(--parchment);line-height:1.4;word-break:break-word}
-.q-item-badge{font-family:"Cinzel",serif;font-size:.5rem;text-transform:uppercase;letter-spacing:.06em;padding:.14rem .4rem;border-radius:2px;flex-shrink:0}
-.q-item-badge.p-high{background:rgba(180,40,40,.2);color:#e06060;border:1px solid rgba(180,40,40,.3)}
-.q-item-badge.p-mid{background:rgba(180,140,0,.15);color:#c9a227;border:1px solid rgba(180,140,0,.25)}
-.q-item-badge.p-low{background:rgba(30,100,50,.2);color:#5aaf70;border:1px solid rgba(30,100,50,.3)}
-.q-done-btn{font-size:.65rem;padding:.3rem .65rem;background:linear-gradient(to bottom,#1a2e14,#0e1a0a);color:#5aaf70;border:1px solid rgba(80,160,80,.35);border-radius:2px;cursor:pointer;font-family:"Cinzel",serif;text-transform:uppercase;transition:all .2s;flex-shrink:0;white-space:nowrap}
-.q-done-btn:hover{background:linear-gradient(to bottom,#2a4a20,#1a2e14);border-color:rgba(80,160,80,.7);color:#7acc88}
-.q-del-btn{font-size:.75rem;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#3a2218;cursor:pointer;border-radius:2px;transition:color .15s;flex-shrink:0}
-.q-del-btn:hover{color:#c94040}
-.q-done-section{margin-top:1.2rem}
-.q-done-header{font-family:"Cinzel",serif;font-size:.58rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);border-bottom:1px solid var(--border);padding-bottom:.35rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem;cursor:pointer}
-.q-done-header:hover{color:var(--parchment)}
-.q-item.done{opacity:.45;filter:saturate(.3)}
-.q-item.done .q-item-text{text-decoration:line-through;color:var(--dim)}
-.q-clear-btn{font-family:"Cinzel",serif;font-size:.52rem;text-transform:uppercase;padding:.18rem .5rem;background:none;border:1px solid #1e1208;border-radius:2px;color:#3a2218;cursor:pointer;transition:all .15s;margin-left:auto}
-.q-clear-btn:hover{border-color:#c94040;color:#c94040}
-::-webkit-scrollbar-track{background:#060402;}::-webkit-scrollbar-thumb{background:#2a1a0a;border-radius:3px;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#060402;}::-webkit-scrollbar-thumb{background:#2a1a0a;border-radius:3px;}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
 <script>
-  try{const tg=window.Telegram.WebApp;if(tg&&tg.initData){tg.expand();tg.ready();tg.setHeaderColor('#040302');tg.setBackgroundColor('#0a0604');if(tg.isVersionAtLeast('6.1'))tg.enableClosingConfirmation();}}catch(e){}
-
   const _fbCfg={apiKey:"AIzaSyB23h7K0ZR8WixlWJdibOG1CCfp2u3YyM4",authDomain:"neurodeck-ba4f1.firebaseapp.com",
     projectId:"neurodeck-ba4f1",storageBucket:"neurodeck-ba4f1.firebasestorage.app",
     messagingSenderId:"282856627370",appId:"1:282856627370:web:b9947f11afb26291c9c4d3"};
@@ -516,7 +453,6 @@ input,textarea,select{user-select:auto;}
       <div style="margin-top:1.5rem;color:var(--dim);font-size:.65rem;font-style:italic;line-height:1.6;">Нажми на портрет, чтобы сменить картинку<br>или просмотреть стадии прогресса.</div>
     </div>
   </div>
-
 
 <!-- RANK-UP OVERLAY -->
 <div class="overlay" id="ru-overlay">
@@ -769,7 +705,9 @@ function buildCard(c){
 }
 
 /* ============ INTERACTIONS ============ */
-function toggleCB(id,idx){const c=cards.find(x=>x.id===id);if(!c)return;const i=c.checked.indexOf(idx);if(i>-1)c.checked.splice(i,1);else{c.checked.push(idx);playCheckSound();try{if(window.Telegram?.WebApp?.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred("light");}catch(e){}}save();render();}
+function toggleCB(id,idx){const c=cards.find(x=>x.id===id);if(!c)return;const i=c.checked.indexOf(idx);if(i>-1)c.checked.splice(i,1);else{c.checked.push(idx);playCheckSound();
+  try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred("light");}catch(e){}
+}save();render();}
 function delCard(id,e){e.stopPropagation();if(!confirm('Уничтожить?'))return;cards=cards.filter(x=>x.id!==id);save();render();}
 
 /* ============ RANK-UP ============ */
@@ -922,26 +860,138 @@ function _buildAvGrid(){
 }
 function _uploadAvImg(key){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.onchange=function(){const f=this.files[0];if(!f)return;_compressImage(f,c=>{localStorage.setItem('av_img_'+key,c);updateAvatar();_buildAvGrid();});};inp.click();}
 
-/* FIREBASE */
-let _uid=null,_code=null,_unsub=null,_syncReady=false;
-function _makeCode(uid){return uid.slice(0,2).toUpperCase()+'-'+uid.slice(-4).toUpperCase();}
-function _setSyncDot(st){const el=document.getElementById('sync-status-msg');if(!el)return;const c=st==='ok'?'green':st==='warn'?'yellow':'red';el.innerHTML=`<span class="sync-dot ${c}"></span>${st==='ok'?'Синхронизировано ✓':st==='warn'?'Синхронизация…':'Нет соединения'}`;}
-function openSyncModal(){_refreshSyncUI();document.getElementById('sync-overlay').classList.add('open');}
-function _refreshSyncUI(){const a=document.getElementById('my-code-display');if(a)a.textContent=_code||'…';const b=document.getElementById('stat-code');if(b)b.textContent=_code||'…';}
-function _saveToCloud(){if(!_uid||!_syncReady)return;_setSyncDot('warn');fbDb.collection('decks').doc(_uid).set({cards,ts:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).then(()=>_setSyncDot('ok')).catch(e=>{_setSyncDot('red');console.warn(e.message);});}
-function saveToLocal(){localStorage.setItem('nd_v3',JSON.stringify(cards));}
-function save(){saveToLocal();_saveToCloud();}
-function _subscribeRemote(uid){if(_unsub)_unsub();_unsub=fbDb.collection('decks').doc(uid).onSnapshot(snap=>{if(!snap.exists)return;cards=snap.data().cards||[];cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!c.history)c.history=[];});saveToLocal();render();_setSyncDot('ok');},e=>{_setSyncDot('red');console.warn(e.message);});}
-function loadByCode(){const raw=(document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''),msg=document.getElementById('load-code-msg');if(raw.length<6){msg.textContent='Введи код AB-1234';return;}msg.style.color='var(--dim)';msg.textContent='Поиск…';fbDb.collection('decks').get().then(snap=>{let found=null;snap.forEach(d=>{if(_makeCode(d.id)===raw.slice(0,2)+'-'+raw.slice(2))found=d;});if(!found){msg.style.color='#f44336';msg.textContent='❌ Не найден';return;}const remote=found.data().cards||[];if(confirm('Найдено '+remote.length+' карточек. Заменить?')){cards=remote;cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;});_subscribeRemote(found.id);saveToLocal();render();msg.style.color='#4caf50';msg.textContent='✓ Загружено!';}}).catch(e=>{msg.style.color='#f44336';msg.textContent='Ошибка: '+e.message;});}
-fbAuth.signInAnonymously().then(cred=>{_uid=cred.user.uid;_code=_makeCode(_uid);_syncReady=true;_refreshSyncUI();_setSyncDot('ok');_subscribeRemote(_uid);fbDb.collection('decks').doc(_uid).get().then(snap=>{if(!snap.exists||(snap.data().cards||[]).length===0)_saveToCloud();});}).catch(e=>{_setSyncDot('red');console.warn('auth:',e.message);});
+/* FIREBASE & SYNC (V4) */
+let _uid=null, _code=null, _unsub=null, _syncReady=false;
+const STORE_SYNC_ID='nd_sync_uid';
 
+function _makeCode(uid){return uid.slice(0,2).toUpperCase()+'-'+uid.slice(-4).toUpperCase();}
+function _setSyncDot(st){
+  const el=document.getElementById('sync-status-msg');if(!el)return;
+  const c=st==='ok'?'green':st==='warn'?'yellow':'red';
+  el.innerHTML=`<span class="sync-dot ${c}"></span>${st==='ok'?'Синхронизировано ✓':st==='warn'?'Синхронизация…':'Нет соединения'}`;
+}
+function openSyncModal(){_refreshSyncUI();document.getElementById('sync-overlay').classList.add('open');}
+function _refreshSyncUI(){
+  const a=document.getElementById('my-code-display');if(a)a.textContent=_code||'…';
+  const b=document.getElementById('stat-code');if(b)b.textContent=_code||'…';
+}
+
+window._saveToCloud=function(){
+  if(!_uid||!_syncReady)return;
+  _setSyncDot('warn');
+  const payload = {
+    cards: (typeof cards !== 'undefined' ? cards : []),
+    quests: window._quests || [],
+    qstats: window._qstats || {total:0,todayDate:'',todayCount:0},
+    ts: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  fbDb.collection('decks').doc(_uid).set(payload, {merge:true})
+    .then(()=>_setSyncDot('ok'))
+    .catch(e=>{_setSyncDot('red');console.warn(e.message);});
+};
+
+function saveToLocal(){
+  if(typeof cards !== 'undefined'){
+    localStorage.setItem('nd_v3',JSON.stringify(cards));
+  }
+}
+function save(){saveToLocal();window._saveToCloud();}
+
+function _subscribeRemote(uid){
+  if(_unsub)_unsub();
+  _unsub=fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
+    if(!snap.exists)return;
+    const d=snap.data() || {};
+
+    // Safety check arrays
+    cards = Array.isArray(d.cards) ? d.cards : [];
+    cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!c.history)c.history=[];});
+    saveToLocal();
+
+    // Quests
+    if(Array.isArray(d.quests)){
+      window._quests = d.quests;
+    }
+    if(d.qstats){
+      window._qstats = d.qstats;
+    }
+
+    localStorage.setItem('nd_quests',JSON.stringify(window._quests || []));
+    localStorage.setItem('nd_qstats',JSON.stringify(window._qstats || {total:0}));
+
+    if(typeof window.renderQuests==='function') window.renderQuests();
+    if(typeof render==='function') render();
+
+    _setSyncDot('ok');
+  },e=>{_setSyncDot('red');console.warn(e.message);});
+}
+
+function loadByCode(){
+  const raw=(document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const msg=document.getElementById('load-code-msg');
+  if(raw.length<6){msg.textContent='Введи код AB-1234';return;}
+  msg.style.color='var(--dim)';msg.textContent='Поиск…';
+
+  fbDb.collection('decks').get().then(snap=>{
+    let found=null;
+    snap.forEach(d=>{if(_makeCode(d.id)===raw.slice(0,2)+'-'+raw.slice(2))found=d;});
+    if(!found){msg.style.color='#f44336';msg.textContent='❌ Не найден';return;}
+
+    const d=found.data() || {};
+    const remoteCards = Array.isArray(d.cards) ? d.cards : [];
+
+    if(confirm('Найдено карточек: '+remoteCards.length+'. Связать устройства? Текущие данные заменятся.')){
+      _uid=found.id;
+      localStorage.setItem(STORE_SYNC_ID, _uid); // Persist UID for TG
+      _code=_makeCode(_uid);
+      _refreshSyncUI();
+
+      cards = remoteCards;
+      cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;});
+      saveToLocal();
+
+      if(Array.isArray(d.quests)){
+        window._quests=d.quests;
+      }
+      if(d.qstats){
+        window._qstats=d.qstats;
+      }
+
+      localStorage.setItem('nd_quests',JSON.stringify(window._quests || []));
+      localStorage.setItem('nd_qstats',JSON.stringify(window._qstats || {total:0}));
+
+      if(typeof window.renderQuests==='function') window.renderQuests();
+      if(typeof render==='function') render();
+
+      _subscribeRemote(_uid);
+      msg.style.color='#4caf50';msg.textContent='✓ Устройства связаны!';
+    }
+  }).catch(e=>{msg.style.color='#f44336';msg.textContent='Ошибка: '+e.message;});
+}
+
+fbAuth.signInAnonymously().then(cred=>{
+  // ALWAYS PREFER THE STORED SYNC ID! This fixes Telegram volatile reloads
+  _uid = localStorage.getItem(STORE_SYNC_ID) || cred.user.uid;
+  _code = _makeCode(_uid);
+  _syncReady = true;
+  _refreshSyncUI();
+  _setSyncDot('ok');
+
+  _subscribeRemote(_uid);
+
+  fbDb.collection('decks').doc(_uid).get().then(snap=>{
+    if(!snap.exists||(snap.data().cards||[]).length===0) window._saveToCloud();
+  });
+}).catch(e=>{_setSyncDot('red');console.warn('auth:',e.message);});
 /* STREAKS */
 function _sameDay(a,b){if(!a||!b)return false;const x=new Date(a),y=new Date(b);return x.getFullYear()===y.getFullYear()&&x.getMonth()===y.getMonth()&&x.getDate()===y.getDate();}
 function _daysBetween(a,b){return Math.round((new Date(new Date(b).toDateString())-new Date(new Date(a).toDateString()))/86400000);}
 function _updateStreak(c){const now=Date.now();if(!c.lastDone)c.streakDays=1;else if(_sameDay(c.lastDone,now))return;else{const d=_daysBetween(c.lastDone,now);c.streakDays=d===1?(c.streakDays||0)+1:1;}c.lastDone=now;if(!c.history)c.history=[];c.history.push(now);if(c.history.length>180)c.history=c.history.slice(-180);}
 (function(){const now=Date.now();let ch=false;cards.forEach(c=>{if(c.lastDone&&!_sameDay(c.lastDone,now)&&_daysBetween(c.lastDone,now)>1){c.streakDays=0;ch=true;}});if(ch)saveToLocal();})();
 const _origToggleCB=toggleCB;
-window.toggleCB=function(id,idx){const c=cards.find(x=>x.id===id);if(!c)return;const i=c.checked.indexOf(idx);if(i>-1)c.checked.splice(i,1);else{c.checked.push(idx);_updateStreak(c);playCheckSound();try{if(window.Telegram?.WebApp?.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred("light");}catch(e){}}save();render();};
+window.toggleCB=function(id,idx){const c=cards.find(x=>x.id===id);if(!c)return;const i=c.checked.indexOf(idx);if(i>-1)c.checked.splice(i,1);else{c.checked.push(idx);_updateStreak(c);playCheckSound();
+  try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred("light");}catch(e){}
+}save();render();};
 const _origBuildCard=buildCard;
 window.buildCard=function(c){if(!c.streakDays)c.streakDays=0;const card=_origBuildCard(c);if(c.streakDays>0){const h=`<div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Стрик</span><span class="s-val streak-val">${c.streakDays}дн.${c.streakDays>=7?' ⚡':''}</span></div>`;card.innerHTML=card.innerHTML.replace(/(<div class="div"><\/div>)(?!.*<div class="div">)/,h+'$1');}return card;};
 const _origRender=render;
@@ -965,13 +1015,149 @@ function _buildStats(){
   const mx=Math.max(1,...Object.values(cnt));
   document.getElementById('rank-bars').innerHTML=tiers.map(t=>{const p=Math.round(cnt[t]/mx*100);return `<div class="rb-row"><span class="rb-lbl" style="color:${RC2[t]}">${t}</span><div class="rb-track"><div class="rb-fill" style="width:${p}%;background:${RC2[t]}"></div></div><span class="rb-cnt">${cnt[t]}</span></div>`;}).join('');
 }
+
+/* ===== QUESTS JS (SAFE MODE) ===== */
+window._quests = [];
+window._qstats = {total:0,todayDate:'',todayCount:0};
+let _f='all',_dOpen=true;
+const SQ='nd_quests',SS='nd_qstats';
+
+function _loadQuests(){
+  try{window._quests=JSON.parse(localStorage.getItem(SQ)||'[]');}catch(e){window._quests=[];}
+  try{window._qstats=Object.assign({total:0,todayDate:'',todayCount:0},JSON.parse(localStorage.getItem(SS)||'{}'));}catch(e){}
+  if(!Array.isArray(window._quests)) window._quests = [];
+
+  const today=new Date().toISOString().slice(0,10);
+  if(window._qstats.todayDate!==today){window._qstats.todayDate=today;window._qstats.todayCount=0;}
+}
+
+function _saveQuests(){
+  const cut=Date.now()-48*3600*1000;
+  window._quests = (window._quests || []).filter(q=>!q.done||(q.doneAt&&q.doneAt>cut));
+  localStorage.setItem(SQ,JSON.stringify(window._quests));
+  localStorage.setItem(SS,JSON.stringify(window._qstats));
+  if(typeof window._saveToCloud === 'function') window._saveToCloud();
+}
+
+const PI={high:'🔥',mid:'⚔',low:'🌿'},PL={high:'Срочное',mid:'Обычное',low:'Лёгкое'};
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+window.renderQuests = function(){
+  try {
+    const today=new Date().toISOString().slice(0,10);
+    if(window._qstats.todayDate!==today){window._qstats.todayDate=today;window._qstats.todayCount=0;}
+
+    const dt=document.getElementById('q-done-today');if(dt)dt.textContent=window._qstats.todayCount;
+    const tt=document.getElementById('q-done-total');if(tt)tt.textContent=window._qstats.total;
+
+    window._quests = Array.isArray(window._quests) ? window._quests : [];
+    let active = window._quests.filter(q=>!q.done);
+    if(_f!=='all') active = active.filter(q=>q.priority===_f);
+
+    const listEl=document.getElementById('q-list');if(!listEl)return;
+
+    if(active.length){
+      listEl.innerHTML = active.map(q=>`<div class="q-item p-${q.priority}" id="qi-${q.id}"><span class="q-item-icon">${PI[q.priority]}</span><span class="q-item-text">${esc(q.text)}</span><span class="q-item-badge p-${q.priority}">${PL[q.priority]}</span><button class="q-done-btn" onclick="completeQuest('${q.id}')">✓ Готово</button><button class="q-del-btn" onclick="deleteQuest('${q.id}')" title="Удалить">✕</button></div>`).join('');
+    } else {
+      listEl.innerHTML = '<div class="q-empty"><span class="q-empty-icon">📜</span>'+(_f==='all'?'Все задания выполнены. Ты воин.':'Нет заданий в этой категории.')+'</div>';
+    }
+
+    const done=window._quests.filter(q=>q.done);
+    const ds=document.getElementById('q-done-section');
+    const dl=document.getElementById('q-done-list');
+
+    if(done.length){
+      if(ds) ds.style.display='block';
+      const lbl=document.getElementById('q-done-count-lbl');if(lbl)lbl.textContent='('+done.length+')';
+      if(dl){
+        dl.style.display = _dOpen?'flex':'none';
+        dl.innerHTML = done.map(q=>`<div class="q-item done p-${q.priority}"><span class="q-item-icon">✓</span><span class="q-item-text">${esc(q.text)}</span><button class="q-del-btn" onclick="deleteQuest('${q.id}')">✕</button></div>`).join('');
+      }
+      const ic=document.getElementById('q-done-toggle-icon');if(ic)ic.textContent=_dOpen?'▼':'▶';
+    } else {
+      if(ds) ds.style.display='none';
+    }
+  } catch(e) { console.error("renderQuests error:", e); }
+};
+
+window.addQuest=function(){
+  try {
+    const inp=document.getElementById('q-input'),pr=document.getElementById('q-priority');
+    if(!inp)return;
+    const text=(inp.value||'').trim();
+    if(!text)return;
+
+    window._quests = Array.isArray(window._quests) ? window._quests : [];
+    window._quests.unshift({
+      id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      text: text,
+      priority: pr ? pr.value : 'mid',
+      done: false,
+      doneAt: null,
+      createdAt: Date.now()
+    });
+
+    _saveQuests();
+    window.renderQuests();
+    inp.value='';
+    inp.focus();
+  } catch(e) { alert("Ошибка при добавлении квеста: " + e.message); }
+};
+
+window.completeQuest=function(id){
+  const q=(window._quests||[]).find(x=>x.id===id);if(!q)return;
+  const el=document.getElementById('qi-'+id);
+  const fin=()=>{
+    q.done=true; q.doneAt=Date.now();
+    window._qstats.total++;
+    const today=new Date().toISOString().slice(0,10);
+    if(window._qstats.todayDate===today) window._qstats.todayCount++;
+    else { window._qstats.todayDate=today; window._qstats.todayCount=1; }
+    _saveQuests();
+    window.renderQuests();
+  };
+
+  if(el){
+    try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');}catch(e){}
+    el.style.transition='opacity .28s,transform .28s';el.style.opacity='0';el.style.transform='translateX(24px)';
+    setTimeout(fin,280);
+  } else fin();
+};
+
+window.deleteQuest=function(id){
+  window._quests = (window._quests||[]).filter(x=>x.id!==id);
+  _saveQuests();
+  window.renderQuests();
+};
+
+window.setQFilter=function(f){
+  _f=f;
+  ['all','high','mid','low'].forEach(k=>{
+    const b=document.getElementById('qf-'+k);
+    if(b)b.classList.toggle('active',k===f);
+  });
+  window.renderQuests();
+};
+
+window.toggleDoneSection=function(){_dOpen=!_dOpen;window.renderQuests();};
+
+window.clearDoneQuests=function(){
+  if(!confirm('Очистить выполненные задания?'))return;
+  window._quests=(window._quests||[]).filter(q=>!q.done);
+  _saveQuests();
+  window.renderQuests();
+};
+
+_loadQuests();
+setTimeout(window.renderQuests, 400);
+
 window.openSyncModal=openSyncModal;window.openStatsModal=openStatsModal;
 window.openAvatarModal=openAvatarModal;window.loadByCode=loadByCode;
 window.switchTab=switchTab;window.showRoomTip=showRoomTip;window.hideRoomTip=hideRoomTip;window.showRoomInfo=showRoomInfo;
 setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
 
 </script>
-<!-- avatar moved to profile tab -->
+
 <div class="overlay" id="avatar-overlay" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="sound-modal" style="max-width:480px;width:92%;max-height:76vh;overflow-y:auto">
     <button class="em-close" onclick="document.getElementById('avatar-overlay').classList.remove('open')">✕</button>
