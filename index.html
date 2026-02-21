@@ -275,6 +275,85 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .sync-dot.green{background:#4caf50;box-shadow:0 0 6px #4caf50}.sync-dot.yellow{background:#ffeb3b}.sync-dot.red{background:#f44336}
 .streak-val{color:#ff6b35;font-weight:700}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#060402;}::-webkit-scrollbar-thumb{background:#2a1a0a;border-radius:3px;}
+
+/* ===== TG MOBILE ===== */
+html,body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:pan-y;}
+input,textarea,select{user-select:auto;}
+::-webkit-scrollbar{display:none;}
+*{scrollbar-width:none;}
+.main-tabs{padding-top:env(safe-area-inset-top,0px);flex-wrap:wrap;justify-content:center;}
+.mtab{font-size:.52rem;padding:.35rem .5rem;flex:1 1 auto;min-width:0;text-align:center;}
+
+/* ===== PROFILE TAB AVATAR (Card size) ===== */
+#tab-profile{display:none;padding:1.5rem .8rem;}
+#tab-profile.active{display:block;}
+.profile-av-wrap{display:flex;justify-content:center;margin-bottom:1rem;}
+.profile-av-wrap #avatar-panel{
+  position:relative!important; top:auto!important; right:auto!important;
+  width:260px!important; height:auto!important; margin:0 auto;
+  filter:drop-shadow(0 8px 24px rgba(0,0,0,.9));
+  border:1px solid rgba(201,162,39,0.3); border-radius:5px;
+  background:rgba(10,6,2,0.8);
+  padding-bottom: 0.5rem;
+}
+.profile-av-wrap .av-frame {
+  width: 260px!important; height: 350px!important; 
+  border-bottom: 1px solid var(--border)!important;
+  border-radius: 5px 5px 0 0;
+}
+.profile-av-wrap .av-label, .profile-av-wrap .av-stage {
+  display: block; width: 100%; text-align: center;
+}
+.profile-av-wrap .av-label { font-size: 0.8rem!important; margin-top: 0.5rem!important; }
+.profile-av-wrap .av-stage { font-size: 1rem!important; margin-top: 0.2rem!important; }
+
+/* ===== QUESTS ===== */
+#tab-quests{display:none;padding:1.2rem .8rem}
+#tab-quests.active{display:block}
+.q-wrap{max-width:680px;margin:0 auto}
+.q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+.q-title{font-family:"Cinzel Decorative",serif;font-size:.85rem;color:var(--gold);text-shadow:0 0 12px rgba(201,162,39,.4);letter-spacing:.1em}
+.q-stats{display:flex;gap:.8rem}
+.q-stat-chip{font-family:"Cinzel",serif;font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:2px;padding:.25rem .6rem}
+.q-stat-chip b{color:var(--gold)}
+.q-add-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem}
+.q-input{flex:1 1 200px;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.72rem;padding:.5rem .75rem;outline:none;transition:border-color .2s}
+.q-input:focus{border-color:rgba(201,162,39,.5)}
+.q-input::placeholder{color:var(--dim);font-style:italic}
+.q-priority{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.65rem;padding:.5rem .4rem;outline:none;cursor:pointer;flex:0 0 110px}
+.q-add-btn{flex:1 1 100%;font-family:"Cinzel",serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;padding:.5rem 1rem;background:linear-gradient(to bottom,#2e1e00,#180f00);color:var(--gold);border:1px solid rgba(201,162,39,.5);border-radius:2px;cursor:pointer;transition:all .2s;z-index:10;position:relative;}
+.q-add-btn:hover{background:linear-gradient(to bottom,#4a3200,#2e1a00);border-color:var(--gold)}
+.q-filter-row{display:flex;gap:.4rem;margin-bottom:.8rem;flex-wrap:wrap}
+.q-filter-btn{font-family:"Cinzel",serif;font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;padding:.22rem .65rem;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:2px;color:var(--dim);cursor:pointer;transition:all .18s}
+.q-filter-btn.active{color:var(--gold);border-color:var(--gold);background:rgba(201,162,39,.08)}
+.q-list{display:flex;flex-direction:column;gap:.45rem}
+.q-empty{text-align:center;padding:2.5rem 1rem;color:var(--dim);font-style:italic;font-size:.72rem;border:1px dashed #1e1208;border-radius:3px}
+.q-empty-icon{font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4}
+@keyframes qSlideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.q-item{display:flex;align-items:center;gap:.6rem;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:3px;padding:.6rem .75rem;transition:border-color .2s,background .2s;animation:qSlideIn .2s ease;position:relative;overflow:hidden}
+.q-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.q-item.p-high::before{background:linear-gradient(to bottom,#c94040,#8a1a1a)}
+.q-item.p-mid::before{background:linear-gradient(to bottom,#c9a227,#7a5a00)}
+.q-item.p-low::before{background:linear-gradient(to bottom,#2e6e3e,#1a3e24)}
+.q-item:hover{border-color:rgba(201,162,39,.25);}
+.q-item-icon{font-size:1rem;flex-shrink:0;width:20px;text-align:center}
+.q-item-text{flex:1;font-family:"Cinzel",serif;font-size:.7rem;color:var(--parchment);line-height:1.4;word-break:break-word}
+.q-item-badge{font-family:"Cinzel",serif;font-size:.5rem;text-transform:uppercase;letter-spacing:.06em;padding:.14rem .4rem;border-radius:2px;flex-shrink:0}
+.q-item-badge.p-high{background:rgba(180,40,40,.2);color:#e06060;border:1px solid rgba(180,40,40,.3)}
+.q-item-badge.p-mid{background:rgba(180,140,0,.15);color:#c9a227;border:1px solid rgba(180,140,0,.25)}
+.q-item-badge.p-low{background:rgba(30,100,50,.2);color:#5aaf70;border:1px solid rgba(30,100,50,.3)}
+.q-done-btn{font-size:.65rem;padding:.3rem .65rem;background:linear-gradient(to bottom,#1a2e14,#0e1a0a);color:#5aaf70;border:1px solid rgba(80,160,80,.35);border-radius:2px;cursor:pointer;font-family:"Cinzel",serif;text-transform:uppercase;transition:all .2s;flex-shrink:0;white-space:nowrap}
+.q-done-btn:hover{background:linear-gradient(to bottom,#2a4a20,#1a2e14);border-color:rgba(80,160,80,.7);color:#7acc88}
+.q-del-btn{font-size:.75rem;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#3a2218;cursor:pointer;border-radius:2px;transition:color .15s;flex-shrink:0}
+.q-del-btn:hover{color:#c94040}
+.q-done-section{margin-top:1.2rem}
+.q-done-header{font-family:"Cinzel",serif;font-size:.58rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);border-bottom:1px solid var(--border);padding-bottom:.35rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem;cursor:pointer}
+.q-done-header:hover{color:var(--parchment)}
+.q-item.done{opacity:.45;filter:saturate(.3)}
+.q-item.done .q-item-text{text-decoration:line-through;color:var(--dim)}
+.q-clear-btn{font-family:"Cinzel",serif;font-size:.52rem;text-transform:uppercase;padding:.18rem .5rem;background:none;border:1px solid #1e1208;border-radius:2px;color:#3a2218;cursor:pointer;transition:all .15s;margin-left:auto}
+.q-clear-btn:hover{border-color:#c94040;color:#c94040}
+
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
@@ -442,7 +521,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <!-- PROFILE -->
   <div id="tab-profile" class="tab-panel">
     <div style="text-align:center;padding:2rem .8rem;">
-      <div style="font-family:'Cinzel Decorative',serif;font-size:1rem;color:var(--gold);margin-bottom:1.5rem;letter-spacing:.1em;text-shadow:0 0 10px rgba(201,162,39,.3);">Дух подземелья</div>
+      <div style="font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:var(--gold);margin-bottom:1.5rem;letter-spacing:.1em;text-shadow:0 0 10px rgba(201,162,39,.3);">Дух подземелья</div>
       <div class="profile-av-wrap">
         <div id="avatar-panel" onclick="openAvatarModal()" title="Дух подземелья">
   <div class="av-frame"><img id="av-img" src="" alt="Avatar"><div class="av-rank-glow" id="av-glow"></div></div>
@@ -450,7 +529,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="av-progress"><div class="av-prog-fill" id="av-prog" style="width:0%"></div></div>
 </div>
       </div>
-      <div style="margin-top:1.5rem;color:var(--dim);font-size:.65rem;font-style:italic;line-height:1.6;">Нажми на портрет, чтобы сменить картинку<br>или просмотреть стадии прогресса.</div>
+      <div style="margin-top:1.5rem;color:var(--dim);font-size:.7rem;font-style:italic;line-height:1.6;">Нажми на портрет, чтобы сменить картинку<br>или просмотреть стадии прогресса.</div>
     </div>
   </div>
 
@@ -860,7 +939,7 @@ function _buildAvGrid(){
 }
 function _uploadAvImg(key){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.onchange=function(){const f=this.files[0];if(!f)return;_compressImage(f,c=>{localStorage.setItem('av_img_'+key,c);updateAvatar();_buildAvGrid();});};inp.click();}
 
-/* FIREBASE & SYNC (V4) */
+/* FIREBASE & SYNC (V5) */
 let _uid=null, _code=null, _unsub=null, _syncReady=false;
 const STORE_SYNC_ID='nd_sync_uid';
 
@@ -903,18 +982,12 @@ function _subscribeRemote(uid){
     if(!snap.exists)return;
     const d=snap.data() || {};
 
-    // Safety check arrays
     cards = Array.isArray(d.cards) ? d.cards : [];
     cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!c.history)c.history=[];});
     saveToLocal();
 
-    // Quests
-    if(Array.isArray(d.quests)){
-      window._quests = d.quests;
-    }
-    if(d.qstats){
-      window._qstats = d.qstats;
-    }
+    if(Array.isArray(d.quests)){ window._quests = d.quests; }
+    if(d.qstats){ window._qstats = d.qstats; }
 
     localStorage.setItem('nd_quests',JSON.stringify(window._quests || []));
     localStorage.setItem('nd_qstats',JSON.stringify(window._qstats || {total:0}));
@@ -940,9 +1013,9 @@ function loadByCode(){
     const d=found.data() || {};
     const remoteCards = Array.isArray(d.cards) ? d.cards : [];
 
-    if(confirm('Найдено карточек: '+remoteCards.length+'. Связать устройства? Текущие данные заменятся.')){
+    if(confirm('Найдено карточек: '+remoteCards.length+'. Связать устройства?')){
       _uid=found.id;
-      localStorage.setItem(STORE_SYNC_ID, _uid); // Persist UID for TG
+      localStorage.setItem(STORE_SYNC_ID, _uid);
       _code=_makeCode(_uid);
       _refreshSyncUI();
 
@@ -950,12 +1023,8 @@ function loadByCode(){
       cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;});
       saveToLocal();
 
-      if(Array.isArray(d.quests)){
-        window._quests=d.quests;
-      }
-      if(d.qstats){
-        window._qstats=d.qstats;
-      }
+      if(Array.isArray(d.quests)){ window._quests=d.quests; }
+      if(d.qstats){ window._qstats=d.qstats; }
 
       localStorage.setItem('nd_quests',JSON.stringify(window._quests || []));
       localStorage.setItem('nd_qstats',JSON.stringify(window._qstats || {total:0}));
@@ -970,7 +1039,6 @@ function loadByCode(){
 }
 
 fbAuth.signInAnonymously().then(cred=>{
-  // ALWAYS PREFER THE STORED SYNC ID! This fixes Telegram volatile reloads
   _uid = localStorage.getItem(STORE_SYNC_ID) || cred.user.uid;
   _code = _makeCode(_uid);
   _syncReady = true;
