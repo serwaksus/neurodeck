@@ -938,13 +938,10 @@ function _buildStats(){
   document.getElementById('rank-bars').innerHTML=tiers.map(t=>{const p=Math.round(cnt[t]/mx*100);return `<div class="rb-row"><span class="rb-lbl" style="color:${RC2[t]}">${t}</span><div class="rb-track"><div class="rb-fill" style="width:${p}%;background:${RC2[t]}"></div></div><span class="rb-cnt">${cnt[t]}</span></div>`;}).join('');
 }
 
-/* ============================================================
-   QUESTS SYSTEM
-   ============================================================ */
+/* ===== QUESTS JS ===== */
 (function(){
-  const SQ='nd_quests', SS='nd_qstats';
-  let _q=[], _st={total:0,todayDate:'',todayCount:0}, _f='all', _dOpen=true;
-
+  const SQ='nd_quests',SS='nd_qstats';
+  let _q=[],_st={total:0,todayDate:'',todayCount:0},_f='all',_dOpen=true;
   function _load(){
     try{_q=JSON.parse(localStorage.getItem(SQ)||'[]');}catch(e){_q=[];}
     try{_st=Object.assign({total:0,todayDate:'',todayCount:0},JSON.parse(localStorage.getItem(SS)||'{}'));}catch(e){}
@@ -952,15 +949,14 @@ function _buildStats(){
     if(_st.todayDate!==today){_st.todayDate=today;_st.todayCount=0;}
   }
   function _save(){
-    const cutoff=Date.now()-48*3600*1000;
-    _q=_q.filter(q=>!q.done||(q.doneAt&&q.doneAt>cutoff));
+    const cut=Date.now()-48*3600*1000;
+    _q=_q.filter(q=>!q.done||(q.doneAt&&q.doneAt>cut));
     localStorage.setItem(SQ,JSON.stringify(_q));
     localStorage.setItem(SS,JSON.stringify(_st));
   }
   const PI={high:'🔥',mid:'⚔',low:'🌿'};
   const PL={high:'Срочное',mid:'Обычное',low:'Лёгкое'};
   function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
   function render(){
     const today=new Date().toISOString().slice(0,10);
     if(_st.todayDate!==today){_st.todayDate=today;_st.todayCount=0;}
@@ -968,72 +964,42 @@ function _buildStats(){
     const tt=document.getElementById('q-done-total');if(tt)tt.textContent=_st.total;
     let active=_q.filter(q=>!q.done);
     if(_f!=='all')active=active.filter(q=>q.priority===_f);
-    const listEl=document.getElementById('q-list');
-    if(!listEl)return;
+    const listEl=document.getElementById('q-list');if(!listEl)return;
     if(active.length===0){
-      listEl.innerHTML=`<div class="q-empty"><span class="q-empty-icon">📜</span>${_f==='all'?'Все задания выполнены. Ты воин.':'Нет заданий в этой категории.'}</div>`;
+      listEl.innerHTML='<div class="q-empty"><span class="q-empty-icon">📜</span>'+(_f==='all'?'Все задания выполнены. Ты воин.':'Нет заданий в этой категории.')+'</div>';
     }else{
-      listEl.innerHTML=active.map(q=>`<div class="q-item p-${q.priority}" id="qi-${q.id}">
-        <span class="q-item-icon">${PI[q.priority]}</span>
-        <span class="q-item-text">${esc(q.text)}</span>
-        <span class="q-item-badge p-${q.priority}">${PL[q.priority]}</span>
-        <button class="q-done-btn" onclick="completeQuest('${q.id}')">✓ Готово</button>
-        <button class="q-del-btn"  onclick="deleteQuest('${q.id}')" title="Удалить">✕</button>
-      </div>`).join('');
+      listEl.innerHTML=active.map(q=>'<div class="q-item p-'+q.priority+'" id="qi-'+q.id+'"><span class="q-item-icon">'+PI[q.priority]+'</span><span class="q-item-text">'+esc(q.text)+'</span><span class="q-item-badge p-'+q.priority+'">'+PL[q.priority]+'</span><button class="q-done-btn" onclick="completeQuest(\''+q.id+'\')">✓ Готово</button><button class="q-del-btn" onclick="deleteQuest(\''+q.id+'\')" title="Удалить">✕</button></div>').join('');
     }
     const done=_q.filter(q=>q.done);
     const ds=document.getElementById('q-done-section');
     const dl=document.getElementById('q-done-list');
     if(done.length>0){
       if(ds)ds.style.display='block';
-      const lbl=document.getElementById('q-done-count-lbl');if(lbl)lbl.textContent=`(${done.length})`;
+      const lbl=document.getElementById('q-done-count-lbl');if(lbl)lbl.textContent='('+done.length+')';
       if(dl){
         dl.style.display=_dOpen?'flex':'none';
-        dl.innerHTML=done.map(q=>`<div class="q-item done p-${q.priority}">
-          <span class="q-item-icon">✓</span>
-          <span class="q-item-text">${esc(q.text)}</span>
-          <button class="q-del-btn" onclick="deleteQuest('${q.id}')">✕</button>
-        </div>`).join('');
+        dl.innerHTML=done.map(q=>'<div class="q-item done p-'+q.priority+'"><span class="q-item-icon">✓</span><span class="q-item-text">'+esc(q.text)+'</span><button class="q-del-btn" onclick="deleteQuest(\''+q.id+'\')">✕</button></div>').join('');
       }
       const ic=document.getElementById('q-done-toggle-icon');if(ic)ic.textContent=_dOpen?'▼':'▶';
     }else{if(ds)ds.style.display='none';}
   }
-
   window.addQuest=function(){
-    const inp=document.getElementById('q-input');
-    const pr=document.getElementById('q-priority');
-    if(!inp)return;
-    const text=(inp.value||'').trim();if(!text)return;
-    _q.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-      text,priority:pr?pr.value:'mid',done:false,doneAt:null,createdAt:Date.now()});
+    const inp=document.getElementById('q-input'),pr=document.getElementById('q-priority');
+    if(!inp)return;const text=(inp.value||'').trim();if(!text)return;
+    _q.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),text,priority:pr?pr.value:'mid',done:false,doneAt:null,createdAt:Date.now()});
     _save();render();inp.value='';inp.focus();
   };
   window.completeQuest=function(id){
     const q=_q.find(x=>x.id===id);if(!q)return;
     const el=document.getElementById('qi-'+id);
-    const finish=()=>{
-      q.done=true;q.doneAt=Date.now();_st.total++;
-      const today=new Date().toISOString().slice(0,10);
-      if(_st.todayDate===today)_st.todayCount++;
-      else{_st.todayDate=today;_st.todayCount=1;}
-      _save();render();
-    };
-    if(el){el.style.transition='opacity .28s,transform .28s';el.style.opacity='0';el.style.transform='translateX(24px)';setTimeout(finish,280);}
-    else finish();
+    const fin=function(){q.done=true;q.doneAt=Date.now();_st.total++;const today=new Date().toISOString().slice(0,10);if(_st.todayDate===today)_st.todayCount++;else{_st.todayDate=today;_st.todayCount=1;}_save();render();};
+    if(el){el.style.transition='opacity .28s,transform .28s';el.style.opacity='0';el.style.transform='translateX(24px)';setTimeout(fin,280);}else fin();
   };
   window.deleteQuest=function(id){_q=_q.filter(x=>x.id!==id);_save();render();};
-  window.setQFilter=function(f){
-    _f=f;
-    ['all','high','mid','low'].forEach(k=>{const b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k===f);});
-    render();
-  };
+  window.setQFilter=function(f){_f=f;['all','high','mid','low'].forEach(function(k){var b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k===f);});render();};
   window.toggleDoneSection=function(){_dOpen=!_dOpen;render();};
-  window.clearDoneQuests=function(){
-    if(!confirm('Очистить все выполненные задания?'))return;
-    _q=_q.filter(q=>!q.done);_save();render();
-  };
+  window.clearDoneQuests=function(){if(!confirm('Очистить все выполненные задания?'))return;_q=_q.filter(q=>!q.done);_save();render();};
   _load();
-  window._renderQuests=render;
   setTimeout(render,300);
 })();
 
