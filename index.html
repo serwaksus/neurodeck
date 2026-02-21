@@ -284,59 +284,37 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .q-stats{display:flex;gap:.8rem}
 .q-stat-chip{font-family:"Cinzel",serif;font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:2px;padding:.25rem .6rem}
 .q-stat-chip b{color:var(--gold)}
-
-/* Add form — two-row layout */
-.q-add-form{display:flex;flex-direction:column;gap:.45rem;margin-bottom:1rem;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:3px;padding:.65rem .75rem}
-.q-add-row1{display:flex;gap:.5rem;align-items:center}
-.q-input{flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.72rem;padding:.5rem .75rem;outline:none;transition:border-color .2s;min-width:0}
+.q-add-row{display:flex;gap:.5rem;margin-bottom:1rem}
+.q-input{flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.72rem;padding:.5rem .75rem;outline:none;transition:border-color .2s}
 .q-input:focus{border-color:rgba(201,162,39,.5)}
 .q-input::placeholder{color:var(--dim);font-style:italic}
-/* priority as compact icon-buttons */
-.q-prio-group{display:flex;gap:.3rem;flex-shrink:0}
-.q-prio-btn{font-family:"Cinzel",serif;font-size:.58rem;padding:.32rem .55rem;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--dim);cursor:pointer;transition:all .15s;white-space:nowrap}
-.q-prio-btn:hover{border-color:rgba(201,162,39,.35);color:var(--parchment)}
-.q-prio-btn.selected{color:var(--gold);border-color:var(--gold);background:rgba(201,162,39,.1)}
-.q-add-btn{font-family:"Cinzel",serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;padding:.48rem 1rem;background:linear-gradient(to bottom,#2e1e00,#180f00);color:var(--gold);border:1px solid rgba(201,162,39,.5);border-radius:2px;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.q-priority{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.65rem;padding:.5rem .4rem;outline:none;cursor:pointer;min-width:90px}
+.q-add-btn{font-family:"Cinzel",serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;padding:.5rem 1rem;background:linear-gradient(to bottom,#2e1e00,#180f00);color:var(--gold);border:1px solid rgba(201,162,39,.5);border-radius:2px;cursor:pointer;transition:all .2s;white-space:nowrap}
 .q-add-btn:hover{background:linear-gradient(to bottom,#4a3200,#2e1a00);border-color:var(--gold)}
-
 .q-filter-row{display:flex;gap:.4rem;margin-bottom:.8rem;flex-wrap:wrap}
 .q-filter-btn{font-family:"Cinzel",serif;font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;padding:.22rem .65rem;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:2px;color:var(--dim);cursor:pointer;transition:all .18s}
 .q-filter-btn:hover{color:var(--parchment);border-color:rgba(201,162,39,.3)}
 .q-filter-btn.active{color:var(--gold);border-color:var(--gold);background:rgba(201,162,39,.08)}
-
 .q-list{display:flex;flex-direction:column;gap:.45rem}
 .q-empty{text-align:center;padding:2.5rem 1rem;color:var(--dim);font-style:italic;font-size:.72rem;border:1px dashed #1e1208;border-radius:3px}
 .q-empty-icon{font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4}
-
 @keyframes qSlideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
-.q-item{display:flex;align-items:center;gap:.55rem;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:3px;padding:.55rem .7rem;transition:border-color .2s,background .2s;animation:qSlideIn .2s ease;position:relative;overflow:hidden}
+.q-item{display:flex;align-items:center;gap:.6rem;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:3px;padding:.6rem .75rem;transition:border-color .2s,background .2s;animation:qSlideIn .2s ease;position:relative;overflow:hidden}
 .q-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
 .q-item.p-high::before{background:linear-gradient(to bottom,#c94040,#8a1a1a)}
 .q-item.p-mid::before{background:linear-gradient(to bottom,#c9a227,#7a5a00)}
 .q-item.p-low::before{background:linear-gradient(to bottom,#2e6e3e,#1a3e24)}
 .q-item:hover{border-color:rgba(201,162,39,.25);background:rgba(10,6,2,.5)}
-.q-item-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.q-item-icon{font-size:1rem;flex-shrink:0;width:20px;text-align:center}
 .q-item-text{flex:1;font-family:"Cinzel",serif;font-size:.7rem;color:var(--parchment);line-height:1.4;word-break:break-word}
-.q-item-badge{font-family:"Cinzel",serif;font-size:.48rem;text-transform:uppercase;letter-spacing:.06em;padding:.12rem .38rem;border-radius:2px;flex-shrink:0}
+.q-item-badge{font-family:"Cinzel",serif;font-size:.5rem;text-transform:uppercase;letter-spacing:.06em;padding:.14rem .4rem;border-radius:2px;flex-shrink:0}
 .q-item-badge.p-high{background:rgba(180,40,40,.2);color:#e06060;border:1px solid rgba(180,40,40,.3)}
 .q-item-badge.p-mid{background:rgba(180,140,0,.15);color:#c9a227;border:1px solid rgba(180,140,0,.25)}
 .q-item-badge.p-low{background:rgba(30,100,50,.2);color:#5aaf70;border:1px solid rgba(30,100,50,.3)}
-
-.q-done-btn{font-size:.6rem;padding:.28rem .6rem;background:linear-gradient(to bottom,#1a2e14,#0e1a0a);color:#5aaf70;border:1px solid rgba(80,160,80,.35);border-radius:2px;cursor:pointer;font-family:"Cinzel",serif;text-transform:uppercase;letter-spacing:.07em;transition:all .2s;flex-shrink:0;white-space:nowrap}
+.q-done-btn{font-size:.65rem;padding:.3rem .65rem;background:linear-gradient(to bottom,#1a2e14,#0e1a0a);color:#5aaf70;border:1px solid rgba(80,160,80,.35);border-radius:2px;cursor:pointer;font-family:"Cinzel",serif;text-transform:uppercase;letter-spacing:.07em;transition:all .2s;flex-shrink:0;white-space:nowrap}
 .q-done-btn:hover{background:linear-gradient(to bottom,#2a4a20,#1a2e14);border-color:rgba(80,160,80,.7);color:#7acc88}
-.q-edit-btn{font-size:.68rem;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#3a2a18;cursor:pointer;border-radius:2px;transition:color .15s;flex-shrink:0}
-.q-edit-btn:hover{color:#c9a227}
-.q-del-btn{font-size:.72rem;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#2e1e14;cursor:pointer;border-radius:2px;transition:color .15s;flex-shrink:0}
+.q-del-btn{font-size:.75rem;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#3a2218;cursor:pointer;border-radius:2px;transition:color .15s;flex-shrink:0}
 .q-del-btn:hover{color:#c94040}
-
-/* Inline edit mode */
-.q-item.editing{border-color:rgba(201,162,39,.5);background:rgba(15,8,2,.7)}
-.q-edit-input{flex:1;background:rgba(0,0,0,.5);border:1px solid rgba(201,162,39,.4);border-radius:2px;color:var(--parchment);font-family:"Cinzel",serif;font-size:.68rem;padding:.3rem .5rem;outline:none;min-width:0}
-.q-edit-save{font-size:.58rem;padding:.28rem .55rem;background:linear-gradient(to bottom,#2e1e00,#180f00);color:var(--gold);border:1px solid rgba(201,162,39,.5);border-radius:2px;cursor:pointer;font-family:"Cinzel",serif;white-space:nowrap;flex-shrink:0}
-.q-edit-save:hover{border-color:var(--gold)}
-.q-edit-cancel{font-size:.68rem;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#3a2218;cursor:pointer;flex-shrink:0}
-.q-edit-cancel:hover{color:#c94040}
-
 .q-done-section{margin-top:1.2rem}
 .q-done-header{font-family:"Cinzel",serif;font-size:.58rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);border-bottom:1px solid var(--border);padding-bottom:.35rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem;cursor:pointer}
 .q-done-header:hover{color:var(--parchment)}
@@ -480,39 +458,25 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
           <div class="q-stat-chip">Всего: <b id="q-done-total">0</b></div>
         </div>
       </div>
-
-      <!-- Add form -->
-      <div class="q-add-form">
-        <div class="q-add-row1">
-          <input class="q-input" id="q-input" type="text"
-            placeholder="Введи задание и нажми Enter или кнопку…" maxlength="200"
-            onkeydown="if(event.key==='Enter')addQuest()" style="font-size:.73rem">
-          <button class="q-add-btn" onclick="addQuest()">+ Добавить</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:.5rem">
-          <span style="font-family:'Cinzel',serif;font-size:.54rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;flex-shrink:0">Приоритет:</span>
-          <div class="q-prio-group" id="q-prio-group">
-            <button class="q-prio-btn selected" data-p="mid"  onclick="selectPrio('mid')">⚔ Обычное</button>
-            <button class="q-prio-btn"          data-p="high" onclick="selectPrio('high')">🔥 Срочное</button>
-            <button class="q-prio-btn"          data-p="low"  onclick="selectPrio('low')">🌿 Лёгкое</button>
-          </div>
-        </div>
+      <div class="q-add-row">
+        <input class="q-input" id="q-input" type="text" placeholder="Новое задание…" maxlength="120"
+          onkeydown="if(event.key==='Enter')addQuest()">
+        <select class="q-priority" id="q-priority">
+          <option value="mid">⚔ Обычное</option>
+          <option value="high">🔥 Срочное</option>
+          <option value="low">🌿 Лёгкое</option>
+        </select>
+        <button class="q-add-btn" onclick="addQuest()">+ Добавить</button>
       </div>
-
-      <!-- Filter -->
       <div class="q-filter-row">
         <button class="q-filter-btn active" id="qf-all"  onclick="setQFilter('all')">Все</button>
         <button class="q-filter-btn"        id="qf-high" onclick="setQFilter('high')">🔥 Срочные</button>
         <button class="q-filter-btn"        id="qf-mid"  onclick="setQFilter('mid')">⚔ Обычные</button>
         <button class="q-filter-btn"        id="qf-low"  onclick="setQFilter('low')">🌿 Лёгкие</button>
       </div>
-
-      <!-- Active list -->
       <div class="q-list" id="q-list">
         <div class="q-empty"><span class="q-empty-icon">📜</span>Свиток пуст. Добавь первое задание.</div>
       </div>
-
-      <!-- Done section -->
       <div class="q-done-section" id="q-done-section" style="display:none">
         <div class="q-done-header" onclick="toggleDoneSection()">
           <span id="q-done-toggle-icon">▼</span>
@@ -977,126 +941,64 @@ function _buildStats(){
 /* ===== QUESTS JS ===== */
 (function(){
   const SQ='nd_quests',SS='nd_qstats';
-  let _q=[],_st={total:0,todayDate:'',todayCount:0},_f='all',_dOpen=true,_curPrio='mid',_editId=null;
+  let _q=[],_st={total:0,todayDate:'',todayCount:0},_f='all',_dOpen=true;
   function _load(){
     try{_q=JSON.parse(localStorage.getItem(SQ)||'[]');}catch(e){_q=[];}
     try{_st=Object.assign({total:0,todayDate:'',todayCount:0},JSON.parse(localStorage.getItem(SS)||'{}'));}catch(e){}
-    var today=new Date().toISOString().slice(0,10);
+    const today=new Date().toISOString().slice(0,10);
     if(_st.todayDate!==today){_st.todayDate=today;_st.todayCount=0;}
   }
   function _save(){
-    var cut=Date.now()-48*3600*1000;
-    _q=_q.filter(function(q){return !q.done||(q.doneAt&&q.doneAt>cut);});
+    const cut=Date.now()-48*3600*1000;
+    _q=_q.filter(q=>!q.done||(q.doneAt&&q.doneAt>cut));
     localStorage.setItem(SQ,JSON.stringify(_q));
     localStorage.setItem(SS,JSON.stringify(_st));
   }
-  var PI={high:'🔥',mid:'⚔',low:'🌿'};
-  var PL={high:'Срочное',mid:'Обычное',low:'Лёгкое'};
+  const PI={high:'🔥',mid:'⚔',low:'🌿'};
+  const PL={high:'Срочное',mid:'Обычное',low:'Лёгкое'};
   function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
   function render(){
-    var today=new Date().toISOString().slice(0,10);
+    const today=new Date().toISOString().slice(0,10);
     if(_st.todayDate!==today){_st.todayDate=today;_st.todayCount=0;}
-    var dt=document.getElementById('q-done-today');if(dt)dt.textContent=_st.todayCount;
-    var tt=document.getElementById('q-done-total');if(tt)tt.textContent=_st.total;
-
-    var active=_q.filter(function(q){return !q.done;});
-    if(_f!=='all')active=active.filter(function(q){return q.priority===_f;});
-    var listEl=document.getElementById('q-list');if(!listEl)return;
-
+    const dt=document.getElementById('q-done-today');if(dt)dt.textContent=_st.todayCount;
+    const tt=document.getElementById('q-done-total');if(tt)tt.textContent=_st.total;
+    let active=_q.filter(q=>!q.done);
+    if(_f!=='all')active=active.filter(q=>q.priority===_f);
+    const listEl=document.getElementById('q-list');if(!listEl)return;
     if(active.length===0){
       listEl.innerHTML='<div class="q-empty"><span class="q-empty-icon">📜</span>'+(_f==='all'?'Все задания выполнены. Ты воин.':'Нет заданий в этой категории.')+'</div>';
-    } else {
-      listEl.innerHTML=active.map(function(q){
-        if(q.id===_editId){
-          return '<div class="q-item p-'+q.priority+' editing" id="qi-'+q.id+'">'
-            +'<span class="q-item-icon">✏️</span>'
-            +'<input class="q-edit-input" id="qei-'+q.id+'" value="'+esc(q.text)+'" maxlength="200" onkeydown="if(event.key===\'Enter\')saveQEdit(\''+q.id+'\');if(event.key===\'Escape\')cancelQEdit()">'
-            +'<div class="q-prio-group" style="flex-shrink:0">'
-            +'<button class="q-prio-btn'+(q.priority==='mid'?' selected':'')+'" onclick="setEditPrio(\''+q.id+'\',\'mid\')">⚔</button>'
-            +'<button class="q-prio-btn'+(q.priority==='high'?' selected':'')+'" onclick="setEditPrio(\''+q.id+'\',\'high\')">🔥</button>'
-            +'<button class="q-prio-btn'+(q.priority==='low'?' selected':'')+'" onclick="setEditPrio(\''+q.id+'\',\'low\')">🌿</button>'
-            +'</div>'
-            +'<button class="q-edit-save" onclick="saveQEdit(\''+q.id+'\')">✓</button>'
-            +'<button class="q-edit-cancel" onclick="cancelQEdit()">✕</button>'
-            +'</div>';
-        }
-        return '<div class="q-item p-'+q.priority+'" id="qi-'+q.id+'">'
-          +'<span class="q-item-icon">'+PI[q.priority]+'</span>'
-          +'<span class="q-item-text">'+esc(q.text)+'</span>'
-          +'<span class="q-item-badge p-'+q.priority+'">'+PL[q.priority]+'</span>'
-          +'<button class="q-done-btn" onclick="completeQuest(\''+q.id+'\')">✓ Готово</button>'
-          +'<button class="q-edit-btn" onclick="startQEdit(\''+q.id+'\')" title="Редактировать">✏️</button>'
-          +'<button class="q-del-btn"  onclick="deleteQuest(\''+q.id+'\')"  title="Удалить">✕</button>'
-          +'</div>';
-      }).join('');
-      if(_editId){var ei=document.getElementById('qei-'+_editId);if(ei){ei.focus();ei.select();}}
+    }else{
+      listEl.innerHTML=active.map(q=>'<div class="q-item p-'+q.priority+'" id="qi-'+q.id+'"><span class="q-item-icon">'+PI[q.priority]+'</span><span class="q-item-text">'+esc(q.text)+'</span><span class="q-item-badge p-'+q.priority+'">'+PL[q.priority]+'</span><button class="q-done-btn" onclick="completeQuest(\''+q.id+'\')">✓ Готово</button><button class="q-del-btn" onclick="deleteQuest(\''+q.id+'\')" title="Удалить">✕</button></div>').join('');
     }
-
-    var done=_q.filter(function(q){return q.done;});
-    var ds=document.getElementById('q-done-section');
-    var dl=document.getElementById('q-done-list');
+    const done=_q.filter(q=>q.done);
+    const ds=document.getElementById('q-done-section');
+    const dl=document.getElementById('q-done-list');
     if(done.length>0){
       if(ds)ds.style.display='block';
-      var lbl=document.getElementById('q-done-count-lbl');if(lbl)lbl.textContent='('+done.length+')';
+      const lbl=document.getElementById('q-done-count-lbl');if(lbl)lbl.textContent='('+done.length+')';
       if(dl){
         dl.style.display=_dOpen?'flex':'none';
-        dl.innerHTML=done.map(function(q){
-          return '<div class="q-item done p-'+q.priority+'">'
-            +'<span class="q-item-icon">✓</span>'
-            +'<span class="q-item-text">'+esc(q.text)+'</span>'
-            +'<button class="q-del-btn" onclick="deleteQuest(\''+q.id+'\')">✕</button>'
-            +'</div>';
-        }).join('');
+        dl.innerHTML=done.map(q=>'<div class="q-item done p-'+q.priority+'"><span class="q-item-icon">✓</span><span class="q-item-text">'+esc(q.text)+'</span><button class="q-del-btn" onclick="deleteQuest(\''+q.id+'\')">✕</button></div>').join('');
       }
-      var ic=document.getElementById('q-done-toggle-icon');if(ic)ic.textContent=_dOpen?'▼':'▶';
-    } else {if(ds)ds.style.display='none';}
+      const ic=document.getElementById('q-done-toggle-icon');if(ic)ic.textContent=_dOpen?'▼':'▶';
+    }else{if(ds)ds.style.display='none';}
   }
-
-  window.selectPrio=function(p){
-    _curPrio=p;
-    document.querySelectorAll('#q-prio-group .q-prio-btn').forEach(function(b){
-      b.classList.toggle('selected',b.getAttribute('data-p')===p);
-    });
-  };
   window.addQuest=function(){
-    var inp=document.getElementById('q-input');if(!inp)return;
-    var text=(inp.value||'').trim();if(!text)return;
-    _q.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-      text:text,priority:_curPrio,done:false,doneAt:null,createdAt:Date.now()});
+    const inp=document.getElementById('q-input'),pr=document.getElementById('q-priority');
+    if(!inp)return;const text=(inp.value||'').trim();if(!text)return;
+    _q.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),text,priority:pr?pr.value:'mid',done:false,doneAt:null,createdAt:Date.now()});
     _save();render();inp.value='';inp.focus();
   };
   window.completeQuest=function(id){
-    var q=_q.find(function(x){return x.id===id;});if(!q)return;
-    var el=document.getElementById('qi-'+id);
-    var fin=function(){q.done=true;q.doneAt=Date.now();_st.total++;
-      var today=new Date().toISOString().slice(0,10);
-      if(_st.todayDate===today)_st.todayCount++;
-      else{_st.todayDate=today;_st.todayCount=1;}
-      _save();render();};
-    if(el){el.style.transition='opacity .28s,transform .28s';el.style.opacity='0';el.style.transform='translateX(24px)';setTimeout(fin,280);}
-    else fin();
+    const q=_q.find(x=>x.id===id);if(!q)return;
+    const el=document.getElementById('qi-'+id);
+    const fin=function(){q.done=true;q.doneAt=Date.now();_st.total++;const today=new Date().toISOString().slice(0,10);if(_st.todayDate===today)_st.todayCount++;else{_st.todayDate=today;_st.todayCount=1;}_save();render();};
+    if(el){el.style.transition='opacity .28s,transform .28s';el.style.opacity='0';el.style.transform='translateX(24px)';setTimeout(fin,280);}else fin();
   };
-  window.deleteQuest=function(id){_q=_q.filter(function(x){return x.id!==id;});_save();render();};
-  window.startQEdit=function(id){_editId=id;render();};
-  window.cancelQEdit=function(){_editId=null;render();};
-  window.setEditPrio=function(id,p){
-    var q=_q.find(function(x){return x.id===id;});if(!q)return;
-    q.priority=p;render();
-  };
-  window.saveQEdit=function(id){
-    var q=_q.find(function(x){return x.id===id;});if(!q)return;
-    var inp=document.getElementById('qei-'+id);
-    if(inp){var t=(inp.value||'').trim();if(t)q.text=t;}
-    _editId=null;_save();render();
-  };
-  window.setQFilter=function(f){
-    _f=f;
-    ['all','high','mid','low'].forEach(function(k){var b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k===f);});
-    render();
-  };
+  window.deleteQuest=function(id){_q=_q.filter(x=>x.id!==id);_save();render();};
+  window.setQFilter=function(f){_f=f;['all','high','mid','low'].forEach(function(k){var b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k===f);});render();};
   window.toggleDoneSection=function(){_dOpen=!_dOpen;render();};
-  window.clearDoneQuests=function(){if(!confirm('Очистить все выполненные задания?'))return;_q=_q.filter(function(q){return !q.done;});_save();render();};
+  window.clearDoneQuests=function(){if(!confirm('Очистить все выполненные задания?'))return;_q=_q.filter(q=>!q.done);_save();render();};
   _load();
   setTimeout(render,300);
 })();
