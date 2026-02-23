@@ -354,6 +354,17 @@ input,textarea,select{user-select:auto;}
 .q-clear-btn{font-family:"Cinzel",serif;font-size:.52rem;text-transform:uppercase;padding:.18rem .5rem;background:none;border:1px solid #1e1208;border-radius:2px;color:#3a2218;cursor:pointer;transition:all .15s;margin-left:auto}
 .q-clear-btn:hover{border-color:#c94040;color:#c94040}
 
+
+/* ===== CARD DO BUTTON ===== */
+.card-do-wrap{padding:.55rem .75rem;display:flex;align-items:center;gap:.65rem;border-top:1px solid var(--border);}
+.card-do-btn{flex:1;font-family:"Cinzel",serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;padding:.42rem .6rem;cursor:pointer;border-radius:2px;transition:all .22s;}
+.card-do-btn.undone{background:linear-gradient(to bottom,#1e1205,#0f0903);color:var(--gold);border:1px solid rgba(201,162,39,.4);}
+.card-do-btn.undone:hover{background:linear-gradient(to bottom,#2e1e00,#1a0f00);border-color:var(--gold);}
+.card-do-btn.done{background:linear-gradient(to bottom,#1a2e14,#0e1a0a);color:#5aaf70;border:1px solid rgba(80,160,80,.5);cursor:default;pointer-events:none;}
+.card-do-counter{font-family:"Cinzel",serif;font-size:.62rem;color:var(--dim);white-space:nowrap;letter-spacing:.04em;}
+.card-done-badge{position:absolute;top:.45rem;left:.45rem;font-family:"Cinzel",serif;font-size:.48rem;text-transform:uppercase;letter-spacing:.06em;background:rgba(20,60,20,.9);color:#5aaf70;border:1px solid rgba(80,160,80,.5);border-radius:2px;padding:.13rem .45rem;z-index:5;}
+.ncard.done-today{border-color:rgba(80,160,80,.4)!important;box-shadow:0 0 20px rgba(80,160,80,.1),0 4px 20px rgba(0,0,0,.7)!important;}
+.ncard.done-today .ncard-glow{background:radial-gradient(ellipse at 50% -20%,rgba(80,160,80,.1),transparent 65%)!important;}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
@@ -775,18 +786,65 @@ function render(){
 }
 function buildCard(c){
   const rank=RANKS[c.ri],rcls=RCLS[rank],rc=RC[rank],rg=RG[rank];
-  const all=c.checked.length>=c.cbcount,pct=Math.min(100,Math.round(c.checked.length/c.cbcount*100));
-  let boxes='';for(let i=0;i<c.cbcount;i++){const on=c.checked.includes(i)?'on':'';boxes+=`<div class="cbox ${on}" onclick="toggleCB('${c.id}',${i})"></div>`;}
+  const now=Date.now();
+  const doneToday=!!(c.lastDone&&_sameDay(c.lastDone,now));
+  const doneCount=Array.isArray(c.checked)?c.checked.length:0;
+  const total=c.cbcount||1;
+  const pct=Math.min(100,Math.round(doneCount/total*100));
   const edots=`<div class="edot ${c.energy>=1?'on':''}"></div><div class="edot ${c.energy>=2?'on':''}"></div><div class="edot ${c.energy>=3?'on':''}"></div>`;
-  const w=document.createElement('div');w.className=`ncard ${rcls}`;w.style.cssText=`--rc:${rc};--rg:${rg};`;w.dataset.id=c.id;
-  w.innerHTML=`<div class="ncard-glow"></div><div class="card-del" onclick="delCard('${c.id}',event)">✕</div><div class="card-body"><div class="card-top"><div class="card-name">${c.name}</div><div class="rank-badge">${rank}</div></div><div class="card-img-wrap">${c.img?`<img src="${c.img}" alt="">`:'<div class="card-img-ph">⚔</div>'}<div class="time-badge">${c.tval} ${c.ttype}</div></div><div class="div"></div>${c.trigger?`<div class="stat"><span class="s-ico">🕐</span><span class="s-lbl">Триггер</span><span class="s-val">${c.trigger}</span></div>`:''}${c.sbuff?`<div class="stat"><span class="s-ico">⚡</span><span class="s-lbl">Баф</span><span class="s-val">${c.sbuff}</span></div>`:''}${c.lbuff?`<div class="stat"><span class="s-ico">🌿</span><span class="s-lbl">Прокачка</span><span class="s-val">${c.lbuff}</span></div>`:''}<div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Энергия</span><span class="s-val"><div class="edots">${edots}</div></span></div>${c.bonuses?`<div class="stat"><span class="s-ico">🎁</span><span class="s-lbl">Бонус</span><span class="s-val">${c.bonuses}</span></div>`:''}<div class="div"></div><div class="progress"><div class="prog-lbl"><span>Прогресс</span><span>${c.checked.length}/${c.cbcount}</span></div><div class="prog-bar-wrap"><div class="prog-bar" style="width:${pct}%"></div></div><div class="boxes">${boxes}</div></div>${all&&c.ri<RANKS.length-1?`<button class="rankup-btn show" onclick="startRankUp('${c.id}',event)">⬆ До ${RANKS[c.ri+1]}</button>`:''}${c.ri===RANKS.length-1?'<div class="max-rank">✦ МАКСИМАЛЬНЫЙ РАНГ ✦</div>':''}</div>`;
+  const w=document.createElement('div');
+  w.className=`ncard ${rcls}${doneToday?' done-today':''}`;
+  w.style.cssText=`--rc:${rc};--rg:${rg};`;
+  w.dataset.id=c.id;
+  w.innerHTML=`
+    <div class="ncard-glow"></div>
+    <div class="card-del" onclick="delCard('${c.id}',event)">✕</div>
+    ${doneToday?'<div class="card-done-badge">✓ Выполнено сегодня</div>':''}
+    <div class="card-body">
+      <div class="card-top"><div class="card-name">${c.name}</div><div class="rank-badge">${rank}</div></div>
+      <div class="card-img-wrap">${c.img?`<img src="${c.img}" alt="">`:'<div class="card-img-ph">⚔</div>'}<div class="time-badge">${c.tval} ${c.ttype}</div></div>
+      <div class="div"></div>
+      ${c.trigger?`<div class="stat"><span class="s-ico">🕐</span><span class="s-lbl">Триггер</span><span class="s-val">${c.trigger}</span></div>`:''}
+      ${c.sbuff?`<div class="stat"><span class="s-ico">⚡</span><span class="s-lbl">Баф</span><span class="s-val">${c.sbuff}</span></div>`:''}
+      ${c.lbuff?`<div class="stat"><span class="s-ico">🌿</span><span class="s-lbl">Прокачка</span><span class="s-val">${c.lbuff}</span></div>`:''}
+      <div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Энергия</span><span class="s-val"><div class="edots">${edots}</div></span></div>
+      ${c.bonuses?`<div class="stat"><span class="s-ico">🎁</span><span class="s-lbl">Бонус</span><span class="s-val">${c.bonuses}</span></div>`:''}
+      <div class="div"></div>
+      <div class="card-do-wrap">
+        <button class="card-do-btn ${doneToday?'done':'undone'}"
+          onclick="${doneToday?'':'doCard(\\'' + c.id + '\\')'}"
+          ${doneToday?'disabled':''}>
+          ${doneToday?'✓ Выполнено':'⚔ Выполнить'}
+        </button>
+        <span class="card-do-counter">🔁 ${doneCount}&thinsp;/&thinsp;${total}</span>
+      </div>
+      ${doneCount>=total&&c.ri<RANKS.length-1?`<button class="rankup-btn show" onclick="startRankUp('${c.id}',event)">⬆ До ${RANKS[c.ri+1]}</button>`:''}
+      ${c.ri===RANKS.length-1?'<div class="max-rank">✦ МАКСИМАЛЬНЫЙ РАНГ ✦</div>':''}
+    </div>`;
   return w;
 }
 
 /* ============ INTERACTIONS ============ */
-function toggleCB(id,idx){const c=cards.find(x=>x.id===id);if(!c)return;const i=c.checked.indexOf(idx);if(i>-1)c.checked.splice(i,1);else{c.checked.push(idx);playCheckSound();
-  try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred("light");}catch(e){}
-}save();render();}
+function doCard(id){
+  const c=cards.find(x=>x.id===id);
+  if(!c)return;
+  const now=Date.now();
+  // Guard: only once per day
+  if(c.lastDone&&_sameDay(c.lastDone,now))return;
+  // Store execution timestamp (used as counter towards rank-up)
+  if(!Array.isArray(c.checked))c.checked=[];
+  c.checked.push(now);
+  // Update streak (has internal _sameDay guard)
+  _updateStreak(c);
+  // Sound & haptic
+  playCheckSound();
+  try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');}catch(ex){}
+  save();
+  render();
+}
+// Legacy alias — kept for safety
+function toggleCB(id,idx){doCard(id);}
+
 function delCard(id,e){e.stopPropagation();if(!confirm('Уничтожить?'))return;cards=cards.filter(x=>x.id!==id);save();render();}
 
 /* ============ RANK-UP ============ */
@@ -939,9 +997,10 @@ function _buildAvGrid(){
 }
 function _uploadAvImg(key){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.onchange=function(){const f=this.files[0];if(!f)return;_compressImage(f,c=>{localStorage.setItem('av_img_'+key,c);updateAvatar();_buildAvGrid();});};inp.click();}
 
-/* FIREBASE & SYNC (V5) */
+/* FIREBASE & SYNC (V6) */
 let _uid=null, _code=null, _unsub=null, _syncReady=false;
 const STORE_SYNC_ID='nd_sync_uid';
+let _localWriteTs = 0; // timestamp of last local save — guards against stale snapshots
 
 function _makeCode(uid){return uid.slice(0,2).toUpperCase()+'-'+uid.slice(-4).toUpperCase();}
 function _setSyncDot(st){
@@ -958,21 +1017,20 @@ function _refreshSyncUI(){
 window._saveToCloud=function(){
   if(!_uid||!_syncReady)return;
   _setSyncDot('warn');
-  const payload = {
-    cards: (typeof cards !== 'undefined' ? cards : []),
-    quests: window._quests || [],
-    qstats: window._qstats || {total:0,todayDate:'',todayCount:0},
-    ts: firebase.firestore.FieldValue.serverTimestamp()
+  _localWriteTs=Date.now(); // mark local write time
+  const payload={
+    cards:(typeof cards!=='undefined'?cards:[]),
+    quests:window._quests||[],
+    qstats:window._qstats||{total:0,todayDate:'',todayCount:0},
+    ts:firebase.firestore.FieldValue.serverTimestamp()
   };
-  fbDb.collection('decks').doc(_uid).set(payload, {merge:true})
+  fbDb.collection('decks').doc(_uid).set(payload,{merge:true})
     .then(()=>_setSyncDot('ok'))
     .catch(e=>{_setSyncDot('red');console.warn(e.message);});
 };
 
 function saveToLocal(){
-  if(typeof cards !== 'undefined'){
-    localStorage.setItem('nd_v3',JSON.stringify(cards));
-  }
+  if(typeof cards!=='undefined')localStorage.setItem('nd_v3',JSON.stringify(cards));
 }
 function save(){saveToLocal();window._saveToCloud();}
 
@@ -980,21 +1038,36 @@ function _subscribeRemote(uid){
   if(_unsub)_unsub();
   _unsub=fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
     if(!snap.exists)return;
-    const d=snap.data() || {};
+    const d=snap.data()||{};
 
-    cards = Array.isArray(d.cards) ? d.cards : [];
-    cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!c.history)c.history=[];});
+    // KEY FIX: Firebase fires onSnapshot even for our own writes (often with slightly stale data).
+    // If we wrote locally within the last 3s, trust local state for cards only.
+    if(Date.now()-_localWriteTs<3000){
+      // Still sync quests from cloud (they change less frequently)
+      if(Array.isArray(d.quests)){window._quests=d.quests;}
+      if(d.qstats){window._qstats=d.qstats;}
+      localStorage.setItem('nd_quests',JSON.stringify(window._quests||[]));
+      localStorage.setItem('nd_qstats',JSON.stringify(window._qstats||{}));
+      if(typeof window.renderQuests==='function')window.renderQuests();
+      _setSyncDot('ok');
+      return; // skip overwriting cards
+    }
+
+    cards=Array.isArray(d.cards)?d.cards:[];
+    cards.forEach(c=>{
+      if(!c.streakDays)c.streakDays=0;
+      if(!c.lastDone)c.lastDone=null;
+      if(!c.history)c.history=[];
+      if(!Array.isArray(c.checked))c.checked=[];
+    });
     saveToLocal();
 
-    if(Array.isArray(d.quests)){ window._quests = d.quests; }
-    if(d.qstats){ window._qstats = d.qstats; }
-
-    localStorage.setItem('nd_quests',JSON.stringify(window._quests || []));
-    localStorage.setItem('nd_qstats',JSON.stringify(window._qstats || {total:0}));
-
-    if(typeof window.renderQuests==='function') window.renderQuests();
-    if(typeof render==='function') render();
-
+    if(Array.isArray(d.quests)){window._quests=d.quests;}
+    if(d.qstats){window._qstats=d.qstats;}
+    localStorage.setItem('nd_quests',JSON.stringify(window._quests||[]));
+    localStorage.setItem('nd_qstats',JSON.stringify(window._qstats||{}));
+    if(typeof window.renderQuests==='function')window.renderQuests();
+    if(typeof render==='function')render();
     _setSyncDot('ok');
   },e=>{_setSyncDot('red');console.warn(e.message);});
 }
@@ -1004,34 +1077,24 @@ function loadByCode(){
   const msg=document.getElementById('load-code-msg');
   if(raw.length<6){msg.textContent='Введи код AB-1234';return;}
   msg.style.color='var(--dim)';msg.textContent='Поиск…';
-
   fbDb.collection('decks').get().then(snap=>{
     let found=null;
     snap.forEach(d=>{if(_makeCode(d.id)===raw.slice(0,2)+'-'+raw.slice(2))found=d;});
     if(!found){msg.style.color='#f44336';msg.textContent='❌ Не найден';return;}
-
-    const d=found.data() || {};
-    const remoteCards = Array.isArray(d.cards) ? d.cards : [];
-
-    if(confirm('Найдено карточек: '+remoteCards.length+'. Связать устройства?')){
+    const d=found.data()||{};
+    if(confirm('Найдено карточек: '+(d.cards||[]).length+'. Связать устройства?')){
       _uid=found.id;
-      localStorage.setItem(STORE_SYNC_ID, _uid);
-      _code=_makeCode(_uid);
-      _refreshSyncUI();
-
-      cards = remoteCards;
-      cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;});
+      localStorage.setItem(STORE_SYNC_ID,_uid);
+      _code=_makeCode(_uid);_refreshSyncUI();
+      cards=Array.isArray(d.cards)?d.cards:[];
+      cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!Array.isArray(c.checked))c.checked=[];});
       saveToLocal();
-
-      if(Array.isArray(d.quests)){ window._quests=d.quests; }
-      if(d.qstats){ window._qstats=d.qstats; }
-
-      localStorage.setItem('nd_quests',JSON.stringify(window._quests || []));
-      localStorage.setItem('nd_qstats',JSON.stringify(window._qstats || {total:0}));
-
-      if(typeof window.renderQuests==='function') window.renderQuests();
-      if(typeof render==='function') render();
-
+      if(Array.isArray(d.quests)){window._quests=d.quests;}
+      if(d.qstats){window._qstats=d.qstats;}
+      localStorage.setItem('nd_quests',JSON.stringify(window._quests||[]));
+      localStorage.setItem('nd_qstats',JSON.stringify(window._qstats||{}));
+      if(typeof window.renderQuests==='function')window.renderQuests();
+      if(typeof render==='function')render();
       _subscribeRemote(_uid);
       msg.style.color='#4caf50';msg.textContent='✓ Устройства связаны!';
     }
@@ -1039,18 +1102,15 @@ function loadByCode(){
 }
 
 fbAuth.signInAnonymously().then(cred=>{
-  _uid = localStorage.getItem(STORE_SYNC_ID) || cred.user.uid;
-  _code = _makeCode(_uid);
-  _syncReady = true;
-  _refreshSyncUI();
-  _setSyncDot('ok');
-
+  _uid=localStorage.getItem(STORE_SYNC_ID)||cred.user.uid;
+  _code=_makeCode(_uid);_syncReady=true;
+  _refreshSyncUI();_setSyncDot('ok');
   _subscribeRemote(_uid);
-
   fbDb.collection('decks').doc(_uid).get().then(snap=>{
-    if(!snap.exists||(snap.data().cards||[]).length===0) window._saveToCloud();
+    if(!snap.exists||(snap.data().cards||[]).length===0)window._saveToCloud();
   });
 }).catch(e=>{_setSyncDot('red');console.warn('auth:',e.message);});
+
 /* STREAKS */
 function _sameDay(a,b){if(!a||!b)return false;const x=new Date(a),y=new Date(b);return x.getFullYear()===y.getFullYear()&&x.getMonth()===y.getMonth()&&x.getDate()===y.getDate();}
 function _daysBetween(a,b){return Math.round((new Date(new Date(b).toDateString())-new Date(new Date(a).toDateString()))/86400000);}
