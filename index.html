@@ -356,19 +356,18 @@ input,textarea,select{user-select:auto;}
 
 
 /* ===== CARD DO BUTTON + COUNTER ===== */
-.card-do-wrap{padding:.55rem .75rem;display:flex;align-items:center;gap:.6rem;border-top:1px solid var(--border);}
-.card-do-btn{flex:1;font-family:"Cinzel",serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;padding:.42rem .6rem;cursor:pointer;border-radius:2px;transition:all .22s;}
+.card-do-wrap{padding:.5rem .75rem;display:flex;align-items:center;gap:.6rem;border-top:1px solid var(--border);}
+.card-do-btn{flex:1;display:flex;justify-content:center;align-items:center;height:38px;cursor:pointer;border-radius:2px;transition:all .2s;}
 .card-do-btn.undone{background:linear-gradient(to bottom,#1e1205,#0f0903);color:var(--gold);border:1px solid rgba(201,162,39,.4);}
 .card-do-btn.undone:hover{background:linear-gradient(to bottom,#2e1e00,#1a0f00);border-color:var(--gold);}
 .card-do-btn.done{background:linear-gradient(to bottom,#1a2e14,#0e1a0a);color:#5aaf70;border:1px solid rgba(80,160,80,.5);cursor:default;pointer-events:none;}
-/* Counter: visible pill */
-.card-do-counter{display:flex;align-items:baseline;gap:.18rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:3px;padding:.28rem .55rem;flex-shrink:0;}
-.card-do-counter-num{font-family:"Cinzel",serif;font-size:.85rem;font-weight:700;color:var(--gold);line-height:1;}
-.card-do-counter-sep{font-family:"Cinzel",serif;font-size:.65rem;color:rgba(201,162,39,.5);margin:0 .05rem;}
-.card-do-counter-total{font-family:"Cinzel",serif;font-size:.65rem;color:var(--parchment);line-height:1;}
-.card-do-counter-lbl{font-family:"Cinzel",serif;font-size:.42rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-left:.2rem;align-self:flex-end;}
+/* Compact counter */
+.card-do-counter{display:flex;align-items:baseline;justify-content:center;min-width:55px;height:38px;box-sizing:border-box;background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.25);border-radius:2px;padding:0 .55rem;flex-shrink:0;}
+.card-do-counter-num{font-family:"Cinzel",serif;font-size:1.05rem;font-weight:700;color:var(--gold);line-height:36px;display:flex;align-items:center;}
+.card-do-counter-sep{font-family:"Cinzel",serif;font-size:.75rem;color:rgba(201,162,39,.4);margin:0 .2rem;line-height:36px;display:flex;align-items:center;}
+.card-do-counter-total{font-family:"Cinzel",serif;font-size:.75rem;color:var(--dim);line-height:36px;display:flex;align-items:center;}
 /* Done badge + card glow */
-.card-done-badge{position:absolute;top:.45rem;left:.45rem;font-family:"Cinzel",serif;font-size:.48rem;text-transform:uppercase;letter-spacing:.06em;background:rgba(20,60,20,.9);color:#5aaf70;border:1px solid rgba(80,160,80,.5);border-radius:2px;padding:.13rem .45rem;z-index:5;}
+.card-done-badge{position:absolute;top:.45rem;left:.45rem;font-family:"Cinzel",serif;font-size:.45rem;text-transform:uppercase;letter-spacing:.06em;background:rgba(20,60,20,.9);color:#5aaf70;border:1px solid rgba(80,160,80,.5);border-radius:2px;padding:.15rem .4rem;z-index:5;}
 .ncard.done-today{border-color:rgba(80,160,80,.4)!important;box-shadow:0 0 20px rgba(80,160,80,.1),0 4px 20px rgba(0,0,0,.7)!important;}
 .ncard.done-today .ncard-glow{background:radial-gradient(ellipse at 50% -20%,rgba(80,160,80,.1),transparent 65%)!important;}
 </style>
@@ -803,19 +802,28 @@ function buildCard(c){
   w.className='ncard '+rcls+(doneToday?' done-today':'');
   w.style.cssText='--rc:'+rc+';--rg:'+rg+';';
   w.dataset.id=c.id;
+
   const imgHtml=c.img?('<img src="'+c.img+'" alt="">'):'<div class="card-img-ph">⚔</div>';
   const doneBadge=doneToday?'<div class="card-done-badge">✓ Выполнено сегодня</div>':'';
+
+  // Icon-only button
+  const btnIcon=doneToday?'<span style="font-size:1.1rem;display:flex;align-items:center;height:100%">✓</span>':'<span style="font-size:1.1rem;display:flex;align-items:center;height:100%">⚔</span>';
   const doBtn='<button class="card-do-btn '+(doneToday?'done':'undone')+'"'
     +(doneToday?' disabled':' onclick="doCard(\''+c.id+'\')"')+'>'
-    +(doneToday?'✓ Выполнено':'⚔ Выполнить')+'</button>';
-  const counter='<div class="card-do-counter"><span class="card-do-counter-num">'+doneCount+'</span><span class="card-do-counter-sep">/</span><span class="card-do-counter-total">'+total+'</span><span class="card-do-counter-lbl">выполн.</span></div>';
+    +btnIcon+'</button>';
+
+  // Compact counter
+  const counter='<div class="card-do-counter"><span class="card-do-counter-num">'+doneCount+'</span><span class="card-do-counter-sep">/</span><span class="card-do-counter-total">'+total+'</span></div>';
+
   const rankupBtn=(doneCount>=total&&c.ri<RANKS.length-1)
     ?'<button class="rankup-btn show" onclick="startRankUp(\''+c.id+'\',event)">⬆ До '+RANKS[c.ri+1]+'</button>':'';
   const maxRank=c.ri===RANKS.length-1?'<div class="max-rank">✦ МАКСИМАЛЬНЫЙ РАНГ ✦</div>':'';
+
   const triggerStat=c.trigger?'<div class="stat"><span class="s-ico">🕐</span><span class="s-lbl">Триггер</span><span class="s-val">'+c.trigger+'</span></div>':'';
   const sbuffStat=c.sbuff?'<div class="stat"><span class="s-ico">⚡</span><span class="s-lbl">Баф</span><span class="s-val">'+c.sbuff+'</span></div>':'';
   const lbuffStat=c.lbuff?'<div class="stat"><span class="s-ico">🌿</span><span class="s-lbl">Прокачка</span><span class="s-val">'+c.lbuff+'</span></div>':'';
   const bonusStat=c.bonuses?'<div class="stat"><span class="s-ico">🎁</span><span class="s-lbl">Бонус</span><span class="s-val">'+c.bonuses+'</span></div>':'';
+
   w.innerHTML=
     '<div class="ncard-glow"></div>'
     +'<div class="card-del" onclick="delCard(\''+c.id+'\',event)">✕</div>'
@@ -1018,6 +1026,7 @@ function _refreshSyncUI(){
   const a=document.getElementById('my-code-display');if(a)a.textContent=_code||'…';
   const b=document.getElementById('stat-code');if(b)b.textContent=_code||'…';
 }
+
 window._saveToCloud=function(){
   if(!_uid||!_syncReady)return;
   _setSyncDot('warn');
@@ -1032,6 +1041,7 @@ window._saveToCloud=function(){
     .then(()=>_setSyncDot('ok'))
     .catch(e=>{_setSyncDot('red');console.warn(e.message);});
 };
+
 function saveToLocal(){
   if(typeof cards!=='undefined')localStorage.setItem('nd_v3',JSON.stringify(cards));
 }
@@ -1068,6 +1078,7 @@ function _subscribeRemote(uid){
     _setSyncDot('ok');
   },e=>{_setSyncDot('red');console.warn(e.message);});
 }
+
 function loadByCode(){
   const raw=(document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   const msg=document.getElementById('load-code-msg');
@@ -1096,6 +1107,7 @@ function loadByCode(){
     }
   }).catch(e=>{msg.style.color='#f44336';msg.textContent='Ошибка: '+e.message;});
 }
+
 fbAuth.signInAnonymously().then(cred=>{
   _uid=localStorage.getItem(STORE_SYNC_ID)||cred.user.uid;
   _code=_makeCode(_uid);_syncReady=true;
