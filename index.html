@@ -355,13 +355,19 @@ input,textarea,select{user-select:auto;}
 .q-clear-btn:hover{border-color:#c94040;color:#c94040}
 
 
-/* ===== CARD DO BUTTON ===== */
-.card-do-wrap{padding:.55rem .75rem;display:flex;align-items:center;gap:.65rem;border-top:1px solid var(--border);}
+/* ===== CARD DO BUTTON + COUNTER ===== */
+.card-do-wrap{padding:.55rem .75rem;display:flex;align-items:center;gap:.6rem;border-top:1px solid var(--border);}
 .card-do-btn{flex:1;font-family:"Cinzel",serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;padding:.42rem .6rem;cursor:pointer;border-radius:2px;transition:all .22s;}
 .card-do-btn.undone{background:linear-gradient(to bottom,#1e1205,#0f0903);color:var(--gold);border:1px solid rgba(201,162,39,.4);}
 .card-do-btn.undone:hover{background:linear-gradient(to bottom,#2e1e00,#1a0f00);border-color:var(--gold);}
 .card-do-btn.done{background:linear-gradient(to bottom,#1a2e14,#0e1a0a);color:#5aaf70;border:1px solid rgba(80,160,80,.5);cursor:default;pointer-events:none;}
-.card-do-counter{font-family:"Cinzel",serif;font-size:.62rem;color:var(--dim);white-space:nowrap;letter-spacing:.04em;}
+/* Counter: visible pill */
+.card-do-counter{display:flex;align-items:baseline;gap:.18rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:3px;padding:.28rem .55rem;flex-shrink:0;}
+.card-do-counter-num{font-family:"Cinzel",serif;font-size:.85rem;font-weight:700;color:var(--gold);line-height:1;}
+.card-do-counter-sep{font-family:"Cinzel",serif;font-size:.65rem;color:rgba(201,162,39,.5);margin:0 .05rem;}
+.card-do-counter-total{font-family:"Cinzel",serif;font-size:.65rem;color:var(--parchment);line-height:1;}
+.card-do-counter-lbl{font-family:"Cinzel",serif;font-size:.42rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-left:.2rem;align-self:flex-end;}
+/* Done badge + card glow */
 .card-done-badge{position:absolute;top:.45rem;left:.45rem;font-family:"Cinzel",serif;font-size:.48rem;text-transform:uppercase;letter-spacing:.06em;background:rgba(20,60,20,.9);color:#5aaf70;border:1px solid rgba(80,160,80,.5);border-radius:2px;padding:.13rem .45rem;z-index:5;}
 .ncard.done-today{border-color:rgba(80,160,80,.4)!important;box-shadow:0 0 20px rgba(80,160,80,.1),0 4px 20px rgba(0,0,0,.7)!important;}
 .ncard.done-today .ncard-glow{background:radial-gradient(ellipse at 50% -20%,rgba(80,160,80,.1),transparent 65%)!important;}
@@ -802,7 +808,7 @@ function buildCard(c){
   const doBtn='<button class="card-do-btn '+(doneToday?'done':'undone')+'"'
     +(doneToday?' disabled':' onclick="doCard(\''+c.id+'\')"')+'>'
     +(doneToday?'✓ Выполнено':'⚔ Выполнить')+'</button>';
-  const counter='<span class="card-do-counter">🔁 '+doneCount+' / '+total+'</span>';
+  const counter='<div class="card-do-counter"><span class="card-do-counter-num">'+doneCount+'</span><span class="card-do-counter-sep">/</span><span class="card-do-counter-total">'+total+'</span><span class="card-do-counter-lbl">выполн.</span></div>';
   const rankupBtn=(doneCount>=total&&c.ri<RANKS.length-1)
     ?'<button class="rankup-btn show" onclick="startRankUp(\''+c.id+'\',event)">⬆ До '+RANKS[c.ri+1]+'</button>':'';
   const maxRank=c.ri===RANKS.length-1?'<div class="max-rank">✦ МАКСИМАЛЬНЫЙ РАНГ ✦</div>':'';
@@ -1012,7 +1018,6 @@ function _refreshSyncUI(){
   const a=document.getElementById('my-code-display');if(a)a.textContent=_code||'…';
   const b=document.getElementById('stat-code');if(b)b.textContent=_code||'…';
 }
-
 window._saveToCloud=function(){
   if(!_uid||!_syncReady)return;
   _setSyncDot('warn');
@@ -1027,7 +1032,6 @@ window._saveToCloud=function(){
     .then(()=>_setSyncDot('ok'))
     .catch(e=>{_setSyncDot('red');console.warn(e.message);});
 };
-
 function saveToLocal(){
   if(typeof cards!=='undefined')localStorage.setItem('nd_v3',JSON.stringify(cards));
 }
@@ -1064,7 +1068,6 @@ function _subscribeRemote(uid){
     _setSyncDot('ok');
   },e=>{_setSyncDot('red');console.warn(e.message);});
 }
-
 function loadByCode(){
   const raw=(document.getElementById('load-code-input').value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   const msg=document.getElementById('load-code-msg');
@@ -1093,7 +1096,6 @@ function loadByCode(){
     }
   }).catch(e=>{msg.style.color='#f44336';msg.textContent='Ошибка: '+e.message;});
 }
-
 fbAuth.signInAnonymously().then(cred=>{
   _uid=localStorage.getItem(STORE_SYNC_ID)||cred.user.uid;
   _code=_makeCode(_uid);_syncReady=true;
