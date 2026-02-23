@@ -790,37 +790,41 @@ function buildCard(c){
   const doneToday=!!(c.lastDone&&_sameDay(c.lastDone,now));
   const doneCount=Array.isArray(c.checked)?c.checked.length:0;
   const total=c.cbcount||1;
-  const pct=Math.min(100,Math.round(doneCount/total*100));
-  const edots=`<div class="edot ${c.energy>=1?'on':''}"></div><div class="edot ${c.energy>=2?'on':''}"></div><div class="edot ${c.energy>=3?'on':''}"></div>`;
+  const edots='<div class="edot '+(c.energy>=1?'on':'')+'"></div>'
+    +'<div class="edot '+(c.energy>=2?'on':'')+'"></div>'
+    +'<div class="edot '+(c.energy>=3?'on':'')+'"></div>';
   const w=document.createElement('div');
-  w.className=`ncard ${rcls}${doneToday?' done-today':''}`;
-  w.style.cssText=`--rc:${rc};--rg:${rg};`;
+  w.className='ncard '+rcls+(doneToday?' done-today':'');
+  w.style.cssText='--rc:'+rc+';--rg:'+rg+';';
   w.dataset.id=c.id;
-  w.innerHTML=`
-    <div class="ncard-glow"></div>
-    <div class="card-del" onclick="delCard('${c.id}',event)">✕</div>
-    ${doneToday?'<div class="card-done-badge">✓ Выполнено сегодня</div>':''}
-    <div class="card-body">
-      <div class="card-top"><div class="card-name">${c.name}</div><div class="rank-badge">${rank}</div></div>
-      <div class="card-img-wrap">${c.img?`<img src="${c.img}" alt="">`:'<div class="card-img-ph">⚔</div>'}<div class="time-badge">${c.tval} ${c.ttype}</div></div>
-      <div class="div"></div>
-      ${c.trigger?`<div class="stat"><span class="s-ico">🕐</span><span class="s-lbl">Триггер</span><span class="s-val">${c.trigger}</span></div>`:''}
-      ${c.sbuff?`<div class="stat"><span class="s-ico">⚡</span><span class="s-lbl">Баф</span><span class="s-val">${c.sbuff}</span></div>`:''}
-      ${c.lbuff?`<div class="stat"><span class="s-ico">🌿</span><span class="s-lbl">Прокачка</span><span class="s-val">${c.lbuff}</span></div>`:''}
-      <div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Энергия</span><span class="s-val"><div class="edots">${edots}</div></span></div>
-      ${c.bonuses?`<div class="stat"><span class="s-ico">🎁</span><span class="s-lbl">Бонус</span><span class="s-val">${c.bonuses}</span></div>`:''}
-      <div class="div"></div>
-      <div class="card-do-wrap">
-        <button class="card-do-btn ${doneToday?'done':'undone'}"
-          onclick="${doneToday?'':'doCard(\\'' + c.id + '\\')'}"
-          ${doneToday?'disabled':''}>
-          ${doneToday?'✓ Выполнено':'⚔ Выполнить'}
-        </button>
-        <span class="card-do-counter">🔁 ${doneCount}&thinsp;/&thinsp;${total}</span>
-      </div>
-      ${doneCount>=total&&c.ri<RANKS.length-1?`<button class="rankup-btn show" onclick="startRankUp('${c.id}',event)">⬆ До ${RANKS[c.ri+1]}</button>`:''}
-      ${c.ri===RANKS.length-1?'<div class="max-rank">✦ МАКСИМАЛЬНЫЙ РАНГ ✦</div>':''}
-    </div>`;
+  const imgHtml=c.img?('<img src="'+c.img+'" alt="">'):'<div class="card-img-ph">⚔</div>';
+  const doneBadge=doneToday?'<div class="card-done-badge">✓ Выполнено сегодня</div>':'';
+  const doBtn='<button class="card-do-btn '+(doneToday?'done':'undone')+'"'
+    +(doneToday?' disabled':' onclick="doCard(\''+c.id+'\')"')+'>'
+    +(doneToday?'✓ Выполнено':'⚔ Выполнить')+'</button>';
+  const counter='<span class="card-do-counter">🔁 '+doneCount+' / '+total+'</span>';
+  const rankupBtn=(doneCount>=total&&c.ri<RANKS.length-1)
+    ?'<button class="rankup-btn show" onclick="startRankUp(\''+c.id+'\',event)">⬆ До '+RANKS[c.ri+1]+'</button>':'';
+  const maxRank=c.ri===RANKS.length-1?'<div class="max-rank">✦ МАКСИМАЛЬНЫЙ РАНГ ✦</div>':'';
+  const triggerStat=c.trigger?'<div class="stat"><span class="s-ico">🕐</span><span class="s-lbl">Триггер</span><span class="s-val">'+c.trigger+'</span></div>':'';
+  const sbuffStat=c.sbuff?'<div class="stat"><span class="s-ico">⚡</span><span class="s-lbl">Баф</span><span class="s-val">'+c.sbuff+'</span></div>':'';
+  const lbuffStat=c.lbuff?'<div class="stat"><span class="s-ico">🌿</span><span class="s-lbl">Прокачка</span><span class="s-val">'+c.lbuff+'</span></div>':'';
+  const bonusStat=c.bonuses?'<div class="stat"><span class="s-ico">🎁</span><span class="s-lbl">Бонус</span><span class="s-val">'+c.bonuses+'</span></div>':'';
+  w.innerHTML=
+    '<div class="ncard-glow"></div>'
+    +'<div class="card-del" onclick="delCard(\''+c.id+'\',event)">✕</div>'
+    +doneBadge
+    +'<div class="card-body">'
+      +'<div class="card-top"><div class="card-name">'+c.name+'</div><div class="rank-badge">'+rank+'</div></div>'
+      +'<div class="card-img-wrap">'+imgHtml+'<div class="time-badge">'+c.tval+' '+c.ttype+'</div></div>'
+      +'<div class="div"></div>'
+      +triggerStat+sbuffStat+lbuffStat
+      +'<div class="stat"><span class="s-ico">🔥</span><span class="s-lbl">Энергия</span><span class="s-val"><div class="edots">'+edots+'</div></span></div>'
+      +bonusStat
+      +'<div class="div"></div>'
+      +'<div class="card-do-wrap">'+doBtn+counter+'</div>'
+      +rankupBtn+maxRank
+    +'</div>';
   return w;
 }
 
@@ -829,20 +833,15 @@ function doCard(id){
   const c=cards.find(x=>x.id===id);
   if(!c)return;
   const now=Date.now();
-  // Guard: only once per day
   if(c.lastDone&&_sameDay(c.lastDone,now))return;
-  // Store execution timestamp (used as counter towards rank-up)
   if(!Array.isArray(c.checked))c.checked=[];
   c.checked.push(now);
-  // Update streak (has internal _sameDay guard)
   _updateStreak(c);
-  // Sound & haptic
   playCheckSound();
   try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');}catch(ex){}
   save();
   render();
 }
-// Legacy alias — kept for safety
 function toggleCB(id,idx){doCard(id);}
 
 function delCard(id,e){e.stopPropagation();if(!confirm('Уничтожить?'))return;cards=cards.filter(x=>x.id!==id);save();render();}
@@ -1000,7 +999,7 @@ function _uploadAvImg(key){const inp=document.createElement('input');inp.type='f
 /* FIREBASE & SYNC (V6) */
 let _uid=null, _code=null, _unsub=null, _syncReady=false;
 const STORE_SYNC_ID='nd_sync_uid';
-let _localWriteTs = 0; // timestamp of last local save — guards against stale snapshots
+let _localWriteTs = 0;
 
 function _makeCode(uid){return uid.slice(0,2).toUpperCase()+'-'+uid.slice(-4).toUpperCase();}
 function _setSyncDot(st){
@@ -1017,7 +1016,7 @@ function _refreshSyncUI(){
 window._saveToCloud=function(){
   if(!_uid||!_syncReady)return;
   _setSyncDot('warn');
-  _localWriteTs=Date.now(); // mark local write time
+  _localWriteTs=Date.now();
   const payload={
     cards:(typeof cards!=='undefined'?cards:[]),
     quests:window._quests||[],
@@ -1039,20 +1038,15 @@ function _subscribeRemote(uid){
   _unsub=fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
     if(!snap.exists)return;
     const d=snap.data()||{};
-
-    // KEY FIX: Firebase fires onSnapshot even for our own writes (often with slightly stale data).
-    // If we wrote locally within the last 3s, trust local state for cards only.
     if(Date.now()-_localWriteTs<3000){
-      // Still sync quests from cloud (they change less frequently)
       if(Array.isArray(d.quests)){window._quests=d.quests;}
       if(d.qstats){window._qstats=d.qstats;}
       localStorage.setItem('nd_quests',JSON.stringify(window._quests||[]));
       localStorage.setItem('nd_qstats',JSON.stringify(window._qstats||{}));
       if(typeof window.renderQuests==='function')window.renderQuests();
       _setSyncDot('ok');
-      return; // skip overwriting cards
+      return;
     }
-
     cards=Array.isArray(d.cards)?d.cards:[];
     cards.forEach(c=>{
       if(!c.streakDays)c.streakDays=0;
@@ -1061,7 +1055,6 @@ function _subscribeRemote(uid){
       if(!Array.isArray(c.checked))c.checked=[];
     });
     saveToLocal();
-
     if(Array.isArray(d.quests)){window._quests=d.quests;}
     if(d.qstats){window._qstats=d.qstats;}
     localStorage.setItem('nd_quests',JSON.stringify(window._quests||[]));
