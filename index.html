@@ -387,82 +387,69 @@ input,textarea,select{user-select:auto;}
 .boss-desc{font-size:.72rem;line-height:1.6;color:var(--parchment);opacity:.92}.boss-danger{margin-top:.7rem;font-size:.6rem;color:#e58062;font-family:"Cinzel",serif;letter-spacing:.04em;text-transform:uppercase}.boss-reward{margin-top:.7rem;font-size:.62rem;color:#86d85e;font-family:"Cinzel",serif;letter-spacing:.04em}.boss-empty{text-align:center;padding:2rem 1rem;border:1px dashed #2d170f;border-radius:4px;color:var(--dim)}.boss-empty-icon{font-size:2rem;display:block;margin-bottom:.5rem;opacity:.45}
 
 /* ===== INVENTORY HOMM3 STYLE ===== */
-#tab-inventory{display:none;padding:1rem .45rem}
-#tab-inventory.active{display:block}
-.h3inv-wrap{max-width:760px;margin:0 auto}
-.h3inv-title{font-family:"Cinzel Decorative",serif;font-size:1rem;color:var(--gold);letter-spacing:.08em;text-align:center;margin-bottom:.9rem}
-.h3inv-board{
-  --slot-size:68px;
-  position:relative;
-  width:min(100%,560px);
-  min-height:780px;
-  margin:0 auto;
-  padding:18px 16px 190px;
-  background:linear-gradient(to bottom,#5b351d,#311b12 56%,#22120c 100%);
-  border:2px solid #7b5128;
-  border-radius:10px;
-  box-shadow:0 10px 36px rgba(0,0,0,.45), inset 0 0 24px rgba(0,0,0,.35);
-  overflow:hidden;
-}
-.h3inv-board::before{content:'';position:absolute;inset:10px;border:1px solid rgba(201,162,39,.18);border-radius:6px;pointer-events:none}
-.h3hero{position:absolute;left:50%;top:86px;transform:translateX(-50%);width:180px;height:360px;opacity:.82;pointer-events:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.2))}
-.h3hero-head{position:absolute;left:50%;top:0;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;background:linear-gradient(to bottom,#cba1aa,#a97884)}
-.h3hero-body{position:absolute;left:50%;top:42px;transform:translateX(-50%);width:110px;height:170px;background:linear-gradient(to bottom,#d2adb5,#ac808b);clip-path:polygon(50% 0,74% 10%,90% 42%,76% 100%,24% 100%,10% 42%,26% 10%)}
-.h3hero-arm{position:absolute;top:84px;width:28px;height:126px;background:linear-gradient(to bottom,#cba2ad,#9f727c);border-radius:20px}
-.h3hero-arm.left{left:18px;transform:rotate(18deg)}
-.h3hero-arm.right{right:18px;transform:rotate(-18deg)}
-.h3hero-leg{position:absolute;top:206px;width:34px;height:145px;background:linear-gradient(to bottom,#c8a0aa,#9a6f79);border-radius:22px}
-.h3hero-leg.left{left:54px;transform:rotate(2deg)}
-.h3hero-leg.right{right:54px;transform:rotate(-2deg)}
-.h3slot{position:absolute;width:var(--slot-size);height:var(--slot-size);display:flex;align-items:center;justify-content:center;padding:.3rem;box-sizing:border-box;background:linear-gradient(to bottom,#311b11,#160b07);border:2px solid #8a6436;border-radius:6px;box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.24);z-index:2}
-.h3slot::after,.h3bag-slot::after{content:'';position:absolute;inset:4px;border:1px solid rgba(201,162,39,.15);border-radius:3px;pointer-events:none}
-.h3slot.empty,.h3bag-slot.empty{border-color:#5d3c22;background:linear-gradient(to bottom,#28150d,#140b07)}
-.h3slot-label-mini{position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);font-family:"Cinzel",serif;font-size:.45rem;color:#c4a374;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.7)}
-.h3item{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.12rem;text-align:center;cursor:pointer}
-.h3item-icon{font-size:1.4rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
-.h3item-name{font-family:"Cinzel",serif;font-size:.43rem;color:var(--parchment);line-height:1.05}
-.h3item-rare{color:#9fe36d}
-.pos-helmet{left:50%;top:22px;transform:translateX(-50%)}
-.pos-weapon{left:16px;top:126px}
-.pos-shield{left:16px;top:224px}
-.pos-armor{left:50%;top:190px;transform:translateX(-50%)}
-.pos-gloves{right:16px;top:126px}
-.pos-ring1{right:16px;top:224px}
-.pos-ring2{right:16px;top:322px}
-.pos-boots{left:50%;top:348px;transform:translateX(-50%)}
-.h3bag-wrap{position:absolute;left:12px;right:12px;bottom:12px;padding:12px 10px 10px;background:linear-gradient(to bottom,rgba(35,19,13,.88),rgba(20,11,8,.94));border:1px solid rgba(201,162,39,.2);border-radius:8px;z-index:2}
-.h3bag-title{font-family:"Cinzel",serif;font-size:.62rem;letter-spacing:.08em;color:var(--gold);text-transform:uppercase;margin:0 0 .45rem 2px}
-.h3bag-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.h3bag-slot{position:relative;min-height:68px;display:flex;align-items:center;justify-content:center;padding:.3rem;box-sizing:border-box;background:linear-gradient(to bottom,#311b11,#160b07);border:2px solid #8a6436;border-radius:6px;box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.2)}
-.h3slot-actions,.h3bag-actions{position:absolute;left:50%;top:100%;transform:translate(-50%,6px);display:flex;gap:.2rem;z-index:4}
-.h3mini-btn{font-family:"Cinzel",serif;font-size:.4rem;text-transform:uppercase;letter-spacing:.04em;padding:.12rem .3rem;background:rgba(25,13,8,.97);border:1px solid rgba(201,162,39,.3);border-radius:2px;color:var(--gold);cursor:pointer;white-space:nowrap}
-.h3mini-btn:hover{background:rgba(50,27,16,.97)}
-.h3inv-bottom{width:min(100%,560px);margin:.85rem auto 0;display:flex;flex-direction:column;gap:.7rem}
-.h3bonus-box,.h3details{background:rgba(0,0,0,.28);border:1px solid var(--border);border-radius:4px;padding:.7rem}
-.h3bonus-box{font-family:"Cinzel",serif;font-size:.6rem;color:var(--parchment)}
-.h3details{font-size:.68rem;line-height:1.6;color:var(--parchment);min-height:88px}
+#tab-inventory{display:none !important;padding:1rem .45rem !important}
+#tab-inventory.active{display:block !important}
+#tab-inventory .hv3-wrap{max-width:760px !important;margin:0 auto !important}
+#tab-inventory .hv3-title{font-family:"Cinzel Decorative",serif !important;font-size:1rem !important;color:var(--gold) !important;letter-spacing:.08em !important;text-align:center !important;margin-bottom:.9rem !important}
+#tab-inventory .hv3-board{position:relative !important;width:min(100%,560px) !important;min-height:780px !important;margin:0 auto !important;padding:18px 14px 190px !important;background:linear-gradient(to bottom,#5b351d,#311b12 56%,#22120c 100%) !important;border:2px solid #7b5128 !important;border-radius:10px !important;box-shadow:0 10px 36px rgba(0,0,0,.45), inset 0 0 24px rgba(0,0,0,.35) !important;overflow:hidden !important}
+#tab-inventory .hv3-board::before{content:'' !important;position:absolute !important;inset:10px !important;border:1px solid rgba(201,162,39,.18) !important;border-radius:6px !important;pointer-events:none !important}
+#tab-inventory .hv3-hero{position:absolute !important;left:50% !important;top:90px !important;transform:translateX(-50%) !important;width:180px !important;height:360px !important;opacity:.88 !important;pointer-events:none !important;z-index:1 !important}
+#tab-inventory .hv3-head{position:absolute !important;left:50% !important;top:0 !important;transform:translateX(-50%) !important;width:40px !important;height:40px !important;border-radius:50% !important;background:linear-gradient(to bottom,#d7b0b8,#ad7f89) !important}
+#tab-inventory .hv3-body{position:absolute !important;left:50% !important;top:42px !important;transform:translateX(-50%) !important;width:110px !important;height:170px !important;background:linear-gradient(to bottom,#dcb7bf,#b38792) !important;clip-path:polygon(50% 0,74% 10%,90% 42%,76% 100%,24% 100%,10% 42%,26% 10%) !important}
+#tab-inventory .hv3-arm{position:absolute !important;top:82px !important;width:28px !important;height:126px !important;background:linear-gradient(to bottom,#d0a8b1,#a47781) !important;border-radius:20px !important}
+#tab-inventory .hv3-arm.left{left:18px !important;transform:rotate(18deg) !important}
+#tab-inventory .hv3-arm.right{right:18px !important;transform:rotate(-18deg) !important}
+#tab-inventory .hv3-leg{position:absolute !important;top:206px !important;width:34px !important;height:145px !important;background:linear-gradient(to bottom,#caa3ad,#9b707a) !important;border-radius:22px !important}
+#tab-inventory .hv3-leg.left{left:54px !important;transform:rotate(2deg) !important}
+#tab-inventory .hv3-leg.right{right:54px !important;transform:rotate(-2deg) !important}
+#tab-inventory .hv3-slot{position:absolute !important;width:68px !important;height:68px !important;display:flex !important;align-items:center !important;justify-content:center !important;padding:.3rem !important;box-sizing:border-box !important;background:linear-gradient(to bottom,#311b11,#160b07) !important;border:2px solid #8a6436 !important;border-radius:6px !important;box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.24) !important;z-index:2 !important}
+#tab-inventory .hv3-slot::after,#tab-inventory .hv3-bag-slot::after{content:'' !important;position:absolute !important;inset:4px !important;border:1px solid rgba(201,162,39,.15) !important;border-radius:3px !important;pointer-events:none !important}
+#tab-inventory .hv3-slot.empty,#tab-inventory .hv3-bag-slot.empty{border-color:#5d3c22 !important;background:linear-gradient(to bottom,#28150d,#140b07) !important}
+#tab-inventory .hv3-label{position:absolute !important;left:50% !important;bottom:-18px !important;transform:translateX(-50%) !important;font-family:"Cinzel",serif !important;font-size:.45rem !important;color:#c4a374 !important;text-transform:uppercase !important;letter-spacing:.05em !important;white-space:nowrap !important;text-shadow:0 1px 2px rgba(0,0,0,.7) !important}
+#tab-inventory .hv3-item{width:100% !important;height:100% !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:.12rem !important;text-align:center !important;cursor:pointer !important}
+#tab-inventory .hv3-icon{font-size:1.35rem !important;line-height:1 !important}
+#tab-inventory .hv3-name{font-family:"Cinzel",serif !important;font-size:.43rem !important;color:var(--parchment) !important;line-height:1.05 !important}
+#tab-inventory .hv3-rare{color:#9fe36d !important}
+#tab-inventory .hv3-helmet{left:50% !important;top:20px !important;transform:translateX(-50%) !important}
+#tab-inventory .hv3-weapon{left:14px !important;top:126px !important}
+#tab-inventory .hv3-shield{left:14px !important;top:224px !important}
+#tab-inventory .hv3-armor{left:50% !important;top:190px !important;transform:translateX(-50%) !important}
+#tab-inventory .hv3-gloves{right:14px !important;top:126px !important}
+#tab-inventory .hv3-ring1{right:14px !important;top:224px !important}
+#tab-inventory .hv3-ring2{right:14px !important;top:322px !important}
+#tab-inventory .hv3-boots{left:50% !important;top:348px !important;transform:translateX(-50%) !important}
+#tab-inventory .hv3-bag-wrap{position:absolute !important;left:12px !important;right:12px !important;bottom:12px !important;padding:12px 10px 10px !important;background:linear-gradient(to bottom,rgba(35,19,13,.88),rgba(20,11,8,.94)) !important;border:1px solid rgba(201,162,39,.2) !important;border-radius:8px !important;z-index:2 !important}
+#tab-inventory .hv3-bag-title{font-family:"Cinzel",serif !important;font-size:.62rem !important;letter-spacing:.08em !important;color:var(--gold) !important;text-transform:uppercase !important;margin:0 0 .45rem 2px !important}
+#tab-inventory .hv3-bag-grid{display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:8px !important}
+#tab-inventory .hv3-bag-slot{position:relative !important;min-height:68px !important;display:flex !important;align-items:center !important;justify-content:center !important;padding:.3rem !important;box-sizing:border-box !important;background:linear-gradient(to bottom,#311b11,#160b07) !important;border:2px solid #8a6436 !important;border-radius:6px !important;box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.2) !important}
+#tab-inventory .hv3-act{position:absolute !important;left:50% !important;top:100% !important;transform:translate(-50%,6px) !important;display:flex !important;gap:.2rem !important;z-index:4 !important}
+#tab-inventory .hv3-btn{font-family:"Cinzel",serif !important;font-size:.4rem !important;text-transform:uppercase !important;letter-spacing:.04em !important;padding:.12rem .3rem !important;background:rgba(25,13,8,.97) !important;border:1px solid rgba(201,162,39,.3) !important;border-radius:2px !important;color:var(--gold) !important;cursor:pointer !important;white-space:nowrap !important}
+#tab-inventory .hv3-bottom{width:min(100%,560px) !important;margin:.85rem auto 0 !important;display:flex !important;flex-direction:column !important;gap:.7rem !important}
+#tab-inventory .hv3-bonus,#tab-inventory .hv3-details{background:rgba(0,0,0,.28) !important;border:1px solid var(--border) !important;border-radius:4px !important;padding:.7rem !important}
+#tab-inventory .hv3-bonus{font-family:"Cinzel",serif !important;font-size:.6rem !important;color:var(--parchment) !important}
+#tab-inventory .hv3-details{font-size:.68rem !important;line-height:1.6 !important;color:var(--parchment) !important;min-height:88px !important}
 @media (max-width:520px){
-  .h3inv-board{--slot-size:60px;min-height:710px;padding:16px 10px 174px}
-  .h3hero{top:90px;width:154px;height:312px}
-  .h3hero-head{width:34px;height:34px}
-  .h3hero-body{top:36px;width:92px;height:146px}
-  .h3hero-arm{top:72px;width:24px;height:108px}
-  .h3hero-arm.left{left:14px}
-  .h3hero-arm.right{right:14px}
-  .h3hero-leg{top:176px;width:28px;height:124px}
-  .h3hero-leg.left{left:46px}
-  .h3hero-leg.right{right:46px}
-  .pos-helmet{top:18px}
-  .pos-weapon{left:10px;top:118px}
-  .pos-shield{left:10px;top:206px}
-  .pos-armor{top:176px}
-  .pos-gloves{right:10px;top:118px}
-  .pos-ring1{right:10px;top:206px}
-  .pos-ring2{right:10px;top:294px}
-  .pos-boots{top:318px}
-  .h3bag-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-  .h3bag-slot{min-height:60px}
-  .h3slot-label-mini{font-size:.4rem;bottom:-16px}
+  #tab-inventory .hv3-board{min-height:710px !important;padding:16px 10px 174px !important}
+  #tab-inventory .hv3-hero{top:90px !important;width:154px !important;height:312px !important}
+  #tab-inventory .hv3-head{width:34px !important;height:34px !important}
+  #tab-inventory .hv3-body{top:36px !important;width:92px !important;height:146px !important}
+  #tab-inventory .hv3-arm{top:72px !important;width:24px !important;height:108px !important}
+  #tab-inventory .hv3-arm.left{left:14px !important}
+  #tab-inventory .hv3-arm.right{right:14px !important}
+  #tab-inventory .hv3-leg{top:176px !important;width:28px !important;height:124px !important}
+  #tab-inventory .hv3-leg.left{left:46px !important}
+  #tab-inventory .hv3-leg.right{right:46px !important}
+  #tab-inventory .hv3-slot{width:60px !important;height:60px !important}
+  #tab-inventory .hv3-helmet{top:18px !important}
+  #tab-inventory .hv3-weapon{left:10px !important;top:118px !important}
+  #tab-inventory .hv3-shield{left:10px !important;top:206px !important}
+  #tab-inventory .hv3-armor{top:176px !important}
+  #tab-inventory .hv3-gloves{right:10px !important;top:118px !important}
+  #tab-inventory .hv3-ring1{right:10px !important;top:206px !important}
+  #tab-inventory .hv3-ring2{right:10px !important;top:294px !important}
+  #tab-inventory .hv3-boots{top:318px !important}
+  #tab-inventory .hv3-bag-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:6px !important}
+  #tab-inventory .hv3-bag-slot{min-height:60px !important}
 }
 </style>
 
@@ -646,35 +633,35 @@ input,textarea,select{user-select:auto;}
   </div>
   <!-- INVENTORY -->
   <div id="tab-inventory" class="tab-panel">
-    <div class="h3inv-wrap">
-      <div class="h3inv-title">🎒 Инвентарь героя</div>
-      <div class="h3inv-board">
-        <div class="h3hero" aria-hidden="true">
-          <div class="h3hero-head"></div>
-          <div class="h3hero-body"></div>
-          <div class="h3hero-arm left"></div>
-          <div class="h3hero-arm right"></div>
-          <div class="h3hero-leg left"></div>
-          <div class="h3hero-leg right"></div>
+    <div class="hv3-wrap">
+      <div class="hv3-title">🎒 Инвентарь героя v3</div>
+      <div class="hv3-board" id="hv3-board">
+        <div class="hv3-hero" aria-hidden="true">
+          <div class="hv3-head"></div>
+          <div class="hv3-body"></div>
+          <div class="hv3-arm left"></div>
+          <div class="hv3-arm right"></div>
+          <div class="hv3-leg left"></div>
+          <div class="hv3-leg right"></div>
         </div>
 
-        <div class="h3slot pos-helmet" data-slot="helmet"></div>
-        <div class="h3slot pos-weapon" data-slot="weapon"></div>
-        <div class="h3slot pos-shield" data-slot="shield"></div>
-        <div class="h3slot pos-armor" data-slot="armor"></div>
-        <div class="h3slot pos-gloves" data-slot="gloves"></div>
-        <div class="h3slot pos-ring1" data-slot="ring1"></div>
-        <div class="h3slot pos-ring2" data-slot="ring2"></div>
-        <div class="h3slot pos-boots" data-slot="boots"></div>
+        <div class="hv3-slot hv3-helmet" data-slot="helmet"></div>
+        <div class="hv3-slot hv3-weapon" data-slot="weapon"></div>
+        <div class="hv3-slot hv3-shield" data-slot="shield"></div>
+        <div class="hv3-slot hv3-armor" data-slot="armor"></div>
+        <div class="hv3-slot hv3-gloves" data-slot="gloves"></div>
+        <div class="hv3-slot hv3-ring1" data-slot="ring1"></div>
+        <div class="hv3-slot hv3-ring2" data-slot="ring2"></div>
+        <div class="hv3-slot hv3-boots" data-slot="boots"></div>
 
-        <div class="h3bag-wrap">
-          <div class="h3bag-title">Рюкзак</div>
-          <div class="h3bag-grid" id="h3bag-grid"></div>
+        <div class="hv3-bag-wrap">
+          <div class="hv3-bag-title">Рюкзак</div>
+          <div class="hv3-bag-grid" id="hv3-bag-grid"></div>
         </div>
       </div>
-      <div class="h3inv-bottom">
-        <div class="h3bonus-box" id="inv-bonus-box">Бонусы: —</div>
-        <div class="h3details" id="inv-details">Здесь будут показаны свойства выбранного предмета.</div>
+      <div class="hv3-bottom">
+        <div class="hv3-bonus" id="inv-bonus-box">Бонусы: —</div>
+        <div class="hv3-details" id="inv-details">Здесь будут показаны свойства выбранного предмета.</div>
       </div>
     </div>
   </div>
@@ -1659,28 +1646,28 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
   window.selectItem=selectItem;window.equipItem=equipItem;window.unequipItem=unequipItem;window.dropItem=dropItem;
 
   window.renderInventory=function(){
-    const bag=document.getElementById('h3bag-grid'),bb=document.getElementById('inv-bonus-box');
+    const bag=document.getElementById('hv3-bag-grid'),bb=document.getElementById('inv-bonus-box');
     if(!bag)return;
-
-    document.querySelectorAll('.h3slot[data-slot]').forEach(el=>{
+    document.querySelectorAll('#tab-inventory .hv3-slot[data-slot]').forEach(el=>{
       const slot=el.getAttribute('data-slot');
       const meta=SLOT_META[slot]||{label:slot,icon:'✦'};
       const it=invState.equipped[slot];
       if(!it){
-        el.className='h3slot empty pos-'+slot;
-        el.innerHTML=`<div class="h3item"><div class="h3item-icon" style="opacity:.28">${meta.icon}</div></div><div class="h3slot-label-mini">${meta.label}</div>`;
+        el.className='hv3-slot empty hv3-'+slot;
+        el.setAttribute('data-slot',slot);
+        el.innerHTML=`<div class="hv3-item"><div class="hv3-icon" style="opacity:.28">${meta.icon}</div></div><div class="hv3-label">${meta.label}</div>`;
       }else{
-        el.className='h3slot pos-'+slot;
-        el.innerHTML=`<div class="h3item" onclick="selectItem('${it.uid}')"><div class="h3item-icon">${it.icon}</div><div class="h3item-name ${it.rarity==='rare'?'h3item-rare':''}">${esc(it.name)}</div></div><div class="h3slot-actions"><button class="h3mini-btn" onclick="event.stopPropagation();unequipItem('${slot}')">Снять</button></div><div class="h3slot-label-mini">${meta.label}</div>`;
+        el.className='hv3-slot hv3-'+slot;
+        el.setAttribute('data-slot',slot);
+        el.innerHTML=`<div class="hv3-item" onclick="selectItem('${it.uid}')"><div class="hv3-icon">${it.icon}</div><div class="hv3-name ${it.rarity==='rare'?'hv3-rare':''}">${esc(it.name)}</div></div><div class="hv3-act"><button class="hv3-btn" onclick="event.stopPropagation();unequipItem('${slot}')">Снять</button></div><div class="hv3-label">${meta.label}</div>`;
       }
     });
-
     const cells=[];
     invState.backpack.forEach(it=>{
-      const meta=(SLOT_META[it.slot]||{icon:'🎒',label:it.slot});
-      cells.push(`<div class="h3bag-slot" onclick="selectItem('${it.uid}')"><div class="h3item"><div class="h3item-icon">${it.icon}</div><div class="h3item-name ${it.rarity==='rare'?'h3item-rare':''}">${esc(it.name)}</div></div><div class="h3bag-actions"><button class="h3mini-btn" onclick="event.stopPropagation();equipItem('${it.uid}')">Надеть</button><button class="h3mini-btn" onclick="event.stopPropagation();dropItem('${it.uid}')">Выбросить</button></div><div class="h3slot-label-mini">${meta.label}</div></div>`);
+      const meta=(SLOT_META[it.slot]||{label:it.slot});
+      cells.push(`<div class="hv3-bag-slot" onclick="selectItem('${it.uid}')"><div class="hv3-item"><div class="hv3-icon">${it.icon}</div><div class="hv3-name ${it.rarity==='rare'?'hv3-rare':''}">${esc(it.name)}</div></div><div class="hv3-act"><button class="hv3-btn" onclick="event.stopPropagation();equipItem('${it.uid}')">Надеть</button><button class="hv3-btn" onclick="event.stopPropagation();dropItem('${it.uid}')">Выбросить</button></div><div class="hv3-label">${meta.label}</div></div>`);
     });
-    for(let i=invState.backpack.length;i<12;i++)cells.push('<div class="h3bag-slot empty"><div class="h3item"><div class="h3item-icon" style="opacity:.22">·</div></div></div>');
+    for(let i=invState.backpack.length;i<12;i++)cells.push('<div class="hv3-bag-slot empty"><div class="hv3-item"><div class="hv3-icon" style="opacity:.18">·</div></div></div>');
     bag.innerHTML=cells.join('');
     if(bb)bb.textContent=inventorySummary();
   };
