@@ -392,92 +392,78 @@ input,textarea,select{user-select:auto;}
 .h3inv-wrap{max-width:760px;margin:0 auto}
 .h3inv-title{font-family:"Cinzel Decorative",serif;font-size:1rem;color:var(--gold);letter-spacing:.08em;text-align:center;margin-bottom:.9rem}
 .h3inv-board{
-  --slot:72px;
+  --slot-size:68px;
   position:relative;
   width:min(100%,560px);
-  min-height:760px;
+  min-height:780px;
   margin:0 auto;
-  padding:22px 18px 180px;
-  background:
-    radial-gradient(circle at 50% 18%,rgba(186,122,70,.18),transparent 34%),
-    linear-gradient(to bottom,#5a351d,#352014 50%,#24150f 100%);
-  border:2px solid #7d5228;
+  padding:18px 16px 190px;
+  background:linear-gradient(to bottom,#5b351d,#311b12 56%,#22120c 100%);
+  border:2px solid #7b5128;
   border-radius:10px;
-  box-shadow:0 12px 40px rgba(0,0,0,.45), inset 0 0 28px rgba(0,0,0,.42);
+  box-shadow:0 10px 36px rgba(0,0,0,.45), inset 0 0 24px rgba(0,0,0,.35);
   overflow:hidden;
 }
 .h3inv-board::before{content:'';position:absolute;inset:10px;border:1px solid rgba(201,162,39,.18);border-radius:6px;pointer-events:none}
-.h3hero{position:absolute;left:50%;top:88px;transform:translateX(-50%);width:210px;height:430px;pointer-events:none;opacity:.92}
-.h3hero-head{position:absolute;left:50%;top:0;transform:translateX(-50%);width:46px;height:46px;border-radius:50%;background:linear-gradient(to bottom,rgba(214,173,184,.88),rgba(177,126,139,.92));box-shadow:0 0 0 2px rgba(255,228,236,.08)}
-.h3hero-torso{position:absolute;left:50%;top:50px;transform:translateX(-50%);width:124px;height:188px;background:linear-gradient(to bottom,rgba(218,180,191,.86),rgba(176,132,145,.9));clip-path:polygon(50% 0,72% 8%,88% 34%,88% 62%,68% 100%,32% 100%,12% 62%,12% 34%,28% 8%);filter:drop-shadow(0 8px 18px rgba(0,0,0,.18))}
-.h3hero-arm{position:absolute;top:98px;width:36px;height:150px;background:linear-gradient(to bottom,rgba(208,168,179,.82),rgba(164,120,132,.86));border-radius:18px}
-.h3hero-arm.arm-l{left:18px;transform:rotate(18deg)}
-.h3hero-arm.arm-r{right:18px;transform:rotate(-18deg)}
-.h3hero-leg{position:absolute;top:225px;width:42px;height:184px;background:linear-gradient(to bottom,rgba(205,168,179,.82),rgba(166,122,136,.88));border-radius:20px}
-.h3hero-leg.leg-l{left:70px;transform:rotate(2deg)}
-.h3hero-leg.leg-r{right:70px;transform:rotate(-2deg)}
-.h3slot,.h3bag-slot{background:linear-gradient(to bottom,#321b11,#180d08);border:2px solid #8e6736;border-radius:6px;box-shadow:inset 0 0 10px rgba(0,0,0,.55),0 4px 10px rgba(0,0,0,.24)}
-.h3slot{position:absolute;width:var(--slot);height:var(--slot);display:flex;align-items:center;justify-content:center;padding:.28rem;box-sizing:border-box;z-index:2}
-.h3slot.empty,.h3bag-slot.empty{border-color:#5a3a20;background:linear-gradient(to bottom,#28150d,#140b07)}
-.h3slot::after,.h3bag-slot::after{content:'';position:absolute;inset:4px;border:1px solid rgba(201,162,39,.16);border-radius:3px;pointer-events:none}
-.h3slot-label-mini{position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);font-family:"Cinzel",serif;font-size:.46rem;color:#c9ae86;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.65)}
-.h3item{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;cursor:pointer;text-align:center}
-.h3item-icon{font-size:1.45rem;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))}
-.h3item-name{font-family:"Cinzel",serif;font-size:.45rem;color:var(--parchment);line-height:1.03}
-.h3item-rare{color:#9be06d}
-.pos-helmet{left:50%;top:34px;transform:translateX(-50%)}
-.pos-weapon{left:20px;top:122px}
-.pos-shield{left:20px;top:246px}
-.pos-armor{left:50%;top:208px;transform:translateX(-50%)}
-.pos-gloves{right:20px;top:122px}
-.pos-ring1{right:20px;top:246px}
-.pos-ring2{right:20px;top:370px}
-.pos-boots{left:50%;top:392px;transform:translateX(-50%)}
-.h3bag-wrap{position:absolute;left:18px;right:18px;bottom:18px;padding:14px 12px;background:linear-gradient(to bottom,rgba(37,20,13,.78),rgba(24,13,9,.88));border:1px solid rgba(201,162,39,.18);border-radius:8px;z-index:2}
-.h3bag-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-.h3bag-slot{position:relative;min-height:72px;display:flex;align-items:center;justify-content:center;padding:.28rem;box-sizing:border-box}
-.h3bag-actions,.h3slot-actions{position:absolute;left:50%;top:100%;transform:translate(-50%,6px);display:flex;gap:.22rem;z-index:4}
-.h3mini-btn{font-family:"Cinzel",serif;font-size:.42rem;text-transform:uppercase;letter-spacing:.05em;padding:.13rem .32rem;background:rgba(26,14,8,.97);border:1px solid rgba(201,162,39,.3);border-radius:2px;color:var(--gold);cursor:pointer;white-space:nowrap}
-.h3mini-btn:hover{background:rgba(54,28,16,.98)}
+.h3hero{position:absolute;left:50%;top:86px;transform:translateX(-50%);width:180px;height:360px;opacity:.82;pointer-events:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.2))}
+.h3hero-head{position:absolute;left:50%;top:0;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;background:linear-gradient(to bottom,#cba1aa,#a97884)}
+.h3hero-body{position:absolute;left:50%;top:42px;transform:translateX(-50%);width:110px;height:170px;background:linear-gradient(to bottom,#d2adb5,#ac808b);clip-path:polygon(50% 0,74% 10%,90% 42%,76% 100%,24% 100%,10% 42%,26% 10%)}
+.h3hero-arm{position:absolute;top:84px;width:28px;height:126px;background:linear-gradient(to bottom,#cba2ad,#9f727c);border-radius:20px}
+.h3hero-arm.left{left:18px;transform:rotate(18deg)}
+.h3hero-arm.right{right:18px;transform:rotate(-18deg)}
+.h3hero-leg{position:absolute;top:206px;width:34px;height:145px;background:linear-gradient(to bottom,#c8a0aa,#9a6f79);border-radius:22px}
+.h3hero-leg.left{left:54px;transform:rotate(2deg)}
+.h3hero-leg.right{right:54px;transform:rotate(-2deg)}
+.h3slot{position:absolute;width:var(--slot-size);height:var(--slot-size);display:flex;align-items:center;justify-content:center;padding:.3rem;box-sizing:border-box;background:linear-gradient(to bottom,#311b11,#160b07);border:2px solid #8a6436;border-radius:6px;box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.24);z-index:2}
+.h3slot::after,.h3bag-slot::after{content:'';position:absolute;inset:4px;border:1px solid rgba(201,162,39,.15);border-radius:3px;pointer-events:none}
+.h3slot.empty,.h3bag-slot.empty{border-color:#5d3c22;background:linear-gradient(to bottom,#28150d,#140b07)}
+.h3slot-label-mini{position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);font-family:"Cinzel",serif;font-size:.45rem;color:#c4a374;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.h3item{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.12rem;text-align:center;cursor:pointer}
+.h3item-icon{font-size:1.4rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.h3item-name{font-family:"Cinzel",serif;font-size:.43rem;color:var(--parchment);line-height:1.05}
+.h3item-rare{color:#9fe36d}
+.pos-helmet{left:50%;top:22px;transform:translateX(-50%)}
+.pos-weapon{left:16px;top:126px}
+.pos-shield{left:16px;top:224px}
+.pos-armor{left:50%;top:190px;transform:translateX(-50%)}
+.pos-gloves{right:16px;top:126px}
+.pos-ring1{right:16px;top:224px}
+.pos-ring2{right:16px;top:322px}
+.pos-boots{left:50%;top:348px;transform:translateX(-50%)}
+.h3bag-wrap{position:absolute;left:12px;right:12px;bottom:12px;padding:12px 10px 10px;background:linear-gradient(to bottom,rgba(35,19,13,.88),rgba(20,11,8,.94));border:1px solid rgba(201,162,39,.2);border-radius:8px;z-index:2}
+.h3bag-title{font-family:"Cinzel",serif;font-size:.62rem;letter-spacing:.08em;color:var(--gold);text-transform:uppercase;margin:0 0 .45rem 2px}
+.h3bag-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.h3bag-slot{position:relative;min-height:68px;display:flex;align-items:center;justify-content:center;padding:.3rem;box-sizing:border-box;background:linear-gradient(to bottom,#311b11,#160b07);border:2px solid #8a6436;border-radius:6px;box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.2)}
+.h3slot-actions,.h3bag-actions{position:absolute;left:50%;top:100%;transform:translate(-50%,6px);display:flex;gap:.2rem;z-index:4}
+.h3mini-btn{font-family:"Cinzel",serif;font-size:.4rem;text-transform:uppercase;letter-spacing:.04em;padding:.12rem .3rem;background:rgba(25,13,8,.97);border:1px solid rgba(201,162,39,.3);border-radius:2px;color:var(--gold);cursor:pointer;white-space:nowrap}
+.h3mini-btn:hover{background:rgba(50,27,16,.97)}
 .h3inv-bottom{width:min(100%,560px);margin:.85rem auto 0;display:flex;flex-direction:column;gap:.7rem}
 .h3bonus-box,.h3details{background:rgba(0,0,0,.28);border:1px solid var(--border);border-radius:4px;padding:.7rem}
 .h3bonus-box{font-family:"Cinzel",serif;font-size:.6rem;color:var(--parchment)}
 .h3details{font-size:.68rem;line-height:1.6;color:var(--parchment);min-height:88px}
-@media (max-width:640px){
-  .h3inv-board{--slot:60px;min-height:690px;padding:18px 12px 156px}
-  .h3hero{top:92px;width:168px;height:356px}
-  .h3hero-head{width:38px;height:38px}
-  .h3hero-torso{top:42px;width:100px;height:154px}
-  .h3hero-arm{top:84px;width:28px;height:118px}
-  .h3hero-arm.arm-l{left:10px}
-  .h3hero-arm.arm-r{right:10px}
-  .h3hero-leg{top:188px;width:34px;height:150px}
-  .h3hero-leg.leg-l{left:55px}
-  .h3hero-leg.leg-r{right:55px}
-  .pos-helmet{top:28px}
-  .pos-weapon{left:12px;top:112px}
-  .pos-shield{left:12px;top:218px}
-  .pos-armor{top:192px}
-  .pos-gloves{right:12px;top:112px}
-  .pos-ring1{right:12px;top:218px}
-  .pos-ring2{right:12px;top:324px}
-  .pos-boots{top:346px}
-  .h3bag-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-  .h3bag-slot{min-height:60px}
-  .h3slot-label-mini{font-size:.42rem;bottom:-16px}
-}
-@media (max-width:430px){
-  .h3inv-board{--slot:56px;min-height:660px;padding-bottom:148px}
-  .h3hero{width:150px;height:330px}
-  .h3hero-torso{width:92px;height:144px}
-  .h3hero-arm{height:108px}
-  .h3hero-leg{top:176px;height:138px}
-  .h3hero-leg.leg-l{left:48px}
-  .h3hero-leg.leg-r{right:48px}
+@media (max-width:520px){
+  .h3inv-board{--slot-size:60px;min-height:710px;padding:16px 10px 174px}
+  .h3hero{top:90px;width:154px;height:312px}
+  .h3hero-head{width:34px;height:34px}
+  .h3hero-body{top:36px;width:92px;height:146px}
+  .h3hero-arm{top:72px;width:24px;height:108px}
+  .h3hero-arm.left{left:14px}
+  .h3hero-arm.right{right:14px}
+  .h3hero-leg{top:176px;width:28px;height:124px}
+  .h3hero-leg.left{left:46px}
+  .h3hero-leg.right{right:46px}
+  .pos-helmet{top:18px}
+  .pos-weapon{left:10px;top:118px}
+  .pos-shield{left:10px;top:206px}
+  .pos-armor{top:176px}
+  .pos-gloves{right:10px;top:118px}
+  .pos-ring1{right:10px;top:206px}
+  .pos-ring2{right:10px;top:294px}
+  .pos-boots{top:318px}
   .h3bag-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-  .h3bag-wrap{left:12px;right:12px;bottom:12px;padding:10px 8px}
-}.h3inv-bottom{max-width:92%}}
-
+  .h3bag-slot{min-height:60px}
+  .h3slot-label-mini{font-size:.4rem;bottom:-16px}
+}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
@@ -658,7 +644,6 @@ input,textarea,select{user-select:auto;}
       <div id="boss-root"></div>
     </div>
   </div>
-
   <!-- INVENTORY -->
   <div id="tab-inventory" class="tab-panel">
     <div class="h3inv-wrap">
@@ -666,11 +651,11 @@ input,textarea,select{user-select:auto;}
       <div class="h3inv-board">
         <div class="h3hero" aria-hidden="true">
           <div class="h3hero-head"></div>
-          <div class="h3hero-torso"></div>
-          <div class="h3hero-arm arm-l"></div>
-          <div class="h3hero-arm arm-r"></div>
-          <div class="h3hero-leg leg-l"></div>
-          <div class="h3hero-leg leg-r"></div>
+          <div class="h3hero-body"></div>
+          <div class="h3hero-arm left"></div>
+          <div class="h3hero-arm right"></div>
+          <div class="h3hero-leg left"></div>
+          <div class="h3hero-leg right"></div>
         </div>
 
         <div class="h3slot pos-helmet" data-slot="helmet"></div>
@@ -683,6 +668,7 @@ input,textarea,select{user-select:auto;}
         <div class="h3slot pos-boots" data-slot="boots"></div>
 
         <div class="h3bag-wrap">
+          <div class="h3bag-title">Рюкзак</div>
           <div class="h3bag-grid" id="h3bag-grid"></div>
         </div>
       </div>
@@ -692,7 +678,6 @@ input,textarea,select{user-select:auto;}
       </div>
     </div>
   </div>
-
 
   <!-- PROFILE -->
   <div id="tab-profile" class="tab-panel">
