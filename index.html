@@ -1489,7 +1489,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     rewardState.snakeToothGranted=true;
     bossState.dropGranted=true;
     saveExtra();
-    renderInventory();
+    window.renderInventory();
     alert('Добыча получена: Зуб змеи. Его можно надеть как оружие, и он даст +5 урона следующим боссам.');
   }
   function fullResetRun(){
@@ -1502,7 +1502,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     saveExtra();
     if(window.save)window.save();
     if(window.render)window.render();
-    renderQuests();renderBoss();renderInventory();
+    window.renderQuests();window.renderBoss();window.renderInventory();
     if(window.switchTab)window.switchTab('deck');
     alert('Время вышло. Персонаж погиб, прогресс, квесты и инвентарь сброшены.');
   }
@@ -1532,7 +1532,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     window._quests=window._quests||[];
     window._quests.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),text,priority:(pr&&pr.value)||'mid',difficulty,damage:QDIFF[difficulty].dmg,done:false,doneAt:null,createdAt:Date.now()});
     if(typeof _saveQuests==='function')_saveQuests(); else if(window.save)window.save();
-    inp.value='';inp.focus();renderQuests();
+    inp.value='';inp.focus();window.renderQuests();
   };
 
   window.completeQuest=function(id){
@@ -1547,7 +1547,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     if(typeof q.damage!=='number')q.damage=QDIFF[q.difficulty].dmg;
     dealBossDamage(q.damage);
     if(typeof _saveQuests==='function')_saveQuests(); else if(window.save)window.save();
-    renderQuests();renderBoss();renderInventory();
+    window.renderQuests();window.renderBoss();window.renderInventory();
   };
 
   window.renderQuests=function(){
@@ -1573,9 +1573,9 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     } else if(doneSec) doneSec.style.display='none';
   };
 
-  if(window.setQFilter){window.setQFilter=function(f){qFilter=f;['all','high','mid','low'].forEach(k=>{const b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k===f);});renderQuests();};}
-  if(window.toggleDoneSection){window.toggleDoneSection=function(){doneOpen=!doneOpen;renderQuests();};}
-  if(window.clearDoneQuests){window.clearDoneQuests=function(){if(!confirm('Очистить выполненные задания?'))return;window._quests=(window._quests||[]).filter(q=>!q.done);if(typeof _saveQuests==='function')_saveQuests(); else if(window.save)window.save();renderQuests();};}
+  if(window.setQFilter){window.setQFilter=function(f){qFilter=f;['all','high','mid','low'].forEach(k=>{const b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k===f);});window.renderQuests();};}
+  if(window.toggleDoneSection){window.toggleDoneSection=function(){doneOpen=!doneOpen;window.renderQuests();};}
+  if(window.clearDoneQuests){window.clearDoneQuests=function(){if(!confirm('Очистить выполненные задания?'))return;window._quests=(window._quests||[]).filter(q=>!q.done);if(typeof _saveQuests==='function')_saveQuests(); else if(window.save)window.save();window.renderQuests();};}
 
   function selectItem(uid){
     const item=invState.backpack.find(x=>x.uid===uid)||Object.values(invState.equipped).find(x=>x&&x.uid===uid);
@@ -1588,10 +1588,10 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     const item=invState.backpack[idx];let slot=item.slot;
     if(slot==='ring')slot=!invState.equipped.ring1?'ring1':(!invState.equipped.ring2?'ring2':'ring1');
     const prev=invState.equipped[slot];invState.equipped[slot]=item;invState.backpack.splice(idx,1);if(prev)invState.backpack.unshift(prev);
-    saveExtra();renderInventory();renderBoss();
+    saveExtra();window.renderInventory();window.renderBoss();
   }
-  function unequipItem(slot){const item=invState.equipped[slot];if(!item)return;invState.backpack.unshift(item);invState.equipped[slot]=null;saveExtra();renderInventory();renderBoss();}
-  function dropItem(uid){if(!confirm('Выбросить предмет?'))return;invState.backpack=invState.backpack.filter(x=>x.uid!==uid);saveExtra();renderInventory();}
+  function unequipItem(slot){const item=invState.equipped[slot];if(!item)return;invState.backpack.unshift(item);invState.equipped[slot]=null;saveExtra();window.renderInventory();window.renderBoss();}
+  function dropItem(uid){if(!confirm('Выбросить предмет?'))return;invState.backpack=invState.backpack.filter(x=>x.uid!==uid);saveExtra();window.renderInventory();}
   window.selectItem=selectItem;window.equipItem=equipItem;window.unequipItem=unequipItem;window.dropItem=dropItem;
 
   window.renderInventory=function(){
@@ -1604,17 +1604,17 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
       const it=invState.equipped[slot];
       if(!it){
         el.className='h3slot empty pos-'+slot;
-        el.innerHTML='<div class="h3item"><div class="h3item-icon" style="opacity:.28">'+meta.icon+'</div></div><div class="h3slot-label-mini">'+meta.label+'</div>';
+        el.innerHTML=`<div class="h3item"><div class="h3item-icon" style="opacity:.28">${meta.icon}</div></div><div class="h3slot-label-mini">${meta.label}</div>`;
       }else{
         el.className='h3slot pos-'+slot;
-        el.innerHTML='<div class="h3item" onclick="selectItem(''+it.uid+'')"><div class="h3item-icon">'+it.icon+'</div><div class="h3item-name '+(it.rarity==='rare'?'h3item-rare':'')+'">'+esc(it.name)+'</div></div><div class="h3slot-actions"><button class="h3mini-btn" onclick="event.stopPropagation();unequipItem(''+slot+'')">Снять</button></div><div class="h3slot-label-mini">'+meta.label+'</div>';
+        el.innerHTML=`<div class="h3item" onclick="selectItem('${it.uid}')"><div class="h3item-icon">${it.icon}</div><div class="h3item-name ${it.rarity==='rare'?'h3item-rare':''}">${esc(it.name)}</div></div><div class="h3slot-actions"><button class="h3mini-btn" onclick="event.stopPropagation();unequipItem('${slot}')">Снять</button></div><div class="h3slot-label-mini">${meta.label}</div>`;
       }
     });
 
     const cells=[];
     invState.backpack.forEach(it=>{
       const meta=(SLOT_META[it.slot]||{icon:'🎒',label:it.slot});
-      cells.push('<div class="h3bag-slot" onclick="selectItem(''+it.uid+'')"><div class="h3item"><div class="h3item-icon">'+it.icon+'</div><div class="h3item-name '+(it.rarity==='rare'?'h3item-rare':'')+'">'+esc(it.name)+'</div></div><div class="h3bag-actions"><button class="h3mini-btn" onclick="event.stopPropagation();equipItem(''+it.uid+'')">Надеть</button><button class="h3mini-btn" onclick="event.stopPropagation();dropItem(''+it.uid+'')">Выбросить</button></div><div class="h3slot-label-mini">'+meta.label+'</div></div>');
+      cells.push(`<div class="h3bag-slot" onclick="selectItem('${it.uid}')"><div class="h3item"><div class="h3item-icon">${it.icon}</div><div class="h3item-name ${it.rarity==='rare'?'h3item-rare':''}">${esc(it.name)}</div></div><div class="h3bag-actions"><button class="h3mini-btn" onclick="event.stopPropagation();equipItem('${it.uid}')">Надеть</button><button class="h3mini-btn" onclick="event.stopPropagation();dropItem('${it.uid}')">Выбросить</button></div><div class="h3slot-label-mini">${meta.label}</div></div>`);
     });
     for(let i=invState.backpack.length;i<12;i++)cells.push('<div class="h3bag-slot empty"><div class="h3item"><div class="h3item-icon" style="opacity:.22">·</div></div></div>');
     bag.innerHTML=cells.join('');
@@ -1637,14 +1637,14 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
         if(b)b.classList.toggle('active',t===name);
       });
       if(name==='map'&&typeof updateDungeonMap==='function')updateDungeonMap();
-      if(name==='quests')renderQuests();
-      if(name==='boss')renderBoss();
-      if(name==='inventory')renderInventory();
+      if(name==='quests')window.renderQuests();
+      if(name==='boss')window.renderBoss();
+      if(name==='inventory')window.renderInventory();
     };
   }
 
-  renderQuests();renderBoss();renderInventory();
-  setInterval(()=>{try{checkBossDeadline();renderBoss();}catch(e){}},60000);
+  window.renderQuests();window.renderBoss();window.renderInventory();
+  setInterval(()=>{try{checkBossDeadline();window.renderBoss();}catch(e){}},60000);
 })();
 </script>
 
