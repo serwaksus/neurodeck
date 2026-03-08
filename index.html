@@ -1431,6 +1431,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
   const REWARD_KEY='nd_rewards_local_v2';
   const SLOT_META={weapon:{label:'Оружие',icon:'🗡'},shield:{label:'Щит',icon:'🛡'},helmet:{label:'Шлем',icon:'⛑'},armor:{label:'Кираса',icon:'🦺'},gloves:{label:'Перчатки',icon:'🧤'},boots:{label:'Ботинки',icon:'🥾'},ring1:{label:'Кольцо I',icon:'💍'},ring2:{label:'Кольцо II',icon:'💍'}};
   const SLOT_ORDER=['weapon','shield','helmet','armor','gloves','boots','ring1','ring2'];
+  const WOOD_STICK_DEF={baseId:'wood_stick',name:'Деревянная палка',slot:'weapon',icon:'🪵',bonusDamage:0,rarity:'common'};
   const QDIFF={easy:{label:'Легкая',dmg:1,icon:'🪶'},medium:{label:'Средняя',dmg:5,icon:'⚒'},hard:{label:'Тяжелая',dmg:10,icon:'💀'}};
   const QPRI={high:'🔥',mid:'⚔',low:'🌿'};
   const QPRIL={high:'Срочное',mid:'Обычное',low:'Лёгкое'};
@@ -1458,6 +1459,12 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     if(typeof bossState.days!=='number')bossState.days=5;
     if(typeof bossState.damageTaken!=='number')bossState.damageTaken=0;
     if(typeof bossState.dropGranted!=='boolean')bossState.dropGranted=!!rewardState.snakeToothGranted;
+    const hasWoodInWeapon=invState.equipped&&invState.equipped.weapon&&invState.equipped.weapon.baseId==='wood_stick';
+    const hasWoodInBag=invState.backpack.some(x=>x&&x.baseId==='wood_stick');
+    if(!hasWoodInWeapon&&!hasWoodInBag){
+      const wood=makeItem(WOOD_STICK_DEF);
+      if(!invState.equipped.weapon)invState.equipped.weapon=wood; else invState.backpack.unshift(wood);
+    }
     if(!window._qstats)window._qstats={total:0,todayDate:todayKey(),todayCount:0,bossDamage:0};
     if(typeof window._qstats.bossDamage!=='number')window._qstats.bossDamage=0;
   }
@@ -1481,7 +1488,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
 
   function weaponBonus(){const w=invState.equipped.weapon;return w&&w.bonusDamage?w.bonusDamage:0;}
   function makeItem(def){return {uid:def.baseId+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),...def};}
-  function inventorySummary(){const bonus=weaponBonus();return bonus>0?('Следующим боссам: +'+bonus+' урона от оружия'):'Бонусы: нет активного оружия';}
+  function inventorySummary(){const w=invState.equipped.weapon;if(!w)return 'Бонусы: нет активного оружия';const bonus=w&&w.bonusDamage?w.bonusDamage:0;return 'Оружие: '+w.name+' (+'+bonus+' урона)';}
   function grantSnakeTooth(){
     if(rewardState.snakeToothGranted)return;
     invState.backpack.unshift(makeItem(SNAKE_TOOTH_DEF));
