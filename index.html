@@ -1115,6 +1115,9 @@ window._saveToCloud=function(){
     cards:(typeof cards!=='undefined'?cards:[]),
     quests:window._quests||[],
     qstats:window._qstats||{total:0,todayDate:'',todayCount:0},
+    bossState:typeof bossState!=='undefined'?bossState:null,
+    invState:typeof invState!=='undefined'?invState:null,
+    rewardState:typeof rewardState!=='undefined'?rewardState:null,
     ts:firebase.firestore.FieldValue.serverTimestamp()
   };
   fbDb.collection('decks').doc(_uid).set(payload,{merge:true})
@@ -1153,8 +1156,24 @@ function _subscribeRemote(uid){
     if(d.qstats){window._qstats=d.qstats;}
     localStorage.setItem('nd_quests',JSON.stringify(window._quests||[]));
     localStorage.setItem('nd_qstats',JSON.stringify(window._qstats||{}));
+    if(d.bossState&&typeof bossState!=='undefined'){
+      bossState=Object.assign(typeof bossState!=='undefined'&&bossState?bossState:{},d.bossState);
+      localStorage.setItem(BOSS_KEY,JSON.stringify(bossState));
+    }
+    if(d.invState&&typeof invState!=='undefined'){
+      invState=Object.assign(typeof invState!=='undefined'&&invState?invState:{},d.invState);
+      if(!invState.equipped)invState.equipped=defaultInv().equipped;
+      if(!Array.isArray(invState.backpack))invState.backpack=[];
+      localStorage.setItem(INV_KEY,JSON.stringify(invState));
+    }
+    if(d.rewardState&&typeof rewardState!=='undefined'){
+      rewardState=Object.assign(typeof rewardState!=='undefined'&&rewardState?rewardState:{},d.rewardState);
+      localStorage.setItem(REWARD_KEY,JSON.stringify(rewardState));
+    }
     if(typeof window.renderQuests==='function')window.renderQuests();
     if(typeof render==='function')render();
+    if(typeof window.renderBoss==='function')window.renderBoss();
+    if(typeof window.renderInventory==='function')window.renderInventory();
     _setSyncDot('ok');
   },e=>{_setSyncDot('red');console.warn(e.message);});
 }
@@ -1472,6 +1491,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     localStorage.setItem(BOSS_KEY,JSON.stringify(bossState));
     localStorage.setItem(INV_KEY,JSON.stringify(invState));
     localStorage.setItem(REWARD_KEY,JSON.stringify(rewardState));
+    if(typeof window._saveToCloud==='function')window._saveToCloud();
   }
   loadExtra();
 
