@@ -1111,13 +1111,19 @@ window._saveToCloud=function(){
   if(!_uid||!_syncReady)return;
   _setSyncDot('warn');
   _localWriteTs=Date.now();
+  // Strip img from bossState — base64 is ~700KB and would exceed Firestore 1MB limit
+  const bossCloud=typeof bossState!=='undefined'&&bossState
+    ? (function(){const c=Object.assign({},bossState);delete c.img;return c;})()
+    : null;
+  const invCloud=typeof invState!=='undefined'?invState:null;
+  const rewardCloud=typeof rewardState!=='undefined'?rewardState:null;
   const payload={
     cards:(typeof cards!=='undefined'?cards:[]),
     quests:window._quests||[],
     qstats:window._qstats||{total:0,todayDate:'',todayCount:0},
-    bossState:typeof bossState!=='undefined'?bossState:null,
-    invState:typeof invState!=='undefined'?invState:null,
-    rewardState:typeof rewardState!=='undefined'?rewardState:null,
+    bossState:bossCloud,
+    invState:invCloud,
+    rewardState:rewardCloud,
     ts:firebase.firestore.FieldValue.serverTimestamp()
   };
   fbDb.collection('decks').doc(_uid).set(payload,{merge:true})
@@ -1157,7 +1163,10 @@ function _subscribeRemote(uid){
     localStorage.setItem('nd_quests',JSON.stringify(window._quests||[]));
     localStorage.setItem('nd_qstats',JSON.stringify(window._qstats||{}));
     if(d.bossState&&typeof bossState!=='undefined'){
-      bossState=Object.assign(typeof bossState!=='undefined'&&bossState?bossState:{},d.bossState);
+      // Restore img from local SNAKE_BOSS definition (not stored in cloud)
+      const restoredImg=SNAKE_BOSS&&SNAKE_BOSS.img?SNAKE_BOSS.img:(bossState&&bossState.img?bossState.img:null);
+      bossState=Object.assign({},d.bossState);
+      if(restoredImg&&!bossState.img)bossState.img=restoredImg;
       localStorage.setItem(BOSS_KEY,JSON.stringify(bossState));
     }
     if(d.invState&&typeof invState!=='undefined'){
@@ -1487,11 +1496,16 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     if(!window._qstats)window._qstats={total:0,todayDate:todayKey(),todayCount:0,bossDamage:0};
     if(typeof window._qstats.bossDamage!=='number')window._qstats.bossDamage=0;
   }
+  let _saveExtraTimer=null;
   function saveExtra(){
     localStorage.setItem(BOSS_KEY,JSON.stringify(bossState));
     localStorage.setItem(INV_KEY,JSON.stringify(invState));
     localStorage.setItem(REWARD_KEY,JSON.stringify(rewardState));
-    if(typeof window._saveToCloud==='function')window._saveToCloud();
+    // Debounce cloud sync to avoid hammering Firebase on rapid saves
+    if(_saveExtraTimer)clearTimeout(_saveExtraTimer);
+    _saveExtraTimer=setTimeout(function(){
+      if(typeof window._saveToCloud==='function')window._saveToCloud();
+    },1200);
   }
   loadExtra();
 
