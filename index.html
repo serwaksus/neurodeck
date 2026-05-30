@@ -584,6 +584,39 @@ input,textarea,select{user-select:auto;}
   #ndTreeSvg{width:100%;height:60vh}
 }
 
+/* ===== STAT BARS ===== */
+.nd-stat-section{margin-top:1rem}
+.nd-stat-hdr{font-family:"Cinzel",serif;font-size:.75rem;color:var(--gold);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
+.nd-stat-row{display:flex;align-items:center;gap:8px;padding:5px 0;position:relative}
+.nd-stat-icon{font-size:.95rem;width:20px;text-align:center;flex-shrink:0}
+.nd-stat-info{flex:1;min-width:0}
+.nd-stat-name{font-family:"Cinzel",serif;font-size:.68rem;color:var(--parchment);display:flex;justify-content:space-between;align-items:baseline}
+.nd-stat-lvl{font-size:.72rem;color:var(--gold);font-weight:bold}
+.nd-stat-rank{font-size:.52rem;text-transform:uppercase;letter-spacing:.06em;margin-left:4px}
+.nd-stat-bar{height:6px;background:rgba(0,0,0,.5);border-radius:3px;overflow:hidden;margin-top:2px;border:1px solid rgba(255,255,255,.05)}
+.nd-stat-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.nd-stat-xp{font-size:.5rem;color:var(--dim);text-align:right;margin-top:1px}
+
+/* stat binding buttons (forge + edit) */
+.nd-statbind-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.nd-statbind-btn{display:flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:3px;color:var(--dim);cursor:pointer;font-size:.62rem;font-family:"Cinzel",serif;transition:all .15s;user-select:none}
+.nd-statbind-btn:hover{border-color:rgba(201,162,39,.3)}
+.nd-statbind-btn .nd-sb-stars{color:var(--gold);font-size:.55rem;letter-spacing:1px}
+.nd-statbind-btn.active{border-color:rgba(201,162,39,.5);background:rgba(201,162,39,.08);color:var(--parchment)}
+
+/* mini-boss card */
+.nd-boss-card{background:linear-gradient(150deg,rgba(40,12,8,.95),rgba(20,6,3,.95));border:1px solid rgba(180,40,40,.4);border-radius:4px;padding:.6rem .7rem;margin-top:.4rem;position:relative;overflow:hidden}
+.nd-boss-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(180,40,40,.1),transparent 60%);pointer-events:none}
+.nd-boss-name{font-family:"Cinzel Decorative",serif;font-size:.72rem;color:#e06050;text-shadow:0 0 8px rgba(180,40,40,.4)}
+.nd-boss-desc{font-size:.58rem;color:var(--dim);margin-top:2px;font-style:italic}
+.nd-boss-hp-row{display:flex;align-items:center;gap:6px;margin-top:5px}
+.nd-boss-hp-bar{flex:1;height:8px;background:#1a0a06;border:1px solid #3a1a10;border-radius:4px;overflow:hidden}
+.nd-boss-hp-fill{height:100%;background:linear-gradient(90deg,#c23a1d,#e06050);border-radius:3px;transition:width .4s}
+.nd-boss-hp-text{font-family:"Cinzel",serif;font-size:.55rem;color:var(--dim);white-space:nowrap}
+.nd-boss-timer{font-size:.5rem;color:#e08060;margin-top:2px;text-align:right}
+.nd-boss-locked{font-size:.55rem;color:var(--dim);text-align:center;padding:.4rem;font-style:italic}
+@media(max-width:640px){.nd-stat-row{padding:4px 0}.nd-statbind-row{gap:4px}}
+
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
@@ -686,6 +719,7 @@ input,textarea,select{user-select:auto;}
         <div class="field"><label>Чекбоксов до ранг-апа</label><input id="f-cbcount" type="number" value="6" min="1" max="40"></div>
       </div>
       <div class="field"><label>🎁 Бонусы</label><input id="f-bonuses" type="text" placeholder="+10 XP..."></div>
+      <div class="field"><label>⚡ Характеристики</label><div class="nd-statbind-row" id="forge-binds"></div></div>
       <button class="btn-forge" onclick="createCard();switchTab('deck')">⚔ Выковать карточку</button>
     </div>
   </div>
@@ -775,6 +809,7 @@ input,textarea,select{user-select:auto;}
         </div>
         <div id="ndSkillsList"></div>
         <button class="btn tree-btn" style="width:100%;margin-top:.8rem;padding:8px;text-align:center" onclick="ndOpenTree()">🗺 Дерево навыков</button>
+        <div class="nd-stat-section" id="ndStatsSection"></div>
       </div>
     </div>
     <!-- Hidden elements for boss/inventory JS compatibility -->
@@ -1029,7 +1064,8 @@ function fg(id){return document.getElementById(id).value;}
 function createCard(){
   const name=fv('f-name');if(!name){alert('Введите название');return;}
   const prev=document.getElementById('up-prev');
-  const card={id:Date.now()+'',name,img:prev.style.display!=='none'?prev.src:null,ttype:fg('f-ttype'),tval:fg('f-tval')||'7',trigger:fv('f-trigger'),sbuff:fv('f-sbuff'),lbuff:fv('f-lbuff'),energy:parseInt(fg('f-energy'))||1,cbcount:parseInt(fg('f-cbcount'))||6,bonuses:fv('f-bonuses'),ri:0,checked:[],rankups:0,streakDays:0,lastDone:null,history:[],createdAt:Date.now()};
+  const statBinds=typeof window._readStatBinds==='function'?window._readStatBinds('forge-binds'):[];
+  const card={id:Date.now()+'',name,img:prev.style.display!=='none'?prev.src:null,ttype:fg('f-ttype'),tval:fg('f-tval')||'7',trigger:fv('f-trigger'),sbuff:fv('f-sbuff'),lbuff:fv('f-lbuff'),energy:parseInt(fg('f-energy'))||1,cbcount:parseInt(fg('f-cbcount'))||6,bonuses:fv('f-bonuses'),statBinds,ri:0,checked:[],rankups:0,streakDays:0,lastDone:null,history:[],createdAt:Date.now()};
   cards.push(card);save();render();resetForm();
 }
 function resetForm(){
@@ -1129,6 +1165,7 @@ function doCard(id){
   try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.HapticFeedback)window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');}catch(ex){}
   save();
   render();
+  if(typeof window._onCardCheck==='function')window._onCardCheck(c);
 }
 function toggleCB(id,idx){doCard(id);}
 
@@ -1150,13 +1187,15 @@ function confirmRankUp(){document.getElementById('ru-overlay').classList.remove(
 function openEdit(c,isRankUp){
   const nextRank=isRankUp?RANKS[c.ri+1]:RANKS[c.ri];
   document.getElementById('em-title').textContent=isRankUp?`⚙ Ранг ${nextRank} — обнови карточку`:`⚙ Редактировать «${c.name}»`;
-  document.getElementById('em-fields').innerHTML=`<div class="field"><label>Название</label><input id="e-name" type="text" value="${c.name}" maxlength="40"></div><div class="row2"><div class="field"><label>Тип</label><select id="e-ttype"><option value="мин" ${c.ttype==='мин'?'selected':''}>Минуты</option><option value="действий" ${c.ttype==='действий'?'selected':''}>Действия</option></select></div><div class="field"><label>Значение</label><input id="e-tval" type="number" value="${c.tval}" min="1"></div></div><div class="field"><label>Триггер</label><input id="e-trigger" value="${c.trigger||''}"></div><div class="row2"><div class="field"><label>Краткосрочный баф</label><textarea id="e-sbuff">${c.sbuff||''}</textarea></div><div class="field"><label>Долгосрочный баф</label><textarea id="e-lbuff">${c.lbuff||''}</textarea></div></div><div class="row2"><div class="field"><label>Энергия</label><select id="e-energy"><option value="1" ${c.energy===1?'selected':''}>Низкая ☽</option><option value="2" ${c.energy===2?'selected':''}>Средняя ☀</option><option value="3" ${c.energy===3?'selected':''}>Высокая ⚡</option></select></div><div class="field"><label>Чекбоксов</label><input id="e-cbcount" type="number" value="${c.cbcount}" min="1" max="40"></div></div><div class="field"><label>Бонусы</label><input id="e-bonuses" value="${c.bonuses||''}"></div>`;
+  document.getElementById('em-fields').innerHTML=`<div class="field"><label>Название</label><input id="e-name" type="text" value="${c.name}" maxlength="40"></div><div class="row2"><div class="field"><label>Тип</label><select id="e-ttype"><option value="мин" ${c.ttype==='мин'?'selected':''}>Минуты</option><option value="действий" ${c.ttype==='действий'?'selected':''}>Действия</option></select></div><div class="field"><label>Значение</label><input id="e-tval" type="number" value="${c.tval}" min="1"></div></div><div class="field"><label>Триггер</label><input id="e-trigger" value="${c.trigger||''}"></div><div class="row2"><div class="field"><label>Краткосрочный баф</label><textarea id="e-sbuff">${c.sbuff||''}</textarea></div><div class="field"><label>Долгосрочный баф</label><textarea id="e-lbuff">${c.lbuff||''}</textarea></div></div><div class="row2"><div class="field"><label>Энергия</label><select id="e-energy"><option value="1" ${c.energy===1?'selected':''}>Низкая ☽</option><option value="2" ${c.energy===2?'selected':''}>Средняя ☀</option><option value="3" ${c.energy===3?'selected':''}>Высокая ⚡</option></select></div><div class="field"><label>Чекбоксов</label><input id="e-cbcount" type="number" value="${c.cbcount}" min="1" max="40"></div></div><div class="field"><label>Бонусы</label><input id="e-bonuses" value="${c.bonuses||''}"></div><div class="field"><label>⚡ Характеристики</label><div class="nd-statbind-row" id="edit-binds"></div></div>`;
+  if(typeof window._initStatBinds==='function')window._initStatBinds('edit-binds',c.statBinds||[]);
   document.getElementById('edit-overlay').classList.add('open');
 }
 function closeEdit(){document.getElementById('edit-overlay').classList.remove('open');}
 function saveEdit(){
   const c=cards.find(x=>x.id===editId);if(!c)return;
-  c.name=document.getElementById('e-name').value.trim()||c.name;c.ttype=document.getElementById('e-ttype').value;c.tval=document.getElementById('e-tval').value||c.tval;c.trigger=document.getElementById('e-trigger').value.trim();c.sbuff=document.getElementById('e-sbuff').value.trim();c.lbuff=document.getElementById('e-lbuff').value.trim();c.energy=parseInt(document.getElementById('e-energy').value)||1;c.cbcount=parseInt(document.getElementById('e-cbcount').value)||c.cbcount;c.bonuses=document.getElementById('e-bonuses').value.trim();
+  c.name=document.getElementById('e-name').value.trim()||c.name;c.ttype=document.getElementById('e-ttype').value;c.tval=document.getElementById('e-tval').value||c.tval;c.trigger=document.getElementById('e-trigger').value.trim();c.sbuff=document.getElementById('e-sbuff').value.trim();c.lbuff=document.getElementById('e-lbuff').value.trim();c.energy=parseInt(document.getElementById('e-energy').value)||1;c.cbcount=parseInt(document.getElementById('e-cbcount').value)||c.cbcount;  c.bonuses=document.getElementById('e-bonuses').value.trim();
+  if(typeof window._readStatBinds==='function')c.statBinds=window._readStatBinds('edit-binds');
   if(editIsRankUp){c.ri=Math.min(c.ri+1,RANKS.length-1);c.checked=[];c.rankups=(c.rankups||0)+1;}
   editIsRankUp=false;closeEdit();save();render();
 }
@@ -2108,7 +2147,7 @@ function ndFlash(){
   document.body.appendChild(f);setTimeout(()=>f.remove(),1000);
 }
 
-function ndRender(){ndRenderProfile();ndRenderSkills();ndRenderGoals();}
+  function ndRender(){ndRenderProfile();ndRenderSkills();ndRenderGoals();ndRenderStats();}
 
 function ndRenderProfile(){
   const d=document.getElementById('ndNameDisp');if(d)d.textContent=S.profile.name;
@@ -2340,7 +2379,215 @@ window.ndAddTreeNode=function(){
   save();ndRenderTree();
 };
 
-  load();ndRender();
+  /* ===== STAT SYSTEM ===== */
+  const SD=[
+    {id:'str',name:'Сила',icon:'⚔️',color:'#e05050'},
+    {id:'end',name:'Выносливость',icon:'🛡️',color:'#4caf50'},
+    {id:'int',name:'Интеллект',icon:'📖',color:'#42a5f5'},
+    {id:'cha',name:'Харизма',icon:'💬',color:'#ab47bc'},
+    {id:'dis',name:'Дисциплина',icon:'⛓️',color:'#ff9800'},
+    {id:'luk',name:'Удача',icon:'🎲',color:'#ffd700'}
+  ];
+  const RANKS_STAT=[
+    {max:3,name:'Новичок',color:'#757575'},
+    {max:6,name:'Ученик',color:'#4caf50'},
+    {max:9,name:'Мастер',color:'#2196f3'},
+    {max:14,name:'Эксперт',color:'#9c27b0'},
+    {max:19,name:'Легенда',color:'#ff6b35'},
+    {max:Infinity,name:'Миф',color:'#ffd700'}
+  ];
+  const CEILINGS=[3,6,9,12,15,18];
+  function sXpNeed(l){return Math.floor(100*Math.pow(1.5,l-1))}
+  function sLevel(xp){let l=1,t=0,n=sXpNeed(l);while(t+n<=xp){t+=n;l++;n=sXpNeed(l);}return{level:l,curXp:xp-t,needXp:n};}
+  function sRank(l){for(const r of RANKS_STAT)if(l<=r.max)return r;return RANKS_STAT[RANKS_STAT.length-1];}
+  function ceilIdx(l){const i=CEILINGS.indexOf(l);return i>=0?i:-1;}
+
+  const BOSS_T={
+    str:[
+      {ceil:3,name:'Железный голем',desc:'7 тренировок за 14 дней',hp:7,days:14},
+      {ceil:6,name:'Огненный великан',desc:'14 тренировок за 21 день',hp:14,days:21},
+      {ceil:9,name:'Ледяной дракон',desc:'21 удар за 30 дней',hp:21,days:30},
+      {ceil:12,name:'Титан бездны',desc:'28 ударов за 35 дней',hp:28,days:35},
+      {ceil:15,name:'Бог войны',desc:'35 ударов за 42 дня',hp:35,days:42},
+      {ceil:18,name:'Вечный страж',desc:'42 удара за 50 дней',hp:42,days:50}
+    ],
+    end:[
+      {ceil:3,name:'Блуждающий мертвец',desc:'7 действий выносливости за 14 дней',hp:7,days:14},
+      {ceil:6,name:'Король теней',desc:'14 действий за 21 день',hp:14,days:21},
+      {ceil:9,name:'Гниющий тролль',desc:'21 действие за 30 дней',hp:21,days:30},
+      {ceil:12,name:'Морской левиафан',desc:'28 действий за 35 дней',hp:28,days:35},
+      {ceil:15,name:'Бессмертный страж',desc:'35 действий за 42 дня',hp:35,days:42},
+      {ceil:18,name:'Вечность',desc:'42 действия за 50 дней',hp:42,days:50}
+    ],
+    int:[
+      {ceil:3,name:'Головолом мрака',desc:'7 занятий за 14 дней',hp:7,days:14},
+      {ceil:6,name:'Архилич',desc:'14 занятий за 21 день',hp:14,days:21},
+      {ceil:9,name:'Хранитель запретов',desc:'21 занятие за 30 дней',hp:21,days:30},
+      {ceil:12,name:'Оракул бездны',desc:'28 занятий за 35 дней',hp:28,days:35},
+      {ceil:15,name:'Всевидящий',desc:'35 занятий за 42 дня',hp:35,days:42},
+      {ceil:18,name:'Абсолют',desc:'42 занятия за 50 дней',hp:42,days:50}
+    ],
+    cha:[
+      {ceil:3,name:'Сирена сомнений',desc:'7 социальных действий за 14 дней',hp:7,days:14},
+      {ceil:6,name:'Зеркальный двойник',desc:'14 действий за 21 день',hp:14,days:21},
+      {ceil:9,name:'Тень обмана',desc:'21 действие за 30 дней',hp:21,days:30},
+      {ceil:12,name:'Повелитель масок',desc:'28 действий за 35 дней',hp:28,days:35},
+      {ceil:15,name:'Бог-обманщик',desc:'35 действий за 42 дня',hp:35,days:42},
+      {ceil:18,name:'Иллюзионист вечности',desc:'42 действия за 50 дней',hp:42,days:50}
+    ],
+    dis:[
+      {ceil:3,name:'Лень-демон',desc:'7 дисциплинированных действий за 14 дней',hp:7,days:14},
+      {ceil:6,name:'Прокрастинатор',desc:'14 действий за 21 день',hp:14,days:21},
+      {ceil:9,name:'Хаос воплощённый',desc:'21 действие за 30 дней',hp:21,days:30},
+      {ceil:12,name:'Разрушитель рутин',desc:'28 действий за 35 дней',hp:28,days:35},
+      {ceil:15,name:'Архидемон беспорядка',desc:'35 действий за 42 дня',hp:35,days:42},
+      {ceil:18,name:'Энтропия',desc:'42 действия за 50 дней',hp:42,days:50}
+    ],
+    luk:[
+      {ceil:3,name:'Чёрный кот',desc:'7 рискованных действий за 14 дней',hp:7,days:14},
+      {ceil:6,name:'Разбитое зеркало',desc:'14 действий за 21 день',hp:14,days:21},
+      {ceil:9,name:'Проклятие фараона',desc:'21 действие за 30 дней',hp:21,days:30},
+      {ceil:12,name:'Печать неудачи',desc:'28 действий за 35 дней',hp:28,days:35},
+      {ceil:15,name:'Богиня фортуны',desc:'35 действий за 42 дня',hp:35,days:42},
+      {ceil:18,name:'Колесо судьбы',desc:'42 действия за 50 дней',hp:42,days:50}
+    ]
+  };
+
+  function initStats(){
+    if(!S.stats)S.stats={};SD.forEach(s=>{if(typeof S.stats[s.id]!=='number')S.stats[s.id]=0;});
+    if(!S.statBosses)S.statBosses=[];
+  }
+
+  function spawnBoss(statId,ceilLvl){
+    const t=(BOSS_T[statId]||[]).find(b=>b.ceil===ceilLvl);
+    if(!t)return;
+    if(S.statBosses.find(b=>b.statId===statId&&b.ceil===ceilLvl&&!b.defeated))return;
+    S.statBosses.push({id:uid(),statId,ceil:ceilLvl,name:t.name,desc:t.desc,hp:t.hp,maxHp:t.hp,startedAt:Date.now(),days:t.days,defeated:false});
+  }
+
+  function activeBoss(statId){
+    const info=sLevel(S.stats[statId]||0);
+    const ceil=CEILINGS.find(c=>c===info.level);
+    if(!ceil)return null;
+    return S.statBosses.find(b=>b.statId===statId&&b.ceil===ceil&&!b.defeated)||null;
+  }
+
+  function awardStatXP(statId,xp){
+    if(!S.stats&&S.stats[statId]===undefined)return;
+    const boss=activeBoss(statId);
+    if(boss){
+      boss.hp=Math.max(0,boss.hp-1);
+      if(boss.hp<=0){
+        boss.defeated=true;
+        boss.defeatedAt=Date.now();
+        ndToast(boss.name+' повержен! Потолок снят.',0);
+        ndFlash();
+      }
+    }
+    const oldInfo=sLevel(S.stats[statId]);
+    S.stats[statId]+=xp;
+    const newInfo=sLevel(S.stats[statId]);
+    if(newInfo.level>oldInfo.level){
+      const def=SD.find(s=>s.id===statId);
+      const r=sRank(newInfo.level);
+      if(CEILINGS.includes(newInfo.level)){
+        spawnBoss(statId,newInfo.level);
+        if(def)ndToast(def.name+': потолок! Уровень '+newInfo.level+' — нужен мини-босс',0);
+      }else{
+        if(def)ndToast(def.name+' — '+r.name+' (ур.'+newInfo.level+')',0);
+      }
+      ndFlash();
+    }
+    save();ndRenderStats();
+  }
+
+  window._onCardCheck=function(card){
+    if(!S.stats)initStats();
+    const binds=card.statBinds;
+    if(!binds||!binds.length)return;
+    const tw=binds.reduce((s,b)=>s+b.w,0);
+    if(tw===0)return;
+    const baseXP=15+((card.energy||1)-1)*5;
+    binds.forEach(b=>{
+      const xp=Math.max(1,Math.floor(baseXP*(b.w/tw)));
+      awardStatXP(b.s,xp);
+    });
+  };
+
+  /* stat binding UI for forge/edit */
+  window._initStatBinds=function(containerId,existing){
+    const el=document.getElementById(containerId);if(!el)return;
+    const map={};(existing||[]).forEach(b=>{map[b.s]=b.w;});
+    let h='';
+    SD.forEach(s=>{
+      const w=map[s.id]||0;
+      const stars=w>0?'★'.repeat(w):'';
+      h+=`<div class="nd-statbind-btn${w>0?' active':''}" data-stat="${s.id}" data-w="${w}" onclick="window._cycleStatBind(this)">${s.icon} ${s.name} <span class="nd-sb-stars">${stars}</span></div>`;
+    });
+    el.innerHTML=h;
+  };
+  window._cycleStatBind=function(el){
+    let w=parseInt(el.dataset.w)||0;
+    w=(w+1)%4;
+    el.dataset.w=w;
+    el.className='nd-statbind-btn'+(w>0?' active':'');
+    el.querySelector('.nd-sb-stars').textContent=w>0?'★'.repeat(w):'';
+  };
+  window._readStatBinds=function(containerId){
+    const el=document.getElementById(containerId);if(!el)return[];
+    const binds=[];
+    el.querySelectorAll('.nd-statbind-btn').forEach(btn=>{
+      const w=parseInt(btn.dataset.w)||0;
+      if(w>0)binds.push({s:btn.dataset.stat,w});
+    });
+    return binds;
+  };
+
+  function ndRenderStats(){
+    initStats();
+    const sec=document.getElementById('ndStatsSection');if(!sec)return;
+    let h='<div class="nd-stat-hdr">⚡ Характеристики</div>';
+    SD.forEach(s=>{
+      const xp=S.stats[s.id]||0;
+      const info=sLevel(xp);
+      const rank=sRank(info.level);
+      const boss=activeBoss(s.id);
+      const pct=info.level<=1?0:Math.min(100,Math.round((info.curXp/info.needXp)*100));
+      h+=`<div class="nd-stat-row">`;
+      h+=`<div class="nd-stat-icon">${s.icon}</div>`;
+      h+=`<div class="nd-stat-info">`;
+      h+=`<div class="nd-stat-name"><span>${s.name} <span class="nd-stat-rank" style="color:${rank.color}">${rank.name}</span></span><span class="nd-stat-lvl">${info.level}</span></div>`;
+      if(boss){
+        h+=`<div class="nd-boss-card">`;
+        h+=`<div class="nd-boss-name">${boss.name}</div>`;
+        h+=`<div class="nd-boss-desc">${boss.desc}</div>`;
+        const bPct=Math.round((boss.hp/boss.maxHp)*100);
+        const rem=Math.max(0,boss.startedAt+boss.days*86400000-Date.now());
+        const d=Math.floor(rem/86400000),hr=Math.floor((rem%86400000)/3600000);
+        h+=`<div class="nd-boss-hp-row"><div class="nd-boss-hp-bar"><div class="nd-boss-hp-fill" style="width:${bPct}%"></div></div><div class="nd-boss-hp-text">${boss.hp}/${boss.maxHp}</div></div>`;
+        h+=`<div class="nd-boss-timer">⏳ ${d}д ${hr}ч</div>`;
+        h+=`</div>`;
+      }else{
+        const atCeil=CEILINGS.includes(info.level)&&!S.statBosses.find(b=>b.statId===s.id&&b.ceil===info.level&&b.defeated);
+        if(atCeil){
+          h+=`<div class="nd-boss-locked">🔒 Потолок уровня ${info.level} — достигни его через действия</div>`;
+        }else{
+          h+=`<div class="nd-stat-bar"><div class="nd-stat-fill" style="width:${pct}%;background:${s.color}"></div></div>`;
+          h+=`<div class="nd-stat-xp">${info.curXp} / ${info.needXp} XP</div>`;
+        }
+      }
+      h+=`</div></div>`;
+    });
+    sec.innerHTML=h;
+  }
+
+  /* init stat binds in forge on page load */
+  function initForgeBinds(){
+    const el=document.getElementById('forge-binds');
+    if(el&&!el.children.length)_initStatBinds('forge-binds',[]);
+  }
+
+  load();initStats();ndRender();initForgeBinds();
   window.ndRender=ndRender;
 })();
 </script>
