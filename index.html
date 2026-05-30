@@ -617,6 +617,34 @@ input,textarea,select{user-select:auto;}
 .nd-boss-locked{font-size:.55rem;color:var(--dim);text-align:center;padding:.4rem;font-style:italic}
 @media(max-width:640px){.nd-stat-row{padding:4px 0}.nd-statbind-row{gap:4px}}
 
+/* ===== RANDOM EVENTS ===== */
+.nd-events-bar{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;flex-direction:column;gap:4px;padding:4px 8px;pointer-events:none}
+.nd-ev-banner{pointer-events:auto;display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:4px;font-family:"Cinzel",serif;animation:ndEvSlide .5s ease-out;cursor:default;position:relative;overflow:hidden}
+.nd-ev-banner::before{content:'';position:absolute;inset:0;opacity:.15;pointer-events:none}
+.nd-ev-banner.curse{background:linear-gradient(90deg,rgba(60,10,10,.95),rgba(30,5,5,.95));border:1px solid rgba(200,40,40,.5);box-shadow:0 0 20px rgba(180,40,40,.2)}
+.nd-ev-banner.curse::before{background:radial-gradient(ellipse at 20% 50%,rgba(200,40,40,.3),transparent 60%)}
+.nd-ev-banner.blessing{background:linear-gradient(90deg,rgba(10,40,20,.95),rgba(5,25,12,.95));border:1px solid rgba(80,200,100,.4);box-shadow:0 0 20px rgba(80,200,100,.15)}
+.nd-ev-banner.blessing::before{background:radial-gradient(ellipse at 20% 50%,rgba(80,200,100,.2),transparent 60%)}
+.nd-ev-icon{font-size:1.3rem;flex-shrink:0;filter:drop-shadow(0 0 6px currentColor)}
+.nd-ev-icon.curse{color:#e06050}.nd-ev-icon.blessing{color:#5aaf70}
+.nd-ev-body{flex:1;min-width:0}
+.nd-ev-name{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+.nd-ev-name.curse{color:#e08070}.nd-ev-name.blessing{color:#7acc88}
+.nd-ev-desc{font-family:"IM Fell English",serif;font-size:.62rem;color:var(--parchment);margin-top:1px;opacity:.85}
+.nd-ev-prog-row{display:flex;align-items:center;gap:6px;margin-top:3px}
+.nd-ev-prog-bar{flex:1;height:4px;background:rgba(0,0,0,.5);border-radius:2px;overflow:hidden}
+.nd-ev-prog-fill{height:100%;border-radius:2px;transition:width .4s}
+.nd-ev-prog-fill.curse{background:linear-gradient(90deg,#c23a1d,#e06050)}
+.nd-ev-prog-fill.blessing{background:linear-gradient(90deg,#2e6e3e,#5aaf70)}
+.nd-ev-prog-txt{font-size:.5rem;color:var(--dim);white-space:nowrap}
+.nd-ev-timer{font-size:.55rem;color:var(--dim);flex-shrink:0;text-align:right;white-space:nowrap}
+.nd-ev-reward{font-size:.5rem;color:#7acc88;margin-top:1px}
+.nd-ev-penalty{font-size:.5rem;color:#e08070;margin-top:1px}
+@keyframes ndEvSlide{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+.nd-events-bar~header{top:0}
+.nd-events-bar:not(:empty)~header{margin-top:var(--ev-offset,0px)}
+@media(max-width:640px){.nd-ev-banner{padding:6px 10px;gap:6px}.nd-ev-icon{font-size:1rem}.nd-ev-name{font-size:.62rem}.nd-ev-desc{font-size:.56rem}}
+
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
@@ -632,6 +660,9 @@ input,textarea,select{user-select:auto;}
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+
+<!-- EVENT BANNERS -->
+<div class="nd-events-bar" id="ndEventsBar"></div>
 
 <!-- FOG + DRIPS -->
 <div class="fog-layer"></div>
@@ -2587,7 +2618,231 @@ window.ndAddTreeNode=function(){
     if(el&&!el.children.length)_initStatBinds('forge-binds',[]);
   }
 
-  load();initStats();ndRender();initForgeBinds();
+  /* ===== RANDOM EVENTS SYSTEM ===== */
+  const EV_POOL=[
+    {w:3,tp:'curse',icon:'🌑',name:'Проклятая ночь',cond:{type:'cards',n:3},dur:12,
+     rew:{type:'streak_shield',dur:24},pen:{type:'streak_reset'},
+     rTxt:'🛡 Стрики защищены 24ч',pTxt:'💀 Все стрики сброшены'},
+    {w:3,tp:'curse',icon:'🌫️',name:'Туман забвения',cond:{type:'cards',n:5},dur:24,
+     rew:{type:'stat_xp',stat:'int',n:40},pen:{type:'stat_pct_loss',pct:.15},
+     rTxt:'+40 XP Интеллекта',pTxt:'💀 Все характеристики теряют 15% XP'},
+    {w:2,tp:'curse',icon:'👁️',name:'Предательство тени',cond:{type:'goals',n:2},dur:18,
+     rew:{type:'stat_xp',stat:'cha',n:50},pen:{type:'stat_xp_loss',stat:'random',n:35},
+     rTxt:'+50 XP Харизмы',pTxt:'💀 Случайная характеристика теряет 35 XP'},
+    {w:2,tp:'curse',icon:'🐍',name:'Яд сомнений',cond:{type:'boss_dmg',n:3},dur:24,
+     rew:{type:'boss_dmg_all',n:2},pen:{type:'boss_heal',n:3},
+     rTxt:'⚔ Все мини-боссы получают 2 урона',pTxt:'💀 Активные мини-боссы лечат 3 HP'},
+    {w:2,tp:'curse',icon:'🕳️',name:'Зов пустоты',cond:{type:'cards_unique',n:3},dur:12,
+     rew:{type:'stat_xp',stat:'dis',n:45},pen:{type:'stat_xp_loss',stat:'dis',n:50},
+     rTxt:'+45 XP Дисциплины',pTxt:'💀 Дисциплина теряет 50 XP'},
+    {w:2,tp:'curse',icon:'⛓️',name:'Цепи рока',cond:{type:'goals',n:2},dur:24,
+     rew:{type:'stat_xp',stat:'end',n:60},pen:{type:'streak_reset'},
+     rTxt:'+60 XP Выносливости',pTxt:'💀 Все стрики сброшены'},
+    {w:2,tp:'curse',icon:'🥶',name:'Холод преисподней',cond:{type:'cards',n:1},dur:2,
+     rew:{type:'stat_xp',stat:'end',n:30},pen:{type:'boss_heal_stat',stat:'end',n:5},
+     rTxt:'+30 XP Выносливости',pTxt:'💀 Мини-босс выносливости лечит 5 HP'},
+    {w:2,tp:'blessing',icon:'🔥',name:'Благословение огня',cond:{type:'cards',n:2},dur:24,
+     rew:{type:'stat_mult',mult:2,dur:24},pen:{type:'none'},
+     rTxt:'⚡ ×2 XP характеристик на 24ч',pTxt:''},
+    {w:2,tp:'blessing',icon:'💎',name:'Золотая жила',cond:{type:'cards',n:3},dur:24,
+     rew:{type:'profile_xp',n:200},pen:{type:'none'},
+     rTxt:'+200 XP профиля',pTxt:''},
+    {w:2,tp:'blessing',icon:'⚒️',name:'Дар кузнеца',cond:{type:'cards',n:1},dur:12,
+     rew:{type:'stat_mult',mult:3,dur:12},pen:{type:'none'},
+     rTxt:'⚡ ×3 XP характеристик на 12ч',pTxt:''},
+    {w:2,tp:'blessing',icon:'⭐',name:'Звёздный час',cond:{type:'boss_dmg',n:2},dur:24,
+     rew:{type:'boss_dmg_all',n:3},pen:{type:'none'},
+     rTxt:'⚔ Все мини-боссы получают 3 урона',pTxt:''},
+    {w:1,tp:'blessing',icon:'🌅',name:'Пробуждение',cond:{type:'goals',n:1},dur:18,
+     rew:{type:'stat_xp',stat:'random',n:60},pen:{type:'none'},
+     rTxt:'+60 XP случайной характеристики',pTxt:''}
+  ];
+
+  function initEvents(){
+    if(!S.events)S.events=[];
+    if(!S.lastEvCheck)S.lastEvCheck=Date.now();
+    if(!S.buffs)S.buffs=[];
+  }
+
+  function pickEvent(){
+    const total=EV_POOL.reduce((s,e)=>s+e.w,0);
+    let r=Math.random()*total;
+    for(const e of EV_POOL){r-=e.w;if(r<=0)return e;}
+    return EV_POOL[EV_POOL.length-1];
+  }
+
+  function trySpawnEvent(){
+    if(S.events.filter(e=>!e.done).length>=3)return;
+    const interval=(1+Math.random()*2)*86400000;
+    if(Date.now()-S.lastEvCheck<interval)return;
+    S.lastEvCheck=Date.now();
+    const tmpl=pickEvent();
+    const ev={
+      id:uid(),tp:tmpl.tp,icon:tmpl.icon,name:tmpl.name,
+      condType:tmpl.cond.type,condNeed:tmpl.cond.n,
+      dur:tmpl.dur,reward:tmpl.rew,penalty:tmpl.pen,
+      rTxt:tmpl.rTxt,pTxt:tmpl.pTxt,
+      startedAt:Date.now(),progress:0,done:false,success:false,
+      cardIds:[]
+    };
+    S.events.push(ev);
+    save();ndToast((ev.tp==='curse'?'⚠ ':'✨ ')+ev.name,0);
+  }
+
+  function activeEvents(){return S.events.filter(e=>!e.done);}
+
+  function checkEvents(){
+    initEvents();
+    const now=Date.now();
+    S.events.forEach(ev=>{
+      if(ev.done)return;
+      const elapsed=(now-ev.startedAt)/3600000;
+      if(elapsed>=ev.dur){
+        ev.done=true;
+        if(ev.progress>=ev.condNeed){
+          ev.success=true;
+          applyReward(ev.reward);
+          ndToast('✅ '+ev.name+' — испытание пройдено!',0);
+        }else{
+          ev.success=false;
+          applyPenalty(ev.penalty);
+          ndToast('❌ '+ev.name+' — испытание провалено',0);
+        }
+        save();
+      }
+    });
+    S.events=S.events.filter(e=>!e.done||(now-e.doneAt)<60000);
+  }
+
+  function trackEventProgress(type,data){
+    activeEvents().forEach(ev=>{
+      if(ev.condType!==type)return;
+      if(type==='cards_unique'){
+        if(data&&data.cardId&&!ev.cardIds.includes(data.cardId)){
+          ev.cardIds.push(data.cardId);
+          ev.progress=ev.cardIds.length;
+        }
+      }else{
+        ev.progress++;
+      }
+      if(ev.progress>=ev.condNeed){
+        ev.done=true;ev.success=true;ev.doneAt=Date.now();
+        applyReward(ev.reward);
+        ndToast('✅ '+ev.name+' — выполнено досрочно!',0);
+        ndFlash();
+      }
+    });
+    save();
+  }
+
+  function applyReward(r){
+    if(!r||r.type==='none')return;
+    if(r.type==='stat_xp'){
+      const sid=r.stat==='random'?SD[Math.floor(Math.random()*SD.length)].id:r.stat;
+      if(S.stats&&S.stats[sid]!==undefined)S.stats[sid]+=r.n;
+    }
+    if(r.type==='profile_xp'){addProfXP(r.n);}
+    if(r.type==='stat_mult'){S.buffs.push({type:'stat_mult',mult:r.mult,until:Date.now()+r.dur*3600000});}
+    if(r.type==='boss_dmg_all'){
+      S.statBosses.forEach(b=>{if(!b.defeated){b.hp=Math.max(0,b.hp-r.n);if(b.hp<=0){b.defeated=true;b.defeatedAt=Date.now();}}});
+    }
+    if(r.type==='streak_shield'){S.buffs.push({type:'streak_shield',until:Date.now()+r.dur*3600000});}
+    save();
+  }
+
+  function applyPenalty(p){
+    if(!p||p.type==='none')return;
+    const hasShield=S.buffs.some(b=>b.type==='streak_shield'&&Date.now()<b.until);
+    if(p.type==='streak_reset'){
+      if(hasShield){ndToast('🛡 Стрики защищены щитом!',0);return;}
+      if(typeof cards!=='undefined'){cards.forEach(c=>{c.streakDays=0;c.lastDone=null;});try{localStorage.setItem('nd_v3',JSON.stringify(cards));}catch(e){}}
+    }
+    if(p.type==='stat_pct_loss'){
+      if(S.stats)SD.forEach(s=>{if(S.stats[s.id]>0)S.stats[s.id]=Math.max(0,Math.floor(S.stats[s.id]*(1-p.pct)));});
+    }
+    if(p.type==='stat_xp_loss'){
+      const sid=p.stat==='random'?SD[Math.floor(Math.random()*SD.length)].id:p.stat;
+      if(S.stats&&S.stats[sid]!==undefined)S.stats[sid]=Math.max(0,S.stats[sid]-p.n);
+    }
+    if(p.type==='boss_heal'){
+      S.statBosses.forEach(b=>{if(!b.defeated){b.hp=Math.min(b.maxHp,b.hp+p.n);}});
+    }
+    if(p.type==='boss_heal_stat'){
+      S.statBosses.filter(b=>b.statId===p.stat&&!b.defeated).forEach(b=>{b.hp=Math.min(b.maxHp,b.hp+p.n);});
+    }
+    save();
+  }
+
+  function hasBuff(type){return S.buffs.some(b=>b.type===type&&Date.now()<b.until);}
+
+  /* hook into _onCardCheck to also track events */
+  const _origOnCardCheck=window._onCardCheck;
+  window._onCardCheck=function(card){
+    if(_origOnCardCheck)_origOnCardCheck(card);
+    initEvents();checkEvents();
+    trackEventProgress('cards',{cardId:card.id});
+    trackEventProgress('cards_unique',{cardId:card.id});
+    const stats=card.statBinds||[];
+    if(stats.length)trackEventProgress('cards_stat',{count:stats.length});
+  };
+
+  /* hook into goal completion */
+  const _origToggleGoal=window.ndToggleGoal;
+  window.ndToggleGoal=function(id){
+    const g=S.goals.find(x=>x.id===id);
+    const wasDone=g?g.done:true;
+    if(_origToggleGoal)_origToggleGoal(id);
+    if(!wasDone){initEvents();checkEvents();trackEventProgress('goals');}
+  };
+
+  /* hook into boss damage (called from awardStatXP) */
+  const _origAwardStatXP=awardStatXP;
+  awardStatXP=function(statId,xp){
+    const oldBosses=S.statBosses.map(b=>({id:b.id,hp:b.hp}));
+    _origAwardStatXP(statId,xp);
+    const newBosses=S.statBosses;
+    let dmgDealt=0;
+    oldBosses.forEach(ob=>{
+      const nb=newBosses.find(b=>b.id===ob.id);
+      if(nb&&nb.hp<ob.hp)dmgDealt+=(ob.hp-nb.hp);
+    });
+    if(dmgDealt>0)trackEventProgress('boss_dmg',{n:dmgDealt});
+  };
+
+  function ndRenderEvents(){
+    initEvents();checkEvents();
+    trySpawnEvent();
+    S.buffs=S.buffs.filter(b=>Date.now()<b.until);
+    const bar=document.getElementById('ndEventsBar');if(!bar)return;
+    const evs=activeEvents();
+    if(!evs.length){bar.innerHTML='';bar.style.display='none';document.documentElement.style.setProperty('--ev-offset','0px');return;}
+    bar.style.display='flex';
+    document.documentElement.style.setProperty('--ev-offset',bar.offsetHeight+'px');
+    let h='';
+    evs.forEach(ev=>{
+      const pct=Math.min(100,Math.round((ev.progress/ev.condNeed)*100));
+      const rem=Math.max(0,ev.dur-(Date.now()-ev.startedAt)/3600000);
+      const rh=Math.floor(rem);const rm=Math.floor((rem-rh)*60);
+      const cls=ev.tp==='curse'?'curse':'blessing';
+      h+=`<div class="nd-ev-banner ${cls}">`;
+      h+=`<div class="nd-ev-icon ${cls}">${ev.icon}</div>`;
+      h+=`<div class="nd-ev-body">`;
+      h+=`<div class="nd-ev-name ${cls}">${ev.name}</div>`;
+      h+=`<div class="nd-ev-desc">${ev.condType==='cards'?'Завершить '+ev.condNeed+' карточ.'+['ки','ки','ки','ки'][Math.min(ev.condNeed,4)-1]:ev.condType==='cards_unique'?'Отметить '+ev.condNeed+' разные карточки':ev.condType==='goals'?'Завершить '+ev.condNeed+' цел'+(ev.condNeed===1?'ь':'и'):ev.condType==='boss_dmg'?'Нанести '+ev.condNeed+' урона боссам':'Действие'} за ${ev.dur}ч</div>`;
+      h+=`<div class="nd-ev-prog-row"><div class="nd-ev-prog-bar"><div class="nd-ev-prog-fill ${cls}" style="width:${pct}%"></div></div><div class="nd-ev-prog-txt">${ev.progress}/${ev.condNeed}</div></div>`;
+      if(ev.rTxt)h+=`<div class="nd-ev-reward">${ev.rTxt}</div>`;
+      if(ev.pTxt)h+=`<div class="nd-ev-penalty">${ev.pTxt}</div>`;
+      h+=`</div>`;
+      h+=`<div class="nd-ev-timer">⏳ ${rh}ч ${rm}м</div>`;
+      h+=`</div>`;
+    });
+    bar.innerHTML=h;
+  }
+
+  /* render events on interval */
+  setInterval(()=>ndRenderEvents(),60000);
+
+  load();initStats();initEvents();ndRender();initForgeBinds();ndRenderEvents();
   window.ndRender=ndRender;
 })();
 </script>
