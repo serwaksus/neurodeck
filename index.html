@@ -6,7 +6,7 @@
 <title>NeuroDeck</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <style>
-:root{--gold:#c9a227;--blood:#8b1010;--parchment:#c8a86e;--text:#c4a87a;--dim:#5a4228;--border:#2a1a0a;}
+:root{--gold:#c9a227;--blood:#8b1010;--parchment:#c8a86e;--text:#c4a87a;--dim:#5a4228;--border:#2a1a0a;--bg:#0a0704;--amber:#c9a227;--green:#4caf50;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{min-height:100vh;font-family:"IM Fell English",serif;color:var(--text);overflow-x:hidden;background-color:#070604;
   background-image:
@@ -218,7 +218,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 #tab-forge{display:none;padding:1.2rem 0}
 #tab-forge.active{display:flex;justify-content:center}
 #tab-forge .panel{max-width:520px;width:100%}
-#tab-goals{display:none;padding:1.2rem .8rem}
+#tab-goals{display:none;padding:1.2rem .4rem}
 #tab-goals.active{display:block}
 @keyframes tabFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
@@ -286,32 +286,7 @@ input,textarea,select{user-select:auto;}
 .main-tabs{padding-top:env(safe-area-inset-top,0px);flex-wrap:wrap;justify-content:center;}
 .mtab{font-size:.52rem;padding:.35rem .5rem;flex:1 1 auto;min-width:0;text-align:center;}
 
-/* ===== PROFILE TAB AVATAR (Card size) ===== */
-#tab-profile{display:none;padding:1.5rem .8rem;}
-#tab-profile.active{display:block;}
-.profile-av-wrap{display:flex;justify-content:center;margin-bottom:1rem;}
-.profile-av-wrap #avatar-panel{
-  position:relative!important; top:auto!important; right:auto!important;
-  width:260px!important; height:auto!important; margin:0 auto;
-  filter:drop-shadow(0 8px 24px rgba(0,0,0,.9));
-  border:1px solid rgba(201,162,39,0.3); border-radius:5px;
-  background:rgba(10,6,2,0.8);
-  padding-bottom: 0.5rem;
-}
-.profile-av-wrap .av-frame {
-  width: 260px!important; height: 350px!important; 
-  border-bottom: 1px solid var(--border)!important;
-  border-radius: 5px 5px 0 0;
-}
-.profile-av-wrap .av-label, .profile-av-wrap .av-stage {
-  display: block; width: 100%; text-align: center;
-}
-.profile-av-wrap .av-label { font-size: 0.8rem!important; margin-top: 0.5rem!important; }
-.profile-av-wrap .av-stage { font-size: 1rem!important; margin-top: 0.2rem!important; }
-
 /* ===== QUESTS ===== */
-#tab-quests{display:none;padding:1.2rem .8rem;max-height:calc(100vh - 130px);overflow-y:auto;box-sizing:border-box}
-#tab-quests.active{display:block}
 .q-wrap{max-width:680px;margin:0 auto}
 .q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
 .q-title{font-family:"Cinzel Decorative",serif;font-size:.85rem;color:var(--gold);text-shadow:0 0 12px rgba(201,162,39,.4);letter-spacing:.1em}
@@ -557,6 +532,58 @@ input,textarea,select{user-select:auto;}
 .nd-tree-add-btn{position:absolute;bottom:20px;right:20px;padding:8px 18px;background:linear-gradient(to bottom,#2e1e00,#180f00);border:1px solid rgba(201,162,39,.5);color:var(--gold);border-radius:3px;cursor:pointer;font-family:"Cinzel",serif;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em}
 .nd-tree-add-btn:hover{background:linear-gradient(to bottom,#4a3200,#2e1e00)}
 
+.q-item-main{flex:1;min-width:0}
+
+/* ===== BUTTONS ===== */
+.btn{font-family:"Cinzel",serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;padding:.4rem .9rem;background:linear-gradient(to bottom,#2e1e00,#180f00);border:1px solid rgba(201,162,39,.4);color:var(--gold);border-radius:3px;cursor:pointer;transition:all .2s;display:inline-block;text-align:center}
+.btn:hover{background:linear-gradient(to bottom,#4a3200,#2e1a00);border-color:var(--gold);box-shadow:0 0 8px rgba(201,162,39,.2)}
+.btn-sm{font-size:.6rem;padding:.3rem .7rem}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--dim)}
+.btn-ghost:hover{border-color:rgba(201,162,39,.3);color:var(--parchment)}
+.tree-btn{font-size:.7rem;padding:.55rem 1rem}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media(max-width:640px){
+  header .header-inner{padding:0 .5rem}
+  .logo{font-size:.95rem}.tagline{font-size:.5rem}
+  .torch-wrap{transform:scale(.6);margin:0 -8px}
+  .bars{height:3px}
+  .stats-bar{flex-wrap:wrap;gap:.25rem .6rem;padding:.35rem .5rem;font-size:.55rem}
+  .main-tabs{gap:2px;padding:0 .2rem}
+  .mtab{font-size:.48rem;padding:.32rem .3rem;flex:1 1 auto;min-width:0}
+  .container{padding:.4rem .3rem}
+  .nd-goals-layout{grid-template-columns:1fr;gap:.8rem}
+  .nd-col-left,.nd-col-right{max-height:none;overflow-y:visible}
+  .nd-profile{padding:.7rem}
+  .nd-form-inline{flex-direction:column;gap:0}
+  .nd-goal-item{padding:6px 8px;gap:6px}
+  .nd-chk{width:22px;height:22px;font-size:13px}
+  .nd-g-name{font-size:.82rem}
+  .nd-g-meta{font-size:.6rem}
+  .nd-skill-card{padding:.5rem}
+  .nd-sk-name{font-size:.78rem}
+  .nd-add-form{padding:.7rem}
+  .nd-filter-row{gap:3px}
+  .nd-fbtn{padding:4px 8px;font-size:.68rem}
+  .q-item-main{flex:1;min-width:0}
+  .dm-grid-wrap{padding:10px}
+  .dm-grid-wrap svg{height:auto}
+  .boss-card img{aspect-ratio:16/10}
+  #tab-inventory .h3inv-wrap{font-size:.9rem}
+  #invv5-board{transform:scale(.75);transform-origin:top center;margin-bottom:-180px}
+  .toolbar{flex-wrap:wrap;gap:.3rem}
+  .toolbar select,.toolbar button{font-size:.52rem;padding:.25rem .4rem}
+  .ncard{min-width:0!important}
+  .cards-grid{grid-template-columns:1fr!important}
+  .edit-modal,.sound-modal,.rank-modal{width:94%!important;max-height:90vh;overflow-y:auto}
+  .panel{padding:.8rem!important}
+  .row2{flex-direction:column}
+  .field input,.field textarea,.field select{font-size:.78rem}
+  .nd-tree-overlay{padding:10px}
+  .nd-tree-overlay h2{font-size:1rem;margin-bottom:8px}
+  #ndTreeSvg{width:100%;height:60vh}
+}
+
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
@@ -713,11 +740,11 @@ input,textarea,select{user-select:auto;}
           <div class="nd-form-actions"><button class="btn btn-sm" onclick="ndSubmitGoal()">Создать</button></div>
         </div>
         <div class="nd-filter-row">
-          <button class="nd-fbtn nd-active" onclick="ndFilter('all')">Все</button>
-          <button class="nd-fbtn" onclick="ndFilter('repeating')">🟢</button>
-          <button class="nd-fbtn" onclick="ndFilter('short')">🔵</button>
-          <button class="nd-fbtn" onclick="ndFilter('medium')">🟡</button>
-          <button class="nd-fbtn" onclick="ndFilter('long')">🔴</button>
+          <button class="nd-fbtn nd-active" onclick="ndFilter('all',event)">Все</button>
+          <button class="nd-fbtn" onclick="ndFilter('repeating',event)">🟢</button>
+          <button class="nd-fbtn" onclick="ndFilter('short',event)">🔵</button>
+          <button class="nd-fbtn" onclick="ndFilter('medium',event)">🟡</button>
+          <button class="nd-fbtn" onclick="ndFilter('long',event)">🔴</button>
         </div>
         <div id="ndActiveGoals"></div>
         <div class="nd-comp-hdr" onclick="ndToggleComp()">
@@ -1142,8 +1169,8 @@ const AV_IMGS_DEFAULT={prisoner:'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB
      if(p)p.classList.toggle('active',t===name);
      if(b)b.classList.toggle('active',t===name);
    });
-   if(name==='map')updateDungeonMap();
-   if(name==='goals')ndRender();
+    if(name==='map')updateDungeonMap();
+    if(name==='goals'&&typeof window.ndRender==='function')window.ndRender();
  }
 const DM_ROOMS=[
   {icon:'🔗',name:'Камера пыток',    thresh:0,  col:0,row:0},
@@ -1279,12 +1306,11 @@ window._saveToCloud=function(){
   if(!_uid||!_syncReady)return;
   _setSyncDot('warn');
   _localWriteTs=Date.now();
-  // Strip img from bossState — base64 is ~700KB and would exceed Firestore 1MB limit
-  const bossCloud=typeof bossState!=='undefined'&&bossState
-    ? (function(){const c=Object.assign({},bossState);delete c.img;return c;})()
-    : null;
-  const invCloud=typeof invState!=='undefined'?invState:null;
-  const rewardCloud=typeof rewardState!=='undefined'?rewardState:null;
+  var bossCloud=null,invCloud=null,rewardCloud=null;
+  if(typeof window._getExtraCloud==='function'){
+    var extra=window._getExtraCloud();
+    bossCloud=extra.boss;invCloud=extra.inv;rewardCloud=extra.reward;
+  }
   const payload={
     cards:(typeof cards!=='undefined'?cards:[]),
     quests:window._quests||[],
@@ -1678,6 +1704,12 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
   }
   loadExtra();
 
+  window._getExtraCloud=function(){
+    var bossCloud=null;
+    if(bossState){try{var c=Object.assign({},bossState);delete c.img;bossCloud=c;}catch(e){}}
+    return {boss:bossCloud,inv:invState?Object.assign({},invState):null,reward:rewardState?Object.assign({},rewardState):null};
+  };
+
   if(window.saveToLocal){
     const _oldSaveToLocal=window.saveToLocal;
     window.saveToLocal=function(){saveExtra();return _oldSaveToLocal.apply(this,arguments);};
@@ -1705,7 +1737,6 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
     return s+')';
   }
   function makeItem(def){return {uid:def.baseId+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),...def};}
-  function inventorySummary(){const w=invState.equipped.weapon;if(!w)return 'Бонусы: нет активного оружия';const bonus=w&&w.bonusDamage?w.bonusDamage:0;return 'Оружие: '+w.name+' (+'+bonus+' урона)';}
   function grantSnakeTooth(){
     if(rewardState.snakeToothGranted)return;
     const item=makeItem(SNAKE_TOOTH_DEF);
@@ -1872,6 +1903,7 @@ setTimeout(()=>{updateAvatar();updateDungeonMap();},400);
       document.getElementById('q-done-count-lbl').textContent='('+done.length+')';
       document.getElementById('q-done-toggle-icon').textContent=doneOpen?'▼':'▶';
       doneList.style.display=doneOpen?'flex':'none';
+      doneList.style.flexDirection='column';
       doneList.innerHTML=done.map(q=>`<div class="q-item done p-${q.priority}"><span class="q-item-icon">✓</span><span class="q-item-text">${esc(q.text)}</span><span class="q-item-dmg">${QDIFF[q.difficulty].icon} ${q.totalDamage||q.damage} dmg</span><button class="q-del-btn" onclick="deleteQuest('${q.id}')">✕</button></div>`).join('');
     } else if(doneSec) doneSec.style.display='none';
   };
@@ -2015,8 +2047,9 @@ function skXpNext(l){return l*50}
 function addProfXP(n){
   S.profile.totalXPEarned+=n;
   S.profile.currentXP+=n;
-  let l=S.profile.level,need=xpNext(l);
-  while(S.profile.currentXP>=need){S.profile.currentXP-=need;l++;need=xpNext(l);ndFlash();}
+  let l=S.profile.level,need=xpNext(l),didLvl=false;
+  while(S.profile.currentXP>=need){S.profile.currentXP-=need;l++;need=xpNext(l);didLvl=true;}
+  if(didLvl)ndFlash();
   if(l!==S.profile.level){S.profile.level=l;ndToast('Уровень '+l+'!',0);}
   ndRender();
 }
@@ -2176,8 +2209,14 @@ function ndRenderGoals(){
 window.ndToggleGoal=function(id){
   const g=S.goals.find(x=>x.id===id);if(!g)return;
   if(!g.done){
-    const el=document.querySelector('.nd-goal-item[data-id="'+id+'"]');if(el)el.classList.add('nd-slide-out');
-    if(g.type==='repeating'){g.streak=(g.streak||0)+1;g.lastCompleted=new Date().toISOString();}
+    if(g.type==='repeating'){
+      if(g.lastCompleted){
+        const last=new Date(g.lastCompleted),now=new Date();
+        const samePeriod=g.frequency==='daily'?(last.toDateString()===now.toDateString()):(Math.floor(last.getTime()/604800000)===Math.floor(now.getTime()/604800000));
+        if(samePeriod)return;
+      }
+      g.streak=(g.streak||0)+1;g.lastCompleted=new Date().toISOString();
+    }
     else{g.done=true;g.completedAt=new Date().toISOString();}
     addProfXP(g.xpReward);
     let sn='';
@@ -2190,7 +2229,7 @@ window.ndToggleGoal=function(id){
 };
 
 window.ndDelGoal=function(id){if(!confirm('Удалить цель?'))return;S.goals=S.goals.filter(g=>g.id!==id);save();ndRender();};
-window.ndFilter=function(t){ndFilter_=t;document.querySelectorAll('.nd-fbtn').forEach(b=>b.classList.remove('nd-active'));if(event&&event.target)event.target.classList.add('nd-active');ndRenderGoals();};
+window.ndFilter=function(t,e){ndFilter_=t;document.querySelectorAll('.nd-fbtn').forEach(b=>b.classList.remove('nd-active'));if(e&&e.target)e.target.classList.add('nd-active');ndRenderGoals();};
 window.ndToggleComp=function(){ndCompOpen_=!ndCompOpen_;document.getElementById('ndCompGoals').classList.toggle('nd-open',ndCompOpen_);document.getElementById('ndCompArrow').classList.toggle('nd-open',ndCompOpen_);};
 
 window.ndOpenTree=function(){document.getElementById('ndTreeOverlay').classList.add('nd-show');ndRenderTree();};
@@ -2259,14 +2298,15 @@ window.ndAddTreeNode=function(){
   if(!S.skills.length){alert('Сначала создайте навык');return;}
   const skName=prompt('К какому навыку добавить узел?\n\n'+S.skills.map((s,i)=>(i+1)+'. '+s.name).join('\n'));
   if(!skName)return;
-  const idx=parseInt(skName)-1;const sk=S.skills[idx];
-  if(!sk){const found=S.skills.find(s=>s.name.toLowerCase().includes(skName.toLowerCase()));if(!found){alert('Навык не найден');return;}var sk=found;}
+  const idx=parseInt(skName)-1;let sk=S.skills[idx];
+  if(!sk){const found=S.skills.find(s=>s.name.toLowerCase().includes(skName.toLowerCase()));if(!found){alert('Навык не найден');return;}sk=found;}
   const name=prompt('Название поднавыка:');if(!name||!name.trim())return;
   S.skillTree.push({id:uid(),skillId:sk.id,name:name.trim(),done:false,tier:'bronze',linkedGoalId:null});
   save();ndRenderTree();
 };
 
-load();ndRender();
+  load();ndRender();
+  window.ndRender=ndRender;
 })();
 </script>
 
