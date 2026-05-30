@@ -218,6 +218,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 #tab-forge{display:none;padding:1.2rem 0}
 #tab-forge.active{display:flex;justify-content:center}
 #tab-forge .panel{max-width:520px;width:100%}
+#tab-goals{display:none;padding:1.2rem .8rem}
+#tab-goals.active{display:block}
 @keyframes tabFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
 /* ===== AVATAR top-right ===== */
@@ -677,12 +679,11 @@ input,textarea,select{user-select:auto;}
           <span class="dm-prog-val" id="dm-prog-val">0 / 140 ранг-апов</span>
         </div>
         <div class="dm-prog-bar"><div class="dm-prog-fill" id="dm-prog-fill" style="width:0%"></div></div>
-      </div>
-    </div>
-  </div>
-</div>
+       </div>
+     </div>
+   </div>
 
-<!-- GOALS + SKILLS (replaces old Quests & Profile tabs) -->
+  <!-- GOALS + SKILLS (replaces old Quests & Profile tabs) -->
   <div id="tab-goals" class="tab-panel">
     <div class="nd-goals-layout">
       <!-- LEFT: Goals -->
@@ -792,6 +793,7 @@ input,textarea,select{user-select:auto;}
     </div>
   </div>
 
+</div><!-- end .container -->
 
 <!-- RANK-UP OVERLAY -->
 <div class="overlay" id="ru-overlay">
