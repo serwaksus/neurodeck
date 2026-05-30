@@ -114,7 +114,9 @@ textarea{resize:vertical;min-height:48px;}
 @keyframes rainbow{0%{border-color:#ff4444;box-shadow:0 0 16px #ff4444,inset 0 0 10px rgba(0,0,0,.6);}16%{border-color:#ff9900;box-shadow:0 0 16px #ff9900,inset 0 0 10px rgba(0,0,0,.6);}33%{border-color:#ffee00;box-shadow:0 0 16px #ffee00,inset 0 0 10px rgba(0,0,0,.6);}50%{border-color:#44ff44;box-shadow:0 0 16px #44ff44,inset 0 0 10px rgba(0,0,0,.6);}66%{border-color:#4488ff;box-shadow:0 0 16px #4488ff,inset 0 0 10px rgba(0,0,0,.6);}83%{border-color:#cc44ff;box-shadow:0 0 16px #cc44ff,inset 0 0 10px rgba(0,0,0,.6);}100%{border-color:#ff4444;box-shadow:0 0 16px #ff4444,inset 0 0 10px rgba(0,0,0,.6);}}
 .r-SSSp .ncard-glow{animation:rainbow 2s linear infinite;}
 .card-del{position:absolute;top:-7px;right:-7px;width:19px;height:19px;background:var(--blood);border:1px solid #b03030;border-radius:50%;color:#fff;font-size:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;opacity:0;transition:opacity .2s;}
-.ncard:hover .card-del{opacity:1;}
+.card-edit{position:absolute;top:-7px;right:18px;width:19px;height:19px;background:#2a1a0a;border:1px solid rgba(201,162,39,.5);border-radius:50%;color:var(--gold);font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;opacity:0;transition:opacity .2s;}
+.ncard:hover .card-del,.ncard:hover .card-edit{opacity:1;}
+.card-edit:hover{background:var(--gold);color:var(--bg)}
 .card-body{padding:.7rem;position:relative;z-index:1;}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem;}
 .card-name{font-family:"Cinzel",serif;font-size:.75rem;font-weight:700;color:var(--parchment);line-height:1.2;flex:1;padding-right:.3rem;}
@@ -615,7 +617,7 @@ input,textarea,select{user-select:auto;}
 .nd-boss-hp-text{font-family:"Cinzel",serif;font-size:.55rem;color:var(--dim);white-space:nowrap}
 .nd-boss-timer{font-size:.5rem;color:#e08060;margin-top:2px;text-align:right}
 .nd-boss-locked{font-size:.55rem;color:var(--dim);text-align:center;padding:.4rem;font-style:italic}
-@media(max-width:640px){.nd-stat-row{padding:4px 0}.nd-statbind-row{gap:4px}}
+@media(max-width:640px){.nd-stat-row{padding:4px 0}.nd-statbind-row{gap:4px}.card-del,.card-edit{opacity:.7}}
 
 /* ===== RANDOM EVENTS ===== */
 .nd-events-bar{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;flex-direction:column;gap:4px;padding:4px 8px;pointer-events:none}
@@ -1167,6 +1169,7 @@ function buildCard(c){
 
   w.innerHTML=
     '<div class="ncard-glow"></div>'
+    +'<div class="card-edit" onclick="editId=\''+c.id+'\';openEdit(cards.find(x=>x.id===\''+c.id+'\'))">⚙</div>'
     +'<div class="card-del" onclick="delCard(\''+c.id+'\',event)">✕</div>'
     +doneBadge
     +'<div class="card-body">'
