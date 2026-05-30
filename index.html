@@ -637,6 +637,7 @@ input,textarea,select{user-select:auto;}
   <div class="stat-chip">🏆 Лучший ранг: <b id="stat-best">—</b></div>
   <div class="stat-chip">📈 Ранг-апов: <b id="stat-rankups">0</b></div>
   <div class="stat-chip sync-code-chip" style="cursor:pointer" onclick="openSyncModal()">🔗 Привязка: <b id="stat-code" style="font-family:monospace;font-size:.85rem;letter-spacing:.12em;color:var(--gold);background:rgba(201,162,39,.12);padding:.12rem .45rem;border-radius:3px;border:1px solid rgba(201,162,39,.3)">…</b></div>
+  <div class="stat-chip" style="cursor:pointer" onclick="ndRestoreCloud()">☁ Восстановить</div>
 </div>
 
 <!-- TABS -->
@@ -1330,6 +1331,31 @@ function saveToLocal(){
 }
 function save(){saveToLocal();window._saveToCloud();}
 
+window.ndRestoreCloud=function(){
+  if(!_uid||!_syncReady){alert('Firebase не подключён');return;}
+  _setSyncDot('warn');
+  fbDb.collection('decks').doc(_uid).get().then(snap=>{
+    if(!snap.exists){alert('Документ не найден в облаке');return;}
+    const d=snap.data()||{};
+    const cloudCards=Array.isArray(d.cards)?d.cards:[];
+    const cloudQ=Array.isArray(d.quests)?d.quests:[];
+    if(cloudCards.length===0&&cloudQ.length===0){alert('Облако пустое — данных для восстановления нет');return;}
+    if(cloudCards.length>0){
+      cards=cloudCards;
+      cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!Array.isArray(c.checked))c.checked=[];});
+      saveToLocal();
+    }
+    if(cloudQ.length>0){window._quests=cloudQ;localStorage.setItem('nd_quests',JSON.stringify(cloudQ));}
+    if(d.qstats){window._qstats=d.qstats;localStorage.setItem('nd_qstats',JSON.stringify(d.qstats));}
+    _setSyncDot('ok');
+    if(typeof render==='function')render();
+    if(typeof window.renderQuests==='function')window.renderQuests();
+    if(typeof window.renderBoss==='function')window.renderBoss();
+    if(typeof window.renderInventory==='function')window.renderInventory();
+    alert('Восстановлено: '+cloudCards.length+' карточек, '+cloudQ.length+' квестов');
+  }).catch(e=>{_setSyncDot('red');alert('Ошибка: '+e.message);});
+};
+
 function _subscribeRemote(uid){
   if(_unsub)_unsub();
   _unsub=fbDb.collection('decks').doc(uid).onSnapshot(snap=>{
@@ -1416,7 +1442,16 @@ fbAuth.signInAnonymously().then(cred=>{
   _refreshSyncUI();_setSyncDot('ok');
   _subscribeRemote(_uid);
   fbDb.collection('decks').doc(_uid).get().then(snap=>{
-    if(!snap.exists||(snap.data().cards||[]).length===0)window._saveToCloud();
+    if(!snap.exists){window._saveToCloud();return;}
+    const d=snap.data()||{};
+    const cloudCards=Array.isArray(d.cards)?d.cards:[];
+    if(cloudCards.length>0&&cards.length===0){
+      cards=cloudCards;
+      cards.forEach(c=>{if(!c.streakDays)c.streakDays=0;if(!c.lastDone)c.lastDone=null;if(!Array.isArray(c.checked))c.checked=[];});
+      saveToLocal();
+      if(typeof render==='function')render();
+    }
+    if(cloudCards.length===0&&cards.length>0){window._saveToCloud();}
   });
 }).catch(e=>{_setSyncDot('red');console.warn('auth:',e.message);});
 
