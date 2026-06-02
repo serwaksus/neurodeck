@@ -31,7 +31,6 @@
     --light-rays-opacity: 0;
   }
   html, body { background: var(--bg-deep); color: var(--text); font-family: 'Georgia', serif; height: 100%; overflow: hidden; }
-
   .app-wrap {
     position: fixed; inset: 0;
     background:
@@ -40,7 +39,6 @@
       linear-gradient(180deg, #0a0a0f 0%, #050507 100%);
     transition: background 1.2s ease;
   }
-
   .dungeon-bg {
     position: fixed; inset: 0; z-index: 0;
     background-image: url('https://image.qwenlm.ai/public_source/cee96af7-cd56-4c1d-b3b1-0932ab53b7fe/16152cb1e-eb42-4404-a5fb-02386aeb59d8.png');
@@ -56,7 +54,6 @@
       radial-gradient(ellipse at 50% 120%, transparent 30%, rgba(0,0,0,0.85) 85%),
       linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.7) 100%);
   }
-
   .light-rays {
     position: fixed; inset: 0; z-index: 1;
     pointer-events: none;
@@ -68,16 +65,8 @@
       radial-gradient(ellipse 200px 500px at 50% 0%, rgba(255, 245, 220, 0.08), transparent 70%);
     mix-blend-mode: screen;
   }
-
-  .mist-layer {
-    position: fixed; inset: -50px; z-index: 2;
-    pointer-events: none;
-    opacity: var(--mist-opacity);
-    transition: opacity 1.5s;
-    mix-blend-mode: screen;
-  }
+  .mist-layer { position: fixed; inset: -50px; z-index: 2; pointer-events: none; opacity: var(--mist-opacity); transition: opacity 1.5s; mix-blend-mode: screen; }
   .mist-layer svg { width: 100%; height: 100%; }
-
   .torch-flicker {
     position: fixed; inset: 0; z-index: 3;
     pointer-events: none;
@@ -89,18 +78,14 @@
     animation: flicker 3s infinite ease-in-out;
   }
   @keyframes flicker { 0%,100%{opacity:1;} 33%{opacity:0.72;} 66%{opacity:0.9;} }
-
   #particles { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
   #dustCanvas { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity 2s; }
   .shake-wrap { position: relative; z-index: 5; width: 100%; height: 100%; }
-
   .app { position: relative; z-index: 10; width: 100%; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 14px 20px; gap: 10px; }
-
   .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; position: relative; overflow: hidden; gap: 12px; flex-wrap: wrap; }
   .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: 0.6; }
   .logo { font-size: 18px; letter-spacing: 3px; color: var(--gold-bright); text-shadow: 0 0 12px rgba(212, 165, 116, 0.4); }
   .logo span { color: var(--text-dim); font-size: 10px; letter-spacing: 2px; margin-left: 8px; }
-
   .hero-mini { display: flex; align-items: center; gap: 10px; }
   .hero-avatar-mini { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #2a1810, #1a0f08); border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 12px rgba(212, 165, 116, 0.3); position: relative; flex-shrink: 0; }
   .hero-lvl-badge { position: absolute; bottom: -4px; right: -4px; background: var(--gold-bright); color: var(--bg-deep); font-size: 9px; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-deep); }
@@ -109,39 +94,112 @@
   .hero-mini-xp-wrap { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
   .hero-mini-xp-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; min-width: 60px; }
   .hero-mini-xp-fill { height: 100%; background: linear-gradient(90deg, #d4a574, #f4c896); box-shadow: 0 0 6px rgba(244, 200, 150, 0.6); transition: width 0.6s; }
-
-  .progress-control { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
-  .progress-control input[type=range] { width: 110px; accent-color: var(--gold); }
-  .progress-control .val { color: var(--gold-bright); font-weight: bold; }
-
+  .escape-control { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
+  .escape-control .val { color: var(--gold-bright); font-weight: bold; }
   .main { display: grid; grid-template-columns: 190px 1fr 260px; gap: 12px; min-height: 0; }
   .tabs { display: flex; flex-direction: column; gap: 4px; background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 12px 8px; overflow-y: auto; }
   .tab { padding: 9px 12px; font-size: 12px; letter-spacing: 1.5px; color: var(--text-dim); border-left: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
   .tab:hover { color: var(--text); border-left-color: var(--gold); }
   .tab.active { color: var(--gold-bright); border-left-color: var(--gold-bright); background: linear-gradient(90deg, rgba(212, 165, 116, 0.08), transparent); }
   .tab .icon { margin-right: 6px; }
-
   .content { background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 16px; overflow-y: auto; position: relative; min-height: 0; }
   .content::-webkit-scrollbar { width: 6px; }
   .content::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
-
   .view { display: none; animation: viewIn 0.5s ease; }
   .view.active { display: block; }
   @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   .view-title { font-size: 17px; letter-spacing: 4px; color: var(--gold-bright); margin-bottom: 4px; text-transform: uppercase; }
   .view-subtitle { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 
+  /* ============ КОЛОДА С КНОПКОЙ ВЫКОВКИ ============ */
+  .deck-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .deck-info { font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px; }
+  .deck-info b { color: var(--gold-bright); font-weight: normal; }
+  .deck-forge-btn {
+    padding: 9px 16px;
+    background: linear-gradient(180deg, rgba(212, 165, 116, 0.2), rgba(139, 90, 43, 0.15));
+    border: 1px solid var(--gold);
+    color: var(--gold-bright);
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .deck-forge-btn:hover {
+    box-shadow: 0 0 16px rgba(212, 165, 116, 0.4);
+    transform: translateY(-1px);
+  }
+
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
   .card { position: relative; background: linear-gradient(180deg, var(--surface-hi), var(--surface)); border: 1px solid var(--border); border-radius: 3px; padding: 12px; cursor: pointer; transform-style: preserve-3d; transition: transform 0.2s, box-shadow 0.3s, border-color 0.3s; overflow: hidden; min-height: 170px; }
   .card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), var(--rank-glow, rgba(212, 165, 116, 0.15)), transparent 50%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .card:hover::before { opacity: 1; }
   .card:hover { border-color: var(--rank-color, var(--border-hi)); box-shadow: 0 0 24px var(--rank-shadow, rgba(212, 165, 116, 0.2)); }
+  .card.completed-today { border-color: var(--green); box-shadow: 0 0 14px rgba(52, 211, 153, 0.25); }
+  .card.completed-today::after {
+    content: '✓';
+    position: absolute;
+    top: 6px;
+    left: 40px;
+    font-size: 14px;
+    color: var(--green);
+    font-weight: bold;
+    text-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+  }
   .card.rank-C { --rank-color: #9ca3af; --rank-glow: rgba(156, 163, 175, 0.25); }
+  .card.rank-CC { --rank-color: #b8c0cc; --rank-glow: rgba(184, 192, 204, 0.3); }
+  .card.rank-CCC { --rank-color: #d1d8e0; --rank-glow: rgba(209, 216, 224, 0.4); box-shadow: 0 0 14px rgba(209, 216, 224, 0.2); }
   .card.rank-B { --rank-color: #60a5fa; --rank-glow: rgba(96, 165, 250, 0.3); }
-  .card.rank-A { --rank-color: #c084fc; --rank-glow: rgba(192, 132, 252, 0.3); }
-  .card.rank-S { --rank-color: #fbbf24; --rank-glow: rgba(251, 191, 36, 0.4); }
-  .card-rank { position: absolute; top: 6px; right: 8px; font-size: 20px; font-weight: bold; color: var(--rank-color); text-shadow: 0 0 8px var(--rank-glow); }
-  .card-name { font-size: 13px; color: var(--text); letter-spacing: 1px; margin-bottom: 4px; padding-right: 24px; }
+  .card.rank-BB { --rank-color: #7cb8fc; --rank-glow: rgba(124, 184, 252, 0.4); box-shadow: 0 0 14px rgba(124, 184, 252, 0.2); }
+  .card.rank-BBB { --rank-color: #9acaff; --rank-glow: rgba(154, 202, 255, 0.5); box-shadow: 0 0 18px rgba(154, 202, 255, 0.25); }
+  .card.rank-A { --rank-color: #c084fc; --rank-glow: rgba(192, 132, 252, 0.35); }
+  .card.rank-AA { --rank-color: #d4a0fd; --rank-glow: rgba(212, 160, 253, 0.45); box-shadow: 0 0 16px rgba(212, 160, 253, 0.25); }
+  .card.rank-AAA { --rank-color: #e5bdff; --rank-glow: rgba(229, 189, 255, 0.55); box-shadow: 0 0 20px rgba(229, 189, 255, 0.3); }
+  .card.rank-S { --rank-color: #fbbf24; --rank-glow: rgba(251, 191, 36, 0.45); box-shadow: 0 0 18px rgba(251, 191, 36, 0.3); }
+  .card.rank-SS { --rank-color: #f59e0b; --rank-glow: rgba(245, 158, 11, 0.55); box-shadow: 0 0 22px rgba(245, 158, 11, 0.35); animation: ssGlow 3s infinite ease-in-out; }
+  .card.rank-SSS {
+    --rank-color: #fcd34d; --rank-glow: rgba(252, 211, 77, 0.8);
+    box-shadow: 0 0 28px rgba(252, 211, 77, 0.5), inset 0 0 12px rgba(252, 211, 77, 0.15);
+    border-color: #fcd34d;
+    animation: sssGlow 2.5s infinite ease-in-out;
+  }
+  .card.rank-SSS::after {
+    content: '✓';
+    position: absolute;
+    top: 6px;
+    left: 40px;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+  }
+  .card.rank-SSS.completed-today::after { color: var(--green); }
+  .card.rank-SSS:not(.completed-today)::after { content: '★'; color: #fcd34d; }
+  @keyframes ssGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+    50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.55); }
+  }
+  @keyframes sssGlow {
+    0%, 100% { box-shadow: 0 0 28px rgba(252, 211, 77, 0.55), inset 0 0 12px rgba(252, 211, 77, 0.15); }
+    50% { box-shadow: 0 0 48px rgba(252, 211, 77, 0.95), inset 0 0 24px rgba(252, 211, 77, 0.35); }
+  }
+  .card-rank { position: absolute; top: 6px; right: 8px; font-size: 18px; font-weight: bold; color: var(--rank-color); text-shadow: 0 0 8px var(--rank-glow); letter-spacing: 1px; }
+  .card-name { font-size: 13px; color: var(--text); letter-spacing: 1px; margin-bottom: 4px; padding-right: 48px; }
   .card-meta { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
   .card-stat-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; letter-spacing: 1px; padding: 2px 7px; border-radius: 2px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); margin-bottom: 8px; }
   .card-progress { position: absolute; bottom: 10px; left: 12px; right: 12px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
@@ -152,6 +210,7 @@
   .card-btn { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
   .card-btn:hover { background: var(--gold); color: var(--bg-deep); }
   .card-btn.fail:hover { background: var(--blood-bright); }
+  .card-btn.edit { font-size: 9px; }
 
   .boss-panel { background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
   .boss-title { font-size: 10px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; text-align: center; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
@@ -200,15 +259,12 @@
   @keyframes hpPulse { 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.35);} }
   @keyframes hpShine { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
   .boss-info { font-size: 10px; color: var(--text-dim); text-align: center; font-style: italic; min-height: 28px; line-height: 1.5; }
-
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(40px); z-index: 300; background: var(--surface-hi); backdrop-filter: blur(12px); border: 1px solid var(--gold); border-left: 3px solid var(--gold-bright); padding: 10px 16px; font-size: 12px; color: var(--text); letter-spacing: 1px; opacity: 0; transition: all 0.4s; pointer-events: none; max-width: 92%; min-width: 240px; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast .t-title { color: var(--gold-bright); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 3px; }
-
   .spirit-msg { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 30; max-width: 90%; text-align: center; font-style: italic; font-size: 13px; color: var(--gold-bright); letter-spacing: 1.5px; opacity: 0; pointer-events: none; text-shadow: 0 0 12px rgba(0,0,0,0.9); }
   .spirit-msg.show { animation: spiritIn 4s ease forwards; }
   @keyframes spiritIn { 0%{opacity:0;} 15%{opacity:1;} 85%{opacity:1;} 100%{opacity:0;} }
-
   .blood-drop { position: fixed; top: -20px; width: 6px; height: 20px; background: linear-gradient(180deg, transparent, #8b2635 30%, #c73e4d); border-radius: 0 0 50% 50%; z-index: 48; pointer-events: none; animation: bloodFall linear forwards; }
   @keyframes bloodFall { 0%{transform:translateY(0); opacity:1;} 100%{transform:translateY(105vh); opacity:0;} }
 
@@ -218,10 +274,18 @@
   .hero-avatar-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 14px; }
   .hero-avatar { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #3a2818, #0a0505); border: 3px solid var(--gold); box-shadow: 0 0 24px rgba(212, 165, 116, 0.4); display: flex; align-items: center; justify-content: center; font-size: 58px; position: relative; }
   .hero-avatar.glow { animation: avatarGlow 1.5s ease-out; }
+  .hero-avatar.hurt { animation: heroHurt 0.6s ease-out; }
   @keyframes avatarGlow {
     0% { box-shadow: 0 0 24px rgba(212, 165, 116, 0.4), 0 0 0 0 rgba(251, 191, 36, 0.8); }
     50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.9), 0 0 0 20px rgba(251, 191, 36, 0); }
     100% { box-shadow: 0 0 24px rgba(212, 165, 116, 0.4), 0 0 0 0 rgba(251, 191, 36, 0); }
+  }
+  @keyframes heroHurt {
+    0%, 100% { transform: translateX(0); border-color: var(--gold); }
+    20% { transform: translateX(-8px); border-color: var(--blood-bright); box-shadow: 0 0 30px rgba(199, 62, 77, 0.7); }
+    40% { transform: translateX(8px); border-color: var(--blood-bright); }
+    60% { transform: translateX(-5px); border-color: var(--blood-bright); }
+    80% { transform: translateX(5px); }
   }
   .hero-level-ring { position: absolute; inset: -8px; pointer-events: none; }
   .hero-level-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -231,6 +295,72 @@
   .hero-level { position: absolute; bottom: -6px; background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: var(--bg-deep); font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 12px; letter-spacing: 2px; }
   .hero-name { font-size: 15px; letter-spacing: 3px; color: var(--gold-bright); text-transform: uppercase; margin-top: 12px; text-align: center; }
   .hero-title { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); font-style: italic; margin-top: 3px; text-align: center; }
+
+  /* ============ ХЕЛФБАР ГЕРОЯ ============ */
+  .hero-hp-block {
+    margin-top: 14px;
+    padding: 10px;
+    background: rgba(139, 38, 53, 0.15);
+    border: 1px solid var(--blood);
+    border-radius: 2px;
+  }
+  .hero-hp-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .hero-hp-header b { color: var(--blood-bright); font-weight: normal; }
+  .hero-hp-header .hp-warn {
+    font-size: 9px;
+    color: var(--blood-bright);
+    font-style: italic;
+    letter-spacing: 1px;
+    animation: hpWarnPulse 2s infinite;
+  }
+  @keyframes hpWarnPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  .hero-hp-bar {
+    height: 10px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(139, 38, 53, 0.4);
+  }
+  .hero-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b2635, #c73e4d, #e85d6f);
+    box-shadow: 0 0 8px rgba(199, 62, 77, 0.6);
+    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+  }
+  .hero-hp-fill.low { background: linear-gradient(90deg, #5a1a23, #8b2635); animation: hpCritical 1.2s infinite; }
+  @keyframes hpCritical {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.5) saturate(1.3); }
+  }
+  .hero-hp-fill::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: hpShine 2.5s infinite;
+  }
+  .hero-hp-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  .hero-hp-meta b { color: var(--blood-bright); font-weight: normal; }
+
   .hero-xp-block { margin-top: 14px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px; }
   .hero-xp-header { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; }
   .hero-xp-header b { color: var(--gold-bright); font-weight: normal; }
@@ -238,7 +368,6 @@
   .hero-xp-fill { height: 100%; background: linear-gradient(90deg, #8b5a2b, #d4a574, #f4c896); box-shadow: 0 0 10px rgba(244, 200, 150, 0.5); transition: width 0.8s; position: relative; }
   .hero-xp-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: xpShine 2s infinite; }
   @keyframes xpShine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
   .hero-summary {
     margin-top: 14px;
     padding: 10px;
@@ -251,8 +380,6 @@
   }
   .hero-summary div { display: flex; justify-content: space-between; }
   .hero-summary b { color: var(--gold-bright); font-weight: normal; }
-
-  /* Souls-like difficulty indicator */
   .difficulty-badge {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 4px 10px;
@@ -265,9 +392,28 @@
     text-transform: uppercase;
     margin-top: 10px;
   }
-  .difficulty-badge::before {
-    content: '💀';
-    font-size: 11px;
+  .difficulty-badge::before { content: '💀'; font-size: 11px; }
+
+  /* ============ ПРЕДУПРЕЖДЕНИЕ БОССА ============ */
+  .boss-countdown {
+    margin-top: 14px;
+    padding: 10px;
+    background: rgba(139, 38, 53, 0.12);
+    border: 1px solid var(--blood);
+    border-radius: 2px;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    line-height: 1.6;
+  }
+  .boss-countdown b { color: var(--blood-bright); font-weight: normal; }
+  .boss-countdown .countdown-time {
+    font-size: 14px;
+    color: var(--blood-bright);
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: 4px;
   }
 
   .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
@@ -285,7 +431,6 @@
   .stat-bar-fill { height: 100%; background: linear-gradient(90deg, var(--stat-color-dark, #8b5a2b), var(--stat-color, var(--gold))); box-shadow: 0 0 8px var(--stat-glow); transition: width 0.8s; }
   .stat-bar-label { display: flex; justify-content: space-between; margin-top: 5px; font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
   .stat-bar-label b { color: var(--stat-color, var(--gold-bright)); font-weight: normal; }
-
   .goals-section { background: linear-gradient(180deg, var(--surface-hi), var(--surface)); border: 1px solid var(--border); border-radius: 3px; padding: 16px; position: relative; overflow: hidden; }
   .goals-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
   .goals-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
@@ -299,6 +444,7 @@
   .goals-list { display: flex; flex-direction: column; gap: 10px; }
   .goal-card { background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1)); border: 1px solid var(--border); border-left: 3px solid var(--goal-color, var(--gold)); border-radius: 3px; padding: 12px 14px; transition: all 0.25s; }
   .goal-card:hover { transform: translateX(2px); box-shadow: 0 0 18px var(--goal-glow); }
+  .goal-card.completed-today { border-color: var(--green); background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(0,0,0,0.1)); }
   .goal-card.short { --goal-color: var(--green); --goal-glow: rgba(52, 211, 153, 0.35); }
   .goal-card.medium { --goal-color: var(--blue); --goal-glow: rgba(96, 165, 250, 0.35); }
   .goal-card.long { --goal-color: var(--yellow); --goal-glow: rgba(251, 191, 36, 0.4); }
@@ -323,10 +469,13 @@
   .goal-card.completed { opacity: 0.5; filter: grayscale(0.5); }
   .goal-card.completed .goal-name { text-decoration: line-through; }
   .goals-empty { padding: 30px 16px; text-align: center; color: var(--text-dim); font-style: italic; font-size: 12px; letter-spacing: 1px; line-height: 1.6; }
-
   .float-number { position: fixed; z-index: 310; font-family: 'Georgia', serif; font-size: 20px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; animation: floatUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; white-space: nowrap; }
   @keyframes floatUp { 0%{opacity:0; transform: translate(-50%, 0) scale(0.5);} 20%{opacity:1; transform: translate(-50%, -10px) scale(1.2);} 100%{opacity:0; transform: translate(-50%, -80px) scale(0.8);} }
-
+  .float-number.damage {
+    color: var(--blood-bright);
+    text-shadow: 0 0 12px rgba(199, 62, 77, 0.9), 0 2px 4px rgba(0,0,0,0.8);
+    font-size: 26px;
+  }
   .levelup-overlay { position: fixed; inset: 0; z-index: 320; pointer-events: none; background: radial-gradient(circle, rgba(251, 191, 36, 0.3), transparent 60%); opacity: 0; }
   .levelup-overlay.show { animation: lvlFlash 1.2s ease-out; }
   @keyframes lvlFlash { 0%{opacity:0;} 20%{opacity:1;} 100%{opacity:0;} }
@@ -337,7 +486,31 @@
   .levelup-banner .num { font-size: 88px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 30px rgba(251, 191, 36, 1), 0 0 60px rgba(251, 191, 36, 0.5); line-height: 1; }
   .levelup-banner .sub { font-size: 13px; letter-spacing: 4px; color: var(--text); margin-top: 10px; text-transform: uppercase; }
 
-  /* ============ INVENTORY ============ */
+  /* ============ БАННЕР РАНГАПА КАРТОЧКИ ============ */
+  .rankup-overlay { position: fixed; inset: 0; z-index: 330; pointer-events: none; opacity: 0; }
+  .rankup-overlay.show { animation: rankupFlashAnim 1s ease-out; }
+  @keyframes rankupFlashAnim { 0%{opacity:0;} 25%{opacity:1;} 100%{opacity:0;} }
+  .rankup-banner { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5); z-index: 335; pointer-events: none; text-align: center; opacity: 0; padding: 24px 40px; background: radial-gradient(ellipse, rgba(10, 8, 5, 0.9), transparent 75%); }
+  .rankup-banner.show { animation: rankupBannerAnim 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  @keyframes rankupBannerAnim {
+    0%{opacity:0; transform: translate(-50%, -50%) scale(0.3);}
+    20%{opacity:1; transform: translate(-50%, -50%) scale(1.1);}
+    40%{transform: translate(-50%, -50%) scale(1);}
+    80%{opacity:1;}
+    100%{opacity:0; transform: translate(-50%, -50%) scale(1.15);}
+  }
+  .rankup-banner .lbl { font-size: 10px; letter-spacing: 5px; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
+  .rankup-banner .rank-text {
+    font-size: 72px; font-weight: bold;
+    letter-spacing: 6px;
+    line-height: 1;
+    margin: 8px 0;
+    text-shadow: 0 0 24px currentColor, 0 0 48px currentColor;
+    font-family: 'Georgia', serif;
+  }
+  .rankup-banner .sub { font-size: 12px; letter-spacing: 3px; color: var(--text); margin-top: 8px; text-transform: uppercase; }
+  .rankup-banner .card-name-small { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; margin-top: 4px; font-style: italic; }
+
   .inv-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; min-height: 500px; }
   .inv-main { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
   .paperdoll-wrap { background: linear-gradient(180deg, rgba(30, 20, 15, 0.85), rgba(15, 10, 8, 0.85)); border: 1px solid var(--border-hi); border-radius: 3px; padding: 14px 10px; position: relative; overflow: hidden; }
@@ -362,7 +535,7 @@
     50% { box-shadow: 0 0 28px rgba(251, 191, 36, 0.9), inset 0 0 8px rgba(0,0,0,0.2); }
   }
   .slot .slot-icon { font-size: 24px; filter: drop-shadow(0 0 4px var(--slot-glow, rgba(212, 165, 116, 0.5))); }
-  .slot .slot-rank-badge { position: absolute; top: -6px; right: -6px; background: var(--slot-color, var(--gold)); color: var(--bg-deep); font-size: 9px; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-deep); }
+  .slot .slot-rank-badge { position: absolute; top: -6px; right: -6px; background: var(--slot-color, var(--gold)); color: var(--bg-deep); font-size: 9px; font-weight: bold; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 3px; border: 2px solid var(--bg-deep); letter-spacing: 0.5px; }
   .slot[data-slot="head"]    { top: 20px;  left: 50%; transform: translateX(-50%); }
   .slot[data-slot="amulet"]  { top: 95px;  left: 50%; transform: translateX(-50%); }
   .slot[data-slot="chest"]   { top: 150px; left: 50%; transform: translateX(-50%); }
@@ -372,7 +545,6 @@
   .slot[data-slot="ring1"]   { top: 240px; right: 15px; left: auto; }
   .slot[data-slot="ring2"]   { top: 240px; left: 15px; }
   .slot[data-slot="boots"]   { bottom: 30px; left: 50%; transform: translateX(-50%); }
-
   .backpack { background: linear-gradient(180deg, rgba(20, 15, 10, 0.8), rgba(10, 7, 5, 0.8)); border: 1px solid var(--border); border-radius: 3px; padding: 14px; position: relative; }
   .backpack::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border-hi), transparent); }
   .backpack-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
@@ -393,9 +565,8 @@
     0%, 100% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.4), inset 0 0 8px rgba(0,0,0,0.4); }
     50% { box-shadow: 0 0 22px rgba(251, 191, 36, 0.8), inset 0 0 8px rgba(251, 191, 36, 0.1); }
   }
-  .bp-cell .bp-rank { position: absolute; bottom: 2px; right: 3px; font-size: 8px; font-weight: bold; color: var(--item-color, var(--gold)); text-shadow: 0 0 3px rgba(0,0,0,0.9); }
+  .bp-cell .bp-rank { position: absolute; bottom: 2px; right: 3px; font-size: 8px; font-weight: bold; color: var(--item-color, var(--gold)); text-shadow: 0 0 3px rgba(0,0,0,0.9); letter-spacing: 0.5px; }
   .bp-cell .bp-icon { font-size: 24px; filter: drop-shadow(0 0 3px var(--item-glow, rgba(0,0,0,0.5))); }
-
   .item-panel { background: linear-gradient(180deg, rgba(30, 20, 15, 0.9), rgba(15, 10, 8, 0.9)); border: 1px solid var(--border-hi); border-radius: 3px; padding: 18px; position: relative; overflow: hidden; min-height: 500px; }
   .item-panel::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, var(--panel-glow, rgba(212, 165, 116, 0.08)), transparent 60%); pointer-events: none; transition: background 0.4s; }
   .item-panel-header { font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); text-align: center; }
@@ -405,7 +576,7 @@
     0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.5), inset 0 0 12px rgba(0,0,0,0.5); }
     50% { box-shadow: 0 0 36px rgba(251, 191, 36, 1), inset 0 0 12px rgba(251, 191, 36, 0.15); }
   }
-  .item-preview-rank { position: absolute; top: -8px; right: -8px; background: var(--item-color, var(--gold)); color: var(--bg-deep); font-size: 11px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-deep); }
+  .item-preview-rank { position: absolute; top: -8px; right: -8px; background: var(--item-color, var(--gold)); color: var(--bg-deep); font-size: 10px; font-weight: bold; min-width: 24px; height: 24px; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--bg-deep); letter-spacing: 0.5px; }
   .item-name { font-size: 16px; letter-spacing: 2px; color: var(--item-color, var(--gold-bright)); text-align: center; margin-bottom: 4px; }
   .item-type { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-align: center; text-transform: uppercase; margin-bottom: 14px; font-style: italic; }
   .item-lore { font-size: 11px; color: var(--text-dim); font-style: italic; text-align: center; padding: 8px 12px; background: rgba(0,0,0,0.3); border-left: 2px solid var(--item-color, var(--gold)); border-radius: 2px; margin-bottom: 14px; line-height: 1.5; }
@@ -420,32 +591,21 @@
   .item-btn:hover { background: linear-gradient(180deg, rgba(212, 165, 116, 0.35), rgba(139, 90, 43, 0.3)); box-shadow: 0 0 12px rgba(212, 165, 116, 0.3); }
   .item-btn.danger { border-color: var(--blood); color: var(--blood-bright); background: linear-gradient(180deg, rgba(139, 38, 53, 0.15), rgba(139, 38, 53, 0.05)); }
   .item-btn.danger:hover { background: linear-gradient(180deg, rgba(139, 38, 53, 0.3), rgba(139, 38, 53, 0.1)); }
-
   .total-bonuses { margin-top: 14px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 2px; }
   .total-bonuses-title { font-size: 9px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; text-align: center; }
   .total-bonuses-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px; }
   .total-bonus-row { display: flex; justify-content: space-between; padding: 3px 6px; color: var(--text-dim); letter-spacing: 1px; }
   .total-bonus-row b { color: #9ae6b4; font-weight: normal; }
   .total-bonus-row.has-bonus { color: var(--text); background: rgba(154, 230, 180, 0.08); border-radius: 2px; }
-
   .equip-flash { position: absolute; inset: 0; background: radial-gradient(circle, var(--item-glow, rgba(251, 191, 36, 0.6)), transparent 70%); pointer-events: none; opacity: 0; border-radius: 4px; }
   .equip-flash.show { animation: equipFlash 0.7s ease-out; }
   @keyframes equipFlash { 0% { opacity: 0; transform: scale(0.5); } 30% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(1.4); } }
-
   .tooltip { position: fixed; z-index: 400; background: rgba(10, 7, 5, 0.98); border: 1px solid var(--gold); padding: 8px 12px; font-size: 11px; color: var(--text); letter-spacing: 1px; pointer-events: none; border-radius: 2px; box-shadow: 0 4px 16px rgba(0,0,0,0.6); max-width: 220px; opacity: 0; transition: opacity 0.15s; }
   .tooltip.show { opacity: 1; }
   .tooltip .tt-name { color: var(--gold-bright); font-size: 12px; margin-bottom: 3px; letter-spacing: 1.5px; }
   .tooltip .tt-type { color: var(--text-dim); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; }
   .tooltip .tt-bonus { color: #9ae6b4; font-size: 10px; }
-
   .empty-state { padding: 20px; text-align: center; color: var(--text-dim); font-style: italic; font-size: 12px; letter-spacing: 1px; line-height: 1.6; }
-
-  .forge-hero { text-align: center; padding: 24px 16px; background: radial-gradient(ellipse at center, rgba(212, 165, 116, 0.08), transparent 70%); border: 1px solid var(--border); border-radius: 3px; margin-bottom: 14px; }
-  .forge-hero h3 { font-size: 18px; letter-spacing: 5px; color: var(--gold-bright); margin-bottom: 6px; }
-  .forge-hero p { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); font-style: italic; }
-  .forge-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 8px 18px; background: linear-gradient(180deg, rgba(212, 165, 116, 0.25), rgba(139, 90, 43, 0.25)); border: 1px solid var(--gold); color: var(--gold-bright); font-family: inherit; font-size: 11px; letter-spacing: 2px; cursor: pointer; border-radius: 2px; text-transform: uppercase; }
-  .forge-btn:hover { box-shadow: 0 0 16px rgba(212, 165, 116, 0.4); }
-
   .map-header { padding: 14px; background: radial-gradient(ellipse at center, rgba(212, 165, 116, 0.08), transparent 70%); border: 1px solid var(--border); border-radius: 3px; margin-bottom: 12px; text-align: center; }
   .map-progress-big { font-size: 24px; color: var(--gold-bright); letter-spacing: 3px; margin: 6px 0; }
   .map-progress-bar { height: 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; }
@@ -459,7 +619,6 @@
   .map-room-name { font-size: 10px; letter-spacing: 1px; color: var(--text); line-height: 1.3; }
   .map-room.current .map-room-name { color: var(--gold-bright); }
   .map-room-status { font-size: 8px; color: var(--text-dim); margin-top: 3px; letter-spacing: 1px; }
-
   .modal-overlay { position: fixed; inset: 0; z-index: 400; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 20px; }
   .modal-overlay.show { display: flex; animation: modalIn 0.3s ease; }
   @keyframes modalIn { from { opacity: 0; } to { opacity: 1; } }
@@ -474,11 +633,19 @@
   .form-input, .form-select { width: 100%; padding: 9px 11px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 12px; letter-spacing: 1px; border-radius: 2px; }
   .form-input:focus, .form-select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 8px rgba(212, 165, 116, 0.2); }
   .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-top: 6px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+  .form-hint b { color: var(--gold-bright); font-weight: normal; }
   .stat-chip { display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 11px; letter-spacing: 1px; transition: all 0.2s; margin: 2px; }
   .stat-chip:hover { border-color: var(--gold); }
   .stat-chip.selected { border-color: var(--gold-bright); background: rgba(212, 165, 116, 0.15); color: var(--gold-bright); }
   .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; position: sticky; bottom: 0; background: rgba(15, 12, 8, 0.98); }
-
   .goal-type-selector { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
   .goal-type-option { padding: 12px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; text-align: center; transition: all 0.2s; }
   .goal-type-option:hover { border-color: var(--gold); }
@@ -491,8 +658,6 @@
   .goal-type-option.selected .type-name { color: var(--goal-color); }
   .goal-type-option .type-desc { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
   .goal-type-option .type-reward { margin-top: 6px; font-size: 9px; color: var(--gold-bright); letter-spacing: 1px; padding-top: 5px; border-top: 1px dashed var(--border); }
-
-  /* ============ СИНХРОНИЗАЦИЯ ============ */
   .sync-code-display {
     padding: 20px;
     background: rgba(0, 0, 0, 0.6);
@@ -627,11 +792,88 @@
     color: var(--gold-bright);
     background: rgba(212, 165, 116, 0.08);
   }
-
-  /* Bottom nav for mobile */
   .bottom-nav { display: none; }
 
-  /* Responsive */
+  /* ============ ПРЕДУПРЕЖДЕНИЕ О НАКАЗАНИИ ============ */
+  .punish-alert {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    z-index: 340;
+    background: radial-gradient(ellipse at center, rgba(90, 20, 30, 0.95), rgba(30, 5, 10, 0.95));
+    border: 2px solid var(--blood-bright);
+    border-radius: 4px;
+    padding: 30px 40px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 0 60px rgba(199, 62, 77, 0.6), 0 0 100px rgba(199, 62, 77, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .punish-alert.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+    animation: punishShake 0.6s ease-out;
+  }
+  @keyframes punishShake {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    20% { transform: translate(calc(-50% + 8px), -50%) scale(1); }
+    40% { transform: translate(calc(-50% - 8px), -50%) scale(1); }
+    60% { transform: translate(calc(-50% + 4px), -50%) scale(1); }
+    80% { transform: translate(calc(-50% - 4px), -50%) scale(1); }
+  }
+  .punish-alert-title {
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: var(--blood-bright);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-shadow: 0 0 12px rgba(199, 62, 77, 0.8);
+  }
+  .punish-alert-body {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+  }
+  .punish-alert-body b { color: var(--blood-bright); }
+  .punish-damage {
+    font-size: 36px;
+    font-weight: bold;
+    color: var(--blood-bright);
+    margin: 10px 0;
+    text-shadow: 0 0 16px rgba(199, 62, 77, 1);
+  }
+  .punish-breakdown {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+  .punish-close-btn {
+    padding: 10px 22px;
+    background: rgba(139, 38, 53, 0.3);
+    border: 1px solid var(--blood-bright);
+    color: var(--blood-bright);
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .punish-close-btn:hover {
+    background: rgba(139, 38, 53, 0.5);
+    box-shadow: 0 0 16px rgba(199, 62, 77, 0.5);
+  }
+
   @media (max-width: 1200px) { .backpack-grid { grid-template-columns: repeat(5, 1fr); } }
   @media (max-width: 1100px) {
     .inv-layout { grid-template-columns: 1fr; }
@@ -652,7 +894,6 @@
     .logo span { display: none; }
     .sync-header-btn span { display: none; }
     .hero-mini-info { min-width: 90px; }
-    .progress-control input[type=range] { width: 60px; }
     .cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     .stats-grid { grid-template-columns: 1fr; }
     .sync-code-display { font-size: 13px; letter-spacing: 2px; padding: 14px; }
@@ -682,9 +923,7 @@
 </style>
 </head>
 <body>
-
 <div class="app-wrap">
-
   <div class="dungeon-bg"></div>
   <div class="light-rays"></div>
   <div class="mist-layer" id="mistLayer">
@@ -700,18 +939,31 @@
   <canvas id="dustCanvas"></canvas>
   <div class="torch-flicker"></div>
   <canvas id="particles"></canvas>
-
   <div class="levelup-overlay" id="lvlOverlay"></div>
   <div class="levelup-banner" id="lvlBanner">
     <div class="lbl">⚔ Новый уровень ⚔</div>
     <div class="num" id="lvlNum">2</div>
     <div class="sub">Сила растёт</div>
   </div>
-
+  <!-- Баннер рангапа карточки -->
+  <div class="rankup-overlay" id="rankupOverlay"></div>
+  <div class="rankup-banner" id="rankupBanner">
+    <div class="lbl">⚔ Повышение ранга ⚔</div>
+    <div class="rank-text" id="rankupRankText">CC</div>
+    <div class="sub" id="rankupSubText">Сила пробуждается</div>
+    <div class="card-name-small" id="rankupCardName"></div>
+  </div>
+  <!-- Алерт наказания от босса -->
+  <div class="punish-alert" id="punishAlert">
+    <div class="punish-alert-title">💀 Удар от Босса</div>
+    <div class="punish-alert-body" id="punishAlertBody">Босс наказал тебя за бездействие.</div>
+    <div class="punish-damage" id="punishDamage">-0 HP</div>
+    <div class="punish-breakdown" id="punishBreakdown"></div>
+    <button class="punish-close-btn" onclick="closePunishAlert()">Принять наказание</button>
+  </div>
   <div class="spirit-msg" id="spiritMsg"></div>
   <div class="toast" id="toast"><div class="t-title"></div><div class="t-body"></div></div>
   <div class="tooltip" id="tooltip"></div>
-
   <!-- Goal Modal -->
   <div class="modal-overlay" id="goalModal">
     <div class="modal">
@@ -746,8 +998,7 @@
       <div class="modal-footer"><button class="demo-btn" onclick="closeGoalModal()">Отмена</button><button class="demo-btn primary" onclick="createGoal()">🎯 Создать</button></div>
     </div>
   </div>
-
-  <!-- Forge Modal -->
+  <!-- Forge Modal (вызов из Колоды) -->
   <div class="modal-overlay" id="forgeModal">
     <div class="modal">
       <div class="modal-header"><h3>🔥 Выковать карточку</h3><button class="modal-close" onclick="closeForge()">✕</button></div>
@@ -765,17 +1016,49 @@
         </div>
         <div class="form-grid-2">
           <div class="form-row"><label class="form-label">🕐 Время</label><select class="form-select" id="forgeTime"><option>утро</option><option>день</option><option>вечер</option><option>ночь</option></select></div>
-          <div class="form-row"><label class="form-label">⏱ Минут</label><input class="form-input" type="number" id="forgeDuration" value="15"></div>
+          <div class="form-row"><label class="form-label">⏱ Минут</label><input class="form-input" type="number" id="forgeDuration" value="15" min="1" max="240"></div>
         </div>
-        <div class="form-grid-2">
-          <div class="form-row"><label class="form-label">🏆 Ранг</label><select class="form-select" id="forgeRank"><option>C</option><option>B</option><option>A</option><option>S</option></select></div>
-          <div class="form-row"><label class="form-label">⚔ До ранг-апа</label><input class="form-input" type="number" id="forgeRankup" value="10"></div>
+        <div class="form-row">
+          <label class="form-label">⚔ Выполнений до ранг-апа</label>
+          <input class="form-input" type="number" id="forgeRankup" value="5" min="2" max="100">
+          <div class="form-hint">Карточка создаётся с рангом <b>C</b>. Каждые N выполнений ранг повышается: <b>C → CC → CCC → B → BB → BBB → A → AA → AAA → S → SS → SSS</b>. После каждого ранг-апа откроется окно редактирования карточки.</div>
         </div>
       </div>
       <div class="modal-footer"><button class="demo-btn" onclick="closeForge()">Отмена</button><button class="demo-btn primary" onclick="forgeCard()">🔥 Выковать</button></div>
     </div>
   </div>
-
+  <!-- Edit Card Modal -->
+  <div class="modal-overlay" id="editCardModal">
+    <div class="modal">
+      <div class="modal-header"><h3>✏ Редактировать карточку</h3><button class="modal-close" onclick="closeEditCard()">✕</button></div>
+      <div class="modal-body">
+        <div style="padding: 10px; background: rgba(52, 211, 153, 0.1); border: 1px solid var(--green); border-radius: 2px; margin-bottom: 14px; font-size: 11px; color: var(--green); letter-spacing: 1px; text-align: center;">
+          🏆 Ранг повышен! Настрой карточку под новые возможности.
+        </div>
+        <div class="form-row"><label class="form-label">Название</label><input class="form-input" id="editCardName" placeholder="Медитация"></div>
+        <div class="form-row"><label class="form-label">⚡ Характеристика</label>
+          <div id="editStatChips">
+            <div class="stat-chip" data-stat="str">⚔ Сила</div>
+            <div class="stat-chip" data-stat="end">🛡 Стойкость</div>
+            <div class="stat-chip" data-stat="int">🧠 Интеллект</div>
+            <div class="stat-chip" data-stat="cha">🎭 Харизма</div>
+            <div class="stat-chip" data-stat="wil">🧘 Воля</div>
+            <div class="stat-chip" data-stat="agi">⚡ Ловкость</div>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-row"><label class="form-label">🕐 Время</label><select class="form-select" id="editCardTime"><option>утро</option><option>день</option><option>вечер</option><option>ночь</option></select></div>
+          <div class="form-row"><label class="form-label">⏱ Минут</label><input class="form-input" type="number" id="editCardDuration" value="15" min="1" max="240"></div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">⚔ Новое кол-во выполнений до следующего ранг-апа</label>
+          <input class="form-input" type="number" id="editCardRankup" value="5" min="2" max="100">
+          <div class="form-hint">Текущий ранг <b id="editCardCurrentRank">C</b>. Следующее повышение потребует указанное число выполнений.</div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="demo-btn" onclick="closeEditCard()">Пропустить</button><button class="demo-btn primary" onclick="saveEditCard()">💾 Сохранить</button></div>
+    </div>
+  </div>
   <!-- Sync Modal -->
   <div class="modal-overlay" id="syncModal">
     <div class="modal">
@@ -786,9 +1069,7 @@
       <div class="modal-body">
         <div class="sync-section">
           <div class="sync-section-title">📤 Экспорт с этого устройства</div>
-          <div class="sync-section-desc">
-            Покажи этот код на другом устройстве или сохрани как резервную копию.
-          </div>
+          <div class="sync-section-desc">Покажи этот код на другом устройстве или сохрани как резервную копию.</div>
           <div class="sync-code-display" id="syncCodeDisplay" onclick="copySyncCode()">Генерация...</div>
           <div style="display: flex; gap: 8px; margin-top: 24px;">
             <button class="demo-btn" onclick="regenerateSyncCode()" style="flex: 1;">🔄 Обновить</button>
@@ -797,10 +1078,7 @@
         </div>
         <div class="sync-section">
           <div class="sync-section-title">📥 Импорт с другого устройства</div>
-          <div class="sync-section-desc">
-            Введи код или загрузи файл.
-            <b style="color: var(--blood-bright);">⚠ Внимание:</b> текущие данные будут перезаписаны.
-          </div>
+          <div class="sync-section-desc">Введи код или загрузи файл. <b style="color: var(--blood-bright);">⚠ Внимание:</b> текущие данные будут перезаписаны.</div>
           <div class="sync-input-row">
             <input class="sync-input" id="syncImportCode" placeholder="Вставь код сюда..." maxlength="2000">
             <button class="demo-btn primary" onclick="importSyncCode()">⬇ Загрузить</button>
@@ -814,7 +1092,7 @@
         <div class="sync-hint">
           <b>⚠ Как это работает:</b><br>
           Код — сжатый слепок всего прогресса в base64.
-          Содержит: уровень героя, статы, карточки, цели, артефакты, экипировку, прогресс побега, HP босса.
+          Содержит: уровень героя, статы, карточки, цели, артефакты, экипировку, HP, прогресс побега, HP босса.
         </div>
       </div>
       <div class="modal-footer">
@@ -823,11 +1101,10 @@
       </div>
     </div>
   </div>
-
   <div class="shake-wrap" id="shakeWrap">
   <div class="app">
     <div class="header">
-      <div class="logo">NEURODECK<span>Final · Souls-like</span></div>
+      <div class="logo">NEURODECK<span>Souls-like</span></div>
       <button class="sync-header-btn" onclick="openSyncModal()">🔗 <span>Синхра</span></button>
       <div class="hero-mini">
         <div class="hero-avatar-mini">🗡<div class="hero-lvl-badge" id="heroMiniLvl">1</div></div>
@@ -836,40 +1113,31 @@
           <div class="hero-mini-xp-wrap"><span id="heroMiniXpText">0/100</span><div class="hero-mini-xp-bar"><div class="hero-mini-xp-fill" id="heroMiniXpFill" style="width:0%"></div></div></div>
         </div>
       </div>
-      <div class="progress-control"><span>Побег</span><input type="range" id="progressSlider" min="0" max="140" value="0"><span class="val" id="progressVal">0/140</span></div>
+      <div class="escape-control"><span>Побег:</span><span class="val" id="progressVal">0 / 140</span></div>
     </div>
-
     <div class="main">
       <div class="tabs">
         <div class="tab active" data-view="deck"><span class="icon">📖</span>Колода</div>
-        <div class="tab" data-view="forge"><span class="icon">⚒</span>Выковка</div>
         <div class="tab" data-view="hero"><span class="icon">👤</span>Герой</div>
         <div class="tab" data-view="inv"><span class="icon">🎒</span>Инвентарь</div>
         <div class="tab" data-view="boss"><span class="icon">🐍</span>Босс</div>
         <div class="tab" data-view="map"><span class="icon">🗺</span>Карта</div>
       </div>
-
       <div class="content">
+        <!-- ============ КОЛОДА (с выковкой внутри) ============ -->
         <div class="view active" id="view-deck">
           <div class="view-title">📖 Колода</div>
           <div class="view-subtitle">Каждая выполненная привычка — шаг из тьмы. Не сдавайся.</div>
+          <div class="deck-top">
+            <div class="deck-info">Всего карточек: <b id="deckCount">0</b> · Выполнено сегодня: <b id="deckDoneToday">0</b></div>
+            <button class="deck-forge-btn" onclick="openForge()">🔨 Выковать карточку</button>
+          </div>
           <div class="cards" id="cardGrid"></div>
         </div>
-
-        <div class="view" id="view-forge">
-          <div class="view-title">⚒ Выковка</div>
-          <div class="view-subtitle">Кузница новых испытаний · Каждая карточка закаляет волю</div>
-          <div class="forge-hero">
-            <h3>🔥 ВЫКУЙ КАРТОЧКУ</h3>
-            <p>Каждая карточка — новый путь к силе</p>
-            <button class="forge-btn" onclick="openForge()">🔨 Создать</button>
-          </div>
-          <div class="cards" id="forgedGrid"></div>
-        </div>
-
+        <!-- ============ ГЕРОЙ (с HP баром) ============ -->
         <div class="view" id="view-hero">
           <div class="view-title">👤 Герой</div>
-          <div class="view-subtitle">Характеристики · Цели · Прогресс · Путь из тьмы</div>
+          <div class="view-subtitle">Здоровье · Характеристики · Цели · Путь из тьмы</div>
           <div class="hero-layout">
             <div class="hero-card">
               <div class="hero-avatar-wrap">
@@ -885,9 +1153,30 @@
               <div class="hero-name" id="heroName">Странник</div>
               <div class="hero-title" id="heroTitle">«Тот, кто только начал путь»</div>
               <div class="difficulty-badge">Souls-like</div>
+              <!-- ХЕЛФБАР ГЕРОЯ -->
+              <div class="hero-hp-block">
+                <div class="hero-hp-header">
+                  <span>❤ Здоровье</span>
+                  <span><b id="heroHpCur">100</b> / <b id="heroHpMax">100</b></span>
+                </div>
+                <div class="hero-hp-bar"><div class="hero-hp-fill" id="heroHpFill" style="width:100%"></div></div>
+                <div class="hero-hp-meta">
+                  <span id="heroHpWarn"></span>
+                  <span>Стойкость: <b id="heroEndStat">3</b></span>
+                </div>
+              </div>
               <div class="hero-xp-block">
                 <div class="hero-xp-header"><span>Опыт</span><span><b id="heroXpCur">0</b> / <b id="heroXpMax">100</b></span></div>
                 <div class="hero-xp-bar"><div class="hero-xp-fill" id="heroXpFill" style="width:0%"></div></div>
+              </div>
+              <div class="boss-countdown" id="bossCountdown">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>🐍 До наказания босса:</span>
+                  <b id="punishTimeLeft">—</b>
+                </div>
+                <div style="font-size: 9px; color: var(--text-dim); margin-top: 4px; font-style: italic;">
+                  Босс наносит урон в 23:00 МСК за каждую невыполненную карточку и цель.
+                </div>
               </div>
               <div class="hero-summary">
                 <div><span>Всего XP</span><b id="statTotalXp">0</b></div>
@@ -895,6 +1184,8 @@
                 <div><span>Целей активно</span><b id="statGoalsActive">0</b></div>
                 <div><span>Целей выполнено</span><b id="statGoalsDone">0</b></div>
                 <div><span>Множитель XP</span><b id="statXpMult">×1.00</b></div>
+                <div><span>Рангапов</span><b id="statRankups">0</b></div>
+                <div><span>Прогресс побега</span><b id="statEscape">0 / 140</b></div>
               </div>
             </div>
             <div>
@@ -915,7 +1206,6 @@
             </div>
           </div>
         </div>
-
         <div class="view" id="view-inv">
           <div class="view-title">🎒 Инвентарь героя</div>
           <div class="view-subtitle">Экипируй артефакты · Получай бонусы к характеристикам</div>
@@ -925,15 +1215,15 @@
                 <div class="paperdoll-title">⚔ Снаряжение</div>
                 <div class="paperdoll">
                   <div class="paperdoll-silhouette"></div>
-                  <div class="slot" data-slot="head" data-slot-label="Голова">👑</div>
-                  <div class="slot" data-slot="amulet" data-slot-label="Амулет">💠</div>
-                  <div class="slot" data-slot="chest" data-slot-label="Торс">🧥</div>
-                  <div class="slot" data-slot="cape" data-slot-label="Плащ">🧣</div>
-                  <div class="slot" data-slot="weapon" data-slot-label="Оружие">⚔</div>
-                  <div class="slot" data-slot="shield" data-slot-label="Щит">🛡</div>
-                  <div class="slot" data-slot="ring1" data-slot-label="Кольцо 1">💍</div>
-                  <div class="slot" data-slot="ring2" data-slot-label="Кольцо 2">💍</div>
-                  <div class="slot" data-slot="boots" data-slot-label="Обувь">👢</div>
+                  <div class="slot" data-slot="head" data-slot-label="Голова">◇</div>
+                  <div class="slot" data-slot="amulet" data-slot-label="Амулет">△</div>
+                  <div class="slot" data-slot="chest" data-slot-label="Торс">□</div>
+                  <div class="slot" data-slot="cape" data-slot-label="Плащ">◁</div>
+                  <div class="slot" data-slot="weapon" data-slot-label="Оружие">✕</div>
+                  <div class="slot" data-slot="shield" data-slot-label="Щит">◯</div>
+                  <div class="slot" data-slot="ring1" data-slot-label="Кольцо 1">○</div>
+                  <div class="slot" data-slot="ring2" data-slot-label="Кольцо 2">○</div>
+                  <div class="slot" data-slot="boots" data-slot-label="Обувь">▽</div>
                 </div>
                 <div class="total-bonuses">
                   <div class="total-bonuses-title">⚡ Бонусы экипировки</div>
@@ -960,7 +1250,6 @@
             </div>
           </div>
         </div>
-
         <div class="view" id="view-boss">
           <div class="view-title">🐍 Первый Босс</div>
           <div class="view-subtitle">Змей Лени · Он ждёт твоего провала</div>
@@ -978,16 +1267,18 @@
               </div>
               <div style="padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); font-size: 11px; line-height: 1.7; color: var(--text-dim);">
                 <b style="color:var(--blood-bright)">«Я питаюсь твоим бездействием.»</b><br><br>
-                Каждый пропуск восстанавливает мне силы. Каждая выполненная цель — удар, от которого я трескаюсь.
+                <b style="color:var(--gold-bright)">Каждый день в 23:00 МСК</b> я наказываю тебя:<br>
+                • <b style="color:var(--blood-bright)">-10 HP</b> за каждую невыполненную карточку<br>
+                • <b style="color:var(--blood-bright)">-15 HP</b> за каждую невыполненную цель<br><br>
+                Каждая выполненная карточка — удар, от которого я трескаюсь.<br>
                 Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.
               </div>
             </div>
           </div>
         </div>
-
         <div class="view" id="view-map">
           <div class="view-title">🗺 Карта подземелья</div>
-          <div class="view-subtitle">Каждые 10 ранг-апов открывают новую камеру</div>
+          <div class="view-subtitle">Каждые 20 рангапов карточек открывают новую локацию</div>
           <div class="map-header">
             <div style="font-size: 9px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase;">Прогресс побега</div>
             <div class="map-progress-big"><span id="mapProgressNum">0</span> / 140</div>
@@ -997,7 +1288,6 @@
           <div class="map-rooms" id="mapRooms"></div>
         </div>
       </div>
-
       <div class="boss-panel">
         <div class="boss-title">🐍 Змей Лени</div>
         <div class="boss-image" id="bossImg">
@@ -1017,10 +1307,8 @@
         </div>
       </div>
     </div>
-
     <div class="bottom-nav">
       <button class="bnav-btn active" data-view="deck"><span class="bnav-icon">📖</span>Колода</button>
-      <button class="bnav-btn" data-view="forge"><span class="bnav-icon">⚒</span>Выковка</button>
       <button class="bnav-btn" data-view="hero"><span class="bnav-icon">👤</span>Герой</button>
       <button class="bnav-btn" data-view="inv"><span class="bnav-icon">🎒</span>Инв</button>
       <button class="bnav-btn" data-view="boss"><span class="bnav-icon">🐍</span>Босс</button>
@@ -1029,10 +1317,57 @@
   </div>
   </div>
 </div>
-
 <script>
-// ============ HERO (SOULS-LIKE PROGRESSION) ============
-const HERO = { name: 'Странник', title: '«Тот, кто только начал путь»', level: 1, xp: 0, xpToNext: 100, totalXp: 0 };
+// ============ СИСТЕМА РАНГОВ (12 СТУПЕНЕЙ) ============
+const RANK_PROGRESSION = ['C', 'CC', 'CCC', 'B', 'BB', 'BBB', 'A', 'AA', 'AAA', 'S', 'SS', 'SSS'];
+const RANK_VISUALS = {
+  'C':   { color: '#9ca3af', glow: 'rgba(156, 163, 175, 0.25)' },
+  'CC':  { color: '#b8c0cc', glow: 'rgba(184, 192, 204, 0.35)' },
+  'CCC': { color: '#d1d8e0', glow: 'rgba(209, 216, 224, 0.45)' },
+  'B':   { color: '#60a5fa', glow: 'rgba(96, 165, 250, 0.30)' },
+  'BB':  { color: '#7cb8fc', glow: 'rgba(124, 184, 252, 0.40)' },
+  'BBB': { color: '#9acaff', glow: 'rgba(154, 202, 255, 0.50)' },
+  'A':   { color: '#c084fc', glow: 'rgba(192, 132, 252, 0.35)' },
+  'AA':  { color: '#d4a0fd', glow: 'rgba(212, 160, 253, 0.45)' },
+  'AAA': { color: '#e5bdff', glow: 'rgba(229, 189, 255, 0.55)' },
+  'S':   { color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.45)' },
+  'SS':  { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.55)' },
+  'SSS': { color: '#fcd34d', glow: 'rgba(252, 211, 77, 0.80)' }
+};
+const RANK_PHRASES = {
+  'C': 'Пробуждение',
+  'CC': 'Сила крепнет',
+  'CCC': 'Воля закаляется',
+  'B': 'Путь воина',
+  'BB': 'Сталь и дух',
+  'BBB': 'Непреклонный',
+  'A': 'Мастерство',
+  'AA': 'Совершенство',
+  'AAA': 'Величие',
+  'S': 'Легенда',
+  'SS': 'Миф',
+  'SSS': 'Бессмертный'
+};
+function getNextRank(current) {
+  const idx = RANK_PROGRESSION.indexOf(current);
+  if (idx === -1 || idx >= RANK_PROGRESSION.length - 1) return null;
+  return RANK_PROGRESSION[idx + 1];
+}
+function getRankVisual(rank) {
+  return RANK_VISUALS[rank] || RANK_VISUALS['C'];
+}
+
+// ============ HERO (SOULS-LIKE) ============
+const HERO = {
+  name: 'Странник',
+  title: '«Тот, кто только начал путь»',
+  level: 1,
+  xp: 0,
+  xpToNext: 100,
+  totalXp: 0,
+  hp: 100,
+  maxHp: 100
+};
 const STATS = {
   str: { name: 'Сила',      icon: '⚔', desc: 'Урон',       color: '#c73e4d', dark: '#8b2635', value: 3, max: 100 },
   end: { name: 'Стойкость', icon: '🛡', desc: 'HP',         color: '#60a5fa', dark: '#2563eb', value: 3, max: 100 },
@@ -1041,19 +1376,20 @@ const STATS = {
   wil: { name: 'Воля',      icon: '🧘', desc: 'Стрик',      color: '#34d399', dark: '#047857', value: 3, max: 100 },
   agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color: '#fb923c', dark: '#c2410c', value: 3, max: 100 },
 };
-
-// Souls-like: XP multiplier grows aggressively (1.6x per level)
 const XP_MULTIPLIER = 1.6;
-// Souls-like: base damage lower
 const BASE_DAMAGE = 2;
-// Souls-like: critical chance harder
 const CRIT_DIVISOR = 300;
-// Souls-like: loot chance lower
 const LOOT_CHANCE = 0.08;
-// Souls-like: boss heals more on fail
-const BOSS_HEAL_ON_FAIL = 8;
-// Souls-like: stat gain per card
 const STAT_PER_CARD = 1;
+
+// Прогресс побега
+let escapeProgress = 0;
+const ESCAPE_MAX = 140;
+const ROOMS_STEP = 20; // 140 / 20 = 7 локаций
+
+// Наказание от босса
+let lastPunishDate = null; // дата последнего наказания в МСК (YYYY-MM-DD)
+let lastDayReset = null;   // дата последнего сброса суток
 
 const RANK_COLORS = {
   C: { color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.15)', glow: 'rgba(156, 163, 175, 0.5)' },
@@ -1061,36 +1397,66 @@ const RANK_COLORS = {
   A: { color: '#c084fc', bg: 'rgba(192, 132, 252, 0.15)', glow: 'rgba(192, 132, 252, 0.5)' },
   S: { color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.2)',   glow: 'rgba(251, 191, 36, 0.7)' },
 };
-
 const CARDS = [];
 let FORGED = [];
 let forgedIdCounter = 100;
 
+// ============ УТИЛИТЫ ВРЕМЕНИ (МСК) ============
+const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+function getMSKDate(ts = Date.now()) {
+  return new Date(ts + MSK_OFFSET_MS);
+}
+function getMSKDayKey(ts = Date.now()) {
+  const d = getMSKDate(ts);
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+}
+function isTodayMSK(timestamp) {
+  if (!timestamp) return false;
+  return getMSKDayKey(timestamp) === getMSKDayKey();
+}
+function getMSKHourMinute() {
+  const d = getMSKDate();
+  return { h: d.getUTCHours(), m: d.getUTCMinutes() };
+}
+
+// ============ РЕНДЕР КОЛОДЫ ============
 function renderCards() {
   const grid = document.getElementById('cardGrid');
   grid.innerHTML = '';
   const all = [...CARDS, ...FORGED];
+  document.getElementById('deckCount').textContent = all.length;
+  const doneToday = all.filter(c => isTodayMSK(c.lastCompletedAt)).length;
+  document.getElementById('deckDoneToday').textContent = doneToday;
   if (all.length === 0) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Пока пусто. Перейди во вкладку ⚒ Выковка, чтобы создать первую карточку.</div>';
+    grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Пока пусто. Нажми «🔨 Выковать карточку», чтобы создать первую.</div>';
     return;
   }
   all.forEach(c => renderOneCard(c, grid));
 }
+
 function renderOneCard(card, grid) {
+  if (!card.rank) card.rank = 'C';
+  if (typeof card.completions !== 'number') card.completions = 0;
+  if (typeof card.rankupTarget !== 'number') card.rankupTarget = 5;
+
   const st = STATS[card.stat];
+  const progressPct = Math.min(100, Math.round((card.completions / card.rankupTarget) * 100));
+  const completedToday = isTodayMSK(card.lastCompletedAt);
+
   const el = document.createElement('div');
-  el.className = `card rank-${card.rank}`;
+  el.className = `card rank-${card.rank}${completedToday ? ' completed-today' : ''}`;
   el.innerHTML = `
     <div class="card-actions">
       <div class="card-btn" onclick="completeCard(event, ${card.id})">✓</div>
       <div class="card-btn fail" onclick="failCard(event, ${card.id})">✕</div>
+      <div class="card-btn edit" onclick="openEditCardDirect(${card.id})">✎</div>
     </div>
     <div class="card-rank">${card.rank}</div>
     <div class="card-name">${card.name}</div>
     <div class="card-meta">${card.meta}</div>
     <div class="card-stat-tag" style="color: ${st.color}; border-color: ${st.color}40;"><span>${st.icon}</span> ${st.name}</div>
-    <div class="card-streak">🔥 <b>${card.streak}</b> дн.</div>
-    <div class="card-progress"><div class="card-progress-bar" style="width:${card.progress}%"></div></div>
+    <div class="card-streak">🔥 <b>${card.streak}</b> · ${card.completions}/${card.rankupTarget}</div>
+    <div class="card-progress"><div class="card-progress-bar" style="width:${progressPct}%"></div></div>
   `;
   el.addEventListener('mousemove', (e) => {
     const r = el.getBoundingClientRect();
@@ -1102,20 +1468,34 @@ function renderOneCard(card, grid) {
   el.addEventListener('mouseleave', () => { el.style.transform = ''; });
   grid.appendChild(el);
 }
-renderCards();
 
 function findCard(id) { return CARDS.find(c => c.id === id) || FORGED.find(c => c.id === id); }
 
+// ============ ВЫПОЛНЕНИЕ КАРТОЧКИ ============
 function completeCard(e, id) {
   e.stopPropagation();
   const card = findCard(id); if (!card) return;
+
+  // Если уже выполнена сегодня — предупреждение
+  if (isTodayMSK(card.lastCompletedAt)) {
+    showToast('✓ Уже выполнена сегодня', `${card.name} — отдыхай`, 'save');
+    return;
+  }
+
   const rect = e.target.getBoundingClientRect();
   const x = rect.left + rect.width/2, y = rect.top + rect.height/2;
   burstParticles(x, y, 28, { color: '#f4c896', speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
-  // Souls-like: less XP per card
   addXp(15);
   if (card.stat) setTimeout(() => addStat(card.stat, STAT_PER_CARD, x, y), 200);
-  card.progress = Math.min(100, card.progress + 10);
+
+  // Восстановление HP за выполненную карточку
+  const healAmount = 2;
+  HERO.hp = Math.min(HERO.maxHp, HERO.hp + healAmount);
+
+  // Увеличиваем счётчик выполнений
+  card.completions += 1;
+  card.lastCompletedAt = Date.now();
+
   const gear = getTotalGearBonuses();
   const totalStr = STATS.str.value + gear.str;
   const totalCha = STATS.cha.value + gear.cha;
@@ -1125,15 +1505,44 @@ function completeCard(e, id) {
   changeBossHp(-dmg);
   if (Math.random() < LOOT_CHANCE) dropRandomLoot(x, y);
   card.streak += 1;
-  renderCards();
-  if (crit) {
-    showToast('⚡ КРИТ!', `-${dmg} HP боссу`, 'crit');
-    burstParticles(x, y, 40, { color: '#fbbf24', speed: 8, decay: 0.015, size: 4, shape: 'star', gravity: 0.1 });
-    screenShake(6, 300);
-  } else {
-    showToast('✅ Выполнено', `+15 XP · +${STAT_PER_CARD} ${STATS[card.stat].icon}`);
+
+  // Проверка рангапа
+  let rankUpHappened = false;
+  if (card.completions >= card.rankupTarget) {
+    const nextRank = getNextRank(card.rank);
+    if (nextRank) {
+      const oldRank = card.rank;
+      card.rank = nextRank;
+      card.completions = 0;
+      card.rankupTarget = Math.max(2, Math.round(card.rankupTarget * 1.2));
+      rankUpHappened = true;
+      // Рангап = +1 к прогрессу побега
+      escapeProgress = Math.min(ESCAPE_MAX, escapeProgress + 1);
+      updateEscapeDisplay();
+      renderMap(escapeProgress);
+      setTimeout(() => triggerRankUpEffect(card, oldRank, nextRank, x, y), 300);
+    } else {
+      card.completions = card.rankupTarget;
+      showToast('👑 МАКСИМУМ!', `${card.name} достигла SSS`, 'crit');
+      spiritSay('«Легенда... Твоя дисциплина несокрушима.»');
+    }
   }
+
+  renderCards();
+  updateHeroUI();
+
+  if (!rankUpHappened) {
+    if (crit) {
+      showToast('⚡ КРИТ!', `-${dmg} HP боссу`, 'crit');
+      burstParticles(x, y, 40, { color: '#fbbf24', speed: 8, decay: 0.015, size: 4, shape: 'star', gravity: 0.1 });
+      screenShake(6, 300);
+    } else {
+      showToast('✅ Выполнено', `+15 XP · +${STAT_PER_CARD} ${STATS[card.stat].icon} · +${healAmount} HP`);
+    }
+  }
+  saveGameState();
 }
+
 function failCard(e, id) {
   e.stopPropagation();
   spawnBloodRain(25);
@@ -1141,10 +1550,103 @@ function failCard(e, id) {
   const gear = getTotalGearBonuses();
   const totalWil = STATS.wil.value + gear.wil;
   if (Math.random() < (totalWil / CRIT_DIVISOR)) { showToast('🧘 Воля!', 'Стрик защищён.', 'save'); return; }
-  changeBossHp(BOSS_HEAL_ON_FAIL);
+  changeBossHp(8);
   const card = findCard(id);
   if (card) { card.streak = 0; renderCards(); }
-  showToast('💀 Пропуск', `Босс восстановил +${BOSS_HEAL_ON_FAIL} HP`, 'blood');
+  showToast('💀 Пропуск', 'Босс восстановил +8 HP', 'blood');
+  saveGameState();
+}
+
+// ============ ЭФФЕКТ РАНГАПА ============
+function triggerRankUpEffect(card, oldRank, newRank, x, y) {
+  const visual = getRankVisual(newRank);
+  const phrase = RANK_PHRASES[newRank] || 'Сила пробуждается';
+  const rankupOverlay = document.getElementById('rankupOverlay');
+  const rankupBanner = document.getElementById('rankupBanner');
+
+  rankupOverlay.style.background = `radial-gradient(circle, ${visual.glow.replace(/[\d.]+\)$/, '0.4)')}, transparent 60%)`;
+  const rankText = document.getElementById('rankupRankText');
+  rankText.textContent = newRank;
+  rankText.style.color = visual.color;
+  document.getElementById('rankupSubText').textContent = phrase;
+  document.getElementById('rankupCardName').textContent = card.name;
+
+  rankupOverlay.classList.remove('show');
+  rankupBanner.classList.remove('show');
+  void rankupOverlay.offsetWidth;
+  rankupOverlay.classList.add('show');
+  rankupBanner.classList.add('show');
+
+  burstParticles(x, y, 80, { color: visual.color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
+  burstParticles(x, y, 50, { color: visual.color, speed: 8, decay: 0.012, size: 2, gravity: 0.05 });
+
+  if (newRank === 'SSS') {
+    burstParticles(window.innerWidth/2, window.innerHeight/2, 120, { color: '#fcd34d', speed: 16, decay: 0.006, size: 5, shape: 'star', gravity: 0.12, life: 1.6 });
+    screenShake(12, 600);
+    spiritSay(`«SSS... ${card.name} достигла вечности.»`);
+    showToast('👑 ЛЕГЕНДАРНЫЙ РАНГ!', `${card.name}: SSS`, 'crit');
+  } else {
+    screenShake(7, 400);
+    spiritSay(`«${newRank}... ${phrase.toLowerCase()}.»`);
+    showToast('⚔ Ранг повышен!', `${card.name}: ${oldRank} → ${newRank}`, 'crit');
+  }
+
+  setTimeout(() => {
+    rankupOverlay.classList.remove('show');
+    rankupBanner.classList.remove('show');
+    // Открываем модалку редактирования после рангапа
+    openEditCardAfterRankup(card.id);
+  }, 2200);
+}
+
+// ============ РЕДАКТИРОВАНИЕ КАРТОЧКИ ============
+let editingCardId = null;
+
+function openEditCardAfterRankup(cardId) {
+  const card = findCard(cardId);
+  if (!card) return;
+  editingCardId = cardId;
+  document.getElementById('editCardName').value = card.name;
+  document.getElementById('editCardTime').value = card.meta.split(' · ')[1] || 'утро';
+  document.getElementById('editCardDuration').value = parseInt(card.meta.match(/\d+/)?.[0]) || 15;
+  document.getElementById('editCardRankup').value = card.rankupTarget;
+  document.getElementById('editCardCurrentRank').textContent = card.rank;
+  // Установить чип стата
+  document.querySelectorAll('#editStatChips .stat-chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.stat === card.stat);
+  });
+  document.getElementById('editCardModal').classList.add('show');
+}
+
+function openEditCardDirect(cardId) {
+  openEditCardAfterRankup(cardId);
+}
+
+function closeEditCard() {
+  document.getElementById('editCardModal').classList.remove('show');
+  editingCardId = null;
+}
+
+function saveEditCard() {
+  if (!editingCardId) return;
+  const card = findCard(editingCardId);
+  if (!card) return;
+  const name = document.getElementById('editCardName').value.trim();
+  if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
+  const selectedStatChip = document.querySelector('#editStatChips .stat-chip.selected');
+  const newStat = selectedStatChip ? selectedStatChip.dataset.stat : card.stat;
+  const newTime = document.getElementById('editCardTime').value;
+  const newDuration = parseInt(document.getElementById('editCardDuration').value) || 15;
+  const newRankup = Math.max(2, parseInt(document.getElementById('editCardRankup').value) || 5);
+  const st = STATS[newStat];
+  card.name = name;
+  card.stat = newStat;
+  card.meta = `${st.icon} ${newDuration} мин · ${newTime}`;
+  card.rankupTarget = newRankup;
+  closeEditCard();
+  renderCards();
+  showToast('✏ Сохранено', `Карточка обновлена: ${name}`, 'crit');
+  saveGameState();
 }
 
 // ============ STATS UI ============
@@ -1172,7 +1674,23 @@ function renderStats() {
   updateHeroSummary(); updateDamageInfo();
 }
 
+// ============ РАСЧЁТ HP ============
+function calcMaxHp() {
+  // База 100 + 5 HP за каждый уровень (начиная со 2-го) + 1 HP за каждую единицу Стойкости
+  return 100 + Math.max(0, (HERO.level - 1) * 5) + STATS.end.value;
+}
+
 function updateHeroUI() {
+  // Обновить макс HP если поменялась стойкость/уровень
+  const newMaxHp = calcMaxHp();
+  if (newMaxHp !== HERO.maxHp) {
+    const diff = newMaxHp - HERO.maxHp;
+    HERO.maxHp = newMaxHp;
+    if (diff > 0) HERO.hp = Math.min(HERO.maxHp, HERO.hp + diff);
+    else HERO.hp = Math.min(HERO.maxHp, HERO.hp);
+  }
+  HERO.hp = Math.max(0, Math.min(HERO.maxHp, HERO.hp));
+
   document.getElementById('heroMiniLvl').textContent = HERO.level;
   document.getElementById('heroMiniName').textContent = HERO.name;
   const pct = (HERO.xp / HERO.xpToNext) * 100;
@@ -1185,8 +1703,28 @@ function updateHeroUI() {
   document.getElementById('heroName').textContent = HERO.name;
   document.getElementById('heroTitle').textContent = HERO.title;
   document.getElementById('ringFill').setAttribute('stroke-dashoffset', 2 * Math.PI * 74 * (1 - HERO.xp / HERO.xpToNext));
+
+  // HP bar
+  document.getElementById('heroHpCur').textContent = HERO.hp;
+  document.getElementById('heroHpMax').textContent = HERO.maxHp;
+  const hpPct = (HERO.hp / HERO.maxHp) * 100;
+  const hpFill = document.getElementById('heroHpFill');
+  hpFill.style.width = hpPct + '%';
+  hpFill.classList.toggle('low', hpPct <= 30);
+  const warnEl = document.getElementById('heroHpWarn');
+  if (hpPct <= 0) {
+    warnEl.innerHTML = '<span class="hp-warn" style="color: var(--blood-bright)">💀 Ты пал...</span>';
+  } else if (hpPct <= 30) {
+    warnEl.innerHTML = '<span class="hp-warn">⚠ Критическое состояние</span>';
+  } else {
+    warnEl.textContent = '';
+  }
+  document.getElementById('heroEndStat').textContent = STATS.end.value;
+
   updateHeroSummary(); updateDamageInfo();
+  updatePunishCountdown();
 }
+
 function updateHeroSummary() {
   document.getElementById('statTotalXp').textContent = HERO.totalXp;
   const sum = Object.values(STATS).reduce((a, s) => a + s.value, 0);
@@ -1197,7 +1735,10 @@ function updateHeroSummary() {
   const totalInt = STATS.int.value + gear.int;
   const mult = (1 + (totalInt - 3) * 0.01).toFixed(2);
   document.getElementById('statXpMult').textContent = '×' + mult;
+  document.getElementById('statRankups').textContent = escapeProgress;
+  document.getElementById('statEscape').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
 }
+
 function updateDamageInfo() {
   const gear = getTotalGearBonuses();
   const totalStr = STATS.str.value + gear.str;
@@ -1211,10 +1752,39 @@ function updateDamageInfo() {
   `;
 }
 
-function spawnFloatNumber(x, y, text, color = '#f4c896') {
+function updateEscapeDisplay() {
+  document.getElementById('progressVal').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
+  document.getElementById('mapProgressNum').textContent = escapeProgress;
+  document.getElementById('mapProgressFill').style.width = ((escapeProgress/ESCAPE_MAX) * 100) + '%';
+  const idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
+  document.getElementById('mapRoomText').textContent = `Ты в: ${ROOMS[idx].name}`;
+  // Обновить атмосферу по прогрессу
+  updateAtmosphereByEscape();
+}
+
+function updateAtmosphereByEscape() {
+  const pct = escapeProgress / ESCAPE_MAX;
+  const root = document.documentElement.style;
+  let hue, light, sat, mist, torch, rays;
+  if (pct < 0.2) { hue=0; light=0; sat=0; mist=0.8; torch=0.2; rays=0; }
+  else if (pct < 0.5) { const p=(pct-0.2)/0.3; hue=p*60; light=p*15; sat=p*30; mist=0.8-p*0.25; torch=0.2+p*0.4; rays=0; }
+  else if (pct < 0.8) { const p=(pct-0.5)/0.3; hue=60+p*140; light=15+p*25; sat=30+p*20; mist=0.55-p*0.25; torch=0.6-p*0.2; rays=p*0.3; }
+  else { const p=(pct-0.8)/0.2; hue=200-p*170; light=40+p*40; sat=50-p*20; mist=0.3-p*0.2; torch=0.4+p*0.3; rays=0.3+p*0.5; }
+  root.setProperty('--atmosphere-hue', hue);
+  root.setProperty('--atmosphere-light', light);
+  root.setProperty('--atmosphere-sat', sat);
+  root.setProperty('--mist-opacity', mist);
+  root.setProperty('--torch-intensity', torch);
+  root.setProperty('--light-rays-opacity', rays);
+}
+
+function spawnFloatNumber(x, y, text, color = '#f4c896', isDamage = false) {
   const el = document.createElement('div');
-  el.className = 'float-number'; el.textContent = text; el.style.color = color;
-  el.style.left = x + 'px'; el.style.top = y + 'px';
+  el.className = 'float-number' + (isDamage ? ' damage' : '');
+  el.textContent = text;
+  el.style.color = color;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 1400);
 }
@@ -1229,7 +1799,6 @@ function addXp(amount) {
   spawnFloatNumber(hr.left + hr.width/2, hr.top + hr.height, `+${final} XP`, '#f4c896');
   while (HERO.xp >= HERO.xpToNext) {
     HERO.xp -= HERO.xpToNext; HERO.level++;
-    // Souls-like: XP requirement grows 1.6x
     HERO.xpToNext = Math.round(HERO.xpToNext * XP_MULTIPLIER);
     onLevelUp();
   }
@@ -1239,6 +1808,7 @@ function addXp(amount) {
   else if (HERO.level >= 3) { HERO.name = 'Искатель'; HERO.title = '«Вспомнивший путь»'; }
   updateHeroUI();
 }
+
 function onLevelUp() {
   document.getElementById('lvlNum').textContent = HERO.level;
   const ov = document.getElementById('lvlOverlay'), bn = document.getElementById('lvlBanner');
@@ -1247,16 +1817,18 @@ function onLevelUp() {
   const cx = window.innerWidth/2, cy = window.innerHeight/2;
   burstParticles(cx, cy, 100, { color: '#fbbf24', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12, life: 1.3 });
   screenShake(8, 400);
-  // Souls-like: only +1 stat per level (hardcore)
   Object.keys(STATS).forEach(k => { STATS[k].value = Math.min(STATS[k].max, STATS[k].value + 1); });
+  // Восстановление HP при level-up
+  HERO.maxHp = calcMaxHp();
+  HERO.hp = HERO.maxHp;
   renderStats();
-  spiritSay(`«Уровень ${HERO.level}... Но тьма ещё сильна.»`);
-  showToast('🏆 Уровень ' + HERO.level, '+1 ко всем статам · Следующий: ' + HERO.xpToNext + ' XP');
-  // Legendary artifacts at milestone levels
+  spiritSay(`«Уровень ${HERO.level}... Твоё здоровье восстановлено.»`);
+  showToast('🏆 Уровень ' + HERO.level, '+1 к статам · HP восстановлено');
   if (HERO.level === 5) setTimeout(() => addArtifactToBackpack(ARTIFACTS.crownArchon), 1500);
   if (HERO.level === 10) setTimeout(() => addArtifactToBackpack(ARTIFACTS.capeShadows), 1500);
   setTimeout(() => { ov.classList.remove('show'); bn.classList.remove('show'); }, 2500);
 }
+
 function addStat(statKey, amount, sourceX, sourceY) {
   const stat = STATS[statKey]; if (!stat) return;
   const before = stat.value;
@@ -1272,9 +1844,10 @@ function addStat(statKey, amount, sourceX, sourceY) {
   if (fill) fill.style.width = ((stat.value / stat.max) * 100) + '%';
   if (val) val.textContent = stat.value;
   updateHeroSummary(); updateDamageInfo();
+  updateHeroUI(); // обновить HP если поменялась стойкость
 }
 
-// ============ BOSS ============
+// ============ БОСС ============
 let bossHp = 100;
 function changeBossHp(delta) {
   bossHp = Math.max(0, Math.min(100, bossHp + delta));
@@ -1296,18 +1869,17 @@ function changeBossHp(delta) {
   document.querySelectorAll('.boss-sprite').forEach(sprite => {
     sprite.style.filter = `hue-rotate(${crackPct * -20}deg) saturate(${1 + crackPct * 0.5}) brightness(${1 - crackPct * 0.2})`;
   });
-  // Boss defeated
   if (bossHp <= 0) {
     setTimeout(() => {
       burstParticles(window.innerWidth/2, window.innerHeight/2, 200, { color: '#c73e4d', speed: 15, decay: 0.005, size: 5, shape: 'star', gravity: 0.15, life: 1.5 });
       screenShake(15, 800);
       spiritSay('«Змей повержен... Но впереди — новые демоны.»');
       showToast('🏆 БОСС ПОВЕРЖЕН!', 'Ты сделал первый шаг к свободе');
-      // Restore boss HP for continued play
       setTimeout(() => { bossHp = 100; changeBossHp(0); }, 3000);
     }, 300);
   }
 }
+
 document.addEventListener('mousemove', (e) => {
   document.querySelectorAll('.boss-eye').forEach(eye => {
     const r = eye.parentElement.getBoundingClientRect();
@@ -1318,6 +1890,117 @@ document.addEventListener('mousemove', (e) => {
     eye.style.transform = `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px)`;
   });
 });
+
+// ============ НАКАЗАНИЕ БОССА (23:00 МСК) ============
+function updatePunishCountdown() {
+  const { h, m } = getMSKHourMinute();
+  const el = document.getElementById('punishTimeLeft');
+  if (!el) return;
+  // Время до 23:00 МСК
+  let minutesLeft;
+  if (h < 23) {
+    minutesLeft = (23 - h) * 60 - m;
+  } else {
+    // Уже после 23:00 — до завтрашнего 23:00
+    minutesLeft = 24 * 60 - ((h - 23) * 60 + m);
+  }
+  const hoursLeft = Math.floor(minutesLeft / 60);
+  const minsLeft = minutesLeft % 60;
+  el.textContent = `${String(hoursLeft).padStart(2,'0')}:${String(minsLeft).padStart(2,'0')}`;
+
+  // Подсветка если близко к наказанию
+  if (minutesLeft <= 60) {
+    el.style.color = 'var(--blood-bright)';
+    el.style.fontWeight = 'bold';
+  } else {
+    el.style.color = '';
+    el.style.fontWeight = '';
+  }
+}
+
+function checkBossPunishment() {
+  const { h, m } = getMSKHourMinute();
+  const todayKey = getMSKDayKey();
+
+  // Новый день по МСК — сбрасываем lastPunishDate
+  if (lastDayReset !== todayKey) {
+    if (h === 0 && m < 5) {
+      // Первый запуск после полуночи — сбрасываем
+      lastPunishDate = null;
+    }
+    lastDayReset = todayKey;
+    saveGameState();
+  }
+
+  // Время наказания: 23:00 - 23:59 МСК
+  if (h !== 23) return;
+
+  // Уже наказан сегодня
+  if (lastPunishDate === todayKey) return;
+
+  // Подсчёт невыполненных карточек
+  const allCards = [...CARDS, ...FORGED];
+  const uncompletedCards = allCards.filter(c => !isTodayMSK(c.lastCompletedAt));
+  const uncompletedGoals = GOALS.filter(g => !g.completed && !isTodayMSK(g.lastStepAt));
+
+  const cardsDamage = uncompletedCards.length * 10;
+  const goalsDamage = uncompletedGoals.length * 15;
+  const totalDamage = cardsDamage + goalsDamage;
+
+  if (totalDamage <= 0) {
+    // Все выполнены — не наказываем
+    lastPunishDate = todayKey;
+    saveGameState();
+    return;
+  }
+
+  // Применяем урон
+  HERO.hp = Math.max(0, HERO.hp - totalDamage);
+  lastPunishDate = todayKey;
+  saveGameState();
+
+  // Эффекты
+  spawnBloodRain(40);
+  screenShake(15, 800);
+
+  // Анимация hurt у аватара
+  const avatar = document.getElementById('heroAvatar');
+  if (avatar) {
+    avatar.classList.remove('hurt');
+    void avatar.offsetWidth;
+    avatar.classList.add('hurt');
+  }
+
+  // Плавающее число урона
+  const avatarRect = avatar ? avatar.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 100, height: 100 };
+  spawnFloatNumber(avatarRect.left + avatarRect.width/2, avatarRect.top + avatarRect.height/2, `-${totalDamage} HP`, '#c73e4d', true);
+
+  // Показываем алерт
+  showPunishAlert(totalDamage, uncompletedCards.length, uncompletedGoals.length);
+
+  spiritSay('«Ты не справился... Я пирую на твоих слабостях.»');
+  updateHeroUI();
+}
+
+function showPunishAlert(damage, cardsCount, goalsCount) {
+  document.getElementById('punishDamage').textContent = `-${damage} HP`;
+  document.getElementById('punishAlertBody').innerHTML = 'Босс наказал тебя за бездействие:';
+  document.getElementById('punishBreakdown').innerHTML = `
+    📖 <b>${cardsCount}</b> невыполненных карточек × 10 = <b>${cardsCount * 10} HP</b><br>
+    🎯 <b>${goalsCount}</b> невыполненных целей × 15 = <b>${goalsCount * 15} HP</b>
+  `;
+  document.getElementById('punishAlert').classList.add('show');
+}
+
+function closePunishAlert() {
+  document.getElementById('punishAlert').classList.remove('show');
+}
+
+// Проверка каждую минуту
+setInterval(() => {
+  checkBossPunishment();
+  updatePunishCountdown();
+}, 60 * 1000);
 
 // ============ ARTIFACTS ============
 const ARTIFACTS = {
@@ -1331,8 +2014,6 @@ const ARTIFACTS = {
   chestVirtue: { id: 'chestVirtue', name: 'Кираса Доблести', icon: '🧥', rank: 'A', slot: 'chest', type: 'Нагрудник', category: 'armor', lore: 'Каждая пластина — выигранная битва с собой.', bonuses: [{ stat: 'end', value: 8, label: '🛡 Стойкость' }, { stat: 'str', value: 3, label: '⚔ Сила' }], special: null },
   ringInsight: { id: 'ringInsight', name: 'Кольцо Прозрения', icon: '💎', rank: 'A', slot: 'ring2', type: 'Кольцо', category: 'accessory', lore: 'В его грани отражаются мысли, что ты не успел забыть.', bonuses: [{ stat: 'int', value: 5, label: '🧠 Интеллект' }, { stat: 'cha', value: 2, label: '🎭 Харизма' }], special: null },
 };
-
-// ============ INVENTORY (EMPTY START) ============
 const INVENTORY = {
   backpack: [],
   equipped: { head: null, amulet: null, chest: null, cape: null, weapon: null, shield: null, ring1: null, ring2: null, boots: null },
@@ -1354,6 +2035,7 @@ function addArtifactToBackpack(artifact) {
   }
   showToast(`🎁 Получен ${artifact.rank}-ранг!`, artifact.name);
   spiritSay(`«${artifact.name}... Этот артефакт ждал тебя.»`);
+  saveGameState();
 }
 
 function dropRandomLoot(x, y) {
@@ -1398,7 +2080,6 @@ function renderBackpack() {
     grid.appendChild(cell);
   }
 }
-
 const tooltipEl = document.getElementById('tooltip');
 function showTooltip(e, item) {
   tooltipEl.innerHTML = `
@@ -1415,14 +2096,12 @@ function moveTooltip(e) {
   tooltipEl.style.top = Math.min(y, window.innerHeight - 150) + 'px';
 }
 function hideTooltip() { tooltipEl.classList.remove('show'); }
-
 function selectItem(uid) {
   selectedItemId = uid;
   const item = INVENTORY.backpack.find(i => i.uid === uid);
   if (item) renderItemPanel(item, 'backpack');
   renderBackpack(); renderSlots();
 }
-
 function renderItemPanel(item, source) {
   const rc = RANK_COLORS[item.rank];
   const panel = document.getElementById('itemPanel');
@@ -1450,7 +2129,6 @@ function renderItemPanel(item, source) {
     </div>
   `;
 }
-
 function equipItem(uid) {
   const item = INVENTORY.backpack.find(i => i.uid === uid);
   if (!item) return;
@@ -1473,10 +2151,10 @@ function equipItem(uid) {
   spiritSay(`«${item.name}... Сила артефакта теперь твоя.»`);
   screenShake(4, 250);
   selectedItemId = null;
-  renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo(); renderStats();
+  renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo(); renderStats(); updateHeroUI();
   renderItemPanel(INVENTORY.equipped[targetSlot], 'equipped');
+  saveGameState();
 }
-
 function unequipItem(slotName) {
   const item = INVENTORY.equipped[slotName];
   if (!item) return;
@@ -1485,10 +2163,10 @@ function unequipItem(slotName) {
   INVENTORY.equipped[slotName] = null;
   showToast('↶ Снято', item.name);
   selectedItemId = null;
-  renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo(); renderStats();
+  renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo(); renderStats(); updateHeroUI();
   document.getElementById('itemPanelContent').innerHTML = `<div class="empty-state">Слот пуст.<br>Выбери предмет из рюкзака.</div>`;
+  saveGameState();
 }
-
 function discardItem(uid) {
   const item = INVENTORY.backpack.find(i => i.uid === uid);
   if (!item) return;
@@ -1498,12 +2176,13 @@ function discardItem(uid) {
   selectedItemId = null;
   renderBackpack();
   document.getElementById('itemPanelContent').innerHTML = `<div class="empty-state">Слот пуст.</div>`;
+  saveGameState();
 }
-
 function renderSlots() {
   document.querySelectorAll('.slot').forEach(slot => {
     const key = slot.dataset.slot;
     const item = INVENTORY.equipped[key];
+    const defaultIcons = { head: '◇', amulet: '△', chest: '□', cape: '◁', weapon: '✕', shield: '◯', ring1: '○', ring2: '○', boots: '▽' };
     if (item) {
       const rc = RANK_COLORS[item.rank];
       slot.classList.add('filled', 'rank-' + item.rank);
@@ -1520,13 +2199,11 @@ function renderSlots() {
       slot.style.removeProperty('--slot-color');
       slot.style.removeProperty('--slot-bg');
       slot.style.removeProperty('--slot-glow');
-      const defaultIcons = { head: '👑', amulet: '💠', chest: '🧥', cape: '🧣', weapon: '⚔', shield: '🛡', ring1: '💍', ring2: '💍', boots: '👢' };
       slot.innerHTML = defaultIcons[key] || '?';
       slot.onclick = null; slot.onmouseenter = null; slot.onmousemove = null; slot.onmouseleave = null;
     }
   });
 }
-
 function getTotalGearBonuses() {
   const totals = { str: 0, end: 0, int: 0, cha: 0, wil: 0, agi: 0 };
   Object.values(INVENTORY.equipped).forEach(item => {
@@ -1535,7 +2212,6 @@ function getTotalGearBonuses() {
   });
   return totals;
 }
-
 function updateTotalBonuses() {
   const container = document.getElementById('totalBonuses');
   if (!container) return;
@@ -1545,7 +2221,6 @@ function updateTotalBonuses() {
     return `<div class="total-bonus-row ${v > 0 ? 'has-bonus' : ''}"><span>${s.icon} ${s.name}</span><b>${v > 0 ? '+' + v : '—'}</b></div>`;
   }).join('');
 }
-
 document.querySelectorAll('.backpack-tab').forEach(t => {
   t.addEventListener('click', () => {
     document.querySelectorAll('.backpack-tab').forEach(x => x.classList.remove('active'));
@@ -1554,10 +2229,9 @@ document.querySelectorAll('.backpack-tab').forEach(t => {
     renderBackpack();
   });
 });
-
 renderBackpack(); renderSlots(); updateTotalBonuses();
 
-// ============ GOALS (SOULS-LIKE REWARDS) ============
+// ============ GOALS ============
 const GOAL_REWARDS = {
   short:  { xp: 20,  dmg: 5,  stat: 1,  label: 'Краткая' },
   medium: { xp: 50,  dmg: 12, stat: 3,  label: 'Средняя' },
@@ -1566,7 +2240,6 @@ const GOAL_REWARDS = {
 let GOALS = [], goalIdCounter = 1, selectedGoalType = 'short', selectedGoalStat = 'str', currentGoalFilter = 'all';
 try { const saved = localStorage.getItem('neurodeck_goals'); if (saved) { const p = JSON.parse(saved); GOALS = p.goals || []; goalIdCounter = p.counter || 1; } } catch(e) {}
 function saveGoals() { try { localStorage.setItem('neurodeck_goals', JSON.stringify({ goals: GOALS, counter: goalIdCounter })); } catch(e) {} }
-
 function openGoalModal() {
   document.getElementById('goalModal').classList.add('show');
   const d = new Date(); d.setDate(d.getDate() + 7);
@@ -1586,7 +2259,6 @@ function updateGoalTypeSelection() { document.querySelectorAll('#goalTypeSelecto
 document.querySelectorAll('#goalStatChips .stat-chip').forEach(c => c.addEventListener('click', () => { selectedGoalStat = c.dataset.stat; updateGoalStatChips(); }));
 function updateGoalStatChips() { document.querySelectorAll('#goalStatChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedGoalStat)); }
 updateGoalTypeSelection(); updateGoalStatChips();
-
 function createGoal() {
   const name = document.getElementById('goalName').value.trim();
   if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
@@ -1594,16 +2266,15 @@ function createGoal() {
   const totalSteps = parseInt(document.getElementById('goalSteps').value) || 5;
   const desc = document.getElementById('goalDesc').value.trim();
   const rewards = GOAL_REWARDS[selectedGoalType];
-  const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.stat, completed: false, createdAt: Date.now() };
+  const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.stat, completed: false, createdAt: Date.now(), lastStepAt: null };
   GOALS.unshift(goal);
   saveGoals(); renderGoals(); closeGoalModal();
   const color = selectedGoalType === 'short' ? '#34d399' : selectedGoalType === 'medium' ? '#60a5fa' : '#fbbf24';
   burstParticles(window.innerWidth/2, window.innerHeight/2, 50, { color, speed: 9, decay: 0.012, size: 3, shape: 'star', gravity: 0.1 });
   showToast('🎯 Цель создана!', `${rewards.label}: ${name}`);
   spiritSay(`«Новая цель... Путь через тьму.»`);
-  switchView('hero');
+  saveGameState();
 }
-
 function renderGoals() {
   const list = document.getElementById('goalsList');
   if (!list) return;
@@ -1620,8 +2291,9 @@ function renderGoals() {
     const progressPct = (goal.currentStep / goal.totalSteps) * 100;
     const daysLeft = goal.deadline ? Math.ceil((new Date(goal.deadline) - new Date()) / (1000*60*60*24)) : null;
     const daysText = daysLeft === null ? '' : daysLeft > 0 ? `${daysLeft} дн.` : daysLeft === 0 ? 'Сегодня!' : 'Просрочено';
+    const stepToday = isTodayMSK(goal.lastStepAt);
     const el = document.createElement('div');
-    el.className = `goal-card ${goal.type} ${goal.completed ? 'completed' : ''}`;
+    el.className = `goal-card ${goal.type} ${goal.completed ? 'completed' : ''}${stepToday ? ' completed-today' : ''}`;
     el.innerHTML = `
       <div class="goal-head"><div class="goal-name">${goal.name}</div><div class="goal-type-badge">${rewards.label}</div></div>
       ${goal.desc ? `<div style="font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px;">${goal.desc}</div>` : ''}
@@ -1641,18 +2313,22 @@ function renderGoals() {
   });
   updateHeroSummary();
 }
-
 function advanceGoal(id) {
   const goal = GOALS.find(g => g.id === id);
   if (!goal || goal.completed) return;
+  if (isTodayMSK(goal.lastStepAt)) {
+    showToast('✓ Шаг уже сделан сегодня', 'Приходи завтра', 'save');
+    return;
+  }
   goal.currentStep = Math.min(goal.totalSteps, goal.currentStep + 1);
+  goal.lastStepAt = Date.now();
   addXp(Math.round(goal.xp / goal.totalSteps / 2));
   addStat(goal.stat, 1);
   saveGoals(); renderGoals();
   showToast('📈 Шаг выполнен', `${goal.name}: ${goal.currentStep}/${goal.totalSteps}`);
   if (goal.currentStep >= goal.totalSteps) setTimeout(() => completeGoal(id), 600);
+  saveGameState();
 }
-
 function completeGoal(id) {
   const goal = GOALS.find(g => g.id === id);
   if (!goal || goal.completed) return;
@@ -1662,11 +2338,14 @@ function completeGoal(id) {
   burstParticles(window.innerWidth/2, window.innerHeight/2, 120, { color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
   screenShake(10, 500);
   addXp(goal.xp); addStat(goal.stat, goal.statBonus); changeBossHp(-goal.dmg);
-  showToast(`🏆 Цель достигнута!`, `+${goal.xp} XP · -${goal.dmg} HP · +${goal.statBonus} ${STATS[goal.stat].icon}`);
+  // Лечение за выполненную цель
+  HERO.hp = Math.min(HERO.maxHp, HERO.hp + 5);
+  updateHeroUI();
+  showToast(`🏆 Цель достигнута!`, `+${goal.xp} XP · -${goal.dmg} HP · +${goal.statBonus} ${STATS[goal.stat].icon}`, 'crit');
   spiritSay(`«${goal.name}... Ты стал сильнее.»`);
   renderGoals();
+  saveGameState();
 }
-
 function deleteGoal(id) {
   const goal = GOALS.find(g => g.id === id);
   if (!goal) return;
@@ -1674,8 +2353,8 @@ function deleteGoal(id) {
   GOALS = GOALS.filter(g => g.id !== id);
   saveGoals(); renderGoals();
   showToast('✕ Удалено', goal.name, 'blood');
+  saveGameState();
 }
-
 document.querySelectorAll('.goal-filter').forEach(f => f.addEventListener('click', () => {
   document.querySelectorAll('.goal-filter').forEach(x => x.classList.remove('active'));
   f.classList.add('active');
@@ -1684,10 +2363,17 @@ document.querySelectorAll('.goal-filter').forEach(f => f.addEventListener('click
 }));
 document.getElementById('goalModal').addEventListener('click', (e) => { if (e.target.id === 'goalModal') closeGoalModal(); });
 
-// ============ FORGE ============
+// ============ FORGE (вызов из Колоды) ============
 let selectedStat = 'str';
 function openForge() { document.getElementById('forgeModal').classList.add('show'); }
-function closeForge() { document.getElementById('forgeModal').classList.remove('show'); document.getElementById('forgeName').value = ''; selectedStat = 'str'; updateStatChips(); }
+function closeForge() {
+  document.getElementById('forgeModal').classList.remove('show');
+  document.getElementById('forgeName').value = '';
+  document.getElementById('forgeDuration').value = '15';
+  document.getElementById('forgeRankup').value = '5';
+  selectedStat = 'str';
+  updateStatChips();
+}
 function updateStatChips() { document.querySelectorAll('#statChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedStat)); }
 document.querySelectorAll('#statChips .stat-chip').forEach(c => c.addEventListener('click', () => { selectedStat = c.dataset.stat; updateStatChips(); }));
 updateStatChips();
@@ -1695,18 +2381,29 @@ function forgeCard() {
   const name = document.getElementById('forgeName').value.trim();
   if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
   const time = document.getElementById('forgeTime').value;
-  const duration = parseInt(document.getElementById('forgeDuration').value) || 15;
-  const rank = document.getElementById('forgeRank').value;
+  const duration = Math.max(1, parseInt(document.getElementById('forgeDuration').value) || 15);
+  // КЛЮЧЕВОЕ: используем forgeRankup значение из поля
+  const rankupTarget = Math.max(2, Math.min(100, parseInt(document.getElementById('forgeRankup').value) || 5));
   const st = STATS[selectedStat];
-  const card = { id: forgedIdCounter++, name, meta: `${st.icon} ${duration} мин · ${time}`, rank, streak: 0, stat: selectedStat, progress: 0 };
+  const card = {
+    id: forgedIdCounter++,
+    name,
+    meta: `${st.icon} ${duration} мин · ${time}`,
+    rank: 'C',
+    streak: 0,
+    stat: selectedStat,
+    progress: 0,
+    completions: 0,
+    rankupTarget: rankupTarget,
+    lastCompletedAt: null
+  };
   FORGED.unshift(card);
   renderCards(); closeForge();
   burstParticles(window.innerWidth/2, window.innerHeight/2, 60, { color: st.color, speed: 10, decay: 0.01, size: 3, shape: 'spark', gravity: 0.1 });
-  // Souls-like: less XP for forging
   addXp(10);
-  showToast('🔥 Выковано!', name + ' (+10 XP)');
+  showToast('🔥 Выковано!', `${name} (ранг C, ${rankupTarget} выполн. до CC)`);
   spiritSay(`«Новое испытание выковано. Покажи, на что ты способен.»`);
-  switchView('deck');
+  saveGameState();
 }
 document.getElementById('forgeModal').addEventListener('click', (e) => { if (e.target.id === 'forgeModal') closeForge(); });
 
@@ -1721,68 +2418,47 @@ function switchView(view) {
   if (bnavEl) bnavEl.classList.add('active');
   document.getElementById('view-' + view).classList.add('active');
   if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
-  if (view === 'map') renderMap(parseInt(document.getElementById('progressSlider').value));
+  if (view === 'map') renderMap(escapeProgress);
   if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
+  if (view === 'deck') renderCards();
 }
 document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
 document.querySelectorAll('.bnav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 
-// ============ MAP (SOULS-LIKE ROOMS FROM PRISON) ============
+// ============ MAP (7 ЛОКАЦИЙ × 20 ПРОГРЕССА) ============
 const ROOMS = [
   { name: 'Камера заключенного', icon: '⛓', lore: 'Здесь начинается твой путь.' },
-  { name: 'Коридор Забытых',     icon: '🚪', lore: 'Шаги эхом в пустоте.' },
-  { name: 'Склеп Обетов',        icon: '💀', lore: 'Здесь погребены обещания.' },
   { name: 'Зал Разбитых Зеркал', icon: '🪞', lore: 'Отражения лжи.' },
   { name: 'Катакомбы Сомнений',  icon: '🕳', lore: 'Там, где живут страхи.' },
-  { name: 'Пещера Теней',        icon: '🌑', lore: 'Тени шепчут твоё имя.' },
   { name: 'Библиотека Рун',      icon: '📜', lore: 'Знание — оружие.' },
-  { name: 'Тронный Зал',         icon: '👑', lore: 'Здесь правил страх.' },
-  { name: 'Сад Забытых',         icon: '🌺', lore: 'Мечты, что не сбылись.' },
-  { name: 'Мост Раскаяния',      icon: '🌉', lore: 'Переправа через сомнения.' },
-  { name: 'Башня Снов',          icon: '🗼', lore: 'Верх мира.' },
   { name: 'Кузница Воли',        icon: '⚒', lore: 'Здесь закаляется характер.' },
   { name: 'Алтарь Истины',       icon: '🕯', lore: 'Правда о себе.' },
   { name: 'Врата Свободы',       icon: '🌅', lore: 'Выход из подземелья.' },
 ];
+
 function renderMap(progress) {
   const container = document.getElementById('mapRooms');
   if (!container) return;
   container.innerHTML = '';
   document.getElementById('mapProgressNum').textContent = progress;
-  document.getElementById('mapProgressFill').style.width = ((progress/140) * 100) + '%';
-  const idx = Math.min(Math.floor(progress / 10), ROOMS.length - 1);
+  document.getElementById('mapProgressFill').style.width = ((progress/ESCAPE_MAX) * 100) + '%';
+  const idx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
   document.getElementById('mapRoomText').textContent = `Ты в: ${ROOMS[idx].name}`;
   ROOMS.forEach((room, i) => {
-    const unlocked = progress >= (i + 1) * 10;
-    const current = progress >= i * 10 && progress < (i + 1) * 10;
+    const requiredProgress = i * ROOMS_STEP;
+    const unlocked = progress >= requiredProgress + ROOMS_STEP || (i === 0 && progress >= 0);
+    const current = progress >= requiredProgress && progress < requiredProgress + ROOMS_STEP;
     const el = document.createElement('div');
     el.className = 'map-room ' + (unlocked ? 'unlocked' : current ? 'current' : 'locked');
-    el.innerHTML = `<div class="map-room-icon" style="filter: ${unlocked || current ? 'none' : 'grayscale(1) blur(1px)'};">${room.icon}</div><div class="map-room-name">${room.name}</div><div class="map-room-status">${unlocked ? '✓ ' + room.lore : current ? '▶ ' + room.lore : '🔒 ' + ((i+1)*10 - progress) + ' ранг-апов'}</div>`;
+    const remaining = current ? (requiredProgress + ROOMS_STEP - progress) : 0;
+    el.innerHTML = `<div class="map-room-icon" style="filter: ${unlocked || current ? 'none' : 'grayscale(1) blur(1px)'};">${room.icon}</div><div class="map-room-name">${room.name}</div><div class="map-room-status">${unlocked ? '✓ ' + room.lore : current ? '▶ ' + room.lore + ` (ещё ${remaining})` : '🔒 ' + (requiredProgress + ROOMS_STEP - progress) + ' рангапов'}</div>`;
     container.appendChild(el);
   });
 }
 renderMap(0);
 
-// ============ ФАЗА 2: АТМОСФЕРА ============
-const progressSlider = document.getElementById('progressSlider');
-progressSlider.addEventListener('input', () => {
-  const v = parseInt(progressSlider.value);
-  const pct = v / 140;
-  document.getElementById('progressVal').textContent = `${v}/140`;
-  const root = document.documentElement.style;
-  let hue, light, sat, mist, torch, rays;
-  if (pct < 0.2) { hue=0; light=0; sat=0; mist=0.8; torch=0.2; rays=0; }
-  else if (pct < 0.5) { const p=(pct-0.2)/0.3; hue=p*60; light=p*15; sat=p*30; mist=0.8-p*0.25; torch=0.2+p*0.4; rays=0; }
-  else if (pct < 0.8) { const p=(pct-0.5)/0.3; hue=60+p*140; light=15+p*25; sat=30+p*20; mist=0.55-p*0.25; torch=0.6-p*0.2; rays=p*0.3; }
-  else { const p=(pct-0.8)/0.2; hue=200-p*170; light=40+p*40; sat=50-p*20; mist=0.3-p*0.2; torch=0.4+p*0.3; rays=0.3+p*0.5; }
-  root.setProperty('--atmosphere-hue', hue);
-  root.setProperty('--atmosphere-light', light);
-  root.setProperty('--atmosphere-sat', sat);
-  root.setProperty('--mist-opacity', mist);
-  root.setProperty('--torch-intensity', torch);
-  root.setProperty('--light-rays-opacity', rays);
-  renderMap(v);
-});
+// ============ ФАЗА 2: АТМОСФЕРА (теперь от escapeProgress) ============
+updateAtmosphereByEscape();
 
 document.addEventListener('mousemove', (e) => {
   const r1 = document.getElementById('mistRect1');
@@ -1793,7 +2469,6 @@ document.addEventListener('mousemove', (e) => {
   r1.setAttribute('transform', `translate(${x}, ${y})`);
   r2.setAttribute('transform', `translate(${-x*0.5}, ${-y*0.5})`);
 });
-
 const dustCanvas = document.getElementById('dustCanvas');
 const dustCtx = dustCanvas.getContext('2d');
 let dustParticles = [];
@@ -1804,17 +2479,15 @@ class Dust {
   update() { this.x += this.vx; this.y += this.vy; this.vx += (Math.random() - 0.5) * 0.02; if (this.y < -10 || this.x < -10 || this.x > dustCanvas.width + 10) { this.x = Math.random() * dustCanvas.width; this.y = dustCanvas.height + 10; } }
   draw(ctx) { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = '#f4c896'; ctx.shadowBlur = 6; ctx.shadowColor = '#f4c896'; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
-for (let i = 0; i < 60; i++) dustParticles.push(new Dust());
+for (let i = 0; i < 40; i++) dustParticles.push(new Dust());
 function animateDust() {
   dustCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
-  const pct = parseInt(progressSlider.value) / 140;
+  const pct = escapeProgress / ESCAPE_MAX;
   dustCanvas.style.opacity = pct > 0.4 ? Math.min(1, (pct - 0.4) * 1.5) : 0;
   dustParticles.forEach(d => { d.update(); d.draw(dustCtx); });
   requestAnimationFrame(animateDust);
 }
 animateDust();
-
-// ============ PARTICLES ============
 const canvas = document.getElementById('particles');
 const ctx = canvas.getContext('2d');
 let particles = [];
@@ -1828,7 +2501,6 @@ class Particle {
 function burstParticles(x, y, count, o = {}) { for (let i=0; i<count; i++) { const a = (i/count)*Math.PI*2; const sp = (o.speed ?? 6) * (0.5 + Math.random()*0.5); particles.push(new Particle(x, y, {...o, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp})); } }
 function animate() { ctx.clearRect(0,0,canvas.width,canvas.height); particles = particles.filter(p => p.life > 0); particles.forEach(p => { p.update(); p.draw(ctx); }); requestAnimationFrame(animate); }
 animate();
-
 const shakeWrap = document.getElementById('shakeWrap');
 function screenShake(intensity = 8, duration = 400) {
   const t0 = performance.now();
@@ -1845,57 +2517,86 @@ function showToast(title, body, type = '') {
   const el = document.getElementById('toast');
   el.querySelector('.t-title').textContent = title;
   el.querySelector('.t-body').textContent = body;
-  el.style.borderLeftColor = type === 'blood' ? 'var(--blood-bright)' : type === 'crit' ? '#fbbf24' : 'var(--gold-bright)';
-  el.style.borderColor = type === 'blood' ? 'var(--blood)' : type === 'crit' ? '#fbbf24' : 'var(--gold)';
+  el.style.borderLeftColor = type === 'blood' ? 'var(--blood-bright)' : type === 'crit' || type === 'save' ? '#fbbf24' : 'var(--gold-bright)';
+  el.style.borderColor = type === 'blood' ? 'var(--blood)' : type === 'crit' || type === 'save' ? '#fbbf24' : 'var(--gold)';
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 3500);
 }
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
 
-// ============ СИНХРОНИЗАЦИЯ ============
-const SYNC_VERSION = 'nd-sync-v1';
-let currentSyncCode = '';
-
-function openSyncModal() {
-  document.getElementById('syncModal').classList.add('show');
-  generateSyncCode();
-}
-
-function closeSyncModal() {
-  document.getElementById('syncModal').classList.remove('show');
-  document.getElementById('syncImportCode').value = '';
-}
-
-function generateSyncCode() {
+// ============ SAVE / LOAD STATE ============
+function saveGameState() {
   try {
-    const data = {
-      v: SYNC_VERSION,
-      t: Date.now(),
+    const snapshot = {
       hero: HERO,
       stats: STATS,
-      cards: CARDS,
       forged: FORGED,
       goals: GOALS,
       inventory: INVENTORY,
-      progress: parseInt(document.getElementById('progressSlider').value) || 0,
+      escapeProgress: escapeProgress,
       bossHp: bossHp,
+      lastPunishDate: lastPunishDate,
+      lastDayReset: lastDayReset,
+      forgedIdCounter: forgedIdCounter,
+      uidCounter: uidCounter,
+      goalIdCounter: goalIdCounter,
+      savedAt: Date.now()
+    };
+    localStorage.setItem('neurodeck_full_save', JSON.stringify(snapshot));
+    saveGoals();
+  } catch (e) { console.warn('Save failed:', e); }
+}
+
+function loadGameState() {
+  try {
+    const raw = localStorage.getItem('neurodeck_full_save');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.hero) Object.assign(HERO, data.hero);
+    if (data.stats) Object.keys(data.stats).forEach(k => { if (STATS[k]) Object.assign(STATS[k], data.stats[k]); });
+    if (data.forged) FORGED = data.forged;
+    if (data.goals) GOALS = data.goals;
+    if (data.inventory) {
+      INVENTORY.backpack = data.inventory.backpack || [];
+      INVENTORY.equipped = data.inventory.equipped || INVENTORY.equipped;
+    }
+    if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
+    if (typeof data.bossHp === 'number') bossHp = data.bossHp;
+    if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
+    if (data.lastDayReset) lastDayReset = data.lastDayReset;
+    if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
+    if (data.uidCounter) uidCounter = data.uidCounter;
+    if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
+  } catch (e) { console.warn('Load failed:', e); }
+}
+
+// Автосохранение раз в 30 сек
+setInterval(saveGameState, 30000);
+
+// Сохранение при закрытии вкладки
+window.addEventListener('beforeunload', saveGameState);
+
+// ============ СИНХРОНИЗАЦИЯ ============
+const SYNC_VERSION = 'nd-sync-v2';
+let currentSyncCode = '';
+function openSyncModal() { document.getElementById('syncModal').classList.add('show'); generateSyncCode(); }
+function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); document.getElementById('syncImportCode').value = ''; }
+function generateSyncCode() {
+  try {
+    const data = {
+      v: SYNC_VERSION, t: Date.now(),
+      hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
+      escapeProgress, bossHp, lastPunishDate, lastDayReset,
+      forgedIdCounter, uidCounter, goalIdCounter
     };
     const json = JSON.stringify(data);
     const base64 = btoa(unescape(encodeURIComponent(json)));
     currentSyncCode = base64.match(/.{1,4}/g).join(' ');
     document.getElementById('syncCodeDisplay').textContent = currentSyncCode;
     document.getElementById('syncCodeDisplay').classList.remove('copied');
-  } catch (e) {
-    console.error('Sync error:', e);
-    document.getElementById('syncCodeDisplay').textContent = 'Ошибка генерации';
-  }
+  } catch (e) { console.error('Sync error:', e); document.getElementById('syncCodeDisplay').textContent = 'Ошибка генерации'; }
 }
-
-function regenerateSyncCode() {
-  generateSyncCode();
-  showToast('🔄 Код обновлён', 'Новый слепок создан');
-}
-
+function regenerateSyncCode() { generateSyncCode(); showToast('🔄 Код обновлён', 'Новый слепок создан'); }
 function copySyncCode() {
   const code = currentSyncCode.replace(/\s/g, '');
   navigator.clipboard.writeText(code).then(() => {
@@ -1913,7 +2614,6 @@ function copySyncCode() {
     showToast('📋 Скопировано', 'Код в буфере обмена');
   });
 }
-
 function downloadSyncFile() {
   try {
     const code = currentSyncCode.replace(/\s/g, '');
@@ -1925,11 +2625,8 @@ function downloadSyncFile() {
     a.click();
     URL.revokeObjectURL(url);
     showToast('💾 Файл сохранён', 'Резервная копия загружена');
-  } catch (e) {
-    showToast('⚠ Ошибка', 'Не удалось сохранить файл', 'blood');
-  }
+  } catch (e) { showToast('⚠ Ошибка', 'Не удалось сохранить файл', 'blood'); }
 }
-
 function importSyncCode() {
   const code = document.getElementById('syncImportCode').value.replace(/\s/g, '');
   if (!code) { showToast('⚠ Пусто', 'Введи код для импорта', 'blood'); return; }
@@ -1937,105 +2634,71 @@ function importSyncCode() {
   try {
     const json = decodeURIComponent(escape(atob(code)));
     const data = JSON.parse(json);
-    if (data.v !== SYNC_VERSION) { showToast('⚠ Несовместимо', 'Версия кода не поддерживается', 'blood'); return; }
+    if (data.v !== SYNC_VERSION && data.v !== 'nd-sync-v1') { showToast('⚠ Несовместимо', 'Версия кода не поддерживается', 'blood'); return; }
     applySyncData(data);
     showToast('✅ Импортировано', `Данные от ${new Date(data.t).toLocaleString('ru')}`);
     spiritSay('«Чужие воспоминания... но теперь они твои.»');
     screenShake(6, 400);
     burstParticles(window.innerWidth/2, window.innerHeight/2, 80, { color: '#34d399', speed: 10, decay: 0.01, size: 3, shape: 'star', gravity: 0.08 });
     closeSyncModal();
-  } catch (e) {
-    console.error('Import error:', e);
-    showToast('⚠ Неверный код', 'Проверь правильность ввода', 'blood');
-  }
+    saveGameState();
+  } catch (e) { console.error('Import error:', e); showToast('⚠ Неверный код', 'Проверь правильность ввода', 'blood'); }
 }
-
 function importSyncFile(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById('syncImportCode').value = e.target.result;
-    importSyncCode();
-  };
+  reader.onload = (e) => { document.getElementById('syncImportCode').value = e.target.result; importSyncCode(); };
   reader.readAsText(file);
   event.target.value = '';
 }
-
 function applySyncData(data) {
   if (data.hero) Object.assign(HERO, data.hero);
-  if (data.stats) {
-    Object.keys(data.stats).forEach(k => {
-      if (STATS[k]) Object.assign(STATS[k], data.stats[k]);
-    });
-  }
-  if (data.cards && Array.isArray(data.cards)) {
-    CARDS.length = 0;
-    CARDS.push(...data.cards);
-  }
-  if (data.forged && Array.isArray(data.forged)) {
-    FORGED.length = 0;
-    FORGED.push(...data.forged);
-    forgedIdCounter = Math.max(...FORGED.map(c => c.id), 99) + 1;
-  }
-  if (data.goals && Array.isArray(data.goals)) {
-    GOALS.length = 0;
-    GOALS.push(...data.goals);
-    goalIdCounter = Math.max(...GOALS.map(g => g.id), 0) + 1;
-    saveGoals();
-  }
+  if (data.stats) Object.keys(data.stats).forEach(k => { if (STATS[k]) Object.assign(STATS[k], data.stats[k]); });
+  if (data.forged) FORGED = data.forged;
+  if (data.goals) GOALS = data.goals;
   if (data.inventory) {
     INVENTORY.backpack = data.inventory.backpack || [];
     INVENTORY.equipped = data.inventory.equipped || INVENTORY.equipped;
-    uidCounter = Math.max(...INVENTORY.backpack.map(i => parseInt((i.uid || '').replace('i', '')) || 0), 9) + 1;
   }
-  if (typeof data.progress === 'number') {
-    document.getElementById('progressSlider').value = data.progress;
-    document.getElementById('progressSlider').dispatchEvent(new Event('input'));
-  }
-  if (typeof data.bossHp === 'number') {
-    bossHp = data.bossHp;
-    changeBossHp(0);
-  }
-  renderCards();
-  renderStats();
-  updateHeroUI();
-  renderGoals();
-  renderBackpack();
-  renderSlots();
-  updateTotalBonuses();
-  updateDamageInfo();
-  renderMap(parseInt(document.getElementById('progressSlider').value));
+  if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
+  if (typeof data.bossHp === 'number') bossHp = data.bossHp;
+  if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
+  if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
+  if (data.uidCounter) uidCounter = data.uidCounter;
+  if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
+  renderCards(); renderStats(); updateHeroUI(); renderGoals();
+  renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
+  updateEscapeDisplay(); renderMap(escapeProgress);
+  changeBossHp(0);
 }
-
 function resetAllData() {
   if (!confirm('🗑 Удалить ВСЕ данные? Это действие нельзя отменить.')) return;
   if (!confirm('⚠ ТОЧНО удалить весь прогресс?')) return;
   localStorage.removeItem('neurodeck_goals');
-  localStorage.removeItem('neurodeck_autosave');
+  localStorage.removeItem('neurodeck_full_save');
   location.reload();
 }
-
-setInterval(() => {
-  try {
-    const snapshot = { hero: HERO, stats: STATS, inventory: INVENTORY, progress: parseInt(document.getElementById('progressSlider').value) || 0, bossHp: bossHp, savedAt: Date.now() };
-    localStorage.setItem('neurodeck_autosave', JSON.stringify(snapshot));
-  } catch (e) {}
-}, 30000);
-
-document.getElementById('syncModal').addEventListener('click', (e) => {
-  if (e.target.id === 'syncModal') closeSyncModal();
-});
-
-document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-    e.preventDefault();
-    openSyncModal();
-  }
-});
+document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
+document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); openSyncModal(); } });
 
 // ============ INIT ============
-renderStats(); updateHeroUI(); renderGoals(); updateDamageInfo();
+loadGameState();
+HERO.maxHp = calcMaxHp();
+if (HERO.hp > HERO.maxHp) HERO.hp = HERO.maxHp;
+renderStats();
+updateHeroUI();
+renderGoals();
+updateDamageInfo();
+updateEscapeDisplay();
+renderMap(escapeProgress);
+renderCards();
+updatePunishCountdown();
+
+// Первоначальная проверка наказания (если пользователь был офлайн в 23:00 — не наказываем задним числом)
+// Но если сейчас 23:XX и ещё не наказан — наказываем
+checkBossPunishment();
+
 setTimeout(() => {
   spiritSay('«Ты очнулся в Камере заключенного... Выкуй первое испытание.»');
   burstParticles(window.innerWidth/2, window.innerHeight/2, 30, { color: '#d4a574', speed: 4, decay: 0.015, size: 2, shape: 'spark', gravity: 0.05 });
