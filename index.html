@@ -94,8 +94,9 @@
   .hero-mini-xp-wrap { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
   .hero-mini-xp-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; min-width: 60px; }
   .hero-mini-xp-fill { height: 100%; background: linear-gradient(90deg, #d4a574, #f4c896); box-shadow: 0 0 6px rgba(244, 200, 150, 0.6); transition: width 0.6s; }
-  .escape-control { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
-  .escape-control .val { color: var(--gold-bright); font-weight: bold; }
+  .progress-control { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
+  .progress-control input[type=range] { width: 110px; accent-color: var(--gold); }
+  .progress-control .val { color: var(--gold-bright); font-weight: bold; }
   .main { display: grid; grid-template-columns: 190px 1fr 260px; gap: 12px; min-height: 0; }
   .tabs { display: flex; flex-direction: column; gap: 4px; background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 12px 8px; overflow-y: auto; }
   .tab { padding: 9px 12px; font-size: 12px; letter-spacing: 1.5px; color: var(--text-dim); border-left: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
@@ -110,58 +111,11 @@
   @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   .view-title { font-size: 17px; letter-spacing: 4px; color: var(--gold-bright); margin-bottom: 4px; text-transform: uppercase; }
   .view-subtitle { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-
-  /* ============ КОЛОДА С КНОПКОЙ ВЫКОВКИ ============ */
-  .deck-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .deck-info { font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px; }
-  .deck-info b { color: var(--gold-bright); font-weight: normal; }
-  .deck-forge-btn {
-    padding: 9px 16px;
-    background: linear-gradient(180deg, rgba(212, 165, 116, 0.2), rgba(139, 90, 43, 0.15));
-    border: 1px solid var(--gold);
-    color: var(--gold-bright);
-    font-family: inherit;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-  }
-  .deck-forge-btn:hover {
-    box-shadow: 0 0 16px rgba(212, 165, 116, 0.4);
-    transform: translateY(-1px);
-  }
-
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
   .card { position: relative; background: linear-gradient(180deg, var(--surface-hi), var(--surface)); border: 1px solid var(--border); border-radius: 3px; padding: 12px; cursor: pointer; transform-style: preserve-3d; transition: transform 0.2s, box-shadow 0.3s, border-color 0.3s; overflow: hidden; min-height: 170px; }
   .card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), var(--rank-glow, rgba(212, 165, 116, 0.15)), transparent 50%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .card:hover::before { opacity: 1; }
   .card:hover { border-color: var(--rank-color, var(--border-hi)); box-shadow: 0 0 24px var(--rank-shadow, rgba(212, 165, 116, 0.2)); }
-  .card.completed-today { border-color: var(--green); box-shadow: 0 0 14px rgba(52, 211, 153, 0.25); }
-  .card.completed-today::after {
-    content: '✓';
-    position: absolute;
-    top: 6px;
-    left: 40px;
-    font-size: 14px;
-    color: var(--green);
-    font-weight: bold;
-    text-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
-  }
   .card.rank-C { --rank-color: #9ca3af; --rank-glow: rgba(156, 163, 175, 0.25); }
   .card.rank-CC { --rank-color: #b8c0cc; --rank-glow: rgba(184, 192, 204, 0.3); }
   .card.rank-CCC { --rank-color: #d1d8e0; --rank-glow: rgba(209, 216, 224, 0.4); box-shadow: 0 0 14px rgba(209, 216, 224, 0.2); }
@@ -179,25 +133,6 @@
     border-color: #fcd34d;
     animation: sssGlow 2.5s infinite ease-in-out;
   }
-  .card.rank-SSS::after {
-    content: '✓';
-    position: absolute;
-    top: 6px;
-    left: 40px;
-    font-size: 14px;
-    font-weight: bold;
-    text-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
-  }
-  .card.rank-SSS.completed-today::after { color: var(--green); }
-  .card.rank-SSS:not(.completed-today)::after { content: '★'; color: #fcd34d; }
-  @keyframes ssGlow {
-    0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
-    50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.55); }
-  }
-  @keyframes sssGlow {
-    0%, 100% { box-shadow: 0 0 28px rgba(252, 211, 77, 0.55), inset 0 0 12px rgba(252, 211, 77, 0.15); }
-    50% { box-shadow: 0 0 48px rgba(252, 211, 77, 0.95), inset 0 0 24px rgba(252, 211, 77, 0.35); }
-  }
   .card-rank { position: absolute; top: 6px; right: 8px; font-size: 18px; font-weight: bold; color: var(--rank-color); text-shadow: 0 0 8px var(--rank-glow); letter-spacing: 1px; }
   .card-name { font-size: 13px; color: var(--text); letter-spacing: 1px; margin-bottom: 4px; padding-right: 48px; }
   .card-meta { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
@@ -211,7 +146,6 @@
   .card-btn:hover { background: var(--gold); color: var(--bg-deep); }
   .card-btn.fail:hover { background: var(--blood-bright); }
   .card-btn.edit { font-size: 9px; }
-
   .boss-panel { background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
   .boss-title { font-size: 10px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; text-align: center; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .boss-image { position: relative; aspect-ratio: 3/4; border-radius: 3px; overflow: hidden; background: #000; border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
@@ -267,25 +201,17 @@
   @keyframes spiritIn { 0%{opacity:0;} 15%{opacity:1;} 85%{opacity:1;} 100%{opacity:0;} }
   .blood-drop { position: fixed; top: -20px; width: 6px; height: 20px; background: linear-gradient(180deg, transparent, #8b2635 30%, #c73e4d); border-radius: 0 0 50% 50%; z-index: 48; pointer-events: none; animation: bloodFall linear forwards; }
   @keyframes bloodFall { 0%{transform:translateY(0); opacity:1;} 100%{transform:translateY(105vh); opacity:0;} }
-
   .hero-layout { display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
   .hero-card { background: linear-gradient(180deg, rgba(40, 30, 20, 0.85), rgba(20, 15, 10, 0.85)); border: 1px solid var(--border-hi); border-radius: 4px; padding: 18px; position: relative; overflow: hidden; }
   .hero-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-bright), transparent); }
   .hero-avatar-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 14px; }
-  .hero-avatar { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #3a2818, #0a0505); border: 3px solid var(--gold); box-shadow: 0 0 24px rgba(212, 165, 116, 0.4); display: flex; align-items: center; justify-content: center; font-size: 58px; position: relative; }
+  .hero-avatar { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #3a2818, #0a0505); border: 3px solid var(--gold); box-shadow: 0 0 24px rgba(212, 165, 116, 0.4); display: flex; align-items: center; justify-content: center; font-size: 58px; position: relative; transition: filter 0.5s; }
   .hero-avatar.glow { animation: avatarGlow 1.5s ease-out; }
-  .hero-avatar.hurt { animation: heroHurt 0.6s ease-out; }
+  .hero-avatar.hollow { filter: grayscale(100%) brightness(0.6) !important; border-color: #555 !important; }
   @keyframes avatarGlow {
     0% { box-shadow: 0 0 24px rgba(212, 165, 116, 0.4), 0 0 0 0 rgba(251, 191, 36, 0.8); }
     50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.9), 0 0 0 20px rgba(251, 191, 36, 0); }
     100% { box-shadow: 0 0 24px rgba(212, 165, 116, 0.4), 0 0 0 0 rgba(251, 191, 36, 0); }
-  }
-  @keyframes heroHurt {
-    0%, 100% { transform: translateX(0); border-color: var(--gold); }
-    20% { transform: translateX(-8px); border-color: var(--blood-bright); box-shadow: 0 0 30px rgba(199, 62, 77, 0.7); }
-    40% { transform: translateX(8px); border-color: var(--blood-bright); }
-    60% { transform: translateX(-5px); border-color: var(--blood-bright); }
-    80% { transform: translateX(5px); }
   }
   .hero-level-ring { position: absolute; inset: -8px; pointer-events: none; }
   .hero-level-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -295,8 +221,6 @@
   .hero-level { position: absolute; bottom: -6px; background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: var(--bg-deep); font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 12px; letter-spacing: 2px; }
   .hero-name { font-size: 15px; letter-spacing: 3px; color: var(--gold-bright); text-transform: uppercase; margin-top: 12px; text-align: center; }
   .hero-title { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); font-style: italic; margin-top: 3px; text-align: center; }
-
-  /* ============ ХЕЛФБАР ГЕРОЯ ============ */
   .hero-hp-block {
     margin-top: 14px;
     padding: 10px;
@@ -360,6 +284,46 @@
     letter-spacing: 1px;
   }
   .hero-hp-meta b { color: var(--blood-bright); font-weight: normal; }
+  
+  .estus-section {
+    margin-top: 12px;
+    padding: 10px;
+    background: rgba(251, 146, 60, 0.1);
+    border: 1px solid #fb923c;
+    border-radius: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .estus-info { font-size: 11px; color: var(--text); letter-spacing: 1px; }
+  .estus-info b { color: #fb923c; font-weight: bold; font-size: 14px; }
+  .estus-btn {
+    padding: 6px 12px;
+    background: linear-gradient(180deg, rgba(251, 146, 60, 0.3), rgba(251, 146, 60, 0.1));
+    border: 1px solid #fb923c;
+    color: #fb923c;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .estus-btn:hover:not(:disabled) { background: rgba(251, 146, 60, 0.4); box-shadow: 0 0 12px rgba(251, 146, 60, 0.4); }
+  .estus-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: var(--text-dim); color: var(--text-dim); }
+
+  .atonement-bar {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+  .atonement-label { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
+  .atonement-track { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; display: flex; gap: 2px; }
+  .atonement-segment { flex: 1; background: rgba(255,255,255,0.1); border-radius: 2px; transition: background 0.3s; }
+  .atonement-segment.filled { background: var(--green); box-shadow: 0 0 6px rgba(52, 211, 153, 0.5); }
 
   .hero-xp-block { margin-top: 14px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px; }
   .hero-xp-header { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; }
@@ -393,29 +357,6 @@
     margin-top: 10px;
   }
   .difficulty-badge::before { content: '💀'; font-size: 11px; }
-
-  /* ============ ПРЕДУПРЕЖДЕНИЕ БОССА ============ */
-  .boss-countdown {
-    margin-top: 14px;
-    padding: 10px;
-    background: rgba(139, 38, 53, 0.12);
-    border: 1px solid var(--blood);
-    border-radius: 2px;
-    font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: 1px;
-    line-height: 1.6;
-  }
-  .boss-countdown b { color: var(--blood-bright); font-weight: normal; }
-  .boss-countdown .countdown-time {
-    font-size: 14px;
-    color: var(--blood-bright);
-    font-weight: bold;
-    letter-spacing: 2px;
-    text-align: center;
-    margin-top: 4px;
-  }
-
   .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .stat-card { background: linear-gradient(180deg, var(--surface-hi), var(--surface)); border: 1px solid var(--border); border-radius: 3px; padding: 14px; position: relative; overflow: hidden; transition: all 0.3s; }
   .stat-card.pulse::before { opacity: 1; animation: statPulse 0.8s ease-out; }
@@ -444,7 +385,6 @@
   .goals-list { display: flex; flex-direction: column; gap: 10px; }
   .goal-card { background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1)); border: 1px solid var(--border); border-left: 3px solid var(--goal-color, var(--gold)); border-radius: 3px; padding: 12px 14px; transition: all 0.25s; }
   .goal-card:hover { transform: translateX(2px); box-shadow: 0 0 18px var(--goal-glow); }
-  .goal-card.completed-today { border-color: var(--green); background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(0,0,0,0.1)); }
   .goal-card.short { --goal-color: var(--green); --goal-glow: rgba(52, 211, 153, 0.35); }
   .goal-card.medium { --goal-color: var(--blue); --goal-glow: rgba(96, 165, 250, 0.35); }
   .goal-card.long { --goal-color: var(--yellow); --goal-glow: rgba(251, 191, 36, 0.4); }
@@ -470,12 +410,8 @@
   .goal-card.completed .goal-name { text-decoration: line-through; }
   .goals-empty { padding: 30px 16px; text-align: center; color: var(--text-dim); font-style: italic; font-size: 12px; letter-spacing: 1px; line-height: 1.6; }
   .float-number { position: fixed; z-index: 310; font-family: 'Georgia', serif; font-size: 20px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; animation: floatUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; white-space: nowrap; }
+  .float-number.damage { color: var(--blood-bright) !important; text-shadow: 0 0 12px rgba(199, 62, 77, 0.9), 0 2px 4px rgba(0,0,0,0.8) !important; font-size: 24px; }
   @keyframes floatUp { 0%{opacity:0; transform: translate(-50%, 0) scale(0.5);} 20%{opacity:1; transform: translate(-50%, -10px) scale(1.2);} 100%{opacity:0; transform: translate(-50%, -80px) scale(0.8);} }
-  .float-number.damage {
-    color: var(--blood-bright);
-    text-shadow: 0 0 12px rgba(199, 62, 77, 0.9), 0 2px 4px rgba(0,0,0,0.8);
-    font-size: 26px;
-  }
   .levelup-overlay { position: fixed; inset: 0; z-index: 320; pointer-events: none; background: radial-gradient(circle, rgba(251, 191, 36, 0.3), transparent 60%); opacity: 0; }
   .levelup-overlay.show { animation: lvlFlash 1.2s ease-out; }
   @keyframes lvlFlash { 0%{opacity:0;} 20%{opacity:1;} 100%{opacity:0;} }
@@ -485,8 +421,6 @@
   .levelup-banner .lbl { font-size: 11px; letter-spacing: 6px; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
   .levelup-banner .num { font-size: 88px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 30px rgba(251, 191, 36, 1), 0 0 60px rgba(251, 191, 36, 0.5); line-height: 1; }
   .levelup-banner .sub { font-size: 13px; letter-spacing: 4px; color: var(--text); margin-top: 10px; text-transform: uppercase; }
-
-  /* ============ БАННЕР РАНГАПА КАРТОЧКИ ============ */
   .rankup-overlay { position: fixed; inset: 0; z-index: 330; pointer-events: none; opacity: 0; }
   .rankup-overlay.show { animation: rankupFlashAnim 1s ease-out; }
   @keyframes rankupFlashAnim { 0%{opacity:0;} 25%{opacity:1;} 100%{opacity:0;} }
@@ -510,7 +444,6 @@
   }
   .rankup-banner .sub { font-size: 12px; letter-spacing: 3px; color: var(--text); margin-top: 8px; text-transform: uppercase; }
   .rankup-banner .card-name-small { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; margin-top: 4px; font-style: italic; }
-
   .inv-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; min-height: 500px; }
   .inv-main { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
   .paperdoll-wrap { background: linear-gradient(180deg, rgba(30, 20, 15, 0.85), rgba(15, 10, 8, 0.85)); border: 1px solid var(--border-hi); border-radius: 3px; padding: 14px 10px; position: relative; overflow: hidden; }
@@ -633,14 +566,7 @@
   .form-input, .form-select { width: 100%; padding: 9px 11px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 12px; letter-spacing: 1px; border-radius: 2px; }
   .form-input:focus, .form-select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 8px rgba(212, 165, 116, 0.2); }
   .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .form-hint {
-    font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: 1px;
-    margin-top: 6px;
-    font-style: italic;
-    line-height: 1.5;
-  }
+  .form-hint { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; margin-top: 6px; font-style: italic; line-height: 1.5; }
   .form-hint b { color: var(--gold-bright); font-weight: normal; }
   .stat-chip { display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 11px; letter-spacing: 1px; transition: all 0.2s; margin: 2px; }
   .stat-chip:hover { border-color: var(--gold); }
@@ -793,87 +719,6 @@
     background: rgba(212, 165, 116, 0.08);
   }
   .bottom-nav { display: none; }
-
-  /* ============ ПРЕДУПРЕЖДЕНИЕ О НАКАЗАНИИ ============ */
-  .punish-alert {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.8);
-    z-index: 340;
-    background: radial-gradient(ellipse at center, rgba(90, 20, 30, 0.95), rgba(30, 5, 10, 0.95));
-    border: 2px solid var(--blood-bright);
-    border-radius: 4px;
-    padding: 30px 40px;
-    text-align: center;
-    max-width: 420px;
-    width: 90%;
-    box-shadow: 0 0 60px rgba(199, 62, 77, 0.6), 0 0 100px rgba(199, 62, 77, 0.3);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s, transform 0.4s;
-  }
-  .punish-alert.show {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(-50%, -50%) scale(1);
-    animation: punishShake 0.6s ease-out;
-  }
-  @keyframes punishShake {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); }
-    20% { transform: translate(calc(-50% + 8px), -50%) scale(1); }
-    40% { transform: translate(calc(-50% - 8px), -50%) scale(1); }
-    60% { transform: translate(calc(-50% + 4px), -50%) scale(1); }
-    80% { transform: translate(calc(-50% - 4px), -50%) scale(1); }
-  }
-  .punish-alert-title {
-    font-size: 18px;
-    letter-spacing: 4px;
-    color: var(--blood-bright);
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    text-shadow: 0 0 12px rgba(199, 62, 77, 0.8);
-  }
-  .punish-alert-body {
-    font-size: 12px;
-    color: var(--text);
-    line-height: 1.6;
-    margin-bottom: 14px;
-    letter-spacing: 1px;
-  }
-  .punish-alert-body b { color: var(--blood-bright); }
-  .punish-damage {
-    font-size: 36px;
-    font-weight: bold;
-    color: var(--blood-bright);
-    margin: 10px 0;
-    text-shadow: 0 0 16px rgba(199, 62, 77, 1);
-  }
-  .punish-breakdown {
-    font-size: 11px;
-    color: var(--text-dim);
-    letter-spacing: 1px;
-    margin-bottom: 14px;
-    line-height: 1.6;
-  }
-  .punish-close-btn {
-    padding: 10px 22px;
-    background: rgba(139, 38, 53, 0.3);
-    border: 1px solid var(--blood-bright);
-    color: var(--blood-bright);
-    font-family: inherit;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.2s;
-  }
-  .punish-close-btn:hover {
-    background: rgba(139, 38, 53, 0.5);
-    box-shadow: 0 0 16px rgba(199, 62, 77, 0.5);
-  }
-
   @media (max-width: 1200px) { .backpack-grid { grid-template-columns: repeat(5, 1fr); } }
   @media (max-width: 1100px) {
     .inv-layout { grid-template-columns: 1fr; }
@@ -894,6 +739,7 @@
     .logo span { display: none; }
     .sync-header-btn span { display: none; }
     .hero-mini-info { min-width: 90px; }
+    .progress-control input[type=range] { width: 60px; }
     .cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     .stats-grid { grid-template-columns: 1fr; }
     .sync-code-display { font-size: 13px; letter-spacing: 2px; padding: 14px; }
@@ -945,7 +791,6 @@
     <div class="num" id="lvlNum">2</div>
     <div class="sub">Сила растёт</div>
   </div>
-  <!-- Баннер рангапа карточки -->
   <div class="rankup-overlay" id="rankupOverlay"></div>
   <div class="rankup-banner" id="rankupBanner">
     <div class="lbl">⚔ Повышение ранга ⚔</div>
@@ -953,18 +798,9 @@
     <div class="sub" id="rankupSubText">Сила пробуждается</div>
     <div class="card-name-small" id="rankupCardName"></div>
   </div>
-  <!-- Алерт наказания от босса -->
-  <div class="punish-alert" id="punishAlert">
-    <div class="punish-alert-title">💀 Удар от Босса</div>
-    <div class="punish-alert-body" id="punishAlertBody">Босс наказал тебя за бездействие.</div>
-    <div class="punish-damage" id="punishDamage">-0 HP</div>
-    <div class="punish-breakdown" id="punishBreakdown"></div>
-    <button class="punish-close-btn" onclick="closePunishAlert()">Принять наказание</button>
-  </div>
   <div class="spirit-msg" id="spiritMsg"></div>
   <div class="toast" id="toast"><div class="t-title"></div><div class="t-body"></div></div>
   <div class="tooltip" id="tooltip"></div>
-  <!-- Goal Modal -->
   <div class="modal-overlay" id="goalModal">
     <div class="modal">
       <div class="modal-header"><h3>🎯 Новая цель</h3><button class="modal-close" onclick="closeGoalModal()">✕</button></div>
@@ -998,7 +834,6 @@
       <div class="modal-footer"><button class="demo-btn" onclick="closeGoalModal()">Отмена</button><button class="demo-btn primary" onclick="createGoal()">🎯 Создать</button></div>
     </div>
   </div>
-  <!-- Forge Modal (вызов из Колоды) -->
   <div class="modal-overlay" id="forgeModal">
     <div class="modal">
       <div class="modal-header"><h3>🔥 Выковать карточку</h3><button class="modal-close" onclick="closeForge()">✕</button></div>
@@ -1021,45 +856,12 @@
         <div class="form-row">
           <label class="form-label">⚔ Выполнений до ранг-апа</label>
           <input class="form-input" type="number" id="forgeRankup" value="5" min="2" max="100">
-          <div class="form-hint">Карточка создаётся с рангом <b>C</b>. Каждые N выполнений ранг повышается: <b>C → CC → CCC → B → BB → BBB → A → AA → AAA → S → SS → SSS</b>. После каждого ранг-апа откроется окно редактирования карточки.</div>
+          <div class="form-hint">Карточка создаётся с рангом <b>C</b>. Каждые N выполнений ранг повышается: <b>C → CC → CCC → B → BB → BBB → A → AA → AAA → S → SS → SSS</b>.</div>
         </div>
       </div>
       <div class="modal-footer"><button class="demo-btn" onclick="closeForge()">Отмена</button><button class="demo-btn primary" onclick="forgeCard()">🔥 Выковать</button></div>
     </div>
   </div>
-  <!-- Edit Card Modal -->
-  <div class="modal-overlay" id="editCardModal">
-    <div class="modal">
-      <div class="modal-header"><h3>✏ Редактировать карточку</h3><button class="modal-close" onclick="closeEditCard()">✕</button></div>
-      <div class="modal-body">
-        <div style="padding: 10px; background: rgba(52, 211, 153, 0.1); border: 1px solid var(--green); border-radius: 2px; margin-bottom: 14px; font-size: 11px; color: var(--green); letter-spacing: 1px; text-align: center;">
-          🏆 Ранг повышен! Настрой карточку под новые возможности.
-        </div>
-        <div class="form-row"><label class="form-label">Название</label><input class="form-input" id="editCardName" placeholder="Медитация"></div>
-        <div class="form-row"><label class="form-label">⚡ Характеристика</label>
-          <div id="editStatChips">
-            <div class="stat-chip" data-stat="str">⚔ Сила</div>
-            <div class="stat-chip" data-stat="end">🛡 Стойкость</div>
-            <div class="stat-chip" data-stat="int">🧠 Интеллект</div>
-            <div class="stat-chip" data-stat="cha">🎭 Харизма</div>
-            <div class="stat-chip" data-stat="wil">🧘 Воля</div>
-            <div class="stat-chip" data-stat="agi">⚡ Ловкость</div>
-          </div>
-        </div>
-        <div class="form-grid-2">
-          <div class="form-row"><label class="form-label">🕐 Время</label><select class="form-select" id="editCardTime"><option>утро</option><option>день</option><option>вечер</option><option>ночь</option></select></div>
-          <div class="form-row"><label class="form-label">⏱ Минут</label><input class="form-input" type="number" id="editCardDuration" value="15" min="1" max="240"></div>
-        </div>
-        <div class="form-row">
-          <label class="form-label">⚔ Новое кол-во выполнений до следующего ранг-апа</label>
-          <input class="form-input" type="number" id="editCardRankup" value="5" min="2" max="100">
-          <div class="form-hint">Текущий ранг <b id="editCardCurrentRank">C</b>. Следующее повышение потребует указанное число выполнений.</div>
-        </div>
-      </div>
-      <div class="modal-footer"><button class="demo-btn" onclick="closeEditCard()">Пропустить</button><button class="demo-btn primary" onclick="saveEditCard()">💾 Сохранить</button></div>
-    </div>
-  </div>
-  <!-- Sync Modal -->
   <div class="modal-overlay" id="syncModal">
     <div class="modal">
       <div class="modal-header">
@@ -1092,7 +894,7 @@
         <div class="sync-hint">
           <b>⚠ Как это работает:</b><br>
           Код — сжатый слепок всего прогресса в base64.
-          Содержит: уровень героя, статы, карточки, цели, артефакты, экипировку, HP, прогресс побега, HP босса.
+          Содержит: уровень героя, статы, карточки, цели, артефакты, экипировку, прогресс побега, HP босса.
         </div>
       </div>
       <div class="modal-footer">
@@ -1113,7 +915,7 @@
           <div class="hero-mini-xp-wrap"><span id="heroMiniXpText">0/100</span><div class="hero-mini-xp-bar"><div class="hero-mini-xp-fill" id="heroMiniXpFill" style="width:0%"></div></div></div>
         </div>
       </div>
-      <div class="escape-control"><span>Побег:</span><span class="val" id="progressVal">0 / 140</span></div>
+      <div class="progress-control"><span>Побег:</span><span class="val" id="progressVal">0 / 140</span></div>
     </div>
     <div class="main">
       <div class="tabs">
@@ -1124,17 +926,15 @@
         <div class="tab" data-view="map"><span class="icon">🗺</span>Карта</div>
       </div>
       <div class="content">
-        <!-- ============ КОЛОДА (с выковкой внутри) ============ -->
         <div class="view active" id="view-deck">
           <div class="view-title">📖 Колода</div>
           <div class="view-subtitle">Каждая выполненная привычка — шаг из тьмы. Не сдавайся.</div>
-          <div class="deck-top">
-            <div class="deck-info">Всего карточек: <b id="deckCount">0</b> · Выполнено сегодня: <b id="deckDoneToday">0</b></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap;">
+            <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px;">Всего карточек: <b id="deckCount" style="color: var(--gold-bright); font-weight: normal;">0</b></div>
             <button class="deck-forge-btn" onclick="openForge()">🔨 Выковать карточку</button>
           </div>
           <div class="cards" id="cardGrid"></div>
         </div>
-        <!-- ============ ГЕРОЙ (с HP баром) ============ -->
         <div class="view" id="view-hero">
           <div class="view-title">👤 Герой</div>
           <div class="view-subtitle">Здоровье · Характеристики · Цели · Путь из тьмы</div>
@@ -1153,7 +953,6 @@
               <div class="hero-name" id="heroName">Странник</div>
               <div class="hero-title" id="heroTitle">«Тот, кто только начал путь»</div>
               <div class="difficulty-badge">Souls-like</div>
-              <!-- ХЕЛФБАР ГЕРОЯ -->
               <div class="hero-hp-block">
                 <div class="hero-hp-header">
                   <span>❤ Здоровье</span>
@@ -1165,18 +964,21 @@
                   <span>Стойкость: <b id="heroEndStat">3</b></span>
                 </div>
               </div>
+              <div class="estus-section">
+                <div class="estus-info">🧪 Эстус: <b id="estusCount">3</b> / 3</div>
+                <button class="estus-btn" id="estusBtn" onclick="drinkEstus()">Выпить Эстус</button>
+              </div>
+              <div class="atonement-bar" id="atonementBar" style="display: none;">
+                <div class="atonement-label">Ритуал Искупления (идеальные дни подряд)</div>
+                <div class="atonement-track">
+                  <div class="atonement-segment" id="at1"></div>
+                  <div class="atonement-segment" id="at2"></div>
+                  <div class="atonement-segment" id="at3"></div>
+                </div>
+              </div>
               <div class="hero-xp-block">
                 <div class="hero-xp-header"><span>Опыт</span><span><b id="heroXpCur">0</b> / <b id="heroXpMax">100</b></span></div>
                 <div class="hero-xp-bar"><div class="hero-xp-fill" id="heroXpFill" style="width:0%"></div></div>
-              </div>
-              <div class="boss-countdown" id="bossCountdown">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span>🐍 До наказания босса:</span>
-                  <b id="punishTimeLeft">—</b>
-                </div>
-                <div style="font-size: 9px; color: var(--text-dim); margin-top: 4px; font-style: italic;">
-                  Босс наносит урон в 23:00 МСК за каждую невыполненную карточку и цель.
-                </div>
               </div>
               <div class="hero-summary">
                 <div><span>Всего XP</span><b id="statTotalXp">0</b></div>
@@ -1251,8 +1053,8 @@
           </div>
         </div>
         <div class="view" id="view-boss">
-          <div class="view-title">🐍 Первый Босс</div>
-          <div class="view-subtitle">Змей Лени · Он ждёт твоего провала</div>
+          <div class="view-title">🐍 Босс локации</div>
+          <div class="view-subtitle" id="bossSubtitle">Змей Лени · Он ждёт твоего провала</div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <div class="boss-image" style="aspect-ratio: 4/5;">
               <div class="boss-sprite"></div>
@@ -1265,7 +1067,7 @@
                 <div class="boss-hp-label"><span>Здоровье</span><b id="bossHpTextFull">100%</b></div>
                 <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFillFull" style="width:100%"></div></div>
               </div>
-              <div style="padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); font-size: 11px; line-height: 1.7; color: var(--text-dim);">
+              <div style="padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); font-size: 11px; line-height: 1.7; color: var(--text-dim);" id="bossLoreText">
                 <b style="color:var(--blood-bright)">«Я питаюсь твоим бездействием.»</b><br><br>
                 <b style="color:var(--gold-bright)">Каждый день в 23:00 МСК</b> я наказываю тебя:<br>
                 • <b style="color:var(--blood-bright)">-10 HP</b> за каждую невыполненную карточку<br>
@@ -1289,7 +1091,7 @@
         </div>
       </div>
       <div class="boss-panel">
-        <div class="boss-title">🐍 Змей Лени</div>
+        <div class="boss-title" id="bossPanelTitle">🐍 Змей Лени</div>
         <div class="boss-image" id="bossImg">
           <div class="boss-sprite"></div>
           <div class="boss-eyes"><div class="boss-eye left"></div><div class="boss-eye right"></div></div>
@@ -1318,79 +1120,40 @@
   </div>
 </div>
 <script>
-// ============ СИСТЕМА РАНГОВ (12 СТУПЕНЕЙ) ============
-const RANK_PROGRESSION = ['C', 'CC', 'CCC', 'B', 'BB', 'BBB', 'A', 'AA', 'AAA', 'S', 'SS', 'SSS'];
-const RANK_VISUALS = {
-  'C':   { color: '#9ca3af', glow: 'rgba(156, 163, 175, 0.25)' },
-  'CC':  { color: '#b8c0cc', glow: 'rgba(184, 192, 204, 0.35)' },
-  'CCC': { color: '#d1d8e0', glow: 'rgba(209, 216, 224, 0.45)' },
-  'B':   { color: '#60a5fa', glow: 'rgba(96, 165, 250, 0.30)' },
-  'BB':  { color: '#7cb8fc', glow: 'rgba(124, 184, 252, 0.40)' },
-  'BBB': { color: '#9acaff', glow: 'rgba(154, 202, 255, 0.50)' },
-  'A':   { color: '#c084fc', glow: 'rgba(192, 132, 252, 0.35)' },
-  'AA':  { color: '#d4a0fd', glow: 'rgba(212, 160, 253, 0.45)' },
-  'AAA': { color: '#e5bdff', glow: 'rgba(229, 189, 255, 0.55)' },
-  'S':   { color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.45)' },
-  'SS':  { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.55)' },
-  'SSS': { color: '#fcd34d', glow: 'rgba(252, 211, 77, 0.80)' }
-};
-const RANK_PHRASES = {
-  'C': 'Пробуждение',
-  'CC': 'Сила крепнет',
-  'CCC': 'Воля закаляется',
-  'B': 'Путь воина',
-  'BB': 'Сталь и дух',
-  'BBB': 'Непреклонный',
-  'A': 'Мастерство',
-  'AA': 'Совершенство',
-  'AAA': 'Величие',
-  'S': 'Легенда',
-  'SS': 'Миф',
-  'SSS': 'Бессмертный'
-};
-function getNextRank(current) {
-  const idx = RANK_PROGRESSION.indexOf(current);
-  if (idx === -1 || idx >= RANK_PROGRESSION.length - 1) return null;
-  return RANK_PROGRESSION[idx + 1];
-}
-function getRankVisual(rank) {
-  return RANK_VISUALS[rank] || RANK_VISUALS['C'];
+// ============ ПРОГРЕССИВНАЯ СИСТЕМА СТАТОВ ============
+function calculateRequiredXp(statValue) {
+  if (statValue >= 100) return Infinity;
+  const baseCost = 10;
+  const scalingFactor = statValue >= 50 ? 1.8 : 1.4;
+  return Math.floor(baseCost * Math.pow(statValue, scalingFactor));
 }
 
-// ============ HERO (SOULS-LIKE) ============
-const HERO = {
-  name: 'Странник',
-  title: '«Тот, кто только начал путь»',
-  level: 1,
-  xp: 0,
-  xpToNext: 100,
-  totalXp: 0,
-  hp: 100,
-  maxHp: 100
-};
 const STATS = {
-  str: { name: 'Сила',      icon: '⚔', desc: 'Урон',       color: '#c73e4d', dark: '#8b2635', value: 3, max: 100 },
-  end: { name: 'Стойкость', icon: '🛡', desc: 'HP',         color: '#60a5fa', dark: '#2563eb', value: 3, max: 100 },
-  int: { name: 'Интеллект', icon: '🧠', desc: 'XP бонус',   color: '#c084fc', dark: '#7c3aed', value: 3, max: 100 },
-  cha: { name: 'Харизма',   icon: '🎭', desc: 'Шанс крита', color: '#fbbf24', dark: '#b45309', value: 3, max: 100 },
-  wil: { name: 'Воля',      icon: '🧘', desc: 'Стрик',      color: '#34d399', dark: '#047857', value: 3, max: 100 },
-  agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color: '#fb923c', dark: '#c2410c', value: 3, max: 100 },
+  str: { name: 'Сила',      icon: '⚔', desc: 'Урон',       color: '#c73e4d', dark: '#8b2635', value: 3, max: 100, currentXp: 0, requiredXp: 0 },
+  end: { name: 'Стойкость', icon: '🛡', desc: 'HP',         color: '#60a5fa', dark: '#2563eb', value: 3, max: 100, currentXp: 0, requiredXp: 0 },
+  int: { name: 'Интеллект', icon: '🧠', desc: 'XP бонус',   color: '#c084fc', dark: '#7c3aed', value: 3, max: 100, currentXp: 0, requiredXp: 0 },
+  cha: { name: 'Харизма',   icon: '🎭', desc: 'Шанс крита', color: '#fbbf24', dark: '#b45309', value: 3, max: 100, currentXp: 0, requiredXp: 0 },
+  wil: { name: 'Воля',      icon: '🧘', desc: 'Стрик',      color: '#34d399', dark: '#047857', value: 3, max: 100, currentXp: 0, requiredXp: 0 },
+  agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color: '#fb923c', dark: '#c2410c', value: 3, max: 100, currentXp: 0, requiredXp: 0 },
+};
+Object.keys(STATS).forEach(k => { STATS[k].requiredXp = calculateRequiredXp(STATS[k].value); });
+
+const HERO = { 
+  name: 'Странник', title: '«Тот, кто только начал путь»', level: 1, xp: 0, xpToNext: 100, totalXp: 0, 
+  hp: 100, maxHp: 100,
+  isHollow: false,
+  consecutivePerfectDays: 0,
+  estus: 3,
+  lastEstusReset: new Date().getMonth(),
+  estusUsedToday: false,
+  dailyCompletions: 0,
+  dailySkips: 0
 };
 const XP_MULTIPLIER = 1.6;
 const BASE_DAMAGE = 2;
 const CRIT_DIVISOR = 300;
 const LOOT_CHANCE = 0.08;
-const STAT_PER_CARD = 1;
-
-// Прогресс побега
-let escapeProgress = 0;
-const ESCAPE_MAX = 140;
-const ROOMS_STEP = 20; // 140 / 20 = 7 локаций
-
-// Наказание от босса
-let lastPunishDate = null; // дата последнего наказания в МСК (YYYY-MM-DD)
-let lastDayReset = null;   // дата последнего сброса суток
-
+const BOSS_HEAL_ON_FAIL = 8;
 const RANK_COLORS = {
   C: { color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.15)', glow: 'rgba(156, 163, 175, 0.5)' },
   B: { color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.15)',  glow: 'rgba(96, 165, 250, 0.5)' },
@@ -1400,12 +1163,32 @@ const RANK_COLORS = {
 const CARDS = [];
 let FORGED = [];
 let forgedIdCounter = 100;
+let chimeraShield = 5;
 
-// ============ УТИЛИТЫ ВРЕМЕНИ (МСК) ============
-const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
-function getMSKDate(ts = Date.now()) {
-  return new Date(ts + MSK_OFFSET_MS);
+function getCurrentBoss() {
+  if (escapeProgress < 40) return { name: 'Змей Лени', icon: '🐍', lore: '«Я питаюсь твоим бездействием.»', type: 'normal' };
+  if (escapeProgress < 80) return { name: 'Демон Соцсетей', icon: '📱', lore: '«Твой скролл — моя пища. Пропустишь Волю или Интеллект — я ударю вдвойне.»', type: 'social' };
+  return { name: 'Химера Выгорания', icon: '🔥', lore: '«У тебя нет сил. Собери 5 карточек за день, чтобы пробить мой щит.»', type: 'chimera' };
 }
+
+function drinkEstus() {
+  if (HERO.estus > 0 && !HERO.estusUsedToday) {
+    HERO.estus--;
+    HERO.estusUsedToday = true;
+    updateHeroUI();
+    showToast('🧪 Эстус выпит', 'Босс не нанесет урон сегодня в 23:00', 'save');
+    spiritSay('«Теплое пламя наполняет тебя решимостью...»');
+    saveGameState();
+  } else if (HERO.estusUsedToday) {
+    showToast('⚠ Уже выпито сегодня', 'Эстус действует только раз в день', 'blood');
+  } else {
+    showToast('⚠ Нет фляг', 'Дождитесь следующего месяца', 'blood');
+  }
+}
+
+// ============ ВРЕМЯ МСК ============
+const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+function getMSKDate(ts = Date.now()) { return new Date(ts + MSK_OFFSET_MS); }
 function getMSKDayKey(ts = Date.now()) {
   const d = getMSKDate(ts);
   return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
@@ -1425,24 +1208,19 @@ function renderCards() {
   grid.innerHTML = '';
   const all = [...CARDS, ...FORGED];
   document.getElementById('deckCount').textContent = all.length;
-  const doneToday = all.filter(c => isTodayMSK(c.lastCompletedAt)).length;
-  document.getElementById('deckDoneToday').textContent = doneToday;
   if (all.length === 0) {
     grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Пока пусто. Нажми «🔨 Выковать карточку», чтобы создать первую.</div>';
     return;
   }
   all.forEach(c => renderOneCard(c, grid));
 }
-
 function renderOneCard(card, grid) {
   if (!card.rank) card.rank = 'C';
   if (typeof card.completions !== 'number') card.completions = 0;
   if (typeof card.rankupTarget !== 'number') card.rankupTarget = 5;
-
   const st = STATS[card.stat];
   const progressPct = Math.min(100, Math.round((card.completions / card.rankupTarget) * 100));
   const completedToday = isTodayMSK(card.lastCompletedAt);
-
   const el = document.createElement('div');
   el.className = `card rank-${card.rank}${completedToday ? ' completed-today' : ''}`;
   el.innerHTML = `
@@ -1468,45 +1246,60 @@ function renderOneCard(card, grid) {
   el.addEventListener('mouseleave', () => { el.style.transform = ''; });
   grid.appendChild(el);
 }
-
+renderCards();
 function findCard(id) { return CARDS.find(c => c.id === id) || FORGED.find(c => c.id === id); }
 
 // ============ ВЫПОЛНЕНИЕ КАРТОЧКИ ============
 function completeCard(e, id) {
   e.stopPropagation();
   const card = findCard(id); if (!card) return;
-
-  // Если уже выполнена сегодня — предупреждение
   if (isTodayMSK(card.lastCompletedAt)) {
     showToast('✓ Уже выполнена сегодня', `${card.name} — отдыхай`, 'save');
     return;
   }
-
   const rect = e.target.getBoundingClientRect();
   const x = rect.left + rect.width/2, y = rect.top + rect.height/2;
   burstParticles(x, y, 28, { color: '#f4c896', speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
   addXp(15);
-  if (card.stat) setTimeout(() => addStat(card.stat, STAT_PER_CARD, x, y), 200);
+  
+  const rankMultipliers = { 'C': 1.0, 'CC': 1.1, 'CCC': 1.2, 'B': 1.3, 'BB': 1.4, 'BBB': 1.5, 'A': 1.7, 'AA': 1.9, 'AAA': 2.0, 'S': 2.5, 'SS': 3.0, 'SSS': 3.5 };
+  const multiplier = rankMultipliers[card.rank] || 1.0;
+  const statXp = Math.round(10 * multiplier);
+  if (card.stat) setTimeout(() => addStatXp(card.stat, statXp, x, y), 200);
 
-  // Восстановление HP за выполненную карточку
-  const healAmount = 2;
-  HERO.hp = Math.min(HERO.maxHp, HERO.hp + healAmount);
-
-  // Увеличиваем счётчик выполнений
   card.completions += 1;
   card.lastCompletedAt = Date.now();
+  HERO.hp = Math.min(calcMaxHp(), HERO.hp + 2);
+  HERO.dailyCompletions++;
 
   const gear = getTotalGearBonuses();
   const totalStr = STATS.str.value + gear.str;
   const totalCha = STATS.cha.value + gear.cha;
-  const baseDmg = BASE_DAMAGE + Math.floor(totalStr / 5);
+  let baseDmg = BASE_DAMAGE + Math.floor(totalStr / 5);
   const crit = Math.random() < (totalCha / CRIT_DIVISOR);
-  const dmg = crit ? baseDmg * 2 : baseDmg;
+  let dmg = crit ? baseDmg * 2 : baseDmg;
+  
+  if (HERO.isHollow) dmg = Math.floor(dmg * 0.5);
+
+  const boss = getCurrentBoss();
+  if (boss.type === 'chimera') {
+    if (chimeraShield > 0) {
+      chimeraShield--;
+      if (chimeraShield <= 0) {
+        showToast('💥 Комбо-удар!', 'Щит Химеры пробит! Она уязвима!', 'crit');
+        dmg += 25;
+        screenShake(10, 500);
+      } else {
+        showToast('🛡 Щит Химеры', `Удар поглощен. Осталось: ${chimeraShield}`, 'save');
+        dmg = 0;
+      }
+    }
+  }
+  
   changeBossHp(-dmg);
   if (Math.random() < LOOT_CHANCE) dropRandomLoot(x, y);
   card.streak += 1;
 
-  // Проверка рангапа
   let rankUpHappened = false;
   if (card.completions >= card.rankupTarget) {
     const nextRank = getNextRank(card.rank);
@@ -1516,7 +1309,6 @@ function completeCard(e, id) {
       card.completions = 0;
       card.rankupTarget = Math.max(2, Math.round(card.rankupTarget * 1.2));
       rankUpHappened = true;
-      // Рангап = +1 к прогрессу побега
       escapeProgress = Math.min(ESCAPE_MAX, escapeProgress + 1);
       updateEscapeDisplay();
       renderMap(escapeProgress);
@@ -1527,17 +1319,15 @@ function completeCard(e, id) {
       spiritSay('«Легенда... Твоя дисциплина несокрушима.»');
     }
   }
-
   renderCards();
   updateHeroUI();
-
   if (!rankUpHappened) {
     if (crit) {
       showToast('⚡ КРИТ!', `-${dmg} HP боссу`, 'crit');
       burstParticles(x, y, 40, { color: '#fbbf24', speed: 8, decay: 0.015, size: 4, shape: 'star', gravity: 0.1 });
       screenShake(6, 300);
     } else {
-      showToast('✅ Выполнено', `+15 XP · +${STAT_PER_CARD} ${STATS[card.stat].icon} · +${healAmount} HP`);
+      showToast('✅ Выполнено', `+15 XP · +${statXp} ${STATS[card.stat].icon} XP · +2 HP`);
     }
   }
   saveGameState();
@@ -1547,39 +1337,151 @@ function failCard(e, id) {
   e.stopPropagation();
   spawnBloodRain(25);
   screenShake(10, 500);
+  const card = findCard(id);
+  HERO.dailySkips++;
+  
   const gear = getTotalGearBonuses();
   const totalWil = STATS.wil.value + gear.wil;
-  if (Math.random() < (totalWil / CRIT_DIVISOR)) { showToast('🧘 Воля!', 'Стрик защищён.', 'save'); return; }
-  changeBossHp(8);
-  const card = findCard(id);
+  if (Math.random() < (totalWil / CRIT_DIVISOR)) { 
+    showToast('🧘 Воля!', 'Стрик и прогресс статов защищены.', 'save'); 
+    return; 
+  }
+  if (card && card.stat) {
+    const stat = STATS[card.stat];
+    const penalty = Math.max(1, Math.floor(stat.currentXp * 0.15));
+    stat.currentXp = Math.max(0, stat.currentXp - penalty);
+    const rect = e.target.getBoundingClientRect();
+    spawnFloatNumber(rect.left + rect.width/2, rect.top + rect.height/2, `-${penalty} ${stat.icon} XP`, '#c73e4d', true);
+    updateStatUI(card.stat);
+  }
+  
+  const boss = getCurrentBoss();
+  if (boss.type === 'social' && (card.stat === 'wil' || card.stat === 'int')) {
+    HERO.hp = Math.max(0, HERO.hp - 10);
+    changeBossHp(BOSS_HEAL_ON_FAIL * 2);
+    showToast('📱 Демон Соцсетей атакует!', 'Пропуск Воли/Интеллекта нанес двойной урон!', 'blood');
+    screenShake(12, 600);
+  } else {
+    changeBossHp(BOSS_HEAL_ON_FAIL);
+    showToast('💀 Пропуск', `Босс восстановил +${BOSS_HEAL_ON_FAIL} HP`, 'blood');
+  }
+  
   if (card) { card.streak = 0; renderCards(); }
-  showToast('💀 Пропуск', 'Босс восстановил +8 HP', 'blood');
+  
+  if (HERO.hp <= 0 && !HERO.isHollow) {
+    HERO.hp = 0;
+    HERO.isHollow = true;
+    showToast('💀 ВЫ ПОГИБЛИ', 'Вы стали Полым. XP и урон снижены на 50%.', 'blood');
+    spiritSay('«Ты потерял себя... Но искупление еще возможно.»');
+    screenShake(15, 800);
+  }
+  updateHeroUI();
   saveGameState();
+}
+
+// ============ ПРОГРЕССИВНАЯ ПРОКАЧКА СТАТОВ ============
+function addStatXp(statKey, xpAmount, sourceX, sourceY) {
+  const stat = STATS[statKey];
+  if (!stat) return;
+  if (stat.value >= 100) {
+    if (sourceX !== undefined) spawnFloatNumber(sourceX, sourceY, `МАКС. ${stat.icon}`, stat.color);
+    return;
+  }
+  let finalXp = xpAmount;
+  if (HERO.isHollow) finalXp = Math.floor(finalXp * 0.5);
+  
+  stat.currentXp += finalXp;
+  if (sourceX !== undefined) {
+    spawnFloatNumber(sourceX, sourceY, `+${finalXp} ${stat.icon} XP`, stat.color);
+  }
+  let leveledUp = false;
+  while (stat.currentXp >= stat.requiredXp && stat.value < 100) {
+    stat.currentXp -= stat.requiredXp;
+    stat.value += 1;
+    stat.requiredXp = calculateRequiredXp(stat.value);
+    leveledUp = true;
+  }
+  if (leveledUp) {
+    const statEl = document.getElementById('stat-' + statKey);
+    if (statEl) {
+      statEl.classList.remove('pulse');
+      void statEl.offsetWidth;
+      statEl.classList.add('pulse');
+    }
+    showToast('⚔ Характеристика повышена!', `${stat.name}: ${stat.value}`, 'crit');
+    spiritSay(`«${stat.name} крепнет...»`);
+    if (statKey === 'end') {
+      HERO.maxHp = calcMaxHp();
+      HERO.hp = Math.min(HERO.maxHp, HERO.hp + 5);
+    }
+  }
+  updateStatUI(statKey);
+  updateHeroSummary();
+  updateDamageInfo();
+  updateHeroUI();
+}
+
+function updateStatUI(statKey) {
+  const stat = STATS[statKey];
+  const pct = stat.value >= 100 ? 100 : Math.min(100, (stat.currentXp / stat.requiredXp) * 100);
+  const fill = document.getElementById('statBar-' + statKey);
+  const val = document.getElementById('statVal-' + statKey);
+  const label = document.querySelector(`#stat-${statKey} .stat-bar-label`);
+  if (fill) fill.style.width = pct + '%';
+  if (val) val.textContent = stat.value;
+  if (label) {
+    if (stat.value >= 100) {
+      label.innerHTML = `<span>МАКСИМУМ</span><span><b>${stat.value}</b> / ${stat.max}</span>`;
+    } else {
+      label.innerHTML = `<span>Прогресс</span><span><b>${Math.floor(stat.currentXp)}</b> / ${stat.requiredXp} XP</span>`;
+    }
+  }
+}
+
+function renderStats() {
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = '';
+  Object.entries(STATS).forEach(([key, st]) => {
+    const pct = st.value >= 100 ? 100 : Math.min(100, (st.currentXp / st.requiredXp) * 100);
+    const el = document.createElement('div');
+    el.className = 'stat-card'; el.id = 'stat-' + key;
+    el.style.setProperty('--stat-color', st.color);
+    el.style.setProperty('--stat-color-dark', st.dark);
+    el.style.setProperty('--stat-color-bg', st.dark + '40');
+    el.style.setProperty('--stat-glow', st.color + '60');
+    el.innerHTML = `
+      <div class="stat-card-head">
+        <div class="stat-icon">${st.icon}<div class="stat-value-big" id="statVal-${key}">${st.value}</div></div>
+        <div class="stat-info"><div class="stat-name">${st.name}</div><div class="stat-desc">${st.desc}</div></div>
+      </div>
+      <div class="stat-bar"><div class="stat-bar-fill" id="statBar-${key}" style="width:${pct}%"></div></div>
+      <div class="stat-bar-label"><span>Прогресс</span><span><b>${Math.floor(st.currentXp)}</b> / ${st.requiredXp} XP</span></div>
+    `;
+    grid.appendChild(el);
+  });
+  updateHeroSummary(); updateDamageInfo();
 }
 
 // ============ ЭФФЕКТ РАНГАПА ============
 function triggerRankUpEffect(card, oldRank, newRank, x, y) {
   const visual = getRankVisual(newRank);
-  const phrase = RANK_PHRASES[newRank] || 'Сила пробуждается';
+  const phrases = { 'C':'Пробуждение', 'CC':'Сила крепнет', 'CCC':'Воля закаляется', 'B':'Путь воина', 'BB':'Сталь и дух', 'BBB':'Непреклонный', 'A':'Мастерство', 'AA':'Совершенство', 'AAA':'Величие', 'S':'Легенда', 'SS':'Миф', 'SSS':'Бессмертный' };
+  const phrase = phrases[newRank] || 'Сила пробуждается';
   const rankupOverlay = document.getElementById('rankupOverlay');
   const rankupBanner = document.getElementById('rankupBanner');
-
   rankupOverlay.style.background = `radial-gradient(circle, ${visual.glow.replace(/[\d.]+\)$/, '0.4)')}, transparent 60%)`;
   const rankText = document.getElementById('rankupRankText');
   rankText.textContent = newRank;
   rankText.style.color = visual.color;
   document.getElementById('rankupSubText').textContent = phrase;
   document.getElementById('rankupCardName').textContent = card.name;
-
   rankupOverlay.classList.remove('show');
   rankupBanner.classList.remove('show');
   void rankupOverlay.offsetWidth;
   rankupOverlay.classList.add('show');
   rankupBanner.classList.add('show');
-
   burstParticles(x, y, 80, { color: visual.color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
   burstParticles(x, y, 50, { color: visual.color, speed: 8, decay: 0.012, size: 2, gravity: 0.05 });
-
   if (newRank === 'SSS') {
     burstParticles(window.innerWidth/2, window.innerHeight/2, 120, { color: '#fcd34d', speed: 16, decay: 0.006, size: 5, shape: 'star', gravity: 0.12, life: 1.6 });
     screenShake(12, 600);
@@ -1590,18 +1492,15 @@ function triggerRankUpEffect(card, oldRank, newRank, x, y) {
     spiritSay(`«${newRank}... ${phrase.toLowerCase()}.»`);
     showToast('⚔ Ранг повышен!', `${card.name}: ${oldRank} → ${newRank}`, 'crit');
   }
-
   setTimeout(() => {
     rankupOverlay.classList.remove('show');
     rankupBanner.classList.remove('show');
-    // Открываем модалку редактирования после рангапа
     openEditCardAfterRankup(card.id);
   }, 2200);
 }
 
 // ============ РЕДАКТИРОВАНИЕ КАРТОЧКИ ============
 let editingCardId = null;
-
 function openEditCardAfterRankup(cardId) {
   const card = findCard(cardId);
   if (!card) return;
@@ -1611,22 +1510,16 @@ function openEditCardAfterRankup(cardId) {
   document.getElementById('editCardDuration').value = parseInt(card.meta.match(/\d+/)?.[0]) || 15;
   document.getElementById('editCardRankup').value = card.rankupTarget;
   document.getElementById('editCardCurrentRank').textContent = card.rank;
-  // Установить чип стата
   document.querySelectorAll('#editStatChips .stat-chip').forEach(c => {
     c.classList.toggle('selected', c.dataset.stat === card.stat);
   });
   document.getElementById('editCardModal').classList.add('show');
 }
-
-function openEditCardDirect(cardId) {
-  openEditCardAfterRankup(cardId);
-}
-
+function openEditCardDirect(cardId) { openEditCardAfterRankup(cardId); }
 function closeEditCard() {
   document.getElementById('editCardModal').classList.remove('show');
   editingCardId = null;
 }
-
 function saveEditCard() {
   if (!editingCardId) return;
   const card = findCard(editingCardId);
@@ -1649,39 +1542,9 @@ function saveEditCard() {
   saveGameState();
 }
 
-// ============ STATS UI ============
-function renderStats() {
-  const grid = document.getElementById('statsGrid');
-  grid.innerHTML = '';
-  Object.entries(STATS).forEach(([key, st]) => {
-    const pct = Math.min(100, (st.value / st.max) * 100);
-    const el = document.createElement('div');
-    el.className = 'stat-card'; el.id = 'stat-' + key;
-    el.style.setProperty('--stat-color', st.color);
-    el.style.setProperty('--stat-color-dark', st.dark);
-    el.style.setProperty('--stat-color-bg', st.dark + '40');
-    el.style.setProperty('--stat-glow', st.color + '60');
-    el.innerHTML = `
-      <div class="stat-card-head">
-        <div class="stat-icon">${st.icon}<div class="stat-value-big" id="statVal-${key}">${st.value}</div></div>
-        <div class="stat-info"><div class="stat-name">${st.name}</div><div class="stat-desc">${st.desc}</div></div>
-      </div>
-      <div class="stat-bar"><div class="stat-bar-fill" id="statBar-${key}" style="width:${pct}%"></div></div>
-      <div class="stat-bar-label"><span>Прогресс</span><span><b>${st.value}</b> / ${st.max}</span></div>
-    `;
-    grid.appendChild(el);
-  });
-  updateHeroSummary(); updateDamageInfo();
-}
-
-// ============ РАСЧЁТ HP ============
-function calcMaxHp() {
-  // База 100 + 5 HP за каждый уровень (начиная со 2-го) + 1 HP за каждую единицу Стойкости
-  return 100 + Math.max(0, (HERO.level - 1) * 5) + STATS.end.value;
-}
-
+// ============ УРОВЕНЬ ГЕРОЯ ============
+function calcMaxHp() { return 100 + Math.max(0, (HERO.level - 1) * 5) + STATS.end.value; }
 function updateHeroUI() {
-  // Обновить макс HP если поменялась стойкость/уровень
   const newMaxHp = calcMaxHp();
   if (newMaxHp !== HERO.maxHp) {
     const diff = newMaxHp - HERO.maxHp;
@@ -1690,7 +1553,6 @@ function updateHeroUI() {
     else HERO.hp = Math.min(HERO.maxHp, HERO.hp);
   }
   HERO.hp = Math.max(0, Math.min(HERO.maxHp, HERO.hp));
-
   document.getElementById('heroMiniLvl').textContent = HERO.level;
   document.getElementById('heroMiniName').textContent = HERO.name;
   const pct = (HERO.xp / HERO.xpToNext) * 100;
@@ -1701,10 +1563,21 @@ function updateHeroUI() {
   document.getElementById('heroXpMax').textContent = HERO.xpToNext;
   document.getElementById('heroXpFill').style.width = pct + '%';
   document.getElementById('heroName').textContent = HERO.name;
-  document.getElementById('heroTitle').textContent = HERO.title;
+  
+  if (HERO.isHollow) {
+    document.getElementById('heroTitle').textContent = '«Полый, потерявший цель»';
+    document.getElementById('heroAvatar').classList.add('hollow');
+    document.getElementById('atonementBar').style.display = 'block';
+    for(let i=1; i<=3; i++) {
+      document.getElementById('at'+i).classList.toggle('filled', i <= HERO.consecutivePerfectDays);
+    }
+  } else {
+    document.getElementById('heroTitle').textContent = HERO.title;
+    document.getElementById('heroAvatar').classList.remove('hollow');
+    document.getElementById('atonementBar').style.display = 'none';
+  }
+  
   document.getElementById('ringFill').setAttribute('stroke-dashoffset', 2 * Math.PI * 74 * (1 - HERO.xp / HERO.xpToNext));
-
-  // HP bar
   document.getElementById('heroHpCur').textContent = HERO.hp;
   document.getElementById('heroHpMax').textContent = HERO.maxHp;
   const hpPct = (HERO.hp / HERO.maxHp) * 100;
@@ -1712,19 +1585,22 @@ function updateHeroUI() {
   hpFill.style.width = hpPct + '%';
   hpFill.classList.toggle('low', hpPct <= 30);
   const warnEl = document.getElementById('heroHpWarn');
-  if (hpPct <= 0) {
-    warnEl.innerHTML = '<span class="hp-warn" style="color: var(--blood-bright)">💀 Ты пал...</span>';
-  } else if (hpPct <= 30) {
-    warnEl.innerHTML = '<span class="hp-warn">⚠ Критическое состояние</span>';
-  } else {
-    warnEl.textContent = '';
-  }
+  if (hpPct <= 0) warnEl.innerHTML = '<span class="hp-warn" style="color: var(--blood-bright)">💀 Ты пал...</span>';
+  else if (hpPct <= 30) warnEl.innerHTML = '<span class="hp-warn">⚠ Критическое состояние</span>';
+  else warnEl.textContent = '';
   document.getElementById('heroEndStat').textContent = STATS.end.value;
-
-  updateHeroSummary(); updateDamageInfo();
-  updatePunishCountdown();
+  
+  document.getElementById('estusCount').textContent = HERO.estus;
+  const estusBtn = document.getElementById('estusBtn');
+  if (HERO.estusUsedToday || HERO.estus <= 0) {
+    estusBtn.disabled = true;
+  } else {
+    estusBtn.disabled = false;
+  }
+  
+  updateHeroSummary(); updateDamageInfo(); updatePunishCountdown();
+  updateBossDisplay();
 }
-
 function updateHeroSummary() {
   document.getElementById('statTotalXp').textContent = HERO.totalXp;
   const sum = Object.values(STATS).reduce((a, s) => a + s.value, 0);
@@ -1738,62 +1614,27 @@ function updateHeroSummary() {
   document.getElementById('statRankups').textContent = escapeProgress;
   document.getElementById('statEscape').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
 }
-
 function updateDamageInfo() {
   const gear = getTotalGearBonuses();
   const totalStr = STATS.str.value + gear.str;
   const bonus = Math.floor(totalStr / 5);
-  const total = BASE_DAMAGE + bonus;
-  document.getElementById('damageInfo').innerHTML = `
-    Базовый: <b style="color:var(--gold-bright)">${BASE_DAMAGE}</b><br>
-    Сила (+снаряга): <b style="color:var(--gold-bright)">${totalStr}</b><br>
-    Бонус: <b style="color:var(--gold-bright)">+${bonus}</b><br>
-    Итого: <b style="color:var(--blood-bright)">${total}</b> за ✓
-  `;
+  let total = BASE_DAMAGE + bonus;
+  if (HERO.isHollow) total = Math.floor(total * 0.5);
+  document.getElementById('damageInfo').innerHTML = `Базовый: <b style="color:var(--gold-bright)">${BASE_DAMAGE}</b><br>Сила (+снаряга): <b style="color:var(--gold-bright)">${totalStr}</b><br>Бонус: <b style="color:var(--gold-bright)">+${bonus}</b><br>${HERO.isHollow ? '<b style="color:var(--blood-bright)">Проклятие Полого: урон -50%</b><br>' : ''}Итого: <b style="color:var(--blood-bright)">${total}</b> за ✓`;
 }
-
-function updateEscapeDisplay() {
-  document.getElementById('progressVal').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
-  document.getElementById('mapProgressNum').textContent = escapeProgress;
-  document.getElementById('mapProgressFill').style.width = ((escapeProgress/ESCAPE_MAX) * 100) + '%';
-  const idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
-  document.getElementById('mapRoomText').textContent = `Ты в: ${ROOMS[idx].name}`;
-  // Обновить атмосферу по прогрессу
-  updateAtmosphereByEscape();
+function updateBossDisplay() {
+  const boss = getCurrentBoss();
+  document.getElementById('bossPanelTitle').textContent = `${boss.icon} ${boss.name}`;
+  document.getElementById('bossSubtitle').textContent = `${boss.name} · ${boss.type === 'chimera' ? 'Имеет щит. Нужно 5 карточек за день.' : boss.type === 'social' ? 'Двойной урон за пропуск Воли/Интеллекта' : 'Он ждёт твоего провала'}`;
+  document.getElementById('bossLoreText').innerHTML = `<b style="color:var(--blood-bright)">«${boss.lore}»</b><br><br><b style="color:var(--gold-bright)">Каждый день в 23:00 МСК</b> я наказываю тебя:<br>• <b style="color:var(--blood-bright)">-10 HP</b> за каждую невыполненную карточку<br>• <b style="color:var(--blood-bright)">-15 HP</b> за каждую невыполненную цель<br><br>Каждая выполненная карточка — удар, от которого я трескаюсь.<br>Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.`;
 }
-
-function updateAtmosphereByEscape() {
-  const pct = escapeProgress / ESCAPE_MAX;
-  const root = document.documentElement.style;
-  let hue, light, sat, mist, torch, rays;
-  if (pct < 0.2) { hue=0; light=0; sat=0; mist=0.8; torch=0.2; rays=0; }
-  else if (pct < 0.5) { const p=(pct-0.2)/0.3; hue=p*60; light=p*15; sat=p*30; mist=0.8-p*0.25; torch=0.2+p*0.4; rays=0; }
-  else if (pct < 0.8) { const p=(pct-0.5)/0.3; hue=60+p*140; light=15+p*25; sat=30+p*20; mist=0.55-p*0.25; torch=0.6-p*0.2; rays=p*0.3; }
-  else { const p=(pct-0.8)/0.2; hue=200-p*170; light=40+p*40; sat=50-p*20; mist=0.3-p*0.2; torch=0.4+p*0.3; rays=0.3+p*0.5; }
-  root.setProperty('--atmosphere-hue', hue);
-  root.setProperty('--atmosphere-light', light);
-  root.setProperty('--atmosphere-sat', sat);
-  root.setProperty('--mist-opacity', mist);
-  root.setProperty('--torch-intensity', torch);
-  root.setProperty('--light-rays-opacity', rays);
-}
-
-function spawnFloatNumber(x, y, text, color = '#f4c896', isDamage = false) {
-  const el = document.createElement('div');
-  el.className = 'float-number' + (isDamage ? ' damage' : '');
-  el.textContent = text;
-  el.style.color = color;
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1400);
-}
-
 function addXp(amount) {
   const gear = getTotalGearBonuses();
   const totalInt = STATS.int.value + gear.int;
   const intBonus = 1 + (totalInt - 3) * 0.01;
-  const final = Math.round(amount * intBonus);
+  let final = Math.round(amount * intBonus);
+  if (HERO.isHollow) final = Math.floor(final * 0.5);
+  
   HERO.xp += final; HERO.totalXp += final;
   const hr = document.querySelector('.hero-mini').getBoundingClientRect();
   spawnFloatNumber(hr.left + hr.width/2, hr.top + hr.height, `+${final} XP`, '#f4c896');
@@ -1808,7 +1649,6 @@ function addXp(amount) {
   else if (HERO.level >= 3) { HERO.name = 'Искатель'; HERO.title = '«Вспомнивший путь»'; }
   updateHeroUI();
 }
-
 function onLevelUp() {
   document.getElementById('lvlNum').textContent = HERO.level;
   const ov = document.getElementById('lvlOverlay'), bn = document.getElementById('lvlBanner');
@@ -1817,8 +1657,11 @@ function onLevelUp() {
   const cx = window.innerWidth/2, cy = window.innerHeight/2;
   burstParticles(cx, cy, 100, { color: '#fbbf24', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12, life: 1.3 });
   screenShake(8, 400);
-  Object.keys(STATS).forEach(k => { STATS[k].value = Math.min(STATS[k].max, STATS[k].value + 1); });
-  // Восстановление HP при level-up
+  Object.keys(STATS).forEach(k => { 
+    STATS[k].value = Math.min(STATS[k].max, STATS[k].value + 1); 
+    STATS[k].requiredXp = calculateRequiredXp(STATS[k].value);
+    updateStatUI(k);
+  });
   HERO.maxHp = calcMaxHp();
   HERO.hp = HERO.maxHp;
   renderStats();
@@ -1829,25 +1672,7 @@ function onLevelUp() {
   setTimeout(() => { ov.classList.remove('show'); bn.classList.remove('show'); }, 2500);
 }
 
-function addStat(statKey, amount, sourceX, sourceY) {
-  const stat = STATS[statKey]; if (!stat) return;
-  const before = stat.value;
-  stat.value = Math.min(stat.max, stat.value + amount);
-  const actual = stat.value - before; if (actual <= 0) return;
-  const statEl = document.getElementById('stat-' + statKey);
-  if (statEl && sourceX !== undefined) {
-    spawnFloatNumber(sourceX, sourceY, `+${actual} ${stat.icon}`, stat.color);
-    statEl.classList.remove('pulse'); void statEl.offsetWidth; statEl.classList.add('pulse');
-  }
-  const fill = document.getElementById('statBar-' + statKey);
-  const val = document.getElementById('statVal-' + statKey);
-  if (fill) fill.style.width = ((stat.value / stat.max) * 100) + '%';
-  if (val) val.textContent = stat.value;
-  updateHeroSummary(); updateDamageInfo();
-  updateHeroUI(); // обновить HP если поменялась стойкость
-}
-
-// ============ БОСС ============
+// ============ БОСС И НАКАЗАНИЕ ============
 let bossHp = 100;
 function changeBossHp(delta) {
   bossHp = Math.max(0, Math.min(100, bossHp + delta));
@@ -1873,13 +1698,12 @@ function changeBossHp(delta) {
     setTimeout(() => {
       burstParticles(window.innerWidth/2, window.innerHeight/2, 200, { color: '#c73e4d', speed: 15, decay: 0.005, size: 5, shape: 'star', gravity: 0.15, life: 1.5 });
       screenShake(15, 800);
-      spiritSay('«Змей повержен... Но впереди — новые демоны.»');
-      showToast('🏆 БОСС ПОВЕРЖЕН!', 'Ты сделал первый шаг к свободе');
+      spiritSay('«Босс повержен... Но впереди — новые демоны.»');
+      showToast('🏆 БОСС ПОВЕРЖЕН!', 'Ты сделал шаг к свободе');
       setTimeout(() => { bossHp = 100; changeBossHp(0); }, 3000);
     }, 300);
   }
 }
-
 document.addEventListener('mousemove', (e) => {
   document.querySelectorAll('.boss-eye').forEach(eye => {
     const r = eye.parentElement.getBoundingClientRect();
@@ -1891,93 +1715,55 @@ document.addEventListener('mousemove', (e) => {
   });
 });
 
-// ============ НАКАЗАНИЕ БОССА (23:00 МСК) ============
 function updatePunishCountdown() {
   const { h, m } = getMSKHourMinute();
   const el = document.getElementById('punishTimeLeft');
   if (!el) return;
-  // Время до 23:00 МСК
   let minutesLeft;
-  if (h < 23) {
-    minutesLeft = (23 - h) * 60 - m;
-  } else {
-    // Уже после 23:00 — до завтрашнего 23:00
-    minutesLeft = 24 * 60 - ((h - 23) * 60 + m);
-  }
+  if (h < 23) minutesLeft = (23 - h) * 60 - m;
+  else minutesLeft = 24 * 60 - ((h - 23) * 60 + m);
   const hoursLeft = Math.floor(minutesLeft / 60);
   const minsLeft = minutesLeft % 60;
   el.textContent = `${String(hoursLeft).padStart(2,'0')}:${String(minsLeft).padStart(2,'0')}`;
-
-  // Подсветка если близко к наказанию
-  if (minutesLeft <= 60) {
-    el.style.color = 'var(--blood-bright)';
-    el.style.fontWeight = 'bold';
-  } else {
-    el.style.color = '';
-    el.style.fontWeight = '';
-  }
+  if (minutesLeft <= 60) { el.style.color = 'var(--blood-bright)'; el.style.fontWeight = 'bold'; }
+  else { el.style.color = ''; el.style.fontWeight = ''; }
 }
 
 function checkBossPunishment() {
   const { h, m } = getMSKHourMinute();
   const todayKey = getMSKDayKey();
-
-  // Новый день по МСК — сбрасываем lastPunishDate
   if (lastDayReset !== todayKey) {
-    if (h === 0 && m < 5) {
-      // Первый запуск после полуночи — сбрасываем
-      lastPunishDate = null;
-    }
+    if (h === 0 && m < 5) lastPunishDate = null;
     lastDayReset = todayKey;
     saveGameState();
   }
-
-  // Время наказания: 23:00 - 23:59 МСК
   if (h !== 23) return;
-
-  // Уже наказан сегодня
   if (lastPunishDate === todayKey) return;
-
-  // Подсчёт невыполненных карточек
+  
+  if (HERO.estusUsedToday) {
+    lastPunishDate = todayKey;
+    showToast('🧪 Защита Эстуса', 'Босс не смог нанести урон сегодня.', 'save');
+    return;
+  }
+  
   const allCards = [...CARDS, ...FORGED];
   const uncompletedCards = allCards.filter(c => !isTodayMSK(c.lastCompletedAt));
   const uncompletedGoals = GOALS.filter(g => !g.completed && !isTodayMSK(g.lastStepAt));
-
   const cardsDamage = uncompletedCards.length * 10;
   const goalsDamage = uncompletedGoals.length * 15;
   const totalDamage = cardsDamage + goalsDamage;
-
-  if (totalDamage <= 0) {
-    // Все выполнены — не наказываем
-    lastPunishDate = todayKey;
-    saveGameState();
-    return;
-  }
-
-  // Применяем урон
+  if (totalDamage <= 0) { lastPunishDate = todayKey; saveGameState(); return; }
+  
   HERO.hp = Math.max(0, HERO.hp - totalDamage);
   lastPunishDate = todayKey;
   saveGameState();
-
-  // Эффекты
   spawnBloodRain(40);
   screenShake(15, 800);
-
-  // Анимация hurt у аватара
   const avatar = document.getElementById('heroAvatar');
-  if (avatar) {
-    avatar.classList.remove('hurt');
-    void avatar.offsetWidth;
-    avatar.classList.add('hurt');
-  }
-
-  // Плавающее число урона
+  if (avatar) { avatar.classList.remove('hurt'); void avatar.offsetWidth; avatar.classList.add('hurt'); }
   const avatarRect = avatar ? avatar.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 100, height: 100 };
   spawnFloatNumber(avatarRect.left + avatarRect.width/2, avatarRect.top + avatarRect.height/2, `-${totalDamage} HP`, '#c73e4d', true);
-
-  // Показываем алерт
   showPunishAlert(totalDamage, uncompletedCards.length, uncompletedGoals.length);
-
   spiritSay('«Ты не справился... Я пирую на твоих слабостях.»');
   updateHeroUI();
 }
@@ -1985,24 +1771,13 @@ function checkBossPunishment() {
 function showPunishAlert(damage, cardsCount, goalsCount) {
   document.getElementById('punishDamage').textContent = `-${damage} HP`;
   document.getElementById('punishAlertBody').innerHTML = 'Босс наказал тебя за бездействие:';
-  document.getElementById('punishBreakdown').innerHTML = `
-    📖 <b>${cardsCount}</b> невыполненных карточек × 10 = <b>${cardsCount * 10} HP</b><br>
-    🎯 <b>${goalsCount}</b> невыполненных целей × 15 = <b>${goalsCount * 15} HP</b>
-  `;
+  document.getElementById('punishBreakdown').innerHTML = `📖 <b>${cardsCount}</b> невыполненных карточек × 10 = <b>${cardsCount * 10} HP</b><br>🎯 <b>${goalsCount}</b> невыполненных целей × 15 = <b>${goalsCount * 15} HP</b>`;
   document.getElementById('punishAlert').classList.add('show');
 }
+function closePunishAlert() { document.getElementById('punishAlert').classList.remove('show'); }
+setInterval(() => { checkBossPunishment(); updatePunishCountdown(); }, 60 * 1000);
 
-function closePunishAlert() {
-  document.getElementById('punishAlert').classList.remove('show');
-}
-
-// Проверка каждую минуту
-setInterval(() => {
-  checkBossPunishment();
-  updatePunishCountdown();
-}, 60 * 1000);
-
-// ============ ARTIFACTS ============
+// ============ ИНВЕНТАРЬ И АРТЕФАКТЫ ============
 const ARTIFACTS = {
   swordDiscipline: { id: 'swordDiscipline', name: 'Меч Дисциплины', icon: '⚔', rank: 'A', slot: 'weapon', type: 'Оружие', category: 'weapon', lore: 'Выкован из стали тех обещаний, что ты сдержал.', bonuses: [{ stat: 'str', value: 5, label: '⚔ Сила' }, { stat: 'wil', value: 2, label: '🧘 Воля' }], special: '+10% к урону по боссам' },
   shieldWill: { id: 'shieldWill', name: 'Щит Воли', icon: '🛡', rank: 'A', slot: 'shield', type: 'Щит', category: 'armor', lore: 'Тяжесть этого щита — вес твоих решений.', bonuses: [{ stat: 'end', value: 6, label: '🛡 Стойкость' }, { stat: 'wil', value: 3, label: '🧘 Воля' }], special: 'Защита стрика +15%' },
@@ -2014,14 +1789,8 @@ const ARTIFACTS = {
   chestVirtue: { id: 'chestVirtue', name: 'Кираса Доблести', icon: '🧥', rank: 'A', slot: 'chest', type: 'Нагрудник', category: 'armor', lore: 'Каждая пластина — выигранная битва с собой.', bonuses: [{ stat: 'end', value: 8, label: '🛡 Стойкость' }, { stat: 'str', value: 3, label: '⚔ Сила' }], special: null },
   ringInsight: { id: 'ringInsight', name: 'Кольцо Прозрения', icon: '💎', rank: 'A', slot: 'ring2', type: 'Кольцо', category: 'accessory', lore: 'В его грани отражаются мысли, что ты не успел забыть.', bonuses: [{ stat: 'int', value: 5, label: '🧠 Интеллект' }, { stat: 'cha', value: 2, label: '🎭 Харизма' }], special: null },
 };
-const INVENTORY = {
-  backpack: [],
-  equipped: { head: null, amulet: null, chest: null, cape: null, weapon: null, shield: null, ring1: null, ring2: null, boots: null },
-  maxSlots: 30,
-};
-let selectedItemId = null;
-let currentFilter = 'all';
-let uidCounter = 10;
+const INVENTORY = { backpack: [], equipped: { head: null, amulet: null, chest: null, cape: null, weapon: null, shield: null, ring1: null, ring2: null, boots: null }, maxSlots: 30 };
+let selectedItemId = null, currentFilter = 'all', uidCounter = 10;
 
 function addArtifactToBackpack(artifact) {
   if (INVENTORY.backpack.length >= INVENTORY.maxSlots) { showToast('🎒 Рюкзак полон', 'Освободи место', 'blood'); return; }
@@ -2037,19 +1806,16 @@ function addArtifactToBackpack(artifact) {
   spiritSay(`«${artifact.name}... Этот артефакт ждал тебя.»`);
   saveGameState();
 }
-
 function dropRandomLoot(x, y) {
   const pool = Object.values(ARTIFACTS).filter(a => !INVENTORY.backpack.some(b => b.id === a.id) && !Object.values(INVENTORY.equipped).some(e => e && e.id === a.id));
   if (pool.length === 0) return;
   const weights = pool.map(a => a.rank === 'S' ? 1 : a.rank === 'A' ? 3 : a.rank === 'B' ? 6 : 10);
   const total = weights.reduce((a,b) => a+b, 0);
-  let r = Math.random() * total;
-  let picked = pool[0];
+  let r = Math.random() * total, picked = pool[0];
   for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) { picked = pool[i]; break; } }
   addArtifactToBackpack(picked);
   burstParticles(x, y, 40, { color: RANK_COLORS[picked.rank].color, speed: 7, decay: 0.015, size: 3, shape: 'star', gravity: 0.1 });
 }
-
 function renderBackpack() {
   const grid = document.getElementById('backpackGrid');
   if (!grid) return;
@@ -2074,20 +1840,11 @@ function renderBackpack() {
     grid.appendChild(cell);
   });
   const emptyCount = Math.max(0, 18 - filtered.length);
-  for (let i = 0; i < emptyCount; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'bp-cell';
-    grid.appendChild(cell);
-  }
+  for (let i = 0; i < emptyCount; i++) { const cell = document.createElement('div'); cell.className = 'bp-cell'; grid.appendChild(cell); }
 }
 const tooltipEl = document.getElementById('tooltip');
 function showTooltip(e, item) {
-  tooltipEl.innerHTML = `
-    <div class="tt-name" style="color:${RANK_COLORS[item.rank].color}">${item.icon} ${item.name}</div>
-    <div class="tt-type">${item.type} · ${item.rank}-ранг</div>
-    ${item.bonuses.map(b => `<div class="tt-bonus">+${b.value} ${b.label}</div>`).join('')}
-    ${item.special ? `<div class="tt-bonus" style="color:#fbbf24">★ ${item.special}</div>` : ''}
-  `;
+  tooltipEl.innerHTML = `<div class="tt-name" style="color:${RANK_COLORS[item.rank].color}">${item.icon} ${item.name}</div><div class="tt-type">${item.type} · ${item.rank}-ранг</div>${item.bonuses.map(b => `<div class="tt-bonus">+${b.value} ${b.label}</div>`).join('')}${item.special ? `<div class="tt-bonus" style="color:#fbbf24">★ ${item.special}</div>` : ''}`;
   tooltipEl.classList.add('show'); moveTooltip(e);
 }
 function moveTooltip(e) {
@@ -2111,23 +1868,7 @@ function renderItemPanel(item, source) {
   panel.style.setProperty('--item-glow', rc.glow);
   const slotLabels = { head: 'Голова', amulet: 'Амулет', chest: 'Торс', cape: 'Плащ', weapon: 'Оружие', shield: 'Щит', ring1: 'Кольцо 1', ring2: 'Кольцо 2', boots: 'Обувь' };
   const isEquipped = source === 'equipped';
-  document.getElementById('itemPanelContent').innerHTML = `
-    <div class="item-preview rank-${item.rank}" style="--item-color:${rc.color}; --item-bg:${rc.bg}; --item-glow:${rc.glow};">
-      ${item.icon}
-      <div class="item-preview-rank" style="background:${rc.color}">${item.rank}</div>
-    </div>
-    <div class="item-name" style="color:${rc.color}">${item.name}</div>
-    <div class="item-type">${item.type} · Слот: ${slotLabels[item.slot] || '—'}</div>
-    <div class="item-lore">${item.lore}</div>
-    <div class="item-bonuses">
-      <div class="item-bonuses-title">⚡ Бонусы</div>
-      ${item.bonuses.map(b => `<div class="item-bonus"><span class="item-bonus-name">${b.label}</span><span class="item-bonus-val">+${b.value}</span></div>`).join('')}
-      ${item.special ? `<div class="item-bonus special"><span class="item-bonus-name">★ Особое</span><span class="item-bonus-val">${item.special}</span></div>` : ''}
-    </div>
-    <div class="item-actions">
-      ${isEquipped ? `<button class="item-btn danger" onclick="unequipItem('${item.slot}')">↶ Снять</button>` : `<button class="item-btn" onclick="equipItem('${item.uid}')">⚔ Экипировать</button><button class="item-btn danger" onclick="discardItem('${item.uid}')">✕ Выбросить</button>`}
-    </div>
-  `;
+  document.getElementById('itemPanelContent').innerHTML = `<div class="item-preview rank-${item.rank}" style="--item-color:${rc.color}; --item-bg:${rc.bg}; --item-glow:${rc.glow};">${item.icon}<div class="item-preview-rank" style="background:${rc.color}">${item.rank}</div></div><div class="item-name" style="color:${rc.color}">${item.name}</div><div class="item-type">${item.type} · Слот: ${slotLabels[item.slot] || '—'}</div><div class="item-lore">${item.lore}</div><div class="item-bonuses"><div class="item-bonuses-title">⚡ Бонусы</div>${item.bonuses.map(b => `<div class="item-bonus"><span class="item-bonus-name">${b.label}</span><span class="item-bonus-val">+${b.value}</span></div>`).join('')}${item.special ? `<div class="item-bonus special"><span class="item-bonus-name">★ Особое</span><span class="item-bonus-val">${item.special}</span></div>` : ''}</div><div class="item-actions">${isEquipped ? `<button class="item-btn danger" onclick="unequipItem('${item.slot}')">↶ Снять</button>` : `<button class="item-btn" onclick="equipItem('${item.uid}')">⚔ Экипировать</button><button class="item-btn danger" onclick="discardItem('${item.uid}')">✕ Выбросить</button>`}</div>`;
 }
 function equipItem(uid) {
   const item = INVENTORY.backpack.find(i => i.uid === uid);
@@ -2231,11 +1972,11 @@ document.querySelectorAll('.backpack-tab').forEach(t => {
 });
 renderBackpack(); renderSlots(); updateTotalBonuses();
 
-// ============ GOALS ============
+// ============ ЦЕЛИ ============
 const GOAL_REWARDS = {
-  short:  { xp: 20,  dmg: 5,  stat: 1,  label: 'Краткая' },
-  medium: { xp: 50,  dmg: 12, stat: 3,  label: 'Средняя' },
-  long:   { xp: 120, dmg: 25, stat: 5,  label: 'Долгая' },
+  short:  { xp: 20, dmg: 5, statXp: 50, label: 'Краткая' },
+  medium: { xp: 50, dmg: 12, statXp: 150, label: 'Средняя' },
+  long:   { xp: 120, dmg: 25, statXp: 400, label: 'Долгая' },
 };
 let GOALS = [], goalIdCounter = 1, selectedGoalType = 'short', selectedGoalStat = 'str', currentGoalFilter = 'all';
 try { const saved = localStorage.getItem('neurodeck_goals'); if (saved) { const p = JSON.parse(saved); GOALS = p.goals || []; goalIdCounter = p.counter || 1; } } catch(e) {}
@@ -2266,7 +2007,7 @@ function createGoal() {
   const totalSteps = parseInt(document.getElementById('goalSteps').value) || 5;
   const desc = document.getElementById('goalDesc').value.trim();
   const rewards = GOAL_REWARDS[selectedGoalType];
-  const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.stat, completed: false, createdAt: Date.now(), lastStepAt: null };
+  const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statXp: rewards.statXp, completed: false, createdAt: Date.now(), lastStepAt: null };
   GOALS.unshift(goal);
   saveGoals(); renderGoals(); closeGoalModal();
   const color = selectedGoalType === 'short' ? '#34d399' : selectedGoalType === 'medium' ? '#60a5fa' : '#fbbf24';
@@ -2294,21 +2035,7 @@ function renderGoals() {
     const stepToday = isTodayMSK(goal.lastStepAt);
     const el = document.createElement('div');
     el.className = `goal-card ${goal.type} ${goal.completed ? 'completed' : ''}${stepToday ? ' completed-today' : ''}`;
-    el.innerHTML = `
-      <div class="goal-head"><div class="goal-name">${goal.name}</div><div class="goal-type-badge">${rewards.label}</div></div>
-      ${goal.desc ? `<div style="font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px;">${goal.desc}</div>` : ''}
-      <div class="goal-meta">
-        ${daysText ? `<span>📅 <b>${daysText}</b></span>` : ''}
-        <span>✨ <b>+${goal.xp} XP</b></span>
-        <span class="dmg">⚔ <b>-${goal.dmg} HP</b></span>
-        <span style="color:${st.color}">${st.icon} <b>+${goal.statBonus}</b></span>
-      </div>
-      <div class="goal-progress-wrap"><div class="goal-progress-bar"><div class="goal-progress-fill" style="width:${progressPct}%"></div></div><div class="goal-progress-label"><b>${goal.currentStep}</b>/${goal.totalSteps}</div></div>
-      <div class="goal-actions">
-        ${!goal.completed ? (goal.currentStep < goal.totalSteps - 1 ? `<button class="goal-btn" onclick="advanceGoal(${goal.id})">+ Шаг</button>` : `<button class="goal-btn complete" onclick="completeGoal(${goal.id})">✓ Выполнить</button>`) : `<button class="goal-btn" disabled style="opacity: 0.5;">✓ Выполнено</button>`}
-        <button class="goal-btn delete" onclick="deleteGoal(${goal.id})">✕</button>
-      </div>
-    `;
+    el.innerHTML = `<div class="goal-head"><div class="goal-name">${goal.name}</div><div class="goal-type-badge">${rewards.label}</div></div>${goal.desc ? `<div style="font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px;">${goal.desc}</div>` : ''}<div class="goal-meta">${daysText ? `<span>📅 <b>${daysText}</b></span>` : ''}<span>✨ <b>+${goal.xp} XP</b></span><span class="dmg">⚔ <b>-${goal.dmg} HP</b></span><span style="color:${st.color}">${st.icon} <b>+${goal.statXp} XP</b></span></div><div class="goal-progress-wrap"><div class="goal-progress-bar"><div class="goal-progress-fill" style="width:${progressPct}%"></div></div><div class="goal-progress-label"><b>${goal.currentStep}</b>/${goal.totalSteps}</div></div><div class="goal-actions">${!goal.completed ? (goal.currentStep < goal.totalSteps - 1 ? `<button class="goal-btn" onclick="advanceGoal(${goal.id})">+ Шаг</button>` : `<button class="goal-btn complete" onclick="completeGoal(${goal.id})">✓ Выполнить</button>`) : `<button class="goal-btn" disabled style="opacity: 0.5;">✓ Выполнено</button>`}<button class="goal-btn delete" onclick="deleteGoal(${goal.id})">✕</button></div>`;
     list.appendChild(el);
   });
   updateHeroSummary();
@@ -2316,14 +2043,11 @@ function renderGoals() {
 function advanceGoal(id) {
   const goal = GOALS.find(g => g.id === id);
   if (!goal || goal.completed) return;
-  if (isTodayMSK(goal.lastStepAt)) {
-    showToast('✓ Шаг уже сделан сегодня', 'Приходи завтра', 'save');
-    return;
-  }
+  if (isTodayMSK(goal.lastStepAt)) { showToast('✓ Шаг уже сделан сегодня', 'Приходи завтра', 'save'); return; }
   goal.currentStep = Math.min(goal.totalSteps, goal.currentStep + 1);
   goal.lastStepAt = Date.now();
   addXp(Math.round(goal.xp / goal.totalSteps / 2));
-  addStat(goal.stat, 1);
+  addStatXp(goal.stat, Math.round(goal.statXp / goal.totalSteps));
   saveGoals(); renderGoals();
   showToast('📈 Шаг выполнен', `${goal.name}: ${goal.currentStep}/${goal.totalSteps}`);
   if (goal.currentStep >= goal.totalSteps) setTimeout(() => completeGoal(id), 600);
@@ -2337,11 +2061,10 @@ function completeGoal(id) {
   const color = goal.type === 'short' ? '#34d399' : goal.type === 'medium' ? '#60a5fa' : '#fbbf24';
   burstParticles(window.innerWidth/2, window.innerHeight/2, 120, { color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
   screenShake(10, 500);
-  addXp(goal.xp); addStat(goal.stat, goal.statBonus); changeBossHp(-goal.dmg);
-  // Лечение за выполненную цель
-  HERO.hp = Math.min(HERO.maxHp, HERO.hp + 5);
+  addXp(goal.xp); addStatXp(goal.stat, goal.statXp); changeBossHp(-goal.dmg);
+  HERO.hp = Math.min(calcMaxHp(), HERO.hp + 5);
   updateHeroUI();
-  showToast(`🏆 Цель достигнута!`, `+${goal.xp} XP · -${goal.dmg} HP · +${goal.statBonus} ${STATS[goal.stat].icon}`, 'crit');
+  showToast(`🏆 Цель достигнута!`, `+${goal.xp} XP · -${goal.dmg} HP · +${goal.statXp} ${STATS[goal.stat].icon} XP`, 'crit');
   spiritSay(`«${goal.name}... Ты стал сильнее.»`);
   renderGoals();
   saveGameState();
@@ -2363,7 +2086,7 @@ document.querySelectorAll('.goal-filter').forEach(f => f.addEventListener('click
 }));
 document.getElementById('goalModal').addEventListener('click', (e) => { if (e.target.id === 'goalModal') closeGoalModal(); });
 
-// ============ FORGE (вызов из Колоды) ============
+// ============ ВЫКОВКА ============
 let selectedStat = 'str';
 function openForge() { document.getElementById('forgeModal').classList.add('show'); }
 function closeForge() {
@@ -2382,20 +2105,12 @@ function forgeCard() {
   if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
   const time = document.getElementById('forgeTime').value;
   const duration = Math.max(1, parseInt(document.getElementById('forgeDuration').value) || 15);
-  // КЛЮЧЕВОЕ: используем forgeRankup значение из поля
   const rankupTarget = Math.max(2, Math.min(100, parseInt(document.getElementById('forgeRankup').value) || 5));
   const st = STATS[selectedStat];
   const card = {
-    id: forgedIdCounter++,
-    name,
-    meta: `${st.icon} ${duration} мин · ${time}`,
-    rank: 'C',
-    streak: 0,
-    stat: selectedStat,
-    progress: 0,
-    completions: 0,
-    rankupTarget: rankupTarget,
-    lastCompletedAt: null
+    id: forgedIdCounter++, name, meta: `${st.icon} ${duration} мин · ${time}`,
+    rank: 'C', streak: 0, stat: selectedStat, progress: 0,
+    completions: 0, rankupTarget: rankupTarget, lastCompletedAt: null
   };
   FORGED.unshift(card);
   renderCards(); closeForge();
@@ -2407,7 +2122,7 @@ function forgeCard() {
 }
 document.getElementById('forgeModal').addEventListener('click', (e) => { if (e.target.id === 'forgeModal') closeForge(); });
 
-// ============ TABS ============
+// ============ НАВИГАЦИЯ И КАРТА ============
 function switchView(view) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.bnav-btn').forEach(t => t.classList.remove('active'));
@@ -2421,20 +2136,25 @@ function switchView(view) {
   if (view === 'map') renderMap(escapeProgress);
   if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
   if (view === 'deck') renderCards();
+  if (view === 'boss') updateBossDisplay();
 }
 document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
 document.querySelectorAll('.bnav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 
-// ============ MAP (7 ЛОКАЦИЙ × 20 ПРОГРЕССА) ============
 const ROOMS = [
   { name: 'Камера заключенного', icon: '⛓', lore: 'Здесь начинается твой путь.' },
+  { name: 'Коридор Забытых', icon: '🚪', lore: 'Шаги эхом в пустоте.' },
+  { name: 'Болото Прокрастинации', icon: '🏚️', lore: 'Трясина, засасывающая время.' },
+  { name: 'Склеп Обетов', icon: '💀', lore: 'Здесь погребены обещания.' },
   { name: 'Зал Разбитых Зеркал', icon: '🪞', lore: 'Отражения лжи.' },
-  { name: 'Катакомбы Сомнений',  icon: '🕳', lore: 'Там, где живут страхи.' },
-  { name: 'Библиотека Рун',      icon: '📜', lore: 'Знание — оружие.' },
-  { name: 'Кузница Воли',        icon: '⚒', lore: 'Здесь закаляется характер.' },
-  { name: 'Алтарь Истины',       icon: '🕯', lore: 'Правда о себе.' },
-  { name: 'Врата Свободы',       icon: '🌅', lore: 'Выход из подземелья.' },
+  { name: 'Кузница Воли', icon: '⚒', lore: 'Здесь закаляется характер.' },
+  { name: 'Врата Свободы', icon: '🌅', lore: 'Выход из подземелья.' },
 ];
+const ESCAPE_MAX = 140;
+const ROOMS_STEP = 20;
+let escapeProgress = 0;
+let lastDayReset = null;
+let lastPunishDate = null;
 
 function renderMap(progress) {
   const container = document.getElementById('mapRooms');
@@ -2457,9 +2177,42 @@ function renderMap(progress) {
 }
 renderMap(0);
 
-// ============ ФАЗА 2: АТМОСФЕРА (теперь от escapeProgress) ============
-updateAtmosphereByEscape();
+function updateEscapeDisplay() {
+  document.getElementById('progressVal').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
+  document.getElementById('mapProgressNum').textContent = escapeProgress;
+  document.getElementById('mapProgressFill').style.width = ((escapeProgress/ESCAPE_MAX) * 100) + '%';
+  const idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
+  document.getElementById('mapRoomText').textContent = `Ты в: ${ROOMS[idx].name}`;
+  updateAtmosphereByEscape();
+}
 
+function updateAtmosphereByEscape() {
+  const pct = escapeProgress / ESCAPE_MAX;
+  const root = document.documentElement.style;
+  let hue, light, sat, mist, torch, rays;
+  if (pct < 0.2) { hue=0; light=0; sat=0; mist=0.8; torch=0.2; rays=0; }
+  else if (pct < 0.5) { const p=(pct-0.2)/0.3; hue=p*60; light=p*15; sat=p*30; mist=0.8-p*0.25; torch=0.2+p*0.4; rays=0; }
+  else if (pct < 0.8) { const p=(pct-0.5)/0.3; hue=60+p*140; light=15+p*25; sat=30+p*20; mist=0.55-p*0.25; torch=0.6-p*0.2; rays=p*0.3; }
+  else { const p=(pct-0.8)/0.2; hue=200-p*170; light=40+p*40; sat=50-p*20; mist=0.3-p*0.2; torch=0.4+p*0.3; rays=0.3+p*0.5; }
+  root.setProperty('--atmosphere-hue', hue);
+  root.setProperty('--atmosphere-light', light);
+  root.setProperty('--atmosphere-sat', sat);
+  root.setProperty('--mist-opacity', mist);
+  root.setProperty('--torch-intensity', torch);
+  root.setProperty('--light-rays-opacity', rays);
+}
+
+// ============ ВИЗУАЛЬНЫЕ ЭФФЕКТЫ ============
+function spawnFloatNumber(x, y, text, color = '#f4c896', isDamage = false) {
+  const el = document.createElement('div');
+  el.className = 'float-number' + (isDamage ? ' damage' : '');
+  el.textContent = text;
+  el.style.color = color;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1400);
+}
 document.addEventListener('mousemove', (e) => {
   const r1 = document.getElementById('mistRect1');
   const r2 = document.getElementById('mistRect2');
@@ -2524,29 +2277,52 @@ function showToast(title, body, type = '') {
 }
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
 
-// ============ SAVE / LOAD STATE ============
+// ============ СОХРАНЕНИЕ И СИНХРОНИЗАЦИЯ ============
+function checkDailyReset() {
+  const todayKey = getMSKDayKey();
+  if (lastDayReset !== todayKey) {
+    if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
+      HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
+    } else {
+      HERO.consecutivePerfectDays = 0;
+    }
+    
+    if (HERO.isHollow && HERO.consecutivePerfectDays >= 3) {
+      HERO.isHollow = false;
+      HERO.hp = Math.floor(HERO.maxHp * 0.5);
+      showToast('✨ Искупление совершено!', 'Вы вернули свою человечность. HP восстановлено.', 'crit');
+      spiritSay('«Тьма отступает. Ты снова чувствуешь тепло.»');
+      screenShake(8, 400);
+    }
+    
+    HERO.dailyCompletions = 0;
+    HERO.dailySkips = 0;
+    HERO.estusUsedToday = false;
+    chimeraShield = 5;
+    
+    const currentMonth = new Date().getMonth();
+    if (currentMonth !== HERO.lastEstusReset) {
+      HERO.estus = 3;
+      HERO.lastEstusReset = currentMonth;
+      showToast('🧪 Эстус обновлён', 'Фляги восстановлены на новый месяц', 'save');
+    }
+    
+    lastDayReset = todayKey;
+    saveGameState();
+  }
+}
+
 function saveGameState() {
   try {
     const snapshot = {
-      hero: HERO,
-      stats: STATS,
-      forged: FORGED,
-      goals: GOALS,
-      inventory: INVENTORY,
-      escapeProgress: escapeProgress,
-      bossHp: bossHp,
-      lastPunishDate: lastPunishDate,
-      lastDayReset: lastDayReset,
-      forgedIdCounter: forgedIdCounter,
-      uidCounter: uidCounter,
-      goalIdCounter: goalIdCounter,
-      savedAt: Date.now()
+      hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
+      escapeProgress, bossHp, lastPunishDate, lastDayReset, chimeraShield,
+      forgedIdCounter, uidCounter, goalIdCounter, savedAt: Date.now()
     };
     localStorage.setItem('neurodeck_full_save', JSON.stringify(snapshot));
     saveGoals();
   } catch (e) { console.warn('Save failed:', e); }
 }
-
 function loadGameState() {
   try {
     const raw = localStorage.getItem('neurodeck_full_save');
@@ -2564,31 +2340,22 @@ function loadGameState() {
     if (typeof data.bossHp === 'number') bossHp = data.bossHp;
     if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
     if (data.lastDayReset) lastDayReset = data.lastDayReset;
+    if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
     if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
     if (data.uidCounter) uidCounter = data.uidCounter;
     if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
   } catch (e) { console.warn('Load failed:', e); }
 }
-
-// Автосохранение раз в 30 сек
-setInterval(saveGameState, 30000);
-
-// Сохранение при закрытии вкладки
+setInterval(() => { checkDailyReset(); checkBossPunishment(); updatePunishCountdown(); }, 60 * 1000);
 window.addEventListener('beforeunload', saveGameState);
 
-// ============ СИНХРОНИЗАЦИЯ ============
 const SYNC_VERSION = 'nd-sync-v2';
 let currentSyncCode = '';
 function openSyncModal() { document.getElementById('syncModal').classList.add('show'); generateSyncCode(); }
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); document.getElementById('syncImportCode').value = ''; }
 function generateSyncCode() {
   try {
-    const data = {
-      v: SYNC_VERSION, t: Date.now(),
-      hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-      escapeProgress, bossHp, lastPunishDate, lastDayReset,
-      forgedIdCounter, uidCounter, goalIdCounter
-    };
+    const data = { v: SYNC_VERSION, t: Date.now(), hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY, escapeProgress, bossHp, lastPunishDate, lastDayReset, chimeraShield, forgedIdCounter, uidCounter, goalIdCounter };
     const json = JSON.stringify(data);
     const base64 = btoa(unescape(encodeURIComponent(json)));
     currentSyncCode = base64.match(/.{1,4}/g).join(' ');
@@ -2664,6 +2431,8 @@ function applySyncData(data) {
   if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
   if (typeof data.bossHp === 'number') bossHp = data.bossHp;
   if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
+  if (data.lastDayReset) lastDayReset = data.lastDayReset;
+  if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
   if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
   if (data.uidCounter) uidCounter = data.uidCounter;
   if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
@@ -2682,8 +2451,9 @@ function resetAllData() {
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
 document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); openSyncModal(); } });
 
-// ============ INIT ============
+// ============ ИНИЦИАЛИЗАЦИЯ ============
 loadGameState();
+checkDailyReset();
 HERO.maxHp = calcMaxHp();
 if (HERO.hp > HERO.maxHp) HERO.hp = HERO.maxHp;
 renderStats();
@@ -2694,11 +2464,7 @@ updateEscapeDisplay();
 renderMap(escapeProgress);
 renderCards();
 updatePunishCountdown();
-
-// Первоначальная проверка наказания (если пользователь был офлайн в 23:00 — не наказываем задним числом)
-// Но если сейчас 23:XX и ещё не наказан — наказываем
-checkBossPunishment();
-
+updateBossDisplay();
 setTimeout(() => {
   spiritSay('«Ты очнулся в Камере заключенного... Выкуй первое испытание.»');
   burstParticles(window.innerWidth/2, window.innerHeight/2, 30, { color: '#d4a574', speed: 4, decay: 0.015, size: 2, shape: 'spark', gravity: 0.05 });
