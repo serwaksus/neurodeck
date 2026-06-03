@@ -149,14 +149,55 @@
   .boss-panel { background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
   .boss-title { font-size: 10px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; text-align: center; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .boss-image { position: relative; aspect-ratio: 3/4; border-radius: 3px; overflow: hidden; background: #000; border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+  
+  /* ============ АНИМАЦИИ БОССА ============ */
   .boss-sprite {
     width: 100%; height: 100%;
     background-image: url('https://image.qwenlm.ai/public_source/cee96af7-cd56-4c1d-b3b1-0932ab53b7fe/1b084e4c8-ef88-4523-ad77-b8dd620f5c74.png');
     background-size: cover; background-position: center;
-    animation: bossBreath 4s infinite ease-in-out;
-    transition: filter 0.6s ease;
+    transition: filter 0.6s ease, transform 0.3s ease;
   }
+  .boss-anim-stage1 { animation: bossBreath 4s infinite ease-in-out; }
   @keyframes bossBreath { 0%,100%{transform:scale(1);} 50%{transform:scale(1.03);} }
+  
+  .boss-anim-stage2 { animation: bossRage 2s infinite ease-in-out; filter: hue-rotate(-10deg) saturate(1.3) brightness(1.1); }
+  @keyframes bossRage { 
+    0%,100%{transform:scale(1.05) translateX(0);} 
+    25%{transform:scale(1.05) translateX(-3px);} 
+    75%{transform:scale(1.05) translateX(3px);} 
+  }
+  
+  .boss-anim-stage3 { animation: bossDesperation 0.4s infinite linear; filter: hue-rotate(-30deg) saturate(1.6) brightness(1.2); }
+  @keyframes bossDesperation {
+    0% { transform: scale(1.1) translate(0, 0); }
+    25% { transform: scale(1.1) translate(-3px, 2px); filter: hue-rotate(-30deg) saturate(1.6) brightness(1.3); }
+    50% { transform: scale(1.1) translate(3px, -2px); filter: hue-rotate(-20deg) saturate(1.7) brightness(1.1); }
+    75% { transform: scale(1.1) translate(-2px, -3px); filter: hue-rotate(-30deg) saturate(1.6) brightness(1.3); }
+    100% { transform: scale(1.1) translate(0, 0); }
+  }
+
+  /* Эпичная анимация казни */
+  .boss-anim-execution {
+    animation: bossExecution 3s forwards !important;
+  }
+  @keyframes bossExecution {
+    0% { transform: scale(1.1); filter: brightness(1) saturate(1); }
+    20% { transform: scale(1.3); filter: brightness(4) saturate(0) contrast(2); } /* Ослепительная вспышка */
+    50% { transform: scale(1.4) rotate(5deg); filter: brightness(0.5) saturate(0); opacity: 0.8; }
+    80% { transform: scale(1.5) rotate(10deg); filter: brightness(0) saturate(0); opacity: 0.3; }
+    100% { transform: scale(1.6) rotate(15deg); filter: brightness(0) saturate(0); opacity: 0; }
+  }
+
+  .boss-defeated-text {
+    color: var(--gold-bright) !important;
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: pulse 2s infinite;
+    text-shadow: 0 0 10px rgba(244, 200, 150, 0.8);
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+
   .boss-eyes { position: absolute; inset: 0; pointer-events: none; }
   .boss-eye { position: absolute; width: 10px; height: 6px; background: radial-gradient(ellipse, #fde68a 0%, #f59e0b 50%, transparent 80%); border-radius: 50%; box-shadow: 0 0 12px #f59e0b; animation: eyeGlow 2s infinite; }
   .boss-eye.left { top: 32%; left: 38%; }
@@ -1057,7 +1098,7 @@
           <div class="view-subtitle" id="bossSubtitle">Змей Лени · Он ждёт твоего провала</div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <div class="boss-image" style="aspect-ratio: 4/5;">
-              <div class="boss-sprite"></div>
+              <div class="boss-sprite boss-anim-stage1"></div>
               <div class="boss-eyes"><div class="boss-eye left"></div><div class="boss-eye right"></div></div>
               <div class="boss-blood" id="bossBloodFull"></div>
               <div class="boss-cracks" id="bossCracksFull"></div>
@@ -1093,7 +1134,7 @@
       <div class="boss-panel">
         <div class="boss-title" id="bossPanelTitle">🐍 Змей Лени</div>
         <div class="boss-image" id="bossImg">
-          <div class="boss-sprite"></div>
+          <div class="boss-sprite boss-anim-stage1"></div>
           <div class="boss-eyes"><div class="boss-eye left"></div><div class="boss-eye right"></div></div>
           <div class="boss-blood" id="bossBlood"></div>
           <div class="boss-cracks" id="bossCracks"></div>
@@ -1120,12 +1161,12 @@
   </div>
 </div>
 <script>
-// ============ ПРОГРЕССИВНАЯ СИСТЕМА СТАТОВ ============
+// ============ ПРОГРЕССИВНАЯ СИСТЕМА СТАТОВ (SOULS-LIKE) ============
 function calculateRequiredXp(statValue) {
   if (statValue >= 100) return Infinity;
-  const baseCost = 10;
-  const scalingFactor = statValue >= 50 ? 1.8 : 1.4;
-  return Math.floor(baseCost * Math.pow(statValue, scalingFactor));
+  // Жёсткая экспонента: 50, 92, 171, 317, 587, 1087, 2012, 3723, 6888, 12744...
+  // Достичь 10 уровня теперь требует тысяч XP, а не десятков.
+  return Math.floor(50 * Math.pow(1.85, statValue - 1));
 }
 
 const STATS = {
@@ -1163,12 +1204,35 @@ const RANK_COLORS = {
 const CARDS = [];
 let FORGED = [];
 let forgedIdCounter = 100;
+let bossStage = 0;
+let bossDefeated = false; // Флаг окончательной смерти босса
 let chimeraShield = 5;
 
 function getCurrentBoss() {
-  if (escapeProgress < 40) return { name: 'Змей Лени', icon: '🐍', lore: '«Я питаюсь твоим бездействием.»', type: 'normal' };
-  if (escapeProgress < 80) return { name: 'Демон Соцсетей', icon: '📱', lore: '«Твой скролл — моя пища. Пропустишь Волю или Интеллект — я ударю вдвойне.»', type: 'social' };
-  return { name: 'Химера Выгорания', icon: '🔥', lore: '«У тебя нет сил. Собери 5 карточек за день, чтобы пробить мой щит.»', type: 'chimera' };
+  if (escapeProgress < 40) return {
+    name: 'Змей Лени', icon: '🐍', type: 'normal',
+    stages: [
+      { hp: 100, maxHp: 100, dmgMult: 1, animClass: 'boss-anim-stage1', desc: '«Я питаюсь твоим бездействием.»' },
+      { hp: 150, maxHp: 150, dmgMult: 1.5, animClass: 'boss-anim-stage2', desc: '«Ты думаешь, это было сложно? Я лишь разогревался.»' },
+      { hp: 200, maxHp: 200, dmgMult: 2.0, animClass: 'boss-anim-stage3', desc: '«НЕВОЗМОЖНО! Я ПОГЛОЩУ ТЕБЯ ЦЕЛИКОМ!»' }
+    ]
+  };
+  if (escapeProgress < 80) return {
+    name: 'Демон Соцсетей', icon: '📱', type: 'social',
+    stages: [
+      { hp: 120, maxHp: 120, dmgMult: 1, animClass: 'boss-anim-stage1', desc: '«Твой скролл — моя пища.»' },
+      { hp: 180, maxHp: 180, dmgMult: 1.5, animClass: 'boss-anim-stage2', desc: '«Ещё один свайп, и ты мой!»' },
+      { hp: 250, maxHp: 250, dmgMult: 2.0, animClass: 'boss-anim-stage3', desc: '«ТЫ НЕ МОЖЕШЬ УЙТИ ОТ ЛЕНТЫ!»' }
+    ]
+  };
+  return {
+    name: 'Химера Выгорания', icon: '🔥', type: 'chimera',
+    stages: [
+      { hp: 150, maxHp: 150, dmgMult: 1, animClass: 'boss-anim-stage1', desc: '«У тебя нет сил...»' },
+      { hp: 220, maxHp: 220, dmgMult: 1.5, animClass: 'boss-anim-stage2', desc: '«Твоя мотивация иссякла.»' },
+      { hp: 300, maxHp: 300, dmgMult: 2.0, animClass: 'boss-anim-stage3', desc: '«СГОРИ В ПЕПЛЕ РУТИНЫ!»' }
+    ]
+  };
 }
 
 function drinkEstus() {
@@ -1262,9 +1326,14 @@ function completeCard(e, id) {
   burstParticles(x, y, 28, { color: '#f4c896', speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
   addXp(15);
   
-  const rankMultipliers = { 'C': 1.0, 'CC': 1.1, 'CCC': 1.2, 'B': 1.3, 'BB': 1.4, 'BBB': 1.5, 'A': 1.7, 'AA': 1.9, 'AAA': 2.0, 'S': 2.5, 'SS': 3.0, 'SSS': 3.5 };
-  const multiplier = rankMultipliers[card.rank] || 1.0;
-  const statXp = Math.round(10 * multiplier);
+  // Souls-like: очень мало XP за статы на низких рангах
+  const rankStatXp = {
+    'C': 5, 'CC': 6, 'CCC': 8,
+    'B': 12, 'BB': 15, 'BBB': 18,
+    'A': 25, 'AA': 30, 'AAA': 35,
+    'S': 50, 'SS': 70, 'SSS': 100
+  };
+  const statXp = rankStatXp[card.rank] || 5;
   if (card.stat) setTimeout(() => addStatXp(card.stat, statXp, x, y), 200);
 
   card.completions += 1;
@@ -1356,14 +1425,15 @@ function failCard(e, id) {
   }
   
   const boss = getCurrentBoss();
+  const stage = boss.stages[bossStage];
   if (boss.type === 'social' && (card.stat === 'wil' || card.stat === 'int')) {
-    HERO.hp = Math.max(0, HERO.hp - 10);
-    changeBossHp(BOSS_HEAL_ON_FAIL * 2);
+    HERO.hp = Math.max(0, HERO.hp - 10 * stage.dmgMult);
+    changeBossHp(BOSS_HEAL_ON_FAIL * stage.dmgMult);
     showToast('📱 Демон Соцсетей атакует!', 'Пропуск Воли/Интеллекта нанес двойной урон!', 'blood');
     screenShake(12, 600);
   } else {
-    changeBossHp(BOSS_HEAL_ON_FAIL);
-    showToast('💀 Пропуск', `Босс восстановил +${BOSS_HEAL_ON_FAIL} HP`, 'blood');
+    changeBossHp(BOSS_HEAL_ON_FAIL * stage.dmgMult);
+    showToast('💀 Пропуск', `Босс восстановил +${Math.round(BOSS_HEAL_ON_FAIL * stage.dmgMult)} HP`, 'blood');
   }
   
   if (card) { card.streak = 0; renderCards(); }
@@ -1624,9 +1694,10 @@ function updateDamageInfo() {
 }
 function updateBossDisplay() {
   const boss = getCurrentBoss();
-  document.getElementById('bossPanelTitle').textContent = `${boss.icon} ${boss.name}`;
+  const stage = boss.stages[bossStage];
+  document.getElementById('bossPanelTitle').textContent = `${boss.icon} ${boss.name} (Стадия ${bossStage + 1}/3)`;
   document.getElementById('bossSubtitle').textContent = `${boss.name} · ${boss.type === 'chimera' ? 'Имеет щит. Нужно 5 карточек за день.' : boss.type === 'social' ? 'Двойной урон за пропуск Воли/Интеллекта' : 'Он ждёт твоего провала'}`;
-  document.getElementById('bossLoreText').innerHTML = `<b style="color:var(--blood-bright)">«${boss.lore}»</b><br><br><b style="color:var(--gold-bright)">Каждый день в 23:00 МСК</b> я наказываю тебя:<br>• <b style="color:var(--blood-bright)">-10 HP</b> за каждую невыполненную карточку<br>• <b style="color:var(--blood-bright)">-15 HP</b> за каждую невыполненную цель<br><br>Каждая выполненная карточка — удар, от которого я трескаюсь.<br>Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.`;
+  document.getElementById('bossLoreText').innerHTML = `<b style="color:var(--blood-bright)">«${stage.desc}»</b><br><br><b style="color:var(--gold-bright)">Каждый день в 23:00 МСК</b> я наказываю тебя:<br>• <b style="color:var(--blood-bright)">-${10 * stage.dmgMult} HP</b> за каждую невыполненную карточку<br>• <b style="color:var(--blood-bright)">-${15 * stage.dmgMult} HP</b> за каждую невыполненную цель<br><br>Каждая выполненная карточка — удар, от которого я трескаюсь.<br>Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.`;
 }
 function addXp(amount) {
   const gear = getTotalGearBonuses();
@@ -1675,35 +1746,77 @@ function onLevelUp() {
 // ============ БОСС И НАКАЗАНИЕ ============
 let bossHp = 100;
 function changeBossHp(delta) {
-  bossHp = Math.max(0, Math.min(100, bossHp + delta));
-  document.getElementById('bossHpFill').style.width = bossHp + '%';
-  document.getElementById('bossHpText').textContent = Math.round(bossHp) + '%';
+  if (bossDefeated) return; // Босс уже мёртв, не реагирует на урон
+
+  const boss = getCurrentBoss();
+  const stage = boss.stages[bossStage];
+  
+  bossHp = Math.max(0, Math.min(stage.maxHp, bossHp + delta));
+  
+  const pct = (bossHp / stage.maxHp) * 100;
+  document.getElementById('bossHpFill').style.width = pct + '%';
+  document.getElementById('bossHpText').textContent = Math.round(pct) + '%';
   const ff = document.getElementById('bossHpFillFull'), ft = document.getElementById('bossHpTextFull');
-  if (ff) ff.style.width = bossHp + '%';
-  if (ft) ft.textContent = Math.round(bossHp) + '%';
-  const crackPct = Math.max(0, (100 - bossHp) / 100);
-  const crackEl = document.getElementById('bossCracks');
-  const crackFullEl = document.getElementById('bossCracksFull');
-  if (crackEl) crackEl.style.opacity = crackPct * 0.95;
-  if (crackFullEl) crackFullEl.style.opacity = crackPct * 0.95;
-  const bloodEl = document.getElementById('bossBlood');
-  const bloodFullEl = document.getElementById('bossBloodFull');
-  const bloodPct = bossHp < 30 ? (30 - bossHp) / 30 : 0;
-  if (bloodEl) bloodEl.style.opacity = bloodPct * 0.8;
-  if (bloodFullEl) bloodFullEl.style.opacity = bloodPct * 0.8;
+  if (ff) ff.style.width = pct + '%';
+  if (ft) ft.textContent = Math.round(pct) + '%';
+  
+  const crackPct = Math.max(0, (stage.maxHp - bossHp) / stage.maxHp);
+  document.getElementById('bossCracks').style.opacity = crackPct * 0.95;
+  document.getElementById('bossCracksFull').style.opacity = crackPct * 0.95;
+  const bloodPct = bossHp < stage.maxHp * 0.3 ? (stage.maxHp * 0.3 - bossHp) / (stage.maxHp * 0.3) : 0;
+  document.getElementById('bossBlood').style.opacity = bloodPct * 0.8;
+  document.getElementById('bossBloodFull').style.opacity = bloodPct * 0.8;
+  
   document.querySelectorAll('.boss-sprite').forEach(sprite => {
     sprite.style.filter = `hue-rotate(${crackPct * -20}deg) saturate(${1 + crackPct * 0.5}) brightness(${1 - crackPct * 0.2})`;
   });
+  
   if (bossHp <= 0) {
-    setTimeout(() => {
-      burstParticles(window.innerWidth/2, window.innerHeight/2, 200, { color: '#c73e4d', speed: 15, decay: 0.005, size: 5, shape: 'star', gravity: 0.15, life: 1.5 });
-      screenShake(15, 800);
-      spiritSay('«Босс повержен... Но впереди — новые демоны.»');
-      showToast('🏆 БОСС ПОВЕРЖЕН!', 'Ты сделал шаг к свободе');
-      setTimeout(() => { bossHp = 100; changeBossHp(0); }, 3000);
-    }, 300);
+    if (bossStage < 2) {
+      bossStage++;
+      const nextStage = boss.stages[bossStage];
+      bossHp = nextStage.maxHp;
+      
+      screenShake(12, 600);
+      burstParticles(window.innerWidth/2, window.innerHeight/2, 100, { color: '#c73e4d', speed: 12, decay: 0.01, size: 4, shape: 'star', gravity: 0.1 });
+      showToast(`⚠ БОСС ЭВОЛЮЦИОНИРУЕТ!`, `${boss.name} переходит в стадию ${bossStage + 1}!`, 'blood');
+      spiritSay(`«${nextStage.desc}»`);
+      
+      document.getElementById('bossInfo').textContent = nextStage.desc;
+      document.querySelectorAll('.boss-sprite').forEach(sprite => {
+        sprite.className = 'boss-sprite ' + nextStage.animClass;
+      });
+      updateBossDisplay();
+    } else {
+      triggerBossExecution();
+    }
   }
 }
+
+function triggerBossExecution() {
+  bossDefeated = true;
+  const sprites = document.querySelectorAll('.boss-sprite');
+  sprites.forEach(s => s.classList.add('boss-anim-execution'));
+  
+  screenShake(25, 1500);
+  burstParticles(window.innerWidth/2, window.innerHeight/2, 300, { color: '#fbbf24', speed: 15, decay: 0.005, size: 5, shape: 'star', gravity: 0.15, life: 2.0 });
+  burstParticles(window.innerWidth/2, window.innerHeight/2, 200, { color: '#c73e4d', speed: 12, decay: 0.008, size: 4, shape: 'spark', gravity: 0.1, life: 1.5 });
+  
+  showToast('💀 БОСС КАЗНЕН', 'Тьма отступает. Ты получил древнюю реликвию.', 'crit');
+  spiritSay('«Невозможное совершено. Твоя душа стала крепче.»');
+  
+  addXp(1000);
+  dropRandomLoot(window.innerWidth/2, window.innerHeight/2);
+  dropRandomLoot(window.innerWidth/2 + 50, window.innerHeight/2 - 50);
+  
+  document.getElementById('bossInfo').innerHTML = '<span class="boss-defeated-text">☠ ПОБЕЖДЕН ☠</span>';
+  
+  setTimeout(() => {
+    document.getElementById('bossHpText').textContent = '0%';
+    document.getElementById('bossHpTextFull').textContent = '0%';
+  }, 100);
+}
+
 document.addEventListener('mousemove', (e) => {
   document.querySelectorAll('.boss-eye').forEach(eye => {
     const r = eye.parentElement.getBoundingClientRect();
@@ -1746,11 +1859,13 @@ function checkBossPunishment() {
     return;
   }
   
+  const boss = getCurrentBoss();
+  const stage = boss.stages[bossStage];
   const allCards = [...CARDS, ...FORGED];
   const uncompletedCards = allCards.filter(c => !isTodayMSK(c.lastCompletedAt));
   const uncompletedGoals = GOALS.filter(g => !g.completed && !isTodayMSK(g.lastStepAt));
-  const cardsDamage = uncompletedCards.length * 10;
-  const goalsDamage = uncompletedGoals.length * 15;
+  const cardsDamage = uncompletedCards.length * 10 * stage.dmgMult;
+  const goalsDamage = uncompletedGoals.length * 15 * stage.dmgMult;
   const totalDamage = cardsDamage + goalsDamage;
   if (totalDamage <= 0) { lastPunishDate = todayKey; saveGameState(); return; }
   
@@ -2316,7 +2431,7 @@ function saveGameState() {
   try {
     const snapshot = {
       hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-      escapeProgress, bossHp, lastPunishDate, lastDayReset, chimeraShield,
+      escapeProgress, bossHp, bossStage, bossDefeated, lastPunishDate, lastDayReset, chimeraShield,
       forgedIdCounter, uidCounter, goalIdCounter, savedAt: Date.now()
     };
     localStorage.setItem('neurodeck_full_save', JSON.stringify(snapshot));
@@ -2338,6 +2453,8 @@ function loadGameState() {
     }
     if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
     if (typeof data.bossHp === 'number') bossHp = data.bossHp;
+    if (typeof data.bossStage === 'number') bossStage = data.bossStage;
+    if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
     if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
     if (data.lastDayReset) lastDayReset = data.lastDayReset;
     if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
@@ -2355,7 +2472,7 @@ function openSyncModal() { document.getElementById('syncModal').classList.add('s
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); document.getElementById('syncImportCode').value = ''; }
 function generateSyncCode() {
   try {
-    const data = { v: SYNC_VERSION, t: Date.now(), hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY, escapeProgress, bossHp, lastPunishDate, lastDayReset, chimeraShield, forgedIdCounter, uidCounter, goalIdCounter };
+    const data = { v: SYNC_VERSION, t: Date.now(), hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY, escapeProgress, bossHp, bossStage, bossDefeated, lastPunishDate, lastDayReset, chimeraShield, forgedIdCounter, uidCounter, goalIdCounter };
     const json = JSON.stringify(data);
     const base64 = btoa(unescape(encodeURIComponent(json)));
     currentSyncCode = base64.match(/.{1,4}/g).join(' ');
@@ -2430,6 +2547,8 @@ function applySyncData(data) {
   }
   if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
   if (typeof data.bossHp === 'number') bossHp = data.bossHp;
+  if (typeof data.bossStage === 'number') bossStage = data.bossStage;
+  if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
   if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
   if (data.lastDayReset) lastDayReset = data.lastDayReset;
   if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
@@ -2472,3 +2591,4 @@ setTimeout(() => {
 </script>
 </body>
 </html>
+
