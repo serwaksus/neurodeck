@@ -869,7 +869,7 @@ margin-top: 8px; font-style: italic;
 <svg class="hero-level-ring" viewBox="0 0 160 160">
 <defs><linearGradient id="xpGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5a2b"/><stop offset="50%" stop-color="#d4a574"/><stop offset="100%" stop-color="#f4c896"/></linearGradient></defs>
 <circle class="ring-bg" cx="80" cy="80" r="74"/>
-<circle class="ring-fill" id="ringFill" cx="80" cy="80" r="74" stroke-dasharray="465" stroke-dashoffset="465"/>
+<circle class="ring-fill" id="ringFill" cx="80" cy="80" r="74" stroke-dasharray="465.01" stroke-dashoffset="465.01"/>
 </svg>
 <div class="hero-level" id="heroLevelLabel">LVL 1</div>
 </div>
@@ -1105,7 +1105,6 @@ if (rank === 'AA' || rank === 'AAA') return RANK_COLORS.A;
 if (rank === 'SS' || rank === 'SSS') return RANK_COLORS.S;
 return RANK_COLORS[rank] || RANK_COLORS.C;
 }
-const CARDS = [];
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 let FORGED = [];
 let forgedIdCounter = 100;
@@ -1128,7 +1127,7 @@ return { label: '10%', cls: 'adapt-10' };
 function renderCards() {
 const grid = document.getElementById('cardGrid');
 grid.innerHTML = '';
-const all = [...CARDS, ...FORGED];
+const all = [...FORGED];
 document.getElementById('deckCount').textContent = all.length;
 if (all.length === 0) {
 grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Пока пусто. Нажми «🔨 Выковать карточку», чтобы создать первую карточку.</div>';
@@ -1179,7 +1178,7 @@ el.addEventListener('mouseleave', () => { el.style.transform = ''; });
 grid.appendChild(el);
 }
 renderCards();
-function findCard(id) { return CARDS.find(c => c.id === id) || FORGED.find(c => c.id === id); }
+function findCard(id) { return FORGED.find(c => c.id === id); }
 function spawnFloatNumber(x, y, text, color) {
 const el = document.createElement('div');
 el.className = 'float-number';
@@ -1399,7 +1398,10 @@ document.getElementById('heroTitle').textContent = HERO.title;
 document.getElementById('heroAvatar').classList.remove('hollow');
 document.getElementById('atonementBar').style.display = 'none';
 }
-document.getElementById('ringFill').setAttribute('stroke-dashoffset', 2 * Math.PI * 74 * (1 - HERO.xp / HERO.xpToNext));
+const ringR = parseFloat(document.getElementById('ringFill').getAttribute('r')) || 74;
+const ringCirc = 2 * Math.PI * ringR;
+document.getElementById('ringFill').setAttribute('stroke-dasharray', ringCirc);
+document.getElementById('ringFill').setAttribute('stroke-dashoffset', ringCirc * (1 - HERO.xp / HERO.xpToNext));
 document.getElementById('heroHpCur').textContent = HERO.hp;
 document.getElementById('heroHpMax').textContent = HERO.maxHp;
 const hpPct = (HERO.hp / HERO.maxHp) * 100;
@@ -1463,7 +1465,6 @@ function onLevelUp() {
 document.getElementById('lvlNum').textContent = HERO.level;
 const ov = document.getElementById('lvlOverlay'), bn = document.getElementById('lvlBanner');
 document.getElementById('lvlSub').textContent = (HERO.level - 1) + ' → ' + HERO.level;
-document.getElementById('lvlSub2').textContent = '+100 HP · Новые возможности открыты';
 ov.classList.remove('show'); bn.classList.remove('show'); void ov.offsetWidth;
 ov.classList.add('show'); bn.classList.add('show');
 const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
@@ -1474,7 +1475,9 @@ STATS[k].value = Math.min(STATS[k].max, STATS[k].value + 1);
 updateStatUI(k);
 });
 HERO.maxHp = calcMaxHp();
+const hpGain = HERO.maxHp - HERO.hp;
 HERO.hp = HERO.maxHp;
+document.getElementById('lvlSub2').textContent = '+' + hpGain + ' HP · Все статы +1';
 renderStats();
 spiritSay('«Уровень ' + HERO.level + '... Бремя стало легче.»');
 showToast('🏆 Уровень ' + HERO.level, '+1 ко всем атрибутам · HP восстановлено · Следующий: ' + HERO.xpToNext + ' XP');
@@ -1588,15 +1591,18 @@ const newTime = document.getElementById('editCardTime').value;
 const newDuration = parseInt(document.getElementById('editCardDuration').value) || 15;
 const newMastery = Math.max(2, parseInt(document.getElementById('editCardMastery').value) || 7);
 const st = STATS[newStat];
+const oldMeta = card.meta, oldStat = card.stat;
 card.name = name;
 card.stat = newStat;
 card.meta = st.icon + ' ' + newDuration + ' мин · ' + newTime;
 card.masteryThreshold = newMastery;
+if (card.meta !== oldMeta || newStat !== oldStat) {
 card.firstCompletedAt = Date.now();
 card.daysActive = 0;
+}
 closeEditCard();
 renderCards();
-showToast('✏ Сохранено', 'Карточка обновлена: ' + name + '. Адаптация сброшена!', 'crit');
+showToast('✏ Сохранено', 'Карточка обновлена: ' + name);
 saveGameState();
 }
 let bossHp = 100;
@@ -1915,11 +1921,12 @@ item.bonuses.map(b => '<div class="item-bonus"><span class="item-bonus-name">' +
 function equipItem(uid) {
 const item = INVENTORY.backpack.find(i => i.uid === uid);
 if (!item) return;
-const current = INVENTORY.equipped[item.slot];
-if (current) INVENTORY.backpack.push(current);
-INVENTORY.backpack = INVENTORY.backpack.filter(i => i.uid !== uid);
 let targetSlot = item.slot;
 if (item.slot === 'ring1' && INVENTORY.equipped.ring1 && !INVENTORY.equipped.ring2) targetSlot = 'ring2';
+const current = INVENTORY.equipped[targetSlot];
+if (current) INVENTORY.backpack.push(Object.assign({}, current, { slot: current.slot === 'ring2' ? 'ring1' : current.slot }));
+INVENTORY.equipped[targetSlot] = null;
+INVENTORY.backpack = INVENTORY.backpack.filter(i => i.uid !== uid);
 INVENTORY.equipped[targetSlot] = Object.assign({}, item, { slot: targetSlot });
 const slotEl = document.querySelector('.slot[data-slot="' + targetSlot + '"]');
 if (slotEl) {
@@ -2071,8 +2078,8 @@ list.innerHTML = '<div class="goals-empty">' + (currentGoalFilter === 'all' ? '�
 updateHeroSummary(); return;
 }
 filtered.forEach(goal => {
-const rewards = GOAL_REWARDS[goal.type];
-const st = STATS[goal.stat];
+const rewards = GOAL_REWARDS[goal.type] || GOAL_REWARDS.short;
+    const st = STATS[goal.stat] || STATS.str;
 const progressPct = (goal.currentStep / goal.totalSteps) * 100;
 const daysLeft = goal.deadline ? Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : null;
 const daysText = daysLeft === null ? '' : daysLeft > 0 ? daysLeft + ' дн.' : daysLeft === 0 ? 'Сегодня!' : 'Просрочено';
@@ -2298,7 +2305,7 @@ function checkDailyReset() {
 const todayKey = getMSKDayKey();
 if (lastDayReset !== todayKey) {
         if (lastDayReset !== null) {
-            const allCards = [...CARDS, ...FORGED];
+            const allCards = [...FORGED];
             const uncompletedCards = allCards.filter(c => {
                 if (!c.lastCompletedAt) return true;
                 return getMSKDayKey(c.lastCompletedAt) !== lastDayReset;
@@ -2346,7 +2353,7 @@ HERO.estus = 3;
 HERO.lastEstusReset = currentMonth;
 showToast('🧪 Эстус обновлён', 'Фляги восстановлены на новый месяц', 'save');
 }
-[...CARDS, ...FORGED].forEach(c => {
+FORGED.forEach(c => {
 if (c.firstCompletedAt) {
 c.daysActive = getCardDaysActive(c);
 }
@@ -2389,7 +2396,7 @@ INVENTORY.equipped = data.inventory.equipped || INVENTORY.equipped;
 }
 if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
 if (typeof data.bossHp === 'number') bossHp = data.bossHp;
-if (typeof data.bossStage === 'number') bossStage = data.bossStage;
+if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
@@ -2496,7 +2503,7 @@ INVENTORY.equipped = data.inventory.equipped || INVENTORY.equipped;
 }
 if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
 if (typeof data.bossHp === 'number') bossHp = data.bossHp;
-if (typeof data.bossStage === 'number') bossStage = data.bossStage;
+if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
@@ -2565,7 +2572,7 @@ ctx.closePath(); ctx.fill();
 ctx.restore();
 }
 }
-function burstParticles(x, y, count, o) { o = o || {}; for (let i = 0; i < count; i++) { const a = (i / count) * Math.PI * 2; const sp = (o.speed !== undefined ? o.speed : 6) * (0.5 + Math.random() * 0.5); particles.push(new Particle(x, y, Object.assign({}, o, { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp }))); } }
+function burstParticles(x, y, count, o) { o = o || {}; const MAX_PARTICLES = 500; if (particles.length > MAX_PARTICLES) return; count = Math.min(count, MAX_PARTICLES - particles.length); for (let i = 0; i < count; i++) { const a = (i / count) * Math.PI * 2; const sp = (o.speed !== undefined ? o.speed : 6) * (0.5 + Math.random() * 0.5); particles.push(new Particle(x, y, Object.assign({}, o, { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp }))); } }
 function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles = particles.filter(p => p.life > 0); particles.forEach(p => { p.update(); p.draw(ctx); }); requestAnimationFrame(animate); }
 animate();
 const shakeWrap = document.getElementById('shakeWrap');
