@@ -59,10 +59,9 @@ switch(action) {
 case 'switch-view': switchView(el.dataset.view); break;
 case 'open-sync-modal': openSyncModal(); break;
 case 'close-sync-modal': closeSyncModal(); break;
-case 'copy-sync-code': copySyncCode(); break;
-case 'regenerate-sync-code': regenerateSyncCode(); break;
+case 'save-cloud': saveToCloud(); break;
+case 'load-cloud': loadFromCloud(); break;
 case 'download-sync-file': downloadSyncFile(); break;
-case 'import-sync-code': importSyncCode(); break;
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
@@ -1499,47 +1498,122 @@ if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 }
 setInterval(() => { checkDailyReset(); updatePunishCountdown(); }, 60 * 1000);
 window.addEventListener('beforeunload', saveGameState);
-const SYNC_VERSION = 'nd-sync-v3';
-let currentSyncCode = '';
-function openSyncModal() { document.getElementById('syncModal').classList.add('show'); generateSyncCode(); }
-function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); document.getElementById('syncImportCode').value = ''; }
-function generateSyncCode() {
-try {
-const data = {
-v: SYNC_VERSION, t: Date.now(),
+const CLOUD_MAX_CHUNK = 4000;
+const CLOUD_META_KEY = 'nd_meta';
+const CLOUD_DATA_PREFIX = 'nd_';
+function getCloudStorage() {
+return window.Telegram && Telegram.WebApp && Telegram.WebApp.CloudStorage ? Telegram.WebApp.CloudStorage : null;
+}
+function buildSyncData() {
+return {
+v: 'nd-sync-v4', t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastPunishDate, lastDayReset, chimeraShield,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory
 };
-const json = JSON.stringify(data);
-const base64 = btoa(unescape(encodeURIComponent(json)));
-currentSyncCode = base64.match(/.{1,4}/g).join(' ');
-document.getElementById('syncCodeDisplay').textContent = currentSyncCode;
-document.getElementById('syncCodeDisplay').classList.remove('copied');
-} catch (e) { console.error('Sync error:', e); document.getElementById('syncCodeDisplay').textContent = 'Ошибка генерации'; }
 }
-function regenerateSyncCode() { generateSyncCode(); showToast('🔄 Код обновлён', 'Новый слепок создан'); }
-function copySyncCode() {
-const code = currentSyncCode.replace(/\s/g, '');
-navigator.clipboard.writeText(code).then(() => {
-const el = document.getElementById('syncCodeDisplay');
-el.classList.add('copied');
-showToast('📋 Скопировано', 'Код в буфере обмена');
-setTimeout(() => el.classList.remove('copied'), 2000);
-}).catch(() => {
-const textarea = document.createElement('textarea');
-textarea.value = code;
-document.body.appendChild(textarea);
-textarea.select();
-document.execCommand('copy');
-textarea.remove();
-showToast('📋 Скопировано', 'Код в буфере обмена');
+function updateCloudStatus() {
+const cs = getCloudStorage();
+const el = document.getElementById('cloudStatus');
+if (!cs) {
+if (el) el.innerHTML = '⚠ <b style="color:var(--gold-bright)">Откройте приложение в Telegram</b> для облачной синхронизации.<br>Файловый способ доступен всегда.';
+return;
+}
+cs.getItem(CLOUD_META_KEY, function(val, err) {
+if (el) {
+if (!err && val) {
+try {
+const meta = JSON.parse(val);
+const date = new Date(meta.savedAt).toLocaleString('ru');
+el.innerHTML = '☁ Последнее сохранение: <b style="color:var(--gold-bright)">' + date + '</b>' + (meta.chunks > 1 ? ' (' + meta.chunks + ' частей)' : '');
+} catch(e) {
+el.innerHTML = '☁ Облако доступно';
+}
+} else {
+el.innerHTML = '☁ Облако доступно. Нет сохранений.';
+}
+}
 });
 }
+function saveToCloud() {
+const cs = getCloudStorage();
+if (!cs) { showToast('⚠ Недоступно', 'Откройте в Telegram', 'blood'); return; }
+const data = buildSyncData();
+const json = JSON.stringify(data);
+function doSave() {
+const chunks = [];
+for (let i = 0; i < json.length; i += CLOUD_MAX_CHUNK) {
+chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
+}
+let saved = 0;
+chunks.forEach(function(chunk, idx) {
+cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err) {
+if (!err) saved++;
+if (idx === chunks.length - 1) {
+cs.setItem(CLOUD_META_KEY, JSON.stringify({chunks: chunks.length, savedAt: Date.now()}), function(err2) {
+updateCloudStatus();
+if (saved === chunks.length) {
+showToast('☁ Сохранено в облако', 'Доступно на всех устройствах');
+spiritSay('«Облако запомнило твой путь.»');
+} else {
+showToast('⚠ Частичная ошибка', saved + '/' + chunks.length + ' частей');
+}
+});
+}
+});
+});
+}
+cs.getKeys(function(keys) {
+const oldKeys = keys.filter(function(k) { return k === CLOUD_META_KEY || k.startsWith(CLOUD_DATA_PREFIX); });
+if (oldKeys.length === 0) { doSave(); return; }
+let pending = oldKeys.length;
+oldKeys.forEach(function(k) {
+cs.removeItem(k, function() { pending--; if (pending === 0) doSave(); });
+});
+});
+}
+function loadFromCloud() {
+const cs = getCloudStorage();
+if (!cs) { showToast('⚠ Недоступно', 'Откройте в Telegram', 'blood'); return; }
+if (!confirm('⚠ Текущие данные будут перезаписаны из облака. Продолжить?')) return;
+cs.getItem(CLOUD_META_KEY, function(metaStr, err) {
+if (err || !metaStr) { showToast('⚠ Пусто', 'В облаке нет сохранений', 'blood'); return; }
+let meta;
+try { meta = JSON.parse(metaStr); } catch(e) { showToast('⚠ Ошибка', 'Повреждённые данные', 'blood'); return; }
+const chunks = new Array(meta.chunks);
+let loaded = 0;
+function checkDone() {
+if (loaded < meta.chunks) return;
+const fullJson = chunks.join('');
+try {
+const data = JSON.parse(fullJson);
+applySyncData(data);
+showToast('☁ Загружено из облака', 'От ' + new Date(data.t).toLocaleString('ru'));
+spiritSay('«Облако поделилось воспоминаниями...»');
+screenShake(6, 400);
+burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#34d399', speed: 10, decay: 0.01, size: 3, shape: 'star', gravity: 0.08 });
+closeSyncModal();
+saveGameState();
+} catch(e) { showToast('⚠ Ошибка', 'Не удалось прочитать данные облака', 'blood'); }
+}
+for (let i = 0; i < meta.chunks; i++) {
+cs.getItem(CLOUD_DATA_PREFIX + i, (function(idx) {
+return function(val, err2) {
+if (!err2 && val) chunks[idx] = val;
+loaded++;
+checkDone();
+};
+})(i));
+}
+});
+}
+function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); }
+function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }
 function downloadSyncFile() {
 try {
-const code = currentSyncCode.replace(/\s/g, '');
-const blob = new Blob([code], { type: 'application/json' });
+const data = buildSyncData();
+const json = JSON.stringify(data);
+const blob = new Blob([json], { type: 'application/json' });
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
@@ -1549,30 +1623,22 @@ URL.revokeObjectURL(url);
 showToast('💾 Файл сохранён', 'Резервная копия загружена');
 } catch (e) { showToast('⚠ Ошибка', 'Не удалось сохранить файл', 'blood'); }
 }
-function importSyncCode() {
-const code = document.getElementById('syncImportCode').value.replace(/\s/g, '');
-if (!code) { showToast('⚠ Пусто', 'Введи код для импорта', 'blood'); return; }
-if (!confirm('⚠ Внимание: текущие данные будут перезаписаны. Продолжить?')) return;
-try {
-const json = decodeURIComponent(escape(atob(code)));
-const data = JSON.parse(json);
-if (data.v !== SYNC_VERSION && data.v !== 'nd-sync-v1' && data.v !== 'nd-sync-v2') {
-showToast('⚠ Несовместимо', 'Версия кода не поддерживается', 'blood'); return;
-}
-applySyncData(data);
-showToast('✅ Импортировано', 'Данные от ' + new Date(data.t).toLocaleString('ru'));
-spiritSay('«Чужие воспоминания... но теперь они твои.»');
-screenShake(6, 400);
-burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#34d399', speed: 10, decay: 0.01, size: 3, shape: 'star', gravity: 0.08 });
-closeSyncModal();
-saveGameState();
-} catch (e) { console.error('Import error:', e); showToast('⚠ Неверный код', 'Проверь правильность ввода', 'blood'); }
-}
 function importSyncFile(event) {
 const file = event.target.files[0];
 if (!file) return;
 const reader = new FileReader();
-reader.onload = (e) => { document.getElementById('syncImportCode').value = e.target.result; importSyncCode(); };
+reader.onload = function(e) {
+try {
+const data = JSON.parse(e.target.result);
+if (!confirm('⚠ Текущие данные будут перезаписаны. Продолжить?')) return;
+applySyncData(data);
+showToast('✅ Импортировано', 'Данные из файла');
+spiritSay('«Чужие воспоминания... но теперь они твои.»');
+screenShake(6, 400);
+closeSyncModal();
+saveGameState();
+} catch(err) { showToast('⚠ Ошибка', 'Неверный формат файла', 'blood'); }
+};
 reader.readAsText(file);
 event.target.value = '';
 }

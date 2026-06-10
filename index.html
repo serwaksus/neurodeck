@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 <div class="app-wrap">
@@ -147,41 +147,32 @@
 </div>
 <div class="modal-overlay" id="syncModal">
 <div class="modal">
-<div class="modal-header"><h3>🔗 Синхронизация</h3><button class="modal-close" data-action="close-sync-modal">✕</button></div>
+<div class="modal-header"><h3>☁ Синхронизация</h3><button class="modal-close" data-action="close-sync-modal">✕</button></div>
 <div class="modal-body">
-<div class="sync-section">
-<div class="sync-section-title">📤 Экспорт с этого устройства</div>
-<div class="sync-section-desc">Покажи этот код на другом устройстве или сохрани как резервную копию.</div>
-<div class="sync-code-display" id="syncCodeDisplay" data-action="copy-sync-code">Генерация...</div>
-<div style="display: flex; gap: 8px; margin-top: 24px;">
-<button class="demo-btn" data-action="regenerate-sync-code" style="flex: 1;">🔄 Обновить</button>
-<button class="demo-btn primary" data-action="download-sync-file" style="flex: 1;">💾 Скачать файл</button>
+<div class="sync-section" id="cloudSection">
+<div class="sync-section-title">☁ Облако Telegram</div>
+<div class="sync-section-desc">Автоматическая синхронизация между устройствами через ваш аккаунт Telegram.</div>
+<div id="cloudStatus" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); margin-bottom: 12px; font-size: 12px; color: var(--text-dim);">Проверяю...</div>
+<div style="display: flex; gap: 8px;">
+<button class="demo-btn" data-action="save-cloud" style="flex: 1;">☁ Сохранить</button>
+<button class="demo-btn primary" data-action="load-cloud" style="flex: 1;">☁ Загрузить</button>
 </div>
 </div>
 <div class="sync-section">
-<div class="sync-section-title">📥 Импорт с другого устройства</div>
-<div class="sync-section-desc">Введи код или загрузи файл. <b style="color: var(--blood-bright);">⚠ Внимание:</b> текущие данные будут перезаписаны.</div>
-<div class="sync-input-row">
-<input class="sync-input" id="syncImportCode" placeholder="Вставь код сюда..." maxlength="2000">
-<button class="demo-btn primary" data-action="import-sync-code">⬇ Загрузить</button>
+<div class="sync-section-title">💾 Через файл</div>
+<div class="sync-section-desc">Скачай файл на одном устройстве и загрузи на другом.</div>
+<div style="display: flex; gap: 8px;">
+<button class="demo-btn" data-action="download-sync-file" style="flex: 1;">💾 Скачать</button>
+<button class="demo-btn primary" data-action="choose-sync-file" style="flex: 1;">📁 Загрузить</button>
 </div>
-<div style="text-align: center; color: var(--text-dim); font-size: 11px; margin: 14px 0; letter-spacing: 2px;">— ИЛИ —</div>
-<div style="text-align: center;">
 <input type="file" id="syncFileInput" accept=".ndsync,.json" style="display: none;">
-<button class="demo-btn" data-action="choose-sync-file">📁 Выбрать файл</button>
+</div>
+<div style="display: flex; gap: 8px; margin-top: 8px;">
+<button class="demo-btn" data-action="export-json" style="flex: 1;">📋 JSON</button>
+<button class="demo-btn" data-action="reset-all-data" style="flex: 1; color: var(--blood-bright); border-color: var(--blood);">🗑 Сброс</button>
 </div>
 </div>
-<div class="sync-hint">
-<b>⚠ Как это работает:</b><br>
-Код — сжатый слепок всего прогресса в base64.
-Содержит: уровень героя, атрибуты и пулы очков, карточки с мастерством, цели, артефакты, экипировку, прогресс побега, HP босса.
-</div>
-</div>
-<div class="modal-footer">
-<button class="demo-btn" data-action="export-json">📋 Экспорт JSON</button>
-<button class="demo-btn" data-action="close-sync-modal">Закрыть</button>
-<button class="demo-btn" data-action="reset-all-data" style="color: var(--blood-bright); border-color: var(--blood);">🗑 Сбросить всё</button>
-</div>
+<div class="modal-footer"><button class="demo-btn" data-action="close-sync-modal">Закрыть</button></div>
 </div>
 </div>
 <div class="shake-wrap" id="shakeWrap">
@@ -416,6 +407,7 @@
 </footer>
 </div>
 </div>
-<script src="js/app.js?v=5"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>
