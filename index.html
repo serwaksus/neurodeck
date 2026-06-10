@@ -151,7 +151,7 @@
 <div class="modal-body">
 <div class="sync-section" id="cloudSection">
 <div class="sync-section-title">☁ Облако Telegram</div>
-<div class="sync-section-desc">Автоматическая синхронизация между устройствами через ваш аккаунт Telegram.</div>
+<div class="sync-section-desc">Автоматическая синхронизация. Работает не на всех устройствах.</div>
 <div id="cloudStatus" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); margin-bottom: 12px; font-size: 12px; color: var(--text-dim);">Проверяю...</div>
 <div style="display: flex; gap: 8px;">
 <button class="demo-btn" data-action="save-cloud" style="flex: 1;">☁ Сохранить</button>
@@ -159,7 +159,15 @@
 </div>
 </div>
 <div class="sync-section">
-<div class="sync-section-title">💾 Через файл</div>
+<div class="sync-section-title">🔗 Ссылка</div>
+<div class="sync-section-desc">Создай ссылку с прогрессом и отправь себе в «Избранное» в Telegram. Откроешь на другом устройстве — данные подхватятся автоматически.</div>
+<div style="display: flex; gap: 8px;">
+<button class="demo-btn" data-action="copy-share-link" style="flex: 1;">📋 Копировать</button>
+<button class="demo-btn primary" data-action="share-link" style="flex: 1;">↗ Поделиться</button>
+</div>
+</div>
+<div class="sync-section">
+<div class="sync-section-title">💾 Файл</div>
 <div class="sync-section-desc">Скачай файл на одном устройстве и загрузи на другом.</div>
 <div style="display: flex; gap: 8px;">
 <button class="demo-btn" data-action="download-sync-file" style="flex: 1;">💾 Скачать</button>
@@ -408,6 +416,6 @@
 </div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=8"></script>
+<script src="js/app.js?v=9"></script>
 </body>
 </html>

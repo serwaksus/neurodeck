@@ -61,6 +61,8 @@ case 'open-sync-modal': openSyncModal(); break;
 case 'close-sync-modal': closeSyncModal(); break;
 case 'save-cloud': saveToCloud(); break;
 case 'load-cloud': loadFromCloud(); break;
+case 'copy-share-link': copyShareLink(); break;
+case 'share-link': shareLinkNative(); break;
 case 'download-sync-file': downloadSyncFile(); break;
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
@@ -1626,6 +1628,60 @@ check();
 }
 function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); }
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }
+function generateShareLink() {
+var json = JSON.stringify(buildSyncData());
+var encoded = btoa(unescape(encodeURIComponent(json)));
+return window.location.origin + window.location.pathname + '#' + encoded;
+}
+function copyShareLink() {
+var link = generateShareLink();
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(link).then(function() {
+showToast('📋 Ссылка скопирована', 'Отправь себе в «Избранное» в Telegram');
+}).catch(function() { fallbackCopy(link); });
+} else { fallbackCopy(link); }
+}
+function fallbackCopy(text) {
+var ta = document.createElement('textarea');
+ta.value = text;
+ta.style.position = 'fixed';
+ta.style.left = '-9999px';
+document.body.appendChild(ta);
+ta.select();
+document.execCommand('copy');
+ta.remove();
+showToast('📋 Ссылка скопирована', 'Отправь себе в «Избранное» в Telegram');
+}
+function shareLinkNative() {
+var link = generateShareLink();
+if (navigator.share) {
+navigator.share({title: 'NeuroDeck — Мой прогресс', url: link}).catch(function() {});
+} else {
+copyShareLink();
+}
+}
+function importFromHash() {
+var hash = window.location.hash;
+if (!hash || hash.length < 3) return;
+try {
+var encoded = hash.slice(1);
+var json = decodeURIComponent(escape(atob(encoded)));
+var data = JSON.parse(json);
+if (!data.v || !data.hero) { window.location.hash = ''; return; }
+if (!confirm('📥 В ссылке найден прогресс от ' + new Date(data.t).toLocaleString('ru') + '.\nИмпортировать? (Текущие данные будут перезаписаны)')) {
+window.location.hash = '';
+return;
+}
+applySyncData(data);
+window.location.hash = '';
+showToast('📥 Импортировано из ссылки', 'Прогресс восстановлен');
+spiritSay('«Путь продолжается...»');
+screenShake(6, 400);
+saveGameState();
+} catch(e) {
+window.location.hash = '';
+}
+}
 function downloadSyncFile() {
 try {
 const data = buildSyncData();
@@ -1812,6 +1868,7 @@ renderMap(escapeProgress);
 renderCards();
 updateBossDisplay();
 changeBossHp(0);
+importFromHash();
 setTimeout(() => {
 spiritSay('«Ты очнулся в Камере заключенного... Выкуй первое испытание.»');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 30, { color: '#d4a574', speed: 4, decay: 0.015, size: 2, shape: 'spark', gravity: 0.05 });
