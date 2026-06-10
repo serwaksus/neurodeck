@@ -92,10 +92,12 @@ const st = STATS[card.stat] || STATS.str;
 const progressPct = Math.min(100, Math.round((card.mastery / card.masteryThreshold) * 100));
 const el = document.createElement('div');
 el.className = 'card rank-' + card.rank;
+const doneToday = card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === getMSKDayKey();
+if (doneToday) el.className += ' done-today';
 const nextRankText = getNextRank(card.rank) || 'MAX';
 el.innerHTML =
 '<div class="card-actions">' +
-  '<div class="card-btn" onclick="completeCard(event, ' + card.id + ')" title="Выполнить">✓</div>' +
+   (doneToday ? '<div class="card-btn done-today-btn" title="Уже выполнено сегодня">✓</div>' : '<div class="card-btn" onclick="completeCard(event, ' + card.id + ')" title="Выполнить">✓</div>') +
   '<div class="card-btn fail" onclick="failCard(event, ' + card.id + ')" title="Пропустить">✕</div>' +
   '<div class="card-btn edit" onclick="openEditCardDirect(' + card.id + ')" title="Редактировать">✎</div>' +
 '</div>' +
@@ -141,6 +143,10 @@ e.stopPropagation();
 const card = findCard(id);
 if (!card) {
 console.warn('Card not found:', id);
+return;
+}
+if (card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === getMSKDayKey()) {
+showToast('⚠ Уже выполнено', 'Карточка уже была выполнена сегодня', 'blood');
 return;
 }
 const rect = e.target.getBoundingClientRect();
@@ -628,6 +634,7 @@ updateBossDisplay();
 triggerBossExecution();
 }
 }
+saveGameState();
 }
 function triggerBossExecution() {
 bossDefeated = true;
@@ -1004,7 +1011,7 @@ const desc = document.getElementById('goalDesc').value.trim();
 const rewards = GOAL_REWARDS[selectedGoalType];
 const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.statXp, completed: false, createdAt: Date.now(), lastStepAt: null };
 GOALS.unshift(goal);
-saveGoals(); renderGoals(); closeGoalModal();
+saveGoals(); saveGameState(); renderGoals(); closeGoalModal();
 const color = selectedGoalType === 'short' ? '#34d399' : selectedGoalType === 'medium' ? '#60a5fa' : '#fbbf24';
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 50, { color, speed: 9, decay: 0.012, size: 3, shape: 'star', gravity: 0.1 });
 showToast('🎯 Цель создана!', rewards.label + ': ' + name);

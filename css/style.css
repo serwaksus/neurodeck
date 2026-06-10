@@ -180,6 +180,9 @@ margin-bottom: 4px;
 .card-btn:hover { background: var(--gold); color: var(--bg-deep); }
 .card-btn.fail:hover { background: var(--blood-bright); }
 .card-btn.edit { font-size: 9px; }
+.card.done-today { opacity: 0.6; }
+.card.done-today::after { content: '✓ Сегодня'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; color: var(--green); letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 10px rgba(52, 211, 153, 0.6); pointer-events: none; z-index: 5; }
+.done-today-btn { opacity: 0.4; cursor: not-allowed !important; background: rgba(52, 211, 153, 0.2) !important; color: var(--green) !important; }
 .boss-panel { background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
 .boss-title { font-size: 10px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; text-align: center; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .boss-image { position: relative; aspect-ratio: 3/4; border-radius: 3px; overflow: hidden; background: #000; border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,0.6); transition: opacity 1.5s ease, filter 1.5s ease; }
