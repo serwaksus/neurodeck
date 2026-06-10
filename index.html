@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 <div class="app-wrap">
@@ -44,14 +44,14 @@
 <div class="tooltip" id="tooltip"></div>
 <div class="modal-overlay" id="goalModal">
 <div class="modal">
-<div class="modal-header"><h3>🎯 Новая цель</h3><button class="modal-close" onclick="closeGoalModal()">✕</button></div>
+<div class="modal-header"><h3>🎯 Новая цель</h3><button class="modal-close" data-action="close-goal-modal">✕</button></div>
 <div class="modal-body">
 <div class="form-row">
 <label class="form-label">Тип цели</label>
 <div class="goal-type-selector" id="goalTypeSelector">
-<div class="goal-type-option short selected" data-type="short"><div class="type-icon">🟢</div><div class="type-name">Краткая</div><div class="type-desc">1-7 дней</div><div class="type-reward">+20 XP · -5 HP</div></div>
-<div class="goal-type-option medium" data-type="medium"><div class="type-icon">🔵</div><div class="type-name">Средняя</div><div class="type-desc">1-4 недели</div><div class="type-reward">+50 XP · -12 HP</div></div>
-<div class="goal-type-option long" data-type="long"><div class="type-icon">🟡</div><div class="type-name">Долгая</div><div class="type-desc">1+ месяц</div><div class="type-reward">+120 XP · -25 HP</div></div>
+<div class="goal-type-option short selected" data-action="select-goal-type" data-type="short"><div class="type-icon">🟢</div><div class="type-name">Краткая</div><div class="type-desc">1-7 дней</div><div class="type-reward">+20 XP · -5 HP</div></div>
+<div class="goal-type-option medium" data-action="select-goal-type" data-type="medium"><div class="type-icon">🔵</div><div class="type-name">Средняя</div><div class="type-desc">1-4 недели</div><div class="type-reward">+50 XP · -12 HP</div></div>
+<div class="goal-type-option long" data-action="select-goal-type" data-type="long"><div class="type-icon">🟡</div><div class="type-name">Долгая</div><div class="type-desc">1+ месяц</div><div class="type-reward">+120 XP · -25 HP</div></div>
 </div>
 </div>
 <div class="form-row"><label class="form-label">Название</label><input class="form-input" id="goalName" placeholder="Пробежать 10 км"></div>
@@ -62,32 +62,32 @@
 <div class="form-row">
 <label class="form-label">⚡ Привязанный стат</label>
 <div id="goalStatChips">
-<div class="stat-chip selected" data-stat="str">⚔ Сила</div>
-<div class="stat-chip" data-stat="end">🛡 Стойкость</div>
-<div class="stat-chip" data-stat="int">🧠 Интеллект</div>
-<div class="stat-chip" data-stat="cha">🎭 Харизма</div>
-<div class="stat-chip" data-stat="wil">🧘 Воля</div>
-<div class="stat-chip" data-stat="agi">⚡ Ловкость</div>
+<div class="stat-chip selected" data-action="select-goal-stat" data-stat="str">⚔ Сила</div>
+<div class="stat-chip" data-action="select-goal-stat" data-stat="end">🛡 Стойкость</div>
+<div class="stat-chip" data-action="select-goal-stat" data-stat="int">🧠 Интеллект</div>
+<div class="stat-chip" data-action="select-goal-stat" data-stat="cha">🎭 Харизма</div>
+<div class="stat-chip" data-action="select-goal-stat" data-stat="wil">🧘 Воля</div>
+<div class="stat-chip" data-action="select-goal-stat" data-stat="agi">⚡ Ловкость</div>
 </div>
 </div>
 <div class="form-row"><label class="form-label">📜 Описание</label><input class="form-input" id="goalDesc" placeholder="Зачем эта цель..."></div>
 </div>
-<div class="modal-footer"><button class="demo-btn" onclick="closeGoalModal()">Отмена</button><button class="demo-btn primary" onclick="createGoal()">🎯 Создать</button></div>
+<div class="modal-footer"><button class="demo-btn" data-action="close-goal-modal">Отмена</button><button class="demo-btn primary" data-action="create-goal">🎯 Создать</button></div>
 </div>
 </div>
 <div class="modal-overlay" id="forgeModal">
 <div class="modal">
-<div class="modal-header"><h3>🔥 Выковать карточку</h3><button class="modal-close" onclick="closeForge()">✕</button></div>
+<div class="modal-header"><h3>🔥 Выковать карточку</h3><button class="modal-close" data-action="close-forge">✕</button></div>
 <div class="modal-body">
 <div class="form-row"><label class="form-label">Название</label><input class="form-input" id="forgeName" placeholder="Медитация"></div>
 <div class="form-row"><label class="form-label">⚡ Характеристика</label>
 <div id="statChips">
-<div class="stat-chip" data-stat="str">⚔ Сила</div>
-<div class="stat-chip" data-stat="end">🛡 Стойкость</div>
-<div class="stat-chip" data-stat="int">🧠 Интеллект</div>
-<div class="stat-chip" data-stat="cha">🎭 Харизма</div>
-<div class="stat-chip" data-stat="wil">🧘 Воля</div>
-<div class="stat-chip" data-stat="agi">⚡ Ловкость</div>
+<div class="stat-chip" data-action="select-forge-stat" data-stat="str">⚔ Сила</div>
+<div class="stat-chip" data-action="select-forge-stat" data-stat="end">🛡 Стойкость</div>
+<div class="stat-chip" data-action="select-forge-stat" data-stat="int">🧠 Интеллект</div>
+<div class="stat-chip" data-action="select-forge-stat" data-stat="cha">🎭 Харизма</div>
+<div class="stat-chip" data-action="select-forge-stat" data-stat="wil">🧘 Воля</div>
+<div class="stat-chip" data-action="select-forge-stat" data-stat="agi">⚡ Ловкость</div>
 </div>
 </div>
 <div class="form-grid-2">
@@ -108,12 +108,12 @@
 Карточка создаётся с выбранным рангом. Каждое выполнение увеличивает Мастерство на 1 (с учётом адаптации). При достижении порога — ранг-ап: <b>C → CC → CCC → B → BB → BBB → A → AA → AAA → S → SS → SSS</b>. После ранг-апа откроется модалка для усложнения карточки.
 </div>
 </div>
-<div class="modal-footer"><button class="demo-btn" onclick="closeForge()">Отмена</button><button class="demo-btn primary" onclick="forgeCard()">🔥 Выковать</button></div>
+<div class="modal-footer"><button class="demo-btn" data-action="close-forge">Отмена</button><button class="demo-btn primary" data-action="forge-card">🔥 Выковать</button></div>
 </div>
 </div>
 <div class="modal-overlay" id="editCardModal">
 <div class="modal">
-<div class="modal-header"><h3>✏ Редактировать карточку</h3><button class="modal-close" onclick="closeEditCard()">✕</button></div>
+<div class="modal-header"><h3>✏ Редактировать карточку</h3><button class="modal-close" data-action="close-edit-card">✕</button></div>
 <div class="modal-body">
 <div class="form-warning" id="editCardWarning">
 ⚠ Ранг повышен! Теперь карточка должна стать сложнее, иначе адаптация снизит получаемое Мастерство и XP.
@@ -121,12 +121,12 @@
 <div class="form-row"><label class="form-label">Название</label><input class="form-input" id="editCardName" placeholder="Медитация"></div>
 <div class="form-row"><label class="form-label">⚡ Характеристика</label>
 <div id="editStatChips">
-<div class="stat-chip" data-stat="str">⚔ Сила</div>
-<div class="stat-chip" data-stat="end">🛡 Стойкость</div>
-<div class="stat-chip" data-stat="int">🧠 Интеллект</div>
-<div class="stat-chip" data-stat="cha">🎭 Харизма</div>
-<div class="stat-chip" data-stat="wil">🧘 Воля</div>
-<div class="stat-chip" data-stat="agi">⚡ Ловкость</div>
+<div class="stat-chip" data-action="select-edit-stat" data-stat="str">⚔ Сила</div>
+<div class="stat-chip" data-action="select-edit-stat" data-stat="end">🛡 Стойкость</div>
+<div class="stat-chip" data-action="select-edit-stat" data-stat="int">🧠 Интеллект</div>
+<div class="stat-chip" data-action="select-edit-stat" data-stat="cha">🎭 Харизма</div>
+<div class="stat-chip" data-action="select-edit-stat" data-stat="wil">🧘 Воля</div>
+<div class="stat-chip" data-action="select-edit-stat" data-stat="agi">⚡ Ловкость</div>
 </div>
 </div>
 <div class="form-grid-2">
@@ -140,22 +140,22 @@
 </div>
 </div>
 <div class="modal-footer">
-<button class="demo-btn" onclick="skipEditCard()">Пропустить</button>
-<button class="demo-btn primary" onclick="saveEditCard()">💾 Сохранить</button>
+<button class="demo-btn" data-action="skip-edit-card">Пропустить</button>
+<button class="demo-btn primary" data-action="save-edit-card">💾 Сохранить</button>
 </div>
 </div>
 </div>
 <div class="modal-overlay" id="syncModal">
 <div class="modal">
-<div class="modal-header"><h3>🔗 Синхронизация</h3><button class="modal-close" onclick="closeSyncModal()">✕</button></div>
+<div class="modal-header"><h3>🔗 Синхронизация</h3><button class="modal-close" data-action="close-sync-modal">✕</button></div>
 <div class="modal-body">
 <div class="sync-section">
 <div class="sync-section-title">📤 Экспорт с этого устройства</div>
 <div class="sync-section-desc">Покажи этот код на другом устройстве или сохрани как резервную копию.</div>
-<div class="sync-code-display" id="syncCodeDisplay" onclick="copySyncCode()">Генерация...</div>
+<div class="sync-code-display" id="syncCodeDisplay" data-action="copy-sync-code">Генерация...</div>
 <div style="display: flex; gap: 8px; margin-top: 24px;">
-<button class="demo-btn" onclick="regenerateSyncCode()" style="flex: 1;">🔄 Обновить</button>
-<button class="demo-btn primary" onclick="downloadSyncFile()" style="flex: 1;">💾 Скачать файл</button>
+<button class="demo-btn" data-action="regenerate-sync-code" style="flex: 1;">🔄 Обновить</button>
+<button class="demo-btn primary" data-action="download-sync-file" style="flex: 1;">💾 Скачать файл</button>
 </div>
 </div>
 <div class="sync-section">
@@ -163,12 +163,12 @@
 <div class="sync-section-desc">Введи код или загрузи файл. <b style="color: var(--blood-bright);">⚠ Внимание:</b> текущие данные будут перезаписаны.</div>
 <div class="sync-input-row">
 <input class="sync-input" id="syncImportCode" placeholder="Вставь код сюда..." maxlength="2000">
-<button class="demo-btn primary" onclick="importSyncCode()">⬇ Загрузить</button>
+<button class="demo-btn primary" data-action="import-sync-code">⬇ Загрузить</button>
 </div>
 <div style="text-align: center; color: var(--text-dim); font-size: 11px; margin: 14px 0; letter-spacing: 2px;">— ИЛИ —</div>
 <div style="text-align: center;">
-<input type="file" id="syncFileInput" accept=".ndsync,.json" style="display: none;" onchange="importSyncFile(event)">
-<button class="demo-btn" onclick="document.getElementById('syncFileInput').click()">📁 Выбрать файл</button>
+<input type="file" id="syncFileInput" accept=".ndsync,.json" style="display: none;">
+<button class="demo-btn" data-action="choose-sync-file">📁 Выбрать файл</button>
 </div>
 </div>
 <div class="sync-hint">
@@ -178,8 +178,9 @@
 </div>
 </div>
 <div class="modal-footer">
-<button class="demo-btn" onclick="closeSyncModal()">Закрыть</button>
-<button class="demo-btn" onclick="resetAllData()" style="color: var(--blood-bright); border-color: var(--blood);">🗑 Сбросить всё</button>
+<button class="demo-btn" data-action="export-json">📋 Экспорт JSON</button>
+<button class="demo-btn" data-action="close-sync-modal">Закрыть</button>
+<button class="demo-btn" data-action="reset-all-data" style="color: var(--blood-bright); border-color: var(--blood);">🗑 Сбросить всё</button>
 </div>
 </div>
 </div>
@@ -187,7 +188,7 @@
 <div class="app">
 <div class="header">
 <div class="logo">NEURODECK <span>Learn by Doing</span></div>
-<button class="sync-header-btn" onclick="openSyncModal()">🔗 <span>Синхра</span></button>
+<button class="sync-header-btn" data-action="open-sync-modal">🔗 <span>Синхра</span></button>
 <div class="hero-mini">
 <div class="hero-avatar-mini">🗡<div class="hero-lvl-badge" id="heroMiniLvl">1</div></div>
 <div class="hero-mini-info">
@@ -198,24 +199,25 @@
 <div class="progress-control"><span>Побег</span><input type="range" id="progressSlider" min="0" max="140" value="0"><span class="val" id="progressVal">0/140</span></div>
 </div>
 <div class="main">
-<div class="tabs">
-<div class="tab active" data-view="deck"><span class="icon">📖</span>Колода</div>
-<div class="tab" data-view="hero"><span class="icon">👤</span>Герой</div>
-<div class="tab" data-view="inv"><span class="icon">🎒</span>Инвентарь</div>
-<div class="tab" data-view="boss"><span class="icon">🐍</span>Босс</div>
-<div class="tab" data-view="map"><span class="icon">🗺</span>Карта</div>
-</div>
-<div class="content">
-<div class="view active" id="view-deck">
+<nav class="tabs" aria-label="Навигация">
+<div class="tab active" data-action="switch-view" data-view="deck"><span class="icon">📖</span>Колода</div>
+<div class="tab" data-action="switch-view" data-view="hero"><span class="icon">👤</span>Герой</div>
+<div class="tab" data-action="switch-view" data-view="inv"><span class="icon">🎒</span>Инвентарь</div>
+<div class="tab" data-action="switch-view" data-view="boss"><span class="icon">🐍</span>Босс</div>
+<div class="tab" data-action="switch-view" data-view="map"><span class="icon">🗺</span>Карта</div>
+<div class="tab" data-action="switch-view" data-view="stats"><span class="icon">📊</span>Статистика</div>
+</nav>
+<main class="content">
+<section class="view active" id="view-deck">
 <div class="view-title">📖 Колода</div>
 <div class="view-subtitle">Каждая выполненная привычка — шаг из тьмы. Чем дольше карточка активна, тем ниже адаптация — усложняй её!</div>
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap;">
 <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px;">Всего карточек: <b id="deckCount" style="color: var(--gold-bright); font-weight: normal;">0</b></div>
-<button class="forge-btn" onclick="openForge()">🔨 Выковать карточку</button>
+<button class="forge-btn" data-action="open-forge">🔨 Выковать карточку</button>
 </div>
 <div class="cards" id="cardGrid"></div>
-</div>
-<div class="view" id="view-hero">
+</section>
+<section class="view" id="view-hero">
 <div class="view-title">👤 Герой</div>
 <div class="view-subtitle">Атрибуты растут только через мастерство карточек (5 очков пула = +1 атрибут)</div>
 <div class="hero-layout">
@@ -246,7 +248,7 @@
 </div>
 <div class="estus-section">
 <div class="estus-info">🧪 Эстус: <b id="estusCount">3</b> / 3</div>
-<button class="estus-btn" id="estusBtn" onclick="drinkEstus()">Выпить Эстус</button>
+<button class="estus-btn" id="estusBtn" data-action="drink-estus">Выпить Эстус</button>
 </div>
 <div class="atonement-bar" id="atonementBar" style="display: none;">
 <div class="atonement-label">Ритуал Искупления (идеальные дни подряд)</div>
@@ -275,20 +277,20 @@
 <div class="goals-section">
 <div class="goals-head">
 <div class="goals-title"><div class="goals-title-icon">🎯</div>Цели героя</div>
-<button class="goals-add" onclick="openGoalModal()">+ Добавить</button>
+<button class="goals-add" data-action="open-goal-modal">+ Добавить</button>
 </div>
 <div class="goals-filters">
-<button class="goal-filter active" data-filter="all">Все</button>
-<button class="goal-filter" data-filter="short">🟢 Краткие</button>
-<button class="goal-filter" data-filter="medium">🔵 Средние</button>
-<button class="goal-filter" data-filter="long">🟡 Долгие</button>
+<button class="goal-filter active" data-action="filter-goals" data-filter="all">Все</button>
+<button class="goal-filter" data-action="filter-goals" data-filter="short">🟢 Краткие</button>
+<button class="goal-filter" data-action="filter-goals" data-filter="medium">🔵 Средние</button>
+<button class="goal-filter" data-action="filter-goals" data-filter="long">🟡 Долгие</button>
 </div>
 <div class="goals-list" id="goalsList"></div>
 </div>
 </div>
 </div>
-</div>
-<div class="view" id="view-inv">
+</section>
+<section class="view" id="view-inv">
 <div class="view-title">🎒 Инвентарь героя</div>
 <div class="view-subtitle">Экипируй артефакты · Получай бонусы к характеристикам</div>
 <div class="inv-layout">
@@ -318,10 +320,10 @@
 <div class="backpack-info"><b id="bpCount">0</b> / <b id="bpMax">30</b></div>
 </div>
 <div class="backpack-tabs">
-<button class="backpack-tab active" data-filter="all">Все</button>
-<button class="backpack-tab" data-filter="weapon">Оружие</button>
-<button class="backpack-tab" data-filter="armor">Броня</button>
-<button class="backpack-tab" data-filter="accessory">Аксессуары</button>
+<button class="backpack-tab active" data-action="filter-backpack" data-filter="all">Все</button>
+<button class="backpack-tab" data-action="filter-backpack" data-filter="weapon">Оружие</button>
+<button class="backpack-tab" data-action="filter-backpack" data-filter="armor">Броня</button>
+<button class="backpack-tab" data-action="filter-backpack" data-filter="accessory">Аксессуары</button>
 </div>
 <div class="backpack-grid" id="backpackGrid"></div>
 </div>
@@ -331,8 +333,8 @@
 <div id="itemPanelContent"><div class="empty-state">Выбери предмет в рюкзаке<br>или кликни по слоту экипировки.</div></div>
 </div>
 </div>
-</div>
-<div class="view" id="view-boss">
+</section>
+<section class="view" id="view-boss">
 <div class="view-title">🐍 Босс локации</div>
 <div class="view-subtitle" id="bossSubtitle">Змей Лени · Он ждёт твоего провала</div>
 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -362,8 +364,8 @@
 </div>
 </div>
 </div>
-</div>
-<div class="view" id="view-map">
+</section>
+<section class="view" id="view-map">
 <div class="view-title">🗺 Карта подземелья</div>
 <div class="view-subtitle">Каждые 20 ранг-апов карточек открывают новую локацию</div>
 <div class="map-header">
@@ -373,9 +375,14 @@
 <div class="map-progress-bar"><div class="map-progress-fill" id="mapProgressFill" style="width:0%"></div></div>
 </div>
 <div class="map-rooms" id="mapRooms"></div>
-</div>
-</div>
-<div class="boss-panel">
+</section>
+<section class="view" id="view-stats">
+<div class="view-title">📊 Статистика</div>
+<div class="view-subtitle">Дневник прогресса — отслеживай свой путь из тьмы</div>
+<div id="statsContent"></div>
+</section>
+</main>
+<aside class="boss-panel">
 <div class="boss-title" id="bossPanelTitle">🐍 Змей Лени</div>
 <div class="boss-image" id="bossImg">
 <div class="boss-sprite boss-anim-stage1"></div>
@@ -397,19 +404,18 @@
 <div class="boss-title" style="border: none; padding: 0; margin-bottom: 6px;">⚡ Твой урон</div>
 <div style="font-size: 10px; color: var(--text-dim); line-height: 1.7;" id="damageInfo"></div>
 </div>
+</aside>
+</div>
+<footer class="bottom-nav">
+<button class="bnav-btn active" data-action="switch-view" data-view="deck"><span class="bnav-icon">📖</span>Колода</button>
+<button class="bnav-btn" data-action="switch-view" data-view="hero"><span class="bnav-icon">👤</span>Герой</button>
+<button class="bnav-btn" data-action="switch-view" data-view="inv"><span class="bnav-icon">🎒</span>Инв</button>
+<button class="bnav-btn" data-action="switch-view" data-view="boss"><span class="bnav-icon">🐍</span>Босс</button>
+<button class="bnav-btn" data-action="switch-view" data-view="map"><span class="bnav-icon">🗺</span>Карта</button>
+<button class="bnav-btn" data-action="switch-view" data-view="stats"><span class="bnav-icon">📊</span>Стат</button>
+</footer>
 </div>
 </div>
-<div class="bottom-nav">
-<button class="bnav-btn active" data-view="deck"><span class="bnav-icon">📖</span>Колода</button>
-<button class="bnav-btn" data-view="hero"><span class="bnav-icon">👤</span>Герой</button>
-<button class="bnav-btn" data-view="inv"><span class="bnav-icon">🎒</span>Инв</button>
-<button class="bnav-btn" data-view="boss"><span class="bnav-icon">🐍</span>Босс</button>
-<button class="bnav-btn" data-view="map"><span class="bnav-icon">🗺</span>Карта</button>
-</div>
-</div>
-</div>
-</div>
-<script src="js/app.js?v=3"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>
-

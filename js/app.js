@@ -50,6 +50,65 @@ if (rank === 'SS' || rank === 'SSS') return RANK_COLORS.S;
 return RANK_COLORS[rank] || RANK_COLORS.C;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+document.addEventListener('click', function(e) {
+var el = e.target.closest('[data-action]');
+if (!el) return;
+var action = el.dataset.action;
+switch(action) {
+case 'switch-view': switchView(el.dataset.view); break;
+case 'open-sync-modal': openSyncModal(); break;
+case 'close-sync-modal': closeSyncModal(); break;
+case 'copy-sync-code': copySyncCode(); break;
+case 'regenerate-sync-code': regenerateSyncCode(); break;
+case 'download-sync-file': downloadSyncFile(); break;
+case 'import-sync-code': importSyncCode(); break;
+case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
+case 'export-json': exportJson(); break;
+case 'reset-all-data': resetAllData(); break;
+case 'open-forge': openForge(); break;
+case 'close-forge': closeForge(); break;
+case 'forge-card': forgeCard(); break;
+case 'select-forge-stat': selectedStat = el.dataset.stat; updateStatChips(); break;
+case 'close-edit-card': closeEditCard(); break;
+case 'select-edit-stat':
+document.querySelectorAll('#editStatChips .stat-chip').forEach(function(c) {
+c.classList.toggle('selected', c.dataset.stat === el.dataset.stat);
+});
+break;
+case 'skip-edit-card': skipEditCard(); break;
+case 'save-edit-card': saveEditCard(); break;
+case 'open-goal-modal': openGoalModal(); break;
+case 'close-goal-modal': closeGoalModal(); break;
+case 'select-goal-type': selectedGoalType = el.dataset.type; updateGoalTypeSelection(); break;
+case 'select-goal-stat': selectedGoalStat = el.dataset.stat; updateGoalStatChips(); break;
+case 'create-goal': createGoal(); break;
+case 'filter-goals':
+document.querySelectorAll('.goal-filter').forEach(function(x) { x.classList.remove('active'); });
+el.classList.add('active');
+currentGoalFilter = el.dataset.filter;
+renderGoals();
+break;
+case 'filter-backpack':
+document.querySelectorAll('.backpack-tab').forEach(function(x) { x.classList.remove('active'); });
+el.classList.add('active');
+currentFilter = el.dataset.filter;
+renderBackpack();
+break;
+case 'drink-estus': drinkEstus(); break;
+case 'complete-card': completeCard(e, parseInt(el.dataset.id)); break;
+case 'fail-card': failCard(e, parseInt(el.dataset.id)); break;
+case 'edit-card': openEditCardDirect(parseInt(el.dataset.id)); break;
+case 'delete-card': deleteCard(parseInt(el.dataset.id)); break;
+case 'equip-item': equipItem(el.dataset.uid); break;
+case 'unequip-item': unequipItem(el.dataset.slot); break;
+case 'discard-item': discardItem(el.dataset.uid); break;
+case 'advance-goal': advanceGoal(parseInt(el.dataset.id)); break;
+case 'complete-goal': completeGoal(parseInt(el.dataset.id)); break;
+case 'delete-goal': deleteGoal(parseInt(el.dataset.id)); break;
+}
+});
+
 let FORGED = [];
 let forgedIdCounter = 100;
 function getCardDaysActive(card) {
@@ -97,9 +156,10 @@ if (doneToday) el.className += ' done-today';
 const nextRankText = getNextRank(card.rank) || 'MAX';
 el.innerHTML =
 '<div class="card-actions">' +
-   (doneToday ? '<div class="card-btn done-today-btn" title="Уже выполнено сегодня">✓</div>' : '<div class="card-btn" onclick="completeCard(event, ' + card.id + ')" title="Выполнить">✓</div>') +
-  '<div class="card-btn fail" onclick="failCard(event, ' + card.id + ')" title="Пропустить">✕</div>' +
-  '<div class="card-btn edit" onclick="openEditCardDirect(' + card.id + ')" title="Редактировать">✎</div>' +
+    (doneToday ? '<div class="card-btn done-today-btn" title="Уже выполнено сегодня">✓</div>' : '<div class="card-btn" data-action="complete-card" data-id="' + card.id + '" title="Выполнить">✓</div>') +
+   '<div class="card-btn fail" data-action="fail-card" data-id="' + card.id + '" title="Пропустить">✕</div>' +
+   '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать">✎</div>' +
+   '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить">🗑</div>' +
 '</div>' +
 '<div class="card-rank">' + card.rank + '</div>' +
 '<div class="card-name">' + esc(card.name) + '</div>' +
@@ -149,7 +209,8 @@ if (card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === getMSKDayKey(
 showToast('⚠ Уже выполнено', 'Карточка уже была выполнена сегодня', 'blood');
 return;
 }
-const rect = e.target.getBoundingClientRect();
+const btn = e.target.closest('[data-action]') || e.target;
+const rect = btn.getBoundingClientRect();
 const x = rect.left + rect.width/2, y = rect.top + rect.height/2;
 burstParticles(x, y, 28, { color: '#f4c896', speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
 card.daysActive = getCardDaysActive(card);
@@ -164,6 +225,7 @@ const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
 const finalXp = Math.round(baseCardXp * adaptationMult * heroIntBonus);
 HERO.xp += finalXp; HERO.totalXp += finalXp;
+recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
 const masteryGain = adaptationMult;
 card.mastery += masteryGain;
@@ -222,7 +284,6 @@ showToast('✅ Выполнено', '+' + finalXp + ' XP' + adaptTxt + ' · +' +
 saveGameState();
 }
 function failCard(e, id) {
-e.stopPropagation();
 spawnBloodRain(25);
 screenShake(10, 500);
 const card = findCard(id);
@@ -237,6 +298,15 @@ changeBossHp(BOSS_HEAL_ON_FAIL);
 if (card) { card.streak = 0; renderCards(); }
 showToast('💀 Пропуск', 'Босс восстановил +' + BOSS_HEAL_ON_FAIL + ' HP', 'blood');
 updateHeroUI();
+saveGameState();
+}
+function deleteCard(id) {
+const card = findCard(id);
+if (!card) return;
+if (!confirm('Удалить карточку «' + card.name + '»? Мастерство будет потеряно.')) return;
+FORGED = FORGED.filter(c => c.id !== id);
+renderCards();
+showToast('🗑 Удалено', card.name, 'blood');
 saveGameState();
 }
 function checkAttributePoolGrowth(statKey) {
@@ -731,6 +801,7 @@ screenShake(8, 400);
 function addXpReward(amount) {
 HERO.xp += amount;
 HERO.totalXp += amount;
+recordXpEvent(amount);
 checkHeroLevelUp();
 updateHeroUI();
 }
@@ -865,8 +936,8 @@ item.bonuses.map(b => '<div class="item-bonus"><span class="item-bonus-name">' +
 '</div>' +
 '<div class="item-actions">' +
 (isEquipped
-? '<button class="item-btn danger" onclick="unequipItem(\'' + item.slot + '\')">↶ Снять</button>'
-: '<button class="item-btn" onclick="equipItem(\'' + item.uid + '\')">⚔ Экипировать</button><button class="item-btn danger" onclick="discardItem(\'' + item.uid + '\')">✕ Выбросить</button>') +
+? '<button class="item-btn danger" data-action="unequip-item" data-slot="' + item.slot + '">↶ Снять</button>'
+: '<button class="item-btn" data-action="equip-item" data-uid="' + item.uid + '">⚔ Экипировать</button><button class="item-btn danger" data-action="discard-item" data-uid="' + item.uid + '">✕ Выбросить</button>') +
 '</div>';
 }
 function equipItem(uid) {
@@ -966,14 +1037,6 @@ const v = totals[k];
 return '<div class="total-bonus-row ' + (v > 0 ? 'has-bonus' : '') + '"><span>' + s.icon + ' ' + s.name + '</span><b>' + (v > 0 ? '+' + v : '—') + '</b></div>';
 }).join('');
 }
-document.querySelectorAll('.backpack-tab').forEach(t => {
-t.addEventListener('click', () => {
-document.querySelectorAll('.backpack-tab').forEach(x => x.classList.remove('active'));
-t.classList.add('active');
-currentFilter = t.dataset.filter;
-renderBackpack();
-});
-});
 renderBackpack(); renderSlots(); updateTotalBonuses();
 const GOAL_REWARDS = {
 short:  { xp: 20, dmg: 5, statXp: 1, label: 'Краткая' },
@@ -997,9 +1060,7 @@ document.getElementById('goalSteps').value = '5';
 selectedGoalType = 'short'; selectedGoalStat = 'str';
 updateGoalTypeSelection(); updateGoalStatChips();
 }
-document.querySelectorAll('#goalTypeSelector .goal-type-option').forEach(o => o.addEventListener('click', () => { selectedGoalType = o.dataset.type; updateGoalTypeSelection(); }));
 function updateGoalTypeSelection() { document.querySelectorAll('#goalTypeSelector .goal-type-option').forEach(o => o.classList.toggle('selected', o.dataset.type === selectedGoalType)); }
-document.querySelectorAll('#goalStatChips .stat-chip').forEach(c => c.addEventListener('click', () => { selectedGoalStat = c.dataset.stat; updateGoalStatChips(); }));
 function updateGoalStatChips() { document.querySelectorAll('#goalStatChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedGoalStat)); }
 updateGoalTypeSelection(); updateGoalStatChips();
 function createGoal() {
@@ -1047,8 +1108,8 @@ el.className = 'goal-card ' + goal.type + ' ' + (goal.completed ? 'completed' : 
 '</div>' +
 '<div class="goal-progress-wrap"><div class="goal-progress-bar"><div class="goal-progress-fill" style="width:' + progressPct + '%"></div></div><div class="goal-progress-label"><b>' + goal.currentStep + '</b>/' + goal.totalSteps + '</div></div>' +
 '<div class="goal-actions">' +
-(!goal.completed ? (goal.currentStep < goal.totalSteps - 1 ? '<button class="goal-btn" onclick="advanceGoal(' + goal.id + ')">+ Шаг</button>' : '<button class="goal-btn complete" onclick="completeGoal(' + goal.id + ')">✓ Выполнить</button>') : '<button class="goal-btn" disabled style="opacity: 0.5;">✓ Выполнено</button>') +
-'<button class="goal-btn delete" onclick="deleteGoal(' + goal.id + ')">✕</button>' +
+(!goal.completed ? (goal.currentStep < goal.totalSteps - 1 ? '<button class="goal-btn" data-action="advance-goal" data-id="' + goal.id + '">+ Шаг</button>' : '<button class="goal-btn complete" data-action="complete-goal" data-id="' + goal.id + '">✓ Выполнить</button>') : '<button class="goal-btn" disabled style="opacity: 0.5;">✓ Выполнено</button>') +
+'<button class="goal-btn delete" data-action="delete-goal" data-id="' + goal.id + '">✕</button>' +
 '</div>';
 list.appendChild(el);
 });
@@ -1097,18 +1158,11 @@ saveGoals(); renderGoals();
 showToast('✕ Удалено', goal.name, 'blood');
 saveGameState();
 }
-document.querySelectorAll('.goal-filter').forEach(f => f.addEventListener('click', () => {
-document.querySelectorAll('.goal-filter').forEach(x => x.classList.remove('active'));
-f.classList.add('active');
-currentGoalFilter = f.dataset.filter;
-renderGoals();
-}));
 document.getElementById('goalModal').addEventListener('click', (e) => { if (e.target.id === 'goalModal') closeGoalModal(); });
 let selectedStat = 'str';
 function openForge() { document.getElementById('forgeModal').classList.add('show'); }
 function closeForge() { document.getElementById('forgeModal').classList.remove('show'); document.getElementById('forgeName').value = ''; selectedStat = 'str'; updateStatChips(); }
 function updateStatChips() { document.querySelectorAll('#statChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedStat)); }
-document.querySelectorAll('#statChips .stat-chip').forEach(c => c.addEventListener('click', () => { selectedStat = c.dataset.stat; updateStatChips(); }));
 updateStatChips();
 function forgeCard() {
 const name = document.getElementById('forgeName').value.trim();
@@ -1148,9 +1202,8 @@ if (view === 'map') renderMap(escapeProgress);
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
 if (view === 'boss') updateBossDisplay();
+if (view === 'stats') renderStatsView();
 }
-document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
-document.querySelectorAll('.bnav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 const ROOMS = [
 { name: 'Камера заключенного', icon: '⛓', lore: 'Здесь начинается твой путь.' },
 { name: 'Коридор Забытых', icon: '🚪', lore: 'Шаги эхом в пустоте.' },
@@ -1252,6 +1305,91 @@ document.getElementById('bossLoreText').innerHTML =
 'Каждая выполненная карточка — удар, от которого я трескаюсь. Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.';
 }
 function updatePunishCountdown() { /* stub */ }
+let xpHistory = [];
+function recordXpEvent(amount) {
+const todayKey = getMSKDayKey();
+if (xpHistory.length === 0 || xpHistory[xpHistory.length - 1].date !== todayKey) {
+xpHistory.push({ date: todayKey, xp: 0 });
+}
+xpHistory[xpHistory.length - 1].xp += amount;
+if (xpHistory.length > 90) xpHistory = xpHistory.slice(-90);
+}
+function recordDailySnapshot() {
+const todayKey = getMSKDayKey();
+if (xpHistory.length === 0 || xpHistory[xpHistory.length - 1].date !== todayKey) {
+xpHistory.push({ date: todayKey, xp: 0 });
+}
+}
+function renderStatsView() {
+const container = document.getElementById('statsContent');
+if (!container) return;
+const last7 = xpHistory.slice(-7);
+while (last7.length < 7) { last7.unshift({ date: '—', xp: 0 }); }
+const maxXp = Math.max(1, ...last7.map(d => d.xp));
+let totalXp7 = last7.reduce((a, d) => a + d.xp, 0);
+let totalCompletions = FORGED.reduce((a, c) => a + (c.totalCompletions || 0), 0);
+let avgDaily = totalXp7 > 0 ? Math.round(totalXp7 / 7) : 0;
+container.innerHTML =
+'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">' +
+'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
+'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">Всего XP</div>' +
+'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + HERO.totalXp.toLocaleString() + '</div></div>' +
+'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
+'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">XP за 7 дней</div>' +
+'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + totalXp7.toLocaleString() + '</div></div>' +
+'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
+'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">Среднее XP/день</div>' +
+'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + avgDaily.toLocaleString() + '</div></div>' +
+'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
+'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">Выполнений</div>' +
+'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + totalCompletions + '</div></div>' +
+'</div>' +
+'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 16px; margin-bottom: 20px;">' +
+'<div style="font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;">XP за последние 7 дней</div>' +
+'<div style="display: flex; align-items: flex-end; gap: 6px; height: 160px;">' +
+last7.map(function(d) {
+var h = Math.max(2, (d.xp / maxXp) * 140);
+var dayLabel = d.date !== '—' ? d.date.slice(8) : '—';
+return '<div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">' +
+'<div style="font-size: 9px; color: var(--gold-bright);">' + d.xp + '</div>' +
+'<div style="width: 100%; height: ' + h + 'px; background: linear-gradient(to top, var(--gold), var(--gold-bright)); border-radius: 3px 3px 0 0; min-height: 2px;"></div>' +
+'<div style="font-size: 9px; color: var(--text-dim);">' + dayLabel + '</div>' +
+'</div>';
+}).join('') +
+'</div></div>' +
+'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 16px;">' +
+'<div style="font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;">Карточки по рангам</div>' +
+'<div style="display: flex; flex-wrap: wrap; gap: 8px;">' +
+RANK_PROGRESSION.map(function(r) {
+var count = FORGED.filter(function(c) { return c.rank === r; }).length;
+if (count === 0) return '';
+var rc = getRankColorInfo(r);
+return '<div style="background: ' + rc.bg + '; border: 1px solid ' + rc.color + '40; padding: 6px 12px; border-radius: 4px; font-size: 12px;">' +
+'<span style="color:' + rc.color + '; font-weight: bold;">' + r + '</span> × ' + count +
+'</div>';
+}).join('') +
+(FORGED.length === 0 ? '<div style="color: var(--text-dim); font-size: 12px;">Пока нет карточек</div>' : '') +
+'</div></div>';
+}
+function exportJson() {
+try {
+var data = {
+exportedAt: new Date().toISOString(),
+hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
+escapeProgress: escapeProgress, bossHp: bossHp, bossStage: bossStage,
+bossDefeated: bossDefeated, xpHistory: xpHistory
+};
+var json = JSON.stringify(data, null, 2);
+var blob = new Blob([json], { type: 'application/json' });
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url;
+a.download = 'neurodeck-export-' + new Date().toISOString().split('T')[0] + '.json';
+a.click();
+URL.revokeObjectURL(url);
+showToast('📋 JSON экспортирован', 'Файл загружен');
+} catch (e) { showToast('⚠ Ошибка', 'Не удалось экспортировать', 'blood'); }
+}
 function checkDailyReset() {
 const todayKey = getMSKDayKey();
 if (lastDayReset !== todayKey) {
@@ -1309,6 +1447,7 @@ if (c.firstCompletedAt) {
 c.daysActive = getCardDaysActive(c);
 }
 });
+recordDailySnapshot();
 lastDayReset = todayKey;
 saveGameState();
 renderCards();
@@ -1319,7 +1458,7 @@ try {
 const snapshot = {
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastPunishDate, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, savedAt: Date.now()
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, savedAt: Date.now()
 };
 localStorage.setItem('neurodeck_full_save', JSON.stringify(snapshot));
 saveGoals();
@@ -1355,6 +1494,7 @@ if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
 if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
 if (data.uidCounter) uidCounter = data.uidCounter;
 if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
+if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 } catch (e) { console.warn('Load failed:', e); }
 }
 setInterval(() => { checkDailyReset(); updatePunishCountdown(); }, 60 * 1000);
@@ -1369,7 +1509,7 @@ const data = {
 v: SYNC_VERSION, t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastPunishDate, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory
 };
 const json = JSON.stringify(data);
 const base64 = btoa(unescape(encodeURIComponent(json)));
@@ -1462,6 +1602,7 @@ if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
 if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
 if (data.uidCounter) uidCounter = data.uidCounter;
 if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
+if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
 updateEscapeDisplay(); renderMap(escapeProgress);
@@ -1475,6 +1616,7 @@ localStorage.removeItem('neurodeck_full_save');
 location.reload();
 }
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
+document.getElementById('syncFileInput').addEventListener('change', importSyncFile);
 document.addEventListener('keydown', (e) => {
 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 e.preventDefault();
@@ -1586,6 +1728,7 @@ updateEscapeDisplay();
 renderMap(escapeProgress);
 renderCards();
 updateBossDisplay();
+changeBossHp(0);
 setTimeout(() => {
 spiritSay('«Ты очнулся в Камере заключенного... Выкуй первое испытание.»');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 30, { color: '#d4a574', speed: 4, decay: 0.015, size: 2, shape: 'spark', gravity: 0.05 });
