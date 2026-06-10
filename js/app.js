@@ -1498,7 +1498,7 @@ if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 }
 setInterval(() => { checkDailyReset(); updatePunishCountdown(); }, 60 * 1000);
 window.addEventListener('beforeunload', saveGameState);
-const CLOUD_MAX_CHUNK = 4000;
+const CLOUD_MAX_CHUNK = 4096;
 const CLOUD_META_KEY = 'nd_meta';
 const CLOUD_DATA_PREFIX = 'nd_';
 function getCloudStorage() {
@@ -1517,108 +1517,108 @@ var cs = getCloudStorage();
 var el = document.getElementById('cloudStatus');
 if (!el) return;
 if (!cs) {
-el.innerHTML = '⚠ <b style="color:var(--gold-bright)">Откройте в Telegram</b> для облачной синхронизации<br><span style="font-size:10px">Файловый способ доступен всегда</span>';
+el.innerHTML = '⚠ <b style="color:var(--gold-bright)">Откройте в Telegram</b> для облака<br><span style="font-size:10px">Файловый способ работает всегда</span>';
 return;
 }
-el.innerHTML = '☁ Проверяю облако...';
+el.textContent = '☁ Проверяю...';
 cs.getItem(CLOUD_META_KEY, function(err, val) {
 if (!el) return;
-if (err) {
-el.innerHTML = '⚠ Ошибка доступа к облаку';
-return;
-}
+if (err) { el.textContent = '⚠ Ошибка доступа к облаку'; return; }
 if (val) {
 try {
 var meta = JSON.parse(val);
-var date = new Date(meta.savedAt).toLocaleString('ru');
-el.innerHTML = '☁ Сохранено: <b style="color:var(--gold-bright)">' + date + '</b>' + (meta.chunks > 1 ? ' (' + meta.chunks + ' ч.)' : '');
-} catch(e) {
-el.innerHTML = '☁ Облако доступно';
-}
+el.innerHTML = '☁ Сохранено: <b style="color:var(--gold-bright)">' + new Date(meta.t).toLocaleString('ru') + '</b>';
+} catch(e) { el.textContent = '☁ Облако доступно'; }
 } else {
-el.innerHTML = '☁ Облако доступно. Сохранений нет.';
+el.textContent = '☁ Облако доступно. Нет сохранений.';
 }
-});
-}
-function cloudRemoveOld(cs, callback) {
-cs.getKeys(function(err, keys) {
-if (err || !keys || keys.length === 0) { callback(); return; }
-var oldKeys = keys.filter(function(k) { return k === CLOUD_META_KEY || k.indexOf(CLOUD_DATA_PREFIX) === 0; });
-if (oldKeys.length === 0) { callback(); return; }
-var pending = oldKeys.length;
-oldKeys.forEach(function(k) {
-cs.removeItem(k, function() { pending--; if (pending === 0) callback(); });
-});
 });
 }
 function saveToCloud() {
 var cs = getCloudStorage();
 if (!cs) { showToast('⚠ Недоступно', 'Откройте в Telegram', 'blood'); return; }
-var statusEl = document.getElementById('cloudStatus');
-if (statusEl) statusEl.innerHTML = '☁ Сохраняю...';
-var data = buildSyncData();
-var json = JSON.stringify(data);
+var el = document.getElementById('cloudStatus');
+if (el) el.textContent = '☁ Сохраняю...';
+var json = JSON.stringify(buildSyncData());
 var chunks = [];
-for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) {
-chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
+for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK)); }
+var finished = false;
+setTimeout(function() {
+if (!finished) {
+finished = true;
+if (el) el.textContent = '⚠ Таймаут облака — используйте файл';
+showToast('⚠ Таймаут', 'Облако не ответило. Скачайте файл.', 'blood');
 }
-cloudRemoveOld(cs, function() {
-var done = 0;
-var ok = 0;
-chunks.forEach(function(chunk, idx) {
-cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err, success) {
-done++;
-if (!err && success !== false) ok++;
-if (done === chunks.length) {
-cs.setItem(CLOUD_META_KEY, JSON.stringify({chunks: chunks.length, savedAt: Date.now()}), function(err2) {
+}, 10000);
+var doneCount = 0;
+function saveMeta() {
+cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), function(err) {
+if (finished) return;
+finished = true;
+if (!err) {
 updateCloudStatus();
-if (!err2 && ok === chunks.length) {
 showToast('☁ Сохранено в облако', 'Доступно на всех устройствах');
 spiritSay('«Облако запомнило твой путь.»');
 } else {
-showToast('⚠ Ошибка облака', ok + '/' + chunks.length + ' частей', 'blood');
+if (el) el.textContent = '⚠ Ошибка записи метаданных';
+showToast('⚠ Ошибка', String(err), 'blood');
 }
 });
 }
+chunks.forEach(function(chunk, idx) {
+cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err) {
+if (finished) return;
+doneCount++;
+if (doneCount === chunks.length) saveMeta();
 });
 });
-});
+if (chunks.length === 0) { finished = true; if (el) el.textContent = '⚠ Нет данных'; }
 }
 function loadFromCloud() {
 var cs = getCloudStorage();
 if (!cs) { showToast('⚠ Недоступно', 'Откройте в Telegram', 'blood'); return; }
-if (!confirm('⚠ Текущие данные будут перезаписаны из облака. Продолжить?')) return;
-var statusEl = document.getElementById('cloudStatus');
-if (statusEl) statusEl.innerHTML = '☁ Загружаю...';
+if (!confirm('⚠ Перезаписать текущие данные из облака?')) return;
+var el = document.getElementById('cloudStatus');
+if (el) el.textContent = '☁ Загружаю...';
+var finished = false;
+setTimeout(function() {
+if (!finished) {
+finished = true;
+if (el) el.textContent = '⚠ Таймаут загрузки';
+showToast('⚠ Таймаут', 'Облако не ответило', 'blood');
+}
+}, 10000);
 cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
+if (finished) return;
 if (err || !metaStr) {
+finished = true;
 showToast('⚠ Пусто', 'В облаке нет сохранений', 'blood');
 updateCloudStatus();
 return;
 }
 var meta;
-try { meta = JSON.parse(metaStr); } catch(e) { showToast('⚠ Ошибка', 'Повреждённые данные', 'blood'); return; }
-var chunks = new Array(meta.chunks);
+try { meta = JSON.parse(metaStr); } catch(e) { finished = true; showToast('⚠ Ошибка', 'Повреждённые данные', 'blood'); return; }
+var parts = new Array(meta.n);
 var loaded = 0;
-function checkDone() {
-if (loaded < meta.chunks) return;
-var fullJson = chunks.join('');
+function check() {
+if (loaded < meta.n || finished) return;
+finished = true;
 try {
-var data = JSON.parse(fullJson);
+var data = JSON.parse(parts.join(''));
 applySyncData(data);
-showToast('☁ Загружено', 'Из облака: ' + new Date(data.t).toLocaleString('ru'));
+showToast('☁ Загружено', new Date(data.t).toLocaleString('ru'));
 spiritSay('«Облако поделилось воспоминаниями...»');
 screenShake(6, 400);
 closeSyncModal();
 saveGameState();
 } catch(e) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); }
 }
-for (var i = 0; i < meta.chunks; i++) {
+for (var i = 0; i < meta.n; i++) {
 (function(idx) {
 cs.getItem(CLOUD_DATA_PREFIX + idx, function(err2, val) {
-if (!err2 && val) chunks[idx] = val;
+if (!err2 && val) parts[idx] = val;
 loaded++;
-checkDone();
+check();
 });
 })(i);
 }
