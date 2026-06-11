@@ -182,6 +182,13 @@ el.style.setProperty('--mx', ((x/r.width)*100) + '%');
 el.style.setProperty('--my', ((y/r.height)*100) + '%');
 });
 el.addEventListener('mouseleave', () => { el.style.transform = ''; });
+el.addEventListener('touchmove', (e) => {
+var touch = e.touches[0];
+var r = el.getBoundingClientRect();
+var x = touch.clientX - r.left, y = touch.clientY - r.top;
+el.style.transform = 'perspective(800px) rotateX(' + (-(y-r.height/2)/r.height*8) + 'deg) rotateY(' + ((x-r.width/2)/r.width*8) + 'deg) translateZ(2px)';
+});
+el.addEventListener('touchend', () => { el.style.transform = ''; });
 grid.appendChild(el);
 }
 renderCards();
@@ -305,11 +312,13 @@ saveGameState();
 function deleteCard(id) {
 const card = findCard(id);
 if (!card) return;
-if (!confirm('Удалить карточку «' + card.name + '»? Мастерство будет потеряно.')) return;
+dungeonConfirm('🗑 Удалить карточку?', '«' + esc(card.name) + '» — мастерство будет потеряно.').then(function(ok) {
+if (!ok) return;
 FORGED = FORGED.filter(c => c.id !== id);
 renderCards();
 showToast('🗑 Удалено', card.name, 'blood');
 saveGameState();
+});
 }
 function checkAttributePoolGrowth(statKey) {
 const stat = STATS[statKey];
@@ -987,13 +996,15 @@ saveGameState();
 function discardItem(uid) {
 const item = INVENTORY.backpack.find(i => i.uid === uid);
 if (!item) return;
-if (!confirm('Точно выбросить «' + item.name + '»?')) return;
+dungeonConfirm('✕ Выбросить?', '«' + esc(item.name) + '» — вернуть будет нельзя.').then(function(ok) {
+if (!ok) return;
 INVENTORY.backpack = INVENTORY.backpack.filter(i => i.uid !== uid);
 showToast('✕ Выброшено', item.name, 'blood');
 selectedItemId = null;
 renderBackpack();
 document.getElementById('itemPanelContent').innerHTML = '<div class="empty-state">Слот пуст.</div>';
 saveGameState();
+});
 }
 function renderSlots() {
 document.querySelectorAll('.slot').forEach(slot => {
@@ -1160,11 +1171,13 @@ saveGameState();
 function deleteGoal(id) {
 const goal = GOALS.find(g => g.id === id);
 if (!goal) return;
-if (!confirm('Удалить цель «' + goal.name + '»?')) return;
+dungeonConfirm('✕ Удалить цель?', '«' + esc(goal.name) + '» — прогресс потерян.').then(function(ok) {
+if (!ok) return;
 GOALS = GOALS.filter(g => g.id !== id);
 saveGoals(); renderGoals();
 showToast('✕ Удалено', goal.name, 'blood');
 saveGameState();
+});
 }
 document.getElementById('goalModal').addEventListener('click', (e) => { if (e.target.id === 'goalModal') closeGoalModal(); });
 let selectedStat = 'str';
@@ -1574,7 +1587,8 @@ if (chunks.length === 0) { finished = true; if (el) el.textContent = '⚠ Нет
 function loadFromCloud() {
 var cs = getCloudStorage();
 if (!cs) { showToast('⚠ Недоступно', 'Откройте в Telegram', 'blood'); return; }
-if (!confirm('⚠ Перезаписать текущие данные из облака?')) return;
+dungeonConfirm('☁ Загрузить из облака?', 'Текущие данные будут перезаписаны.').then(function(ok) {
+if (!ok) return;
 var el = document.getElementById('cloudStatus');
 if (el) el.textContent = '☁ Загружаю...';
 var finished = false;
@@ -1620,6 +1634,7 @@ check();
 })(i);
 }
 });
+});
 }
 function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); }
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }
@@ -1663,16 +1678,15 @@ var encoded = hash.slice(1);
 var json = decodeURIComponent(escape(atob(encoded)));
 var data = JSON.parse(json);
 if (!data.v || !data.hero) { window.location.hash = ''; return; }
-if (!confirm('📥 В ссылке найден прогресс от ' + new Date(data.t).toLocaleString('ru') + '.\nИмпортировать? (Текущие данные будут перезаписаны)')) {
-window.location.hash = '';
-return;
-}
+dungeonConfirm('📥 Данные из ссылки', 'Прогресс от <b>' + new Date(data.t).toLocaleString('ru') + '</b>. Импортировать?<br><br><span style="color:var(--blood-bright)">Текущие данные будут перезаписаны.</span>').then(function(ok) {
+if (!ok) { window.location.hash = ''; return; }
 applySyncData(data);
 window.location.hash = '';
 showToast('📥 Импортировано из ссылки', 'Прогресс восстановлен');
 spiritSay('«Путь продолжается...»');
 screenShake(6, 400);
 saveGameState();
+});
 } catch(e) {
 window.location.hash = '';
 }
@@ -1697,14 +1711,16 @@ if (!file) return;
 const reader = new FileReader();
 reader.onload = function(e) {
 try {
-const data = JSON.parse(e.target.result);
-if (!confirm('⚠ Текущие данные будут перезаписаны. Продолжить?')) return;
+var data = JSON.parse(e.target.result);
+dungeonConfirm('📥 Импортировать из файла?', 'Текущие данные будут перезаписаны.').then(function(ok) {
+if (!ok) return;
 applySyncData(data);
 showToast('✅ Импортировано', 'Данные из файла');
 spiritSay('«Чужие воспоминания... но теперь они твои.»');
 screenShake(6, 400);
 closeSyncModal();
 saveGameState();
+});
 } catch(err) { showToast('⚠ Ошибка', 'Неверный формат файла', 'blood'); }
 };
 reader.readAsText(file);
@@ -1744,11 +1760,12 @@ changeBossHp(0);
 }
 }
 function resetAllData() {
-if (!confirm('🗑 Удалить ВСЕ данные? Это действие нельзя отменить.')) return;
-if (!confirm('⚠ ТОЧНО удалить весь прогресс?')) return;
+dungeonConfirm('🗑 Удалить ВСЕ данные?', 'Это действие <b>нельзя отменить</b>. Весь прогресс будет потерян навсегда.').then(function(ok) {
+if (!ok) return;
 localStorage.removeItem('neurodeck_goals');
 localStorage.removeItem('neurodeck_full_save');
 location.reload();
+});
 }
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
 document.getElementById('syncFileInput').addEventListener('change', importSyncFile);
@@ -1768,10 +1785,12 @@ constructor() { this.x = Math.random() * dustCanvas.width; this.y = Math.random(
 update() { this.x += this.vx; this.y += this.vy; this.vx += (Math.random() - 0.5) * 0.02; if (this.y < -10 || this.x < -10 || this.x > dustCanvas.width + 10) { this.x = Math.random() * dustCanvas.width; this.y = dustCanvas.height + 10; } }
 draw(ctx) { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = '#f4c896'; ctx.shadowBlur = 6; ctx.shadowColor = '#f4c896'; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
-for (let i = 0; i < 60; i++) dustParticles.push(new Dust());
+for (var i = 0; i < 60; i++) dustParticles.push(new Dust());
+var dustRunning = true;
 function animateDust() {
+if (!dustRunning) return;
 dustCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
-const pct = parseInt(document.getElementById('progressSlider').value) / 140;
+var pct = parseInt(document.getElementById('progressSlider').value) / 140;
 dustCanvas.style.opacity = pct > 0.4 ? Math.min(1, (pct - 0.4) * 1.5) : 0;
 dustParticles.forEach(d => { d.update(); d.draw(dustCtx); });
 requestAnimationFrame(animateDust);
@@ -1800,9 +1819,21 @@ ctx.closePath(); ctx.fill();
 ctx.restore();
 }
 }
-function burstParticles(x, y, count, o) { o = o || {}; const MAX_PARTICLES = 500; if (particles.length > MAX_PARTICLES) return; count = Math.min(count, MAX_PARTICLES - particles.length); for (let i = 0; i < count; i++) { const a = (i / count) * Math.PI * 2; const sp = (o.speed !== undefined ? o.speed : 6) * (0.5 + Math.random() * 0.5); particles.push(new Particle(x, y, Object.assign({}, o, { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp }))); } }
-function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles = particles.filter(p => p.life > 0); particles.forEach(p => { p.update(); p.draw(ctx); }); requestAnimationFrame(animate); }
+var particlesRunning = true;
+function burstParticles(x, y, count, o) { o = o || {}; var MAX_PARTICLES = 500; if (particles.length + count > MAX_PARTICLES) { particles.splice(0, particles.length + count - MAX_PARTICLES); } for (var i = 0; i < count; i++) { var a = (i / count) * Math.PI * 2; var sp = (o.speed !== undefined ? o.speed : 6) * (0.5 + Math.random() * 0.5); particles.push(new Particle(x, y, Object.assign({}, o, { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp }))); } }
+function animate() { if (!particlesRunning) return; ctx.clearRect(0, 0, canvas.width, canvas.height); particles = particles.filter(p => p.life > 0); particles.forEach(p => { p.update(); p.draw(ctx); }); requestAnimationFrame(animate); }
 animate();
+document.addEventListener('visibilitychange', function() {
+if (document.hidden) {
+dustRunning = false;
+particlesRunning = false;
+} else {
+dustRunning = true;
+particlesRunning = true;
+animateDust();
+animate();
+}
+});
 const shakeWrap = document.getElementById('shakeWrap');
 function screenShake(intensity, duration) {
 intensity = intensity || 8; duration = duration || 400;
@@ -1827,6 +1858,22 @@ el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
 setTimeout(() => el.classList.remove('show'), 3500);
 }
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+function dungeonConfirm(title, body) {
+return new Promise(function(resolve) {
+var overlay = document.getElementById('confirmOverlay');
+document.getElementById('confirmTitle').textContent = title;
+document.getElementById('confirmBody').innerHTML = body;
+overlay.classList.add('show');
+function cleanup(result) {
+overlay.classList.remove('show');
+document.getElementById('confirmYes').onclick = null;
+document.getElementById('confirmNo').onclick = null;
+resolve(result);
+}
+document.getElementById('confirmYes').onclick = function() { cleanup(true); };
+document.getElementById('confirmNo').onclick = function() { cleanup(false); };
+});
+}
 const progressSlider = document.getElementById('progressSlider');
 progressSlider.disabled = true;
 document.addEventListener('mousemove', (e) => {
@@ -1838,6 +1885,53 @@ const y = (e.clientY / window.innerHeight - 0.5) * 25;
 r1.setAttribute('transform', 'translate(' + x + ', ' + y + ')');
 r2.setAttribute('transform', 'translate(' + (-x * 0.5) + ', ' + (-y * 0.5) + ')');
 });
+var ONBOARDING_STEPS = [
+{ icon: '⚔', title: 'Добро пожаловать в NeuroDeck', text: 'Это геймифицированный трекер привычек.<br>Ты — узник подземелья. Твоё оружие — дисциплина.' },
+{ icon: '📖', title: 'Колода карточек', text: 'Каждая карточка — привычка, которую нужно выполнять ежедневно.<br>Нажми <b>✓</b> чтобы выполнить, <b>✕</b> чтобы пропустить.<br>Пропуск = босс восстанавливает HP.' },
+{ icon: '🔥', title: 'Ранги и мастерство', text: 'Выполняй карточку — растёт Мастерство.<br>При достижении порога карточка повышает ранг: C → CC → CCC → B → ... → SSS.<br>Ранг-ап = +1 к пулу атрибута.' },
+{ icon: '🐍', title: 'Босс подземелья', text: 'Каждый день в 23:00 МСК босс наказывает за невыполненные карточки и цели.<br>Выполняй — босс получает урон и трескается.<br>Победи босса — получи награду.' },
+{ icon: '👤', title: 'Герой и атрибуты', text: '5 очков пула = +1 к атрибуту.<br>Сила = урон, Интеллект = XP бонус, Харизма = шанс крита.<br>Уровень даёт +1 ко всем статам.' },
+{ icon: '🎯', title: 'Цели', text: 'Ставь цели с дедлайном: краткие (1-7 дней), средние, долгие.<br>Выполнение цели = XP + урон боссу + очки атрибута.' },
+{ icon: '🎒', title: 'Инвентарь', text: 'Случайные артефакты падают при выполнении карточек.<br>Экипируй их для бонусов к атрибутам.<br>Все бонусы суммируются.' },
+{ icon: '🚀', title: 'Начни свой побег', text: 'Ты в Камере заключенного. Выкуй первую карточку — и начни свой путь к Вратам Свободы.<br><br><span style="color:var(--gold-bright)">Да пребудет с тобой дисциплина.</span>' }
+];
+function startOnboarding() {
+var step = 0;
+var overlay = document.createElement('div');
+overlay.className = 'onboarding-overlay';
+function render() {
+var s = ONBOARDING_STEPS[step];
+var dots = ONBOARDING_STEPS.map(function(_, i) {
+return '<div class="onboarding-dot' + (i === step ? ' active' : '') + '"></div>';
+}).join('');
+overlay.innerHTML =
+'<div class="onboarding-card">' +
+'<div class="onboarding-step">Шаг ' + (step + 1) + ' из ' + ONBOARDING_STEPS.length + '</div>' +
+'<div class="onboarding-icon">' + s.icon + '</div>' +
+'<div class="onboarding-title">' + s.title + '</div>' +
+'<div class="onboarding-text">' + s.text + '</div>' +
+'<div class="onboarding-dots">' + dots + '</div>' +
+(step < ONBOARDING_STEPS.length - 1
+? '<button class="demo-btn primary" style="width:100%;">Далее →</button>'
+: '<button class="demo-btn primary" style="width:100%;">⚔ Начать!</button>') +
+'</div>';
+overlay.querySelector('button').addEventListener('click', function() {
+step++;
+if (step >= ONBOARDING_STEPS.length) {
+overlay.classList.remove('show');
+setTimeout(function() { overlay.remove(); }, 300);
+localStorage.setItem('neurodeck_onboarding_done', '1');
+spiritSay('«Ты очнулся в Камере заключенного... Выкуй первое испытание.»');
+burstParticles(window.innerWidth / 2, window.innerHeight / 2, 30, { color: '#d4a574', speed: 4, decay: 0.015, size: 2, shape: 'spark', gravity: 0.05 });
+} else {
+render();
+}
+});
+}
+document.body.appendChild(overlay);
+render();
+setTimeout(function() { overlay.classList.add('show'); }, 50);
+}
 loadGameState();
 checkDailyReset();
 if (bossDefeated) {
@@ -1861,7 +1955,11 @@ renderCards();
 updateBossDisplay();
 changeBossHp(0);
 importFromHash();
+if (!localStorage.getItem('neurodeck_full_save') && !localStorage.getItem('neurodeck_onboarding_done')) {
+setTimeout(function() { startOnboarding(); }, 1200);
+} else {
 setTimeout(() => {
 spiritSay('«Ты очнулся в Камере заключенного... Выкуй первое испытание.»');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 30, { color: '#d4a574', speed: 4, decay: 0.015, size: 2, shape: 'spark', gravity: 0.05 });
 }, 800);
+}

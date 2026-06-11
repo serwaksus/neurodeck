@@ -647,3 +647,17 @@ margin-top: 8px; font-style: italic;
 .cards { grid-template-columns: 1fr; }
 .backpack-grid { grid-template-columns: repeat(4, 1fr); }
 }
+.confirm-modal { max-width: 340px; text-align: center; }
+.confirm-title { font-size: 16px; font-weight: bold; color: var(--gold-bright); margin-bottom: 12px; }
+.confirm-body { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+.confirm-actions { display: flex; gap: 10px; justify-content: center; }
+.onboarding-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.onboarding-overlay.show { opacity: 1; pointer-events: all; }
+.onboarding-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; max-width: 320px; text-align: center; }
+.onboarding-step { font-size: 10px; letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 14px; }
+.onboarding-icon { font-size: 48px; margin-bottom: 14px; }
+.onboarding-title { font-size: 18px; font-weight: bold; color: var(--gold-bright); margin-bottom: 10px; }
+.onboarding-text { font-size: 13px; color: var(--text-dim); line-height: 1.7; margin-bottom: 20px; }
+.onboarding-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
+.onboarding-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.onboarding-dot.active { background: var(--gold-bright); }

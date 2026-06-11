@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=10">
+<link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body>
 <div class="app-wrap">
@@ -181,6 +181,16 @@
 </div>
 </div>
 <div class="modal-footer"><button class="demo-btn" data-action="close-sync-modal">Закрыть</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="confirmOverlay">
+<div class="modal confirm-modal">
+<div class="confirm-title" id="confirmTitle">Подтверди</div>
+<div class="confirm-body" id="confirmBody">Ты уверен?</div>
+<div class="confirm-actions">
+<button class="demo-btn" id="confirmNo">Отмена</button>
+<button class="demo-btn primary" id="confirmYes">Подтвердить</button>
+</div>
 </div>
 </div>
 <div class="shake-wrap" id="shakeWrap">
@@ -417,6 +427,6 @@
 </div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=10"></script>
+<script src="js/app.js?v=11"></script>
 </body>
 </html>
