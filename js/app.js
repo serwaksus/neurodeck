@@ -1388,59 +1388,28 @@ const ESCAPE_MAX = 140;
 const ROOMS_STEP = 10;
 let escapeProgress = 0;
 let lastDayReset = null;
-const MAP_NODES = [
-{ x: 150, y: 570 }, { x: 75, y: 530 }, { x: 215, y: 485 }, { x: 85, y: 440 },
-{ x: 225, y: 395 }, { x: 75, y: 350 }, { x: 205, y: 305 }, { x: 105, y: 260 },
-{ x: 225, y: 215 }, { x: 80, y: 175 }, { x: 210, y: 135 }, { x: 110, y: 95 },
-{ x: 200, y: 55 }, { x: 150, y: 15 }
-];
-function getHeroMapPos(progress) {
-var idx = Math.min(progress / ROOMS_STEP, MAP_NODES.length - 1);
-var i = Math.floor(idx);
-var frac = idx - i;
-if (i >= MAP_NODES.length - 1) return MAP_NODES[MAP_NODES.length - 1];
-var a = MAP_NODES[i], b = MAP_NODES[i + 1];
-return { x: a.x + (b.x - a.x) * frac, y: a.y + (b.y - a.y) * frac };
-}
 function renderMap(progress) {
 var container = document.getElementById('mapRooms');
 if (!container) return;
+container.innerHTML = '';
 document.getElementById('mapProgressNum').textContent = progress;
 document.getElementById('mapProgressFill').style.width = ((progress / ESCAPE_MAX) * 100) + '%';
-var roomIdx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
-document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[roomIdx].name;
-var heroPos = getHeroMapPos(progress);
-var nodesSvg = '';
+var idx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
+document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[idx].name;
 ROOMS.forEach(function(room, i) {
 var unlocked = progress >= (i + 1) * ROOMS_STEP;
 var current = progress >= i * ROOMS_STEP && progress < (i + 1) * ROOMS_STEP;
-var node = MAP_NODES[i];
-var fill, r, op;
-if (current) { fill = '#fbbf24'; r = 10; op = 1; }
-else if (unlocked) { fill = '#d4a574'; r = 7; op = 0.8; }
-else { fill = '#444'; r = 5; op = 0.3; }
-var side = i % 2 === 0 ? 1 : -1;
-var lx = node.x + side * 40;
-nodesSvg += '<circle cx="' + node.x + '" cy="' + node.y + '" r="' + r + '" fill="' + fill + '" opacity="' + op + '"' + (current ? ' class="map-hero-pulse"' : '') + '/>';
-nodesSvg += '<text x="' + lx + '" y="' + (node.y + 3) + '" text-anchor="' + (side > 0 ? 'start' : 'end') + '" fill="' + (unlocked || current ? '#c0a080' : '#444') + '" font-size="7" font-weight="bold" opacity="' + op + '">' + room.icon + ' ' + room.name + '</text>';
-if (current) {
-var remaining = (i + 1) * ROOMS_STEP - progress;
-nodesSvg += '<text x="' + lx + '" y="' + (node.y + 13) + '" text-anchor="' + (side > 0 ? 'start' : 'end') + '" fill="#fbbf24" font-size="6" opacity="0.7">ещё ' + remaining + ' до ' + ROOMS[Math.min(i + 1, ROOMS.length - 1)].name + '</text>';
-}
+var el = document.createElement('div');
+el.className = 'map-room ' + (unlocked ? 'unlocked' : current ? 'current' : 'locked');
+var remaining = current ? ((i + 1) * ROOMS_STEP - progress) : 0;
+el.innerHTML =
+'<div class="map-room-icon" style="filter: ' + (unlocked || current ? 'none' : 'grayscale(1) blur(1px)') + ';">' + room.icon + '</div>' +
+'<div class="map-room-info">' +
+'<div class="map-room-name">' + room.name + '</div>' +
+'<div class="map-room-status">' + (unlocked ? '✓ ' + room.lore : current ? '▶ ' + room.lore + ' <span style="color:var(--gold-bright)">(' + remaining + ' до след.)</span>' : '🔒 ' + ((i + 1) * ROOMS_STEP - progress) + ' ранг-апов') + '</div>' +
+'</div>';
+container.appendChild(el);
 });
-var pathD = 'M ' + MAP_NODES[0].x + ' ' + MAP_NODES[0].y;
-for (var pi = 1; pi < MAP_NODES.length; pi++) {
-pathD += ' L ' + MAP_NODES[pi].x + ' ' + MAP_NODES[pi].y;
-}
-container.innerHTML =
-'<svg viewBox="0 0 300 600" style="width:100%;max-height:480px;" preserveAspectRatio="xMidYMid meet">' +
-'<defs><filter id="heroGlow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
-'<path d="' + pathD + '" fill="none" stroke="#1a1812" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>' +
-'<path d="' + pathD + '" fill="none" stroke="#2a2218" stroke-width="2" stroke-dasharray="4 8" stroke-linecap="round"/>' +
-nodesSvg +
-'<circle cx="' + heroPos.x + '" cy="' + heroPos.y + '" r="5" fill="#fbbf24" filter="url(#heroGlow)" class="map-hero-dot"/>' +
-'<text x="' + heroPos.x + '" y="' + (heroPos.y - 10) + '" text-anchor="middle" font-size="10">🗡</text>' +
-'</svg>';
 }
 renderMap(0);
 function updateEscapeDisplay() {
