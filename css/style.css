@@ -150,7 +150,8 @@ filter: drop-shadow(0 0 6px rgba(252, 211, 77, 0.8));
 font-size: 20px;
 }
 .card-rank { position: absolute; top: 6px; right: 8px; font-size: 18px; font-weight: bold; color: var(--rank-color); text-shadow: 0 0 8px var(--rank-glow); letter-spacing: 1px; }
-.card-name { font-size: 13px; color: var(--text); letter-spacing: 1px; margin-bottom: 4px; padding-right: 28px; }
+.card-name { font-size: 13px; color: var(--text); letter-spacing: 1px; margin-bottom: 4px; padding-right: 100px; }
+.card-actions { position: absolute; top: 28px; right: 8px; display: flex; gap: 3px; }
 .card-meta { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
 .card-stat-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; letter-spacing: 1px; padding: 2px 7px; border-radius: 2px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); margin-bottom: 6px; }
 .card-adaptation-tag {
@@ -175,7 +176,6 @@ margin-bottom: 4px;
 .card-progress-bar { height: 100%; background: var(--rank-color); box-shadow: 0 0 8px var(--rank-glow); transition: width 0.5s; }
 .card-stats-line { position: absolute; bottom: 46px; left: 12px; font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
 .card-stats-line b { color: var(--text); font-weight: normal; }
-.card-actions { position: absolute; top: 6px; left: 8px; display: flex; gap: 3px; }
 .card-btn { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
 .card-btn:hover { background: var(--gold); color: var(--bg-deep); }
 .card-btn.fail:hover { background: var(--blood-bright); }

@@ -1389,10 +1389,10 @@ const ROOMS_STEP = 10;
 let escapeProgress = 0;
 let lastDayReset = null;
 const MAP_NODES = [
-{ x: 150, y: 580 }, { x: 80, y: 535 }, { x: 220, y: 490 }, { x: 90, y: 440 },
-{ x: 210, y: 395 }, { x: 70, y: 345 }, { x: 190, y: 295 }, { x: 110, y: 245 },
-{ x: 230, y: 200 }, { x: 100, y: 155 }, { x: 200, y: 110 }, { x: 120, y: 70 },
-{ x: 180, y: 35 }, { x: 150, y: 10 }
+{ x: 150, y: 570 }, { x: 75, y: 530 }, { x: 215, y: 485 }, { x: 85, y: 440 },
+{ x: 225, y: 395 }, { x: 75, y: 350 }, { x: 205, y: 305 }, { x: 105, y: 260 },
+{ x: 225, y: 215 }, { x: 80, y: 175 }, { x: 210, y: 135 }, { x: 110, y: 95 },
+{ x: 200, y: 55 }, { x: 150, y: 15 }
 ];
 function getHeroMapPos(progress) {
 var idx = Math.min(progress / ROOMS_STEP, MAP_NODES.length - 1);
@@ -1409,30 +1409,37 @@ document.getElementById('mapProgressNum').textContent = progress;
 document.getElementById('mapProgressFill').style.width = ((progress / ESCAPE_MAX) * 100) + '%';
 var roomIdx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
 document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[roomIdx].name;
-var pathD = 'M ' + MAP_NODES.map(function(n) { return n.x + ' ' + n.y; }).join(' L ');
 var heroPos = getHeroMapPos(progress);
-var nodesHtml = '';
+var nodesSvg = '';
 ROOMS.forEach(function(room, i) {
 var unlocked = progress >= (i + 1) * ROOMS_STEP;
 var current = progress >= i * ROOMS_STEP && progress < (i + 1) * ROOMS_STEP;
 var node = MAP_NODES[i];
-var fill = unlocked ? '#d4a574' : current ? '#fbbf24' : '#333';
-var r = current ? 14 : unlocked ? 10 : 7;
-var opacity = unlocked || current ? 1 : 0.35;
-nodesHtml += '<circle cx="' + node.x + '" cy="' + node.y + '" r="' + r + '" fill="' + fill + '" opacity="' + opacity + '"' + (current ? ' class="map-hero-pulse"' : '') + '/>';
-nodesHtml += '<text x="' + node.x + '" y="' + (node.y + (i % 2 === 0 ? 22 : -16)) + '" text-anchor="middle" fill="' + (unlocked || current ? '#d4a574' : '#555') + '" font-size="9" opacity="' + opacity + '">' + room.icon + '</text>';
-if (unlocked || current) {
-nodesHtml += '<text x="' + node.x + '" y="' + (node.y + (i % 2 === 0 ? 33 : -27)) + '" text-anchor="middle" fill="#8a8a8a" font-size="7">' + room.name + '</text>';
+var fill, r, op;
+if (current) { fill = '#fbbf24'; r = 10; op = 1; }
+else if (unlocked) { fill = '#d4a574'; r = 7; op = 0.8; }
+else { fill = '#444'; r = 5; op = 0.3; }
+var side = i % 2 === 0 ? 1 : -1;
+var lx = node.x + side * 40;
+nodesSvg += '<circle cx="' + node.x + '" cy="' + node.y + '" r="' + r + '" fill="' + fill + '" opacity="' + op + '"' + (current ? ' class="map-hero-pulse"' : '') + '/>';
+nodesSvg += '<text x="' + lx + '" y="' + (node.y + 3) + '" text-anchor="' + (side > 0 ? 'start' : 'end') + '" fill="' + (unlocked || current ? '#c0a080' : '#444') + '" font-size="7" font-weight="bold" opacity="' + op + '">' + room.icon + ' ' + room.name + '</text>';
+if (current) {
+var remaining = (i + 1) * ROOMS_STEP - progress;
+nodesSvg += '<text x="' + lx + '" y="' + (node.y + 13) + '" text-anchor="' + (side > 0 ? 'start' : 'end') + '" fill="#fbbf24" font-size="6" opacity="0.7">ещё ' + remaining + ' до ' + ROOMS[Math.min(i + 1, ROOMS.length - 1)].name + '</text>';
 }
 });
+var pathD = 'M ' + MAP_NODES[0].x + ' ' + MAP_NODES[0].y;
+for (var pi = 1; pi < MAP_NODES.length; pi++) {
+pathD += ' L ' + MAP_NODES[pi].x + ' ' + MAP_NODES[pi].y;
+}
 container.innerHTML =
 '<svg viewBox="0 0 300 600" style="width:100%;max-height:480px;" preserveAspectRatio="xMidYMid meet">' +
-'<defs><filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
-'<path d="' + pathD + '" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-dasharray="6 4"/>' +
-'<path d="' + pathD + '" fill="none" stroke="' + (roomIdx > 0 ? '#d4a574' : '#333') + '" stroke-width="2" stroke-dasharray="6 4" opacity="0.4"/>' +
-nodesHtml +
-'<circle cx="' + heroPos.x + '" cy="' + heroPos.y + '" r="8" fill="#fbbf24" filter="url(#glow)" class="map-hero-dot"/>' +
-'<text x="' + heroPos.x + '" y="' + (heroPos.y - 14) + '" text-anchor="middle" fill="#fbbf24" font-size="12">🗡</text>' +
+'<defs><filter id="heroGlow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
+'<path d="' + pathD + '" fill="none" stroke="#1a1812" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>' +
+'<path d="' + pathD + '" fill="none" stroke="#2a2218" stroke-width="2" stroke-dasharray="4 8" stroke-linecap="round"/>' +
+nodesSvg +
+'<circle cx="' + heroPos.x + '" cy="' + heroPos.y + '" r="5" fill="#fbbf24" filter="url(#heroGlow)" class="map-hero-dot"/>' +
+'<text x="' + heroPos.x + '" y="' + (heroPos.y - 10) + '" text-anchor="middle" font-size="10">🗡</text>' +
 '</svg>';
 }
 renderMap(0);
@@ -2176,8 +2183,7 @@ var dustRunning = true;
 function animateDust() {
 if (!dustRunning) return;
 dustCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
-var pct = parseInt(document.getElementById('progressSlider').value) / 140;
-dustCanvas.style.opacity = pct > 0.4 ? Math.min(1, (pct - 0.4) * 1.5) : 0;
+dustCanvas.style.opacity = 0.6;
 dustParticles.forEach(d => { d.update(); d.draw(dustCtx); });
 requestAnimationFrame(animateDust);
 }
