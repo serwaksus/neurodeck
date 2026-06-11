@@ -661,3 +661,21 @@ margin-top: 8px; font-style: italic;
 .onboarding-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
 .onboarding-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
 .onboarding-dot.active { background: var(--gold-bright); }
+@keyframes cardGlowPulse {
+0%, 100% { box-shadow: 0 0 0 rgba(251, 191, 36, 0); }
+50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.3); }
+}
+.card.rankup-glow { animation: cardGlowPulse 0.6s ease-in-out 3; }
+@keyframes bossAttackFlash {
+0%, 100% { opacity: 1; }
+25% { opacity: 0.3; }
+50% { opacity: 1; }
+75% { opacity: 0.5; }
+}
+.boss-sprite.boss-attacking { animation: bossAttackFlash 0.3s ease-in-out 3; }
+@keyframes heroLevelUpGlow {
+0% { box-shadow: 0 0 0 rgba(244, 200, 150, 0); }
+50% { box-shadow: 0 0 30px rgba(244, 200, 150, 0.6), 0 0 60px rgba(251, 191, 36, 0.3); }
+100% { box-shadow: 0 0 0 rgba(244, 200, 150, 0); }
+}
+.hero-avatar-wrap.levelup-glow { animation: heroLevelUpGlow 1s ease-in-out 2; }

@@ -1,4 +1,54 @@
 // ============ СИСТЕМА LEARN BY DOING ============
+var audioCtx = null;
+function getAudioCtx() {
+    if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
+    }
+    return audioCtx;
+}
+function playTone(freq, duration, type, vol, slide) {
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    try {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = type || 'square';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        if (slide) osc.frequency.linearRampToValueAtTime(slide, ctx.currentTime + duration);
+        gain.gain.setValueAtTime(vol || 0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + duration);
+    } catch(e) {}
+}
+function sfxHit() { playTone(200, 0.12, 'square', 0.12, 100); }
+function sfxCrit() { playTone(400, 0.08, 'square', 0.15); setTimeout(function() { playTone(600, 0.08, 'square', 0.15); }, 60); setTimeout(function() { playTone(800, 0.15, 'square', 0.12); }, 120); }
+function sfxRankUp() { playTone(300, 0.1, 'square', 0.12); setTimeout(function() { playTone(450, 0.1, 'square', 0.12); }, 80); setTimeout(function() { playTone(600, 0.1, 'square', 0.12); }, 160); setTimeout(function() { playTone(900, 0.25, 'triangle', 0.1); }, 240); }
+function sfxLevelUp() { [400,500,600,700,800,1000].forEach(function(f, i) { setTimeout(function() { playTone(f, 0.12, 'square', 0.1); }, i * 70); }); }
+function sfxFail() { playTone(300, 0.15, 'sawtooth', 0.1, 100); }
+function sfxBossHit() { playTone(100, 0.2, 'sawtooth', 0.15, 50); setTimeout(function() { playTone(80, 0.3, 'sawtooth', 0.12, 40); }, 100); }
+function sfxForge() { playTone(150, 0.1, 'square', 0.1); setTimeout(function() { playTone(250, 0.15, 'square', 0.1); }, 100); setTimeout(function() { playTone(400, 0.2, 'triangle', 0.08); }, 200); }
+function sfxGoalComplete() { playTone(500, 0.1, 'square', 0.1); setTimeout(function() { playTone(650, 0.1, 'square', 0.1); }, 80); setTimeout(function() { playTone(800, 0.1, 'square', 0.1); }, 160); setTimeout(function() { playTone(1000, 0.3, 'triangle', 0.08); }, 240); }
+function sfxBossDefeated() { [200,300,400,500,600,800,1000,1200].forEach(function(f, i) { setTimeout(function() { playTone(f, 0.15, 'square', 0.1); }, i * 100); }); }
+function sfxEquip() { playTone(350, 0.08, 'triangle', 0.1); setTimeout(function() { playTone(500, 0.12, 'triangle', 0.08); }, 60); }
+function sfxError() { playTone(150, 0.2, 'square', 0.1, 80); }
+function haptic(type) {
+    try {
+        var tg = window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback;
+        if (tg) {
+            if (type === 'light') tg.impactOccurred('light');
+            else if (type === 'medium') tg.impactOccurred('medium');
+            else if (type === 'heavy') tg.impactOccurred('heavy');
+            else if (type === 'rigid') tg.impactOccurred('rigid');
+            else if (type === 'success') tg.notificationOccurred('success');
+            else if (type === 'warning') tg.notificationOccurred('warning');
+            else if (type === 'error') tg.notificationOccurred('error');
+        }
+    } catch(e) {}
+}
+document.addEventListener('click', function() { getAudioCtx(); }, { once: true });
 const ATTR_POOL_THRESHOLD = 5;
 const HERO_XP_CURVE = [100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000, 256000, 512000, 1024000, 2048000];
 function getXpToNext(level) {
@@ -189,6 +239,16 @@ var x = touch.clientX - r.left, y = touch.clientY - r.top;
 el.style.transform = 'perspective(800px) rotateX(' + (-(y-r.height/2)/r.height*8) + 'deg) rotateY(' + ((x-r.width/2)/r.width*8) + 'deg) translateZ(2px)';
 });
 el.addEventListener('touchend', () => { el.style.transform = ''; });
+var longPressTimer = null;
+el.addEventListener('touchstart', function(e) {
+longPressTimer = setTimeout(function() {
+longPressTimer = null;
+haptic('medium');
+openEditCardDirect(card.id);
+}, 500);
+}, { passive: true });
+el.addEventListener('touchmove', function() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } });
+el.addEventListener('touchend', function() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } });
 grid.appendChild(el);
 }
 renderCards();
@@ -215,6 +275,7 @@ return;
 }
 if (card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === getMSKDayKey()) {
 showToast('⚠ Уже выполнено', 'Карточка уже была выполнена сегодня', 'blood');
+sfxError(); haptic('warning');
 return;
 }
 const btn = e.target.closest('[data-action]') || e.target;
@@ -255,10 +316,13 @@ STATS[card.stat].attributePoints = (STATS[card.stat].attributePoints || 0) + 1;
 checkAttributePoolGrowth(card.stat);
 }
 rankUpHappened = true;
+sfxRankUp(); haptic('medium');
 escapeProgress = Math.min(ESCAPE_MAX, escapeProgress + 1);
 updateEscapeDisplay();
 renderMap(escapeProgress);
 setTimeout(() => triggerRankUpEffect(card, oldRank, nextRank, x, y), 300);
+var rankUpCard = document.querySelector('[data-id="' + card.id + '"]');
+if (rankUpCard) { rankUpCard.closest('.card').classList.add('rankup-glow'); setTimeout(function() { rankUpCard.closest('.card').classList.remove('rankup-glow'); }, 1800); }
 } else {
 card.mastery = card.masteryThreshold;
 showToast('👑 МАКСИМУМ!', card.name + ' достигла SSS', 'crit');
@@ -284,9 +348,11 @@ if (crit) {
 showToast('⚡ КРИТ!', '-' + dmg + ' HP боссу (шанс: ' + Math.round(critChance*100) + '%)', 'crit');
 burstParticles(x, y, 40, { color: '#fbbf24', speed: 8, decay: 0.015, size: 4, shape: 'star', gravity: 0.1 });
 screenShake(6, 300);
+sfxCrit(); haptic('heavy');
 } else {
 const adaptTxt = adaptationMult < 1 ? ' (адаптация ' + Math.round(adaptationMult*100) + '%)' : '';
 showToast('✅ Выполнено', '+' + finalXp + ' XP' + adaptTxt + ' · +' + masteryGain.toFixed(1) + ' Мастерства');
+sfxHit(); haptic('light');
 }
 }
 saveGameState();
@@ -296,6 +362,7 @@ const card = findCard(id);
 if (!card) return;
 spawnBloodRain(25);
 screenShake(10, 500);
+sfxFail(); haptic('error');
 HERO.dailySkips++;
 const gear = getTotalGearBonuses();
 const totalWil = STATS.wil.value + gear.wil;
@@ -493,6 +560,7 @@ else if (HERO.level >= 6) { HERO.name = 'Воин'; HERO.title = '«Идущий
 else if (HERO.level >= 3) { HERO.name = 'Искатель'; HERO.title = '«Вспомнивший путь»'; }
 }
 function onLevelUp() {
+sfxLevelUp(); haptic('success');
 document.getElementById('lvlNum').textContent = HERO.level;
 const ov = document.getElementById('lvlOverlay'), bn = document.getElementById('lvlBanner');
 document.getElementById('lvlSub').textContent = (HERO.level - 1) + ' → ' + HERO.level;
@@ -509,6 +577,8 @@ HERO.maxHp = calcMaxHp();
 const hpGain = HERO.maxHp - HERO.hp;
 HERO.hp = HERO.maxHp;
 document.getElementById('lvlSub2').textContent = '+' + hpGain + ' HP · Все статы +1';
+var avatarWrap = document.querySelector('.hero-avatar-wrap');
+if (avatarWrap) { avatarWrap.classList.add('levelup-glow'); setTimeout(function() { avatarWrap.classList.remove('levelup-glow'); }, 2000); }
 renderStats();
 spiritSay('«Уровень ' + HERO.level + '... Бремя стало легче.»');
 showToast('🏆 Уровень ' + HERO.level, '+1 ко всем атрибутам · HP восстановлено · Следующий: ' + HERO.xpToNext + ' XP');
@@ -640,6 +710,7 @@ let bossHp = 100;
 let bossStage = 0;
 let bossDefeated = false;
 let chimeraShield = 5;
+window._bossKills = { snake: 0, social: 0, chimera: 0 };
 function getCurrentBoss() {
 if (escapeProgress < 40) return {
 name: 'Змей Лени', icon: '🐍', type: 'normal',
@@ -706,6 +777,7 @@ screenShake(12, 600);
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 100, { color: '#c73e4d', speed: 12, decay: 0.01, size: 4, shape: 'star', gravity: 0.1 });
 showToast('⚠ БОСС ЭВОЛЮЦИОНИРУЕТ!', boss.name + ' переходит в стадию ' + (bossStage + 1) + '!', 'blood');
 spiritSay('«' + nextStage.desc + '»');
+sfxBossHit(); haptic('heavy');
 document.getElementById('bossInfo').textContent = nextStage.desc;
 document.querySelectorAll('.boss-sprite').forEach(sprite => {
 sprite.className = 'boss-sprite ' + nextStage.animClass;
@@ -719,6 +791,7 @@ saveGameState();
 }
 function triggerBossExecution() {
 bossDefeated = true;
+sfxBossDefeated(); haptic('heavy');
 const boss = getCurrentBoss();
 // Запускаем анимацию смерти на спрайтах
 document.querySelectorAll('.boss-sprite').forEach(s => s.classList.add('boss-anim-execution'));
@@ -729,6 +802,9 @@ burstParticles(window.innerWidth / 2, window.innerHeight / 2, 200, { color: '#c7
 // Награды
 showToast('💀 БОСС КАЗНЁН', boss.name + ' повержен! Тьма отступает.', 'crit');
 spiritSay('«Невозможное совершено. Твоя душа стала крепче.»');
+if (boss.type === 'chimera') window._bossKills.chimera++;
+else if (boss.type === 'social') window._bossKills.social++;
+else window._bossKills.snake++;
 addXpReward(1000);
 dropRandomLoot(window.innerWidth / 2, window.innerHeight / 2);
 dropRandomLoot(window.innerWidth / 2 + 50, window.innerHeight / 2 - 50);
@@ -976,6 +1052,7 @@ flash.classList.remove('show'); void flash.offsetWidth; flash.classList.add('sho
 showToast('⚔ Экипировано', item.name);
 spiritSay('«' + item.name + '... Сила артефакта теперь твоя.»');
 screenShake(4, 250);
+sfxEquip(); haptic('medium');
 selectedItemId = null;
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo(); renderStats();
 renderItemPanel(INVENTORY.equipped[targetSlot], 'equipped');
@@ -1153,7 +1230,8 @@ function completeGoal(id) {
 const goal = GOALS.find(g => g.id === id);
 if (!goal || goal.completed) return;
 goal.completed = true; goal.currentStep = goal.totalSteps;
-    const color = goal.type === 'short' ? '#34d399' : goal.type === 'medium' ? '#60a5fa' : '#fbbf24';
+sfxGoalComplete(); haptic('success');
+const color = goal.type === 'short' ? '#34d399' : goal.type === 'medium' ? '#60a5fa' : '#fbbf24';
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
 screenShake(10, 500);
 addXpReward(goal.xp);
@@ -1200,8 +1278,9 @@ mastery: 0, masteryThreshold, totalCompletions: 0,
 daysActive: 0, firstCompletedAt: null, lastCompletedAt: null
 };
 FORGED.unshift(card);
-    renderCards(); closeForge();
-    burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: st.color, speed: 10, decay: 0.01, size: 3, shape: 'spark', gravity: 0.1 });
+renderCards(); closeForge();
+sfxForge(); haptic('medium');
+burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: st.color, speed: 10, decay: 0.01, size: 3, shape: 'spark', gravity: 0.1 });
     if (FORGED.length <= 50) addXpReward(10);
     showToast('🔥 Выковано!', name + ' (ранг ' + rank + ', ' + masteryThreshold + ' выполн. до след. ранга)');
 spiritSay('«Новое испытание выковано. Покажи, на что ты способен.»');
@@ -1213,8 +1292,8 @@ function switchView(view) {
 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 document.querySelectorAll('.bnav-btn').forEach(t => t.classList.remove('active'));
 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-const tabEl = document.querySelector('.tab[data-view="' + view + '"]');
-const bnavEl = document.querySelector('.bnav-btn[data-view="' + view + '"]');
+var tabEl = document.querySelector('.tab[data-view="' + view + '"]');
+var bnavEl = document.querySelector('.bnav-btn[data-view="' + view + '"]');
 if (tabEl) tabEl.classList.add('active');
 if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
@@ -1225,6 +1304,29 @@ if (view === 'deck') renderCards();
 if (view === 'boss') updateBossDisplay();
 if (view === 'stats') renderStatsView();
 }
+var VIEW_ORDER = ['deck', 'hero', 'inv', 'boss', 'map', 'stats'];
+var currentViewIndex = 0;
+var swipeStartX = 0, swipeStartY = 0, swiping = false;
+document.querySelector('.content').addEventListener('touchstart', function(e) {
+swipeStartX = e.touches[0].clientX;
+swipeStartY = e.touches[0].clientY;
+swiping = true;
+}, { passive: true });
+document.querySelector('.content').addEventListener('touchend', function(e) {
+if (!swiping) return;
+swiping = false;
+var dx = e.changedTouches[0].clientX - swipeStartX;
+var dy = e.changedTouches[0].clientY - swipeStartY;
+if (Math.abs(dy) > Math.abs(dx)) return;
+if (Math.abs(dx) < 60) return;
+var activeView = document.querySelector('.view.active');
+currentViewIndex = VIEW_ORDER.indexOf(activeView ? activeView.id.replace('view-', '') : 'deck');
+if (dx < 0 && currentViewIndex < VIEW_ORDER.length - 1) {
+switchView(VIEW_ORDER[currentViewIndex + 1]);
+} else if (dx > 0 && currentViewIndex > 0) {
+switchView(VIEW_ORDER[currentViewIndex - 1]);
+}
+});
 const ROOMS = [
 { name: 'Камера заключенного', icon: '⛓', lore: 'Здесь начинается твой путь.' },
 { name: 'Коридор Забытых', icon: '🚪', lore: 'Шаги эхом в пустоте.' },
@@ -1360,6 +1462,9 @@ const maxXp = Math.max(1, ...last7.map(d => d.xp));
 let totalXp7 = last7.reduce((a, d) => a + d.xp, 0);
 let totalCompletions = FORGED.reduce((a, c) => a + (c.totalCompletions || 0), 0);
 let avgDaily = totalXp7 > 0 ? Math.round(totalXp7 / 7) : 0;
+var streakHeatmap = buildStreakHeatmap();
+var bossWins = buildBossWinStats();
+var achievements = buildAchievements();
 container.innerHTML =
 '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">' +
 '<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
@@ -1388,6 +1493,12 @@ return '<div style="flex: 1; display: flex; flex-direction: column; align-items:
 '</div>';
 }).join('') +
 '</div></div>' +
+'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 16px; margin-bottom: 20px;">' +
+'<div style="font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;">🔥 Тепловая карта стиков (последние 8 недель)</div>' +
+streakHeatmap +
+'</div>' +
+bossWins +
+achievements +
 '<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 16px;">' +
 '<div style="font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;">Карточки по рангам</div>' +
 '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' +
@@ -1401,6 +1512,104 @@ return '<div style="background: ' + rc.bg + '; border: 1px solid ' + rc.color + 
 }).join('') +
 (FORGED.length === 0 ? '<div style="color: var(--text-dim); font-size: 12px;">Пока нет карточек</div>' : '') +
 '</div></div>';
+}
+function buildStreakHeatmap() {
+var today = new Date();
+var days = [];
+for (var i = 55; i >= 0; i--) {
+var d = new Date(today);
+d.setDate(d.getDate() - i);
+var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+var xpDay = xpHistory.find(function(h) { return h.date === key; });
+var count = xpDay ? xpDay.xp : 0;
+var color;
+if (count === 0) color = 'rgba(255,255,255,0.05)';
+else if (count < 20) color = 'rgba(52,211,153,0.25)';
+else if (count < 50) color = 'rgba(52,211,153,0.5)';
+else if (count < 100) color = 'rgba(52,211,153,0.75)';
+else color = 'rgba(52,211,153,1)';
+days.push('<div style="width:14px;height:14px;border-radius:2px;background:' + color + ';" title="' + key + ': ' + count + ' XP"></div>');
+}
+var html = '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+days.forEach(function(d) { html += d; });
+html += '</div>';
+html += '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:10px;color:var(--text-dim);">';
+html += '<span>Меньше</span>';
+['rgba(255,255,255,0.05)','rgba(52,211,153,0.25)','rgba(52,211,153,0.5)','rgba(52,211,153,0.75)','rgba(52,211,153,1)'].forEach(function(c) {
+html += '<div style="width:10px;height:10px;border-radius:2px;background:' + c + ';"></div>';
+});
+html += '<span>Больше</span></div>';
+return html;
+}
+function buildBossWinStats() {
+var bosses = [
+{ name: '🐍 Змей Лени', range: '0-39', kills: 0 },
+{ name: '📱 Демон Соцсетей', range: '40-79', kills: 0 },
+{ name: '🔥 Химера Выгорания', range: '80+', kills: 0 }
+];
+if (Array.isArray(window._bossKills)) {
+bosses[0].kills = window._bossKills.snake || 0;
+bosses[1].kills = window._bossKills.social || 0;
+bosses[2].kills = window._bossKills.chimera || 0;
+}
+var html = '<div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);padding:16px;margin-bottom:20px;">';
+html += '<div style="font-size:11px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:12px;">💀 Победы над боссами</div>';
+bosses.forEach(function(b) {
+var barW = Math.min(100, b.kills * 20);
+html += '<div style="margin-bottom:8px;">';
+html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span>' + b.name + '</span><span style="color:var(--blood-bright);">' + b.kills + ' побед</span></div>';
+html += '<div style="height:6px;background:rgba(255,255,255,0.05);border-radius:3px;"><div style="height:100%;width:' + barW + '%;background:var(--blood-bright);border-radius:3px;"></div></div>';
+html += '</div>';
+});
+html += '</div>';
+return html;
+}
+function buildAchievements() {
+var all = [
+{ id: 'first_card', icon: '⚔', name: 'Первая ковка', desc: 'Выковать первую карточку', check: FORGED.length >= 1 },
+{ id: 'cards_10', icon: '📖', name: 'Коллекционер', desc: '10 карточек в колоде', check: FORGED.length >= 10 },
+{ id: 'cards_25', icon: '📚', name: 'Архивариус', desc: '25 карточек в колоде', check: FORGED.length >= 25 },
+{ id: 'rank_b', icon: '🛡', name: 'Воин', desc: 'Карточка ранга B', check: FORGED.some(function(c) { return ['B','BB','BBB','A','AA','AAA','S','SS','SSS'].indexOf(c.rank) >= 0; }) },
+{ id: 'rank_a', icon: '⚡', name: 'Мастер', desc: 'Карточка ранга A', check: FORGED.some(function(c) { return ['A','AA','AAA','S','SS','SSS'].indexOf(c.rank) >= 0; }) },
+{ id: 'rank_s', icon: '👑', name: 'Легенда', desc: 'Карточка ранга S', check: FORGED.some(function(c) { return ['S','SS','SSS'].indexOf(c.rank) >= 0; }) },
+{ id: 'lvl5', icon: '🗡', name: 'Искатель', desc: 'Достичь 5 уровня', check: HERO.level >= 5 },
+{ id: 'lvl10', icon: '🛡', name: 'Страж', desc: 'Достичь 10 уровня', check: HERO.level >= 10 },
+{ id: 'lvl15', icon: '🏰', name: 'Архонт', desc: 'Достичь 15 уровня', check: HERO.level >= 15 },
+{ id: 'xp_1k', icon: '✨', name: 'Первая тысяча', desc: 'Набрать 1000 XP', check: HERO.totalXp >= 1000 },
+{ id: 'xp_10k', icon: '💎', name: 'Десять тысяч', desc: 'Набрать 10 000 XP', check: HERO.totalXp >= 10000 },
+{ id: 'xp_100k', icon: '🌟', name: 'Сто тысяч', desc: 'Набрать 100 000 XP', check: HERO.totalXp >= 100000 },
+{ id: 'goal_1', icon: '🎯', name: 'Первая цель', desc: 'Выполнить первую цель', check: GOALS.filter(function(g) { return g.completed; }).length >= 1 },
+{ id: 'goal_10', icon: '🏆', name: 'Десятка', desc: 'Выполнить 10 целей', check: GOALS.filter(function(g) { return g.completed; }).length >= 10 },
+{ id: 'equip_all', icon: '🎒', name: 'Полный комплект', desc: 'Заполнить все слоты экипировки', check: Object.values(INVENTORY.equipped).filter(function(e) { return e; }).length >= 9 },
+{ id: 'escape_half', icon: '🗝', name: 'Полпути', desc: 'Прогресс побега 50%+', check: escapeProgress >= 70 },
+{ id: 'escape_full', icon: '🌅', name: 'Свобода', desc: 'Достичь Врат Свободы', check: escapeProgress >= ESCAPE_MAX },
+{ id: 'streak_7', icon: '🔥', name: 'Неделя дисциплины', desc: '7-дневный стрик на карточке', check: FORGED.some(function(c) { return (c.streak || 0) >= 7; }) },
+{ id: 'streak_30', icon: '🔥', name: 'Месяц железа', desc: '30-дневный стрик на карточке', check: FORGED.some(function(c) { return (c.streak || 0) >= 30; }) },
+{ id: 'completions_100', icon: '💯', name: 'Сотня', desc: '100 выполнений карточек', check: totalCompletions >= 100 },
+];
+var totalCompletions = FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0);
+all[all.length - 1].check = totalCompletions >= 100;
+var unlocked = all.filter(function(a) { return a.check; }).length;
+var html = '<div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);padding:16px;margin-bottom:20px;">';
+html += '<div style="font-size:11px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:12px;">🏆 Достижения (' + unlocked + '/' + all.length + ')</div>';
+html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">';
+all.forEach(function(a) {
+if (a.check) {
+html += '<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);padding:10px;border-radius:6px;text-align:center;">';
+html += '<div style="font-size:24px;">' + a.icon + '</div>';
+html += '<div style="font-size:11px;color:var(--gold-bright);font-weight:bold;margin-top:4px;">' + a.name + '</div>';
+html += '<div style="font-size:9px;color:var(--text-dim);margin-top:2px;">' + a.desc + '</div>';
+html += '</div>';
+} else {
+html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:10px;border-radius:6px;text-align:center;opacity:0.4;">';
+html += '<div style="font-size:24px;filter:grayscale(1);">' + a.icon + '</div>';
+html += '<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">' + a.name + '</div>';
+html += '<div style="font-size:9px;color:var(--text-dim);margin-top:2px;">' + a.desc + '</div>';
+html += '</div>';
+}
+});
+html += '</div></div>';
+return html;
 }
 function exportJson() {
 try {
@@ -1439,8 +1648,10 @@ if (lastDayReset !== todayKey) {
                 const totalDmg = cardDmg + goalDmg;
                 if (totalDmg > 0) {
                     HERO.hp = Math.max(0, HERO.hp - totalDmg);
-                    spawnBloodRain(15);
-                    screenShake(8, 500);
+spawnBloodRain(15);
+screenShake(8, 500);
+document.querySelectorAll('.boss-sprite').forEach(function(s) { s.classList.add('boss-attacking'); setTimeout(function() { s.classList.remove('boss-attacking'); }, 900); });
+sfxBossHit(); haptic('heavy');
                     showToast('💀 Наказание!', 'Босс нанёс -' + totalDmg + ' HP (' + uncompletedCards.length + ' карточек, ' + uncompletedGoals.length + ' целей)', 'blood');
                     spiritSay('«Боль — учитель. Завтра будь сильнее.»');
                     if (HERO.hp <= 0 && !HERO.isHollow) {
@@ -1489,7 +1700,7 @@ try {
 const snapshot = {
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, savedAt: Date.now()
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, savedAt: Date.now()
 };
 localStorage.setItem('neurodeck_full_save', JSON.stringify(snapshot));
 saveGoals();
@@ -1727,23 +1938,38 @@ reader.readAsText(file);
 event.target.value = '';
 }
 function applySyncData(data, skipRender) {
-if (data.hero) Object.assign(HERO, data.hero);
+if (data.hero) {
+Object.assign(HERO, data.hero);
+HERO.hp = Math.max(0, HERO.hp || 0);
+HERO.maxHp = Math.max(1, HERO.maxHp || 1);
+HERO.xp = Math.max(0, HERO.xp || 0);
+HERO.xpToNext = Math.max(1, HERO.xpToNext || 1);
+HERO.level = Math.max(1, Math.min(99, HERO.level || 1));
+HERO.estus = Math.max(0, Math.min(3, HERO.estus || 0));
+}
 if (data.stats) {
 Object.keys(data.stats).forEach(k => {
 if (STATS[k]) {
 Object.assign(STATS[k], data.stats[k]);
-if (typeof STATS[k].attributePoints !== 'number') STATS[k].attributePoints = 0;
+STATS[k].value = Math.max(0, Math.min(STATS[k].max || 100, STATS[k].value || 0));
+STATS[k].attributePoints = Math.max(0, STATS[k].attributePoints || 0);
 }
 });
 }
-if (data.forged) FORGED = data.forged;
-if (data.goals) GOALS = data.goals;
+if (data.forged) FORGED = data.forged.map(function(c) {
+if (!c.rank) c.rank = 'C';
+if (typeof c.mastery !== 'number') c.mastery = 0;
+if (typeof c.masteryThreshold !== 'number') c.masteryThreshold = 7;
+if (typeof c.streak !== 'number') c.streak = 0;
+return c;
+});
+if (data.goals) GOALS = Array.isArray(data.goals) ? data.goals : [];
 if (data.inventory) {
-INVENTORY.backpack = data.inventory.backpack || [];
+INVENTORY.backpack = Array.isArray(data.inventory.backpack) ? data.inventory.backpack : [];
 INVENTORY.equipped = data.inventory.equipped || INVENTORY.equipped;
 }
-if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
-if (typeof data.bossHp === 'number') bossHp = data.bossHp;
+if (typeof data.escapeProgress === 'number') escapeProgress = Math.max(0, Math.min(ESCAPE_MAX, data.escapeProgress));
+if (typeof data.bossHp === 'number') bossHp = Math.max(0, data.bossHp);
 if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
@@ -1752,6 +1978,7 @@ if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
 if (data.uidCounter) uidCounter = data.uidCounter;
 if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
 if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
+if (data.bossKills) window._bossKills = data.bossKills;
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
