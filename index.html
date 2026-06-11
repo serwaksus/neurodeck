@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 <div class="app-wrap">
@@ -57,8 +57,9 @@
 <div class="form-row"><label class="form-label">Название</label><input class="form-input" id="goalName" placeholder="Пробежать 10 км"></div>
 <div class="form-grid-2">
 <div class="form-row"><label class="form-label">📅 Дедлайн</label><input class="form-input" type="date" id="goalDeadline"></div>
-<div class="form-row"><label class="form-label">📊 Шагов</label><input class="form-input" type="number" id="goalSteps" value="5" min="1" max="100"></div>
+<div class="form-row"><label class="form-label">🕐 Время</label><input class="form-input" type="time" id="goalDeadlineTime" value="23:00"></div>
 </div>
+<div class="form-row"><label class="form-label">📊 Шагов</label><input class="form-input" type="number" id="goalSteps" value="5" min="1" max="100"></div>
 <div class="form-row">
 <label class="form-label">⚡ Привязанный стат</label>
 <div id="goalStatChips">
@@ -177,6 +178,7 @@
 </div>
 <div style="display: flex; gap: 8px; margin-top: 8px;">
 <button class="demo-btn" data-action="export-json" style="flex: 1;">📋 JSON</button>
+<button class="demo-btn" id="notifToggleBtn" data-action="toggle-notif" style="flex: 1;">🔔 Уведомления</button>
 <button class="demo-btn" data-action="reset-all-data" style="flex: 1; color: var(--blood-bright); border-color: var(--blood);">🗑 Сброс</button>
 </div>
 </div>
@@ -427,6 +429,6 @@
 </div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=12"></script>
+<script src="js/app.js?v=13"></script>
 </body>
 </html>

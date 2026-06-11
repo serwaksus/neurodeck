@@ -117,6 +117,7 @@ case 'download-sync-file': downloadSyncFile(); break;
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
+case 'toggle-notif': toggleNotif(); break;
 case 'open-forge': openForge(); break;
 case 'close-forge': closeForge(); break;
 case 'forge-card': forgeCard(); break;
@@ -1142,6 +1143,7 @@ function openGoalModal() {
 document.getElementById('goalModal').classList.add('show');
 const d = new Date(); d.setDate(d.getDate() + 7);
 document.getElementById('goalDeadline').value = d.toISOString().split('T')[0];
+document.getElementById('goalDeadlineTime').value = '23:00';
 setTimeout(() => document.getElementById('goalName').focus(), 100);
 }
 function closeGoalModal() {
@@ -1149,6 +1151,7 @@ document.getElementById('goalModal').classList.remove('show');
 document.getElementById('goalName').value = '';
 document.getElementById('goalDesc').value = '';
 document.getElementById('goalSteps').value = '5';
+document.getElementById('goalDeadlineTime').value = '23:00';
 selectedGoalType = 'short'; selectedGoalStat = 'str';
 updateGoalTypeSelection(); updateGoalStatChips();
 }
@@ -1158,15 +1161,17 @@ updateGoalTypeSelection(); updateGoalStatChips();
 function createGoal() {
 const name = document.getElementById('goalName').value.trim();
 if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
-const deadline = document.getElementById('goalDeadline').value;
-if (deadline) {
-const dl = new Date(deadline + 'T23:59:59');
-if (dl < new Date()) { showToast('⚠ Ошибка', 'Дедлайн не может быть в прошлом', 'blood'); return; }
+const deadlineDate = document.getElementById('goalDeadline').value;
+const deadlineTime = document.getElementById('goalDeadlineTime').value || '23:00';
+var deadline = null;
+if (deadlineDate) {
+deadline = new Date(deadlineDate + 'T' + deadlineTime + ':00');
+if (deadline < new Date()) { showToast('⚠ Ошибка', 'Дедлайн не может быть в прошлом', 'blood'); return; }
 }
 const totalSteps = parseInt(document.getElementById('goalSteps').value) || 5;
 const desc = document.getElementById('goalDesc').value.trim();
 const rewards = GOAL_REWARDS[selectedGoalType];
-const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.statXp, completed: false, createdAt: Date.now(), lastStepAt: null };
+const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline: deadline ? deadline.getTime() : null, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.statXp, completed: false, failed: false, createdAt: Date.now(), lastStepAt: null };
 GOALS.unshift(goal);
 saveGoals(); saveGameState(); renderGoals(); closeGoalModal();
 const color = selectedGoalType === 'short' ? '#34d399' : selectedGoalType === 'medium' ? '#60a5fa' : '#fbbf24';
@@ -1178,6 +1183,12 @@ switchView('hero');
 function renderGoals() {
 const list = document.getElementById('goalsList');
 if (!list) return;
+GOALS.forEach(function(g) {
+if (typeof g.deadline === 'string' && g.deadline) {
+var dl = new Date(g.deadline + 'T23:59:59');
+g.deadline = dl.getTime();
+}
+});
 list.innerHTML = '';
 let filtered = GOALS;
 if (currentGoalFilter !== 'all') filtered = GOALS.filter(g => g.type === currentGoalFilter);
@@ -1187,24 +1198,38 @@ updateHeroSummary(); return;
 }
 filtered.forEach(goal => {
 const rewards = GOAL_REWARDS[goal.type] || GOAL_REWARDS.short;
-    const st = STATS[goal.stat] || STATS.str;
+const st = STATS[goal.stat] || STATS.str;
 const progressPct = (goal.currentStep / goal.totalSteps) * 100;
-const daysLeft = goal.deadline ? Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-const daysText = daysLeft === null ? '' : daysLeft > 0 ? daysLeft + ' дн.' : daysLeft === 0 ? 'Сегодня!' : 'Просрочено';
+var countdownHtml = '';
+if (goal.deadline && !goal.completed && !goal.failed) {
+var remaining = goal.deadline - Date.now();
+if (remaining > 0) {
+var d = Math.floor(remaining / 86400000);
+var h = Math.floor((remaining % 86400000) / 3600000);
+var m = Math.floor((remaining % 3600000) / 60000);
+var cdText = d > 0 ? d + 'д ' + h + 'ч' : h > 0 ? h + 'ч ' + m + 'м' : m + 'м';
+var cdClass = remaining < 3600000 ? 'critical' : remaining < 86400000 ? 'warning' : 'safe';
+countdownHtml = '<span class="goal-countdown ' + cdClass + '">⏱ ' + cdText + '</span>';
+} else {
+countdownHtml = '<span class="goal-countdown critical">⏱ ПРОСРОЧЕНО</span>';
+}
+}
+var deadlineStr = goal.deadline ? new Date(goal.deadline).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const el = document.createElement('div');
-el.className = 'goal-card ' + goal.type + ' ' + (goal.completed ? 'completed' : '');
-    el.innerHTML =
-    '<div class="goal-head"><div class="goal-name">' + esc(goal.name) + '</div><div class="goal-type-badge">' + rewards.label + '</div></div>' +
-    (goal.desc ? '<div style="font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px;">' + esc(goal.desc) + '</div>' : '') +
+el.className = 'goal-card ' + goal.type + ' ' + (goal.completed ? 'completed' : goal.failed ? 'failed' : '');
+el.innerHTML =
+'<div class="goal-head"><div class="goal-name">' + esc(goal.name) + '</div><div class="goal-type-badge">' + rewards.label + '</div></div>' +
+(goal.desc ? '<div style="font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px;">' + esc(goal.desc) + '</div>' : '') +
 '<div class="goal-meta">' +
-(daysText ? '<span>📅 <b>' + daysText + '</b></span>' : '') +
+(deadlineStr ? '<span>📅 <b>' + deadlineStr + '</b></span>' : '') +
+countdownHtml +
 '<span>✨ <b>+' + goal.xp + ' XP</b></span>' +
 '<span class="dmg">⚔ <b>-' + goal.dmg + ' HP</b></span>' +
 '<span style="color:' + st.color + '">' + st.icon + ' <b>+' + goal.statBonus + ' пул</b></span>' +
 '</div>' +
 '<div class="goal-progress-wrap"><div class="goal-progress-bar"><div class="goal-progress-fill" style="width:' + progressPct + '%"></div></div><div class="goal-progress-label"><b>' + goal.currentStep + '</b>/' + goal.totalSteps + '</div></div>' +
 '<div class="goal-actions">' +
-(!goal.completed ? (goal.currentStep < goal.totalSteps - 1 ? '<button class="goal-btn" data-action="advance-goal" data-id="' + goal.id + '">+ Шаг</button>' : '<button class="goal-btn complete" data-action="complete-goal" data-id="' + goal.id + '">✓ Выполнить</button>') : '<button class="goal-btn" disabled style="opacity: 0.5;">✓ Выполнено</button>') +
+(!goal.completed && !goal.failed ? (goal.currentStep < goal.totalSteps - 1 ? '<button class="goal-btn" data-action="advance-goal" data-id="' + goal.id + '">+ Шаг</button>' : '<button class="goal-btn complete" data-action="complete-goal" data-id="' + goal.id + '">✓ Выполнить</button>') : '<button class="goal-btn" disabled style="opacity: 0.5;">' + (goal.failed ? '💀 Провалена' : '✓ Выполнено') + '</button>') +
 '<button class="goal-btn delete" data-action="delete-goal" data-id="' + goal.id + '">✕</button>' +
 '</div>';
 list.appendChild(el);
@@ -1213,7 +1238,7 @@ updateHeroSummary();
 }
 function advanceGoal(id) {
 const goal = GOALS.find(g => g.id === id);
-if (!goal || goal.completed) return;
+if (!goal || goal.completed || goal.failed) return;
 goal.currentStep = Math.min(goal.totalSteps, goal.currentStep + 1);
 addXpReward(Math.round(goal.xp / goal.totalSteps / 2));
 if (goal.stat && STATS[goal.stat]) {
@@ -1228,7 +1253,7 @@ saveGameState();
 }
 function completeGoal(id) {
 const goal = GOALS.find(g => g.id === id);
-if (!goal || goal.completed) return;
+if (!goal || goal.completed || goal.failed) return;
 goal.completed = true; goal.currentStep = goal.totalSteps;
 sfxGoalComplete(); haptic('success');
 const color = goal.type === 'short' ? '#34d399' : goal.type === 'medium' ? '#60a5fa' : '#fbbf24';
@@ -1343,30 +1368,72 @@ const ROOMS = [
 { name: 'Алтарь Истины', icon: '🕯', lore: 'Правда о себе.' },
 { name: 'Врата Свободы', icon: '🌅', lore: 'Выход из подземелья.' },
 ];
+const ROOM_THEMES = [
+{ hue: 25, light: 3, sat: 12, mist: 0.7, torch: 0.3, rays: 0, particleColor: '#d4a574' },
+{ hue: 220, light: 5, sat: 18, mist: 0.8, torch: 0.15, rays: 0, particleColor: '#8090b0' },
+{ hue: 355, light: 5, sat: 22, mist: 0.65, torch: 0.25, rays: 0, particleColor: '#c04040' },
+{ hue: 280, light: 7, sat: 28, mist: 0.5, torch: 0.35, rays: 0.1, particleColor: '#b060e0' },
+{ hue: 120, light: 4, sat: 18, mist: 0.75, torch: 0.2, rays: 0, particleColor: '#60a060' },
+{ hue: 260, light: 3, sat: 22, mist: 0.85, torch: 0.1, rays: 0, particleColor: '#7050a0' },
+{ hue: 195, light: 10, sat: 35, mist: 0.4, torch: 0.4, rays: 0.2, particleColor: '#40c0e0' },
+{ hue: 45, light: 14, sat: 42, mist: 0.3, torch: 0.5, rays: 0.3, particleColor: '#f0c060' },
+{ hue: 160, light: 12, sat: 32, mist: 0.35, torch: 0.4, rays: 0.25, particleColor: '#50c0a0' },
+{ hue: 210, light: 14, sat: 12, mist: 0.7, torch: 0.3, rays: 0.15, particleColor: '#a0b0c0' },
+{ hue: 240, light: 12, sat: 38, mist: 0.3, torch: 0.45, rays: 0.4, particleColor: '#7070e0' },
+{ hue: 15, light: 10, sat: 42, mist: 0.25, torch: 0.6, rays: 0.2, particleColor: '#f08030' },
+{ hue: 50, light: 20, sat: 32, mist: 0.2, torch: 0.5, rays: 0.5, particleColor: '#f0e0a0' },
+{ hue: 38, light: 35, sat: 45, mist: 0.1, torch: 0.7, rays: 0.7, particleColor: '#f0d080' },
+];
 const ESCAPE_MAX = 140;
 const ROOMS_STEP = 10;
 let escapeProgress = 0;
 let lastDayReset = null;
+const MAP_NODES = [
+{ x: 150, y: 580 }, { x: 80, y: 535 }, { x: 220, y: 490 }, { x: 90, y: 440 },
+{ x: 210, y: 395 }, { x: 70, y: 345 }, { x: 190, y: 295 }, { x: 110, y: 245 },
+{ x: 230, y: 200 }, { x: 100, y: 155 }, { x: 200, y: 110 }, { x: 120, y: 70 },
+{ x: 180, y: 35 }, { x: 150, y: 10 }
+];
+function getHeroMapPos(progress) {
+var idx = Math.min(progress / ROOMS_STEP, MAP_NODES.length - 1);
+var i = Math.floor(idx);
+var frac = idx - i;
+if (i >= MAP_NODES.length - 1) return MAP_NODES[MAP_NODES.length - 1];
+var a = MAP_NODES[i], b = MAP_NODES[i + 1];
+return { x: a.x + (b.x - a.x) * frac, y: a.y + (b.y - a.y) * frac };
+}
 function renderMap(progress) {
-const container = document.getElementById('mapRooms');
+var container = document.getElementById('mapRooms');
 if (!container) return;
-container.innerHTML = '';
 document.getElementById('mapProgressNum').textContent = progress;
 document.getElementById('mapProgressFill').style.width = ((progress / ESCAPE_MAX) * 100) + '%';
-const idx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
-document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[idx].name;
-ROOMS.forEach((room, i) => {
-const unlocked = progress >= (i + 1) * ROOMS_STEP;
-const current = progress >= i * ROOMS_STEP && progress < (i + 1) * ROOMS_STEP;
-const el = document.createElement('div');
-el.className = 'map-room ' + (unlocked ? 'unlocked' : current ? 'current' : 'locked');
-const remaining = current ? ((i + 1) * ROOMS_STEP - progress) : 0;
-el.innerHTML =
-'<div class="map-room-icon" style="filter: ' + (unlocked || current ? 'none' : 'grayscale(1) blur(1px)') + ';">' + room.icon + '</div>' +
-'<div class="map-room-name">' + room.name + '</div>' +
-'<div class="map-room-status">' + (unlocked ? '✓ ' + room.lore : current ? '▶ ' + room.lore + ' (ещё ' + remaining + ')' : '🔒 ' + ((i + 1) * ROOMS_STEP - progress) + ' ранг-апов') + '</div>';
-container.appendChild(el);
+var roomIdx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
+document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[roomIdx].name;
+var pathD = 'M ' + MAP_NODES.map(function(n) { return n.x + ' ' + n.y; }).join(' L ');
+var heroPos = getHeroMapPos(progress);
+var nodesHtml = '';
+ROOMS.forEach(function(room, i) {
+var unlocked = progress >= (i + 1) * ROOMS_STEP;
+var current = progress >= i * ROOMS_STEP && progress < (i + 1) * ROOMS_STEP;
+var node = MAP_NODES[i];
+var fill = unlocked ? '#d4a574' : current ? '#fbbf24' : '#333';
+var r = current ? 14 : unlocked ? 10 : 7;
+var opacity = unlocked || current ? 1 : 0.35;
+nodesHtml += '<circle cx="' + node.x + '" cy="' + node.y + '" r="' + r + '" fill="' + fill + '" opacity="' + opacity + '"' + (current ? ' class="map-hero-pulse"' : '') + '/>';
+nodesHtml += '<text x="' + node.x + '" y="' + (node.y + (i % 2 === 0 ? 22 : -16)) + '" text-anchor="middle" fill="' + (unlocked || current ? '#d4a574' : '#555') + '" font-size="9" opacity="' + opacity + '">' + room.icon + '</text>';
+if (unlocked || current) {
+nodesHtml += '<text x="' + node.x + '" y="' + (node.y + (i % 2 === 0 ? 33 : -27)) + '" text-anchor="middle" fill="#8a8a8a" font-size="7">' + room.name + '</text>';
+}
 });
+container.innerHTML =
+'<svg viewBox="0 0 300 600" style="width:100%;max-height:480px;" preserveAspectRatio="xMidYMid meet">' +
+'<defs><filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
+'<path d="' + pathD + '" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-dasharray="6 4"/>' +
+'<path d="' + pathD + '" fill="none" stroke="' + (roomIdx > 0 ? '#d4a574' : '#333') + '" stroke-width="2" stroke-dasharray="6 4" opacity="0.4"/>' +
+nodesHtml +
+'<circle cx="' + heroPos.x + '" cy="' + heroPos.y + '" r="8" fill="#fbbf24" filter="url(#glow)" class="map-hero-dot"/>' +
+'<text x="' + heroPos.x + '" y="' + (heroPos.y - 14) + '" text-anchor="middle" fill="#fbbf24" font-size="12">🗡</text>' +
+'</svg>';
 }
 renderMap(0);
 function updateEscapeDisplay() {
@@ -1379,20 +1446,23 @@ const idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
 document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[idx].name;
 updateAtmosphereByEscape();
 }
+var currentRoomIndex = 0;
 function updateAtmosphereByEscape() {
-const pct = escapeProgress / ESCAPE_MAX;
-const root = document.documentElement.style;
-let hue, light, sat, mist, torch, rays;
-if (pct < 0.2) { hue = 0; light = 0; sat = 0; mist = 0.8; torch = 0.2; rays = 0; }
-else if (pct < 0.5) { const p = (pct - 0.2) / 0.3; hue = p * 60; light = p * 15; sat = p * 30; mist = 0.8 - p * 0.25; torch = 0.2 + p * 0.4; rays = 0; }
-else if (pct < 0.8) { const p = (pct - 0.5) / 0.3; hue = 60 + p * 140; light = 15 + p * 25; sat = 30 + p * 20; mist = 0.55 - p * 0.25; torch = 0.6 - p * 0.2; rays = p * 0.3; }
-else { const p = (pct - 0.8) / 0.2; hue = 200 - p * 170; light = 40 + p * 40; sat = 50 - p * 20; mist = 0.3 - p * 0.2; torch = 0.4 + p * 0.3; rays = 0.3 + p * 0.5; }
-root.setProperty('--atmosphere-hue', hue);
-root.setProperty('--atmosphere-light', light);
-root.setProperty('--atmosphere-sat', sat);
-root.setProperty('--mist-opacity', mist);
-root.setProperty('--torch-intensity', torch);
-root.setProperty('--light-rays-opacity', rays);
+var idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOM_THEMES.length - 1);
+if (idx === currentRoomIndex) return;
+currentRoomIndex = idx;
+var theme = ROOM_THEMES[idx];
+var root = document.documentElement.style;
+root.setProperty('--atmosphere-hue', theme.hue);
+root.setProperty('--atmosphere-light', theme.light);
+root.setProperty('--atmosphere-sat', theme.sat);
+root.setProperty('--mist-opacity', theme.mist);
+root.setProperty('--torch-intensity', theme.torch);
+root.setProperty('--light-rays-opacity', theme.rays);
+dustParticles.forEach(function(d) { d.color = theme.particleColor; });
+document.querySelectorAll('.boss-sprite').forEach(function(s) {
+s.style.filter = 'hue-rotate(' + (theme.hue - 25) + 'deg)';
+});
 }
 function drinkEstus() {
 if (HERO.estus > 0 && !HERO.estusUsedToday) {
@@ -1424,9 +1494,9 @@ const viewBossTitle = document.querySelector('#view-boss .view-title');
 document.getElementById('bossLoreText').innerHTML =
 '<b style="color:var(--blood-bright)">«' + stage.desc + '»</b><br><br>' +
 'Каждый день в 23:00 МСК я наказываю тебя:<br>' +
-'• <b style="color:var(--blood-bright)">-' + (10 * stage.dmgMult) + ' HP</b> за каждую невыполненную карточку<br>' +
-'• <b style="color:var(--blood-bright)">-' + (15 * stage.dmgMult) + ' HP</b> за каждую невыполненную цель<br><br>' +
-'Каждая выполненная карточка — удар, от которого я трескаюсь. Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.';
+'• <b style="color:var(--blood-bright)">-' + (10 * stage.dmgMult) + ' HP</b> за каждую невыполненную карточку<br><br>' +
+'Цели с дедлайном трескаются при провале и наносят урон автоматически.<br>' +
+'Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.';
 }
 function updatePunishCountdown() {
 var el = document.getElementById('punishCountdown');
@@ -1633,35 +1703,33 @@ showToast('📋 JSON экспортирован', 'Файл загружен');
 function checkDailyReset() {
 const todayKey = getMSKDayKey();
 if (lastDayReset !== todayKey) {
-        if (lastDayReset !== null) {
-            const allCards = [...FORGED];
-            const uncompletedCards = allCards.filter(c => {
-                if (!c.lastCompletedAt) return true;
-                return getMSKDayKey(c.lastCompletedAt) !== lastDayReset;
-            });
-            const uncompletedGoals = GOALS.filter(g => !g.completed && getMSKDayKey(g.createdAt) < lastDayReset);
-            if ((uncompletedCards.length > 0 || uncompletedGoals.length > 0) && !HERO.estusUsedToday) {
-                const boss = getCurrentBoss();
-                const stage = boss.stages[bossStage];
-                const cardDmg = uncompletedCards.length * Math.round(10 * stage.dmgMult);
-                const goalDmg = uncompletedGoals.length * Math.round(15 * stage.dmgMult);
-                const totalDmg = cardDmg + goalDmg;
-                if (totalDmg > 0) {
-                    HERO.hp = Math.max(0, HERO.hp - totalDmg);
+if (lastDayReset !== null) {
+const allCards = [...FORGED];
+const uncompletedCards = allCards.filter(c => {
+if (!c.lastCompletedAt) return true;
+return getMSKDayKey(c.lastCompletedAt) !== lastDayReset;
+});
+if (uncompletedCards.length > 0 && !HERO.estusUsedToday) {
+const boss = getCurrentBoss();
+const stage = boss.stages[bossStage];
+const cardDmg = uncompletedCards.length * Math.round(10 * stage.dmgMult);
+const totalDmg = cardDmg;
+if (totalDmg > 0) {
+HERO.hp = Math.max(0, HERO.hp - totalDmg);
 spawnBloodRain(15);
 screenShake(8, 500);
 document.querySelectorAll('.boss-sprite').forEach(function(s) { s.classList.add('boss-attacking'); setTimeout(function() { s.classList.remove('boss-attacking'); }, 900); });
 sfxBossHit(); haptic('heavy');
-                    showToast('💀 Наказание!', 'Босс нанёс -' + totalDmg + ' HP (' + uncompletedCards.length + ' карточек, ' + uncompletedGoals.length + ' целей)', 'blood');
-                    spiritSay('«Боль — учитель. Завтра будь сильнее.»');
-                    if (HERO.hp <= 0 && !HERO.isHollow) {
-                        HERO.isHollow = true;
-                        HERO.hp = Math.floor(HERO.maxHp * 0.25);
-                        showToast('💀 ТЫ ПАЛ', 'Стань Полым. Урон -50%. 3 идеальных дня для искупления.', 'blood');
-                    }
-                }
-            }
-        }
+showToast('💀 Наказание!', 'Босс нанёс -' + totalDmg + ' HP (' + uncompletedCards.length + ' карточек)', 'blood');
+spiritSay('«Боль — учитель. Завтра будь сильнее.»');
+if (HERO.hp <= 0 && !HERO.isHollow) {
+HERO.isHollow = true;
+HERO.hp = Math.floor(HERO.maxHp * 0.25);
+showToast('💀 ТЫ ПАЛ', 'Стань Полым. Урон -50%. 3 идеальных дня для искупления.', 'blood');
+}
+}
+}
+}
         if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
 HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
 } else {
@@ -1717,7 +1785,33 @@ const data = JSON.parse(raw);
 applySyncData(data, true);
 } catch (e) { console.warn('Load failed:', e); }
 }
-setInterval(() => { checkDailyReset(); updatePunishCountdown(); }, 60 * 1000);
+function checkGoalDeadlines() {
+var now = Date.now();
+var changed = false;
+GOALS.forEach(function(goal) {
+if (goal.completed || goal.failed || !goal.deadline) return;
+if (now >= goal.deadline) {
+goal.failed = true;
+changed = true;
+var dmg = goal.dmg * 2;
+HERO.hp = Math.max(0, HERO.hp - dmg);
+screenShake(10, 600);
+spawnBloodRain(20);
+sfxFail(); haptic('error');
+showToast('💀 Цель провалена!', '«' + goal.name + '» — треснула. -' + dmg + ' HP', 'blood');
+spiritSay('«Обещание разбилось о камень реальности...»');
+sfxBossHit();
+}
+});
+if (changed) {
+renderGoals();
+updateHeroUI();
+saveGameState();
+}
+}
+setInterval(function() { checkDailyReset(); updatePunishCountdown(); }, 60 * 1000);
+setInterval(checkGoalDeadlines, 30000);
+checkGoalDeadlines();
 window.addEventListener('beforeunload', saveGameState);
 const CLOUD_MAX_CHUNK = 4096;
 const CLOUD_META_KEY = 'nd_meta';
@@ -1995,6 +2089,71 @@ location.reload();
 });
 }
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
+var notifEnabled = localStorage.getItem('neurodeck_notif') === '1';
+function toggleNotif() {
+if (!('Notification' in window)) { showToast('⚠ Не поддерживается', 'Браузер не поддерживает уведомления', 'blood'); return; }
+if (Notification.permission === 'granted') {
+notifEnabled = !notifEnabled;
+localStorage.setItem('neurodeck_notif', notifEnabled ? '1' : '0');
+updateNotifBtn();
+showToast(notifEnabled ? '🔔 Уведомления включены' : '🔕 Уведомления выключены', '');
+} else if (Notification.permission === 'denied') {
+showToast('⚠ Заблокировано', 'Разрешите уведомления в настройках браузера', 'blood');
+} else {
+Notification.requestPermission().then(function(perm) {
+if (perm === 'granted') {
+notifEnabled = true;
+localStorage.setItem('neurodeck_notif', '1');
+updateNotifBtn();
+showToast('🔔 Уведомления включены', '');
+scheduleNotifs();
+}
+});
+}
+}
+function updateNotifBtn() {
+var btn = document.getElementById('notifToggleBtn');
+if (btn) {
+btn.textContent = notifEnabled ? '🔔 Уведомления: ВКЛ' : '🔕 Уведомления: ВЫКЛ';
+btn.style.borderColor = notifEnabled ? '#34d399' : 'var(--border)';
+}
+}
+function scheduleNotifs() {
+if (!notifEnabled || Notification.permission !== 'granted') return;
+setTimeout(function() {
+var now = new Date();
+var mskNow = new Date(now.getTime() + MSK_OFFSET_MS);
+var h = mskNow.getUTCHours(), m = mskNow.getUTCMinutes();
+var diff = ((22 - h) * 60 - m) * 60;
+if (diff > 0 && diff <= 7200) {
+setTimeout(function() {
+var uncompleted = FORGED.filter(function(c) {
+if (!c.lastCompletedAt) return true;
+return getMSKDayKey(c.lastCompletedAt) !== getMSKDayKey();
+});
+if (uncompleted.length > 0) {
+new Notification('NeuroDeck ⚔', { body: 'Осталось ' + uncompleted.length + ' карточек! Босс атакует через 1 час.', icon: '🗡', tag: 'nd-warn' });
+}
+}, diff * 1000);
+}
+GOALS.forEach(function(goal) {
+if (goal.completed || goal.failed || !goal.deadline) return;
+var remaining = goal.deadline - Date.now();
+if (remaining > 0 && remaining < 86400000) {
+setTimeout(function() {
+if (!notifEnabled) return;
+new Notification('NeuroDeck 🎯', { body: '«' + goal.name + '» — скоро истечёт дедлайн!', icon: '🎯', tag: 'nd-goal-' + goal.id });
+}, remaining - 1800000);
+}
+});
+}, 5000);
+}
+function initNotifs() {
+updateNotifBtn();
+if (notifEnabled && Notification.permission === 'granted') scheduleNotifs();
+}
+initNotifs();
+document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
 document.getElementById('syncFileInput').addEventListener('change', importSyncFile);
 document.addEventListener('keydown', (e) => {
 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -2008,9 +2167,9 @@ let dustParticles = [];
 function resizeDust() { dustCanvas.width = window.innerWidth; dustCanvas.height = window.innerHeight; }
 resizeDust(); window.addEventListener('resize', resizeDust);
 class Dust {
-constructor() { this.x = Math.random() * dustCanvas.width; this.y = Math.random() * dustCanvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = -0.1 - Math.random() * 0.2; this.size = 0.5 + Math.random() * 1.5; this.alpha = 0.2 + Math.random() * 0.4; }
+constructor() { this.x = Math.random() * dustCanvas.width; this.y = Math.random() * dustCanvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = -0.1 - Math.random() * 0.2; this.size = 0.5 + Math.random() * 1.5; this.alpha = 0.2 + Math.random() * 0.4; this.color = ROOM_THEMES[currentRoomIndex].particleColor; }
 update() { this.x += this.vx; this.y += this.vy; this.vx += (Math.random() - 0.5) * 0.02; if (this.y < -10 || this.x < -10 || this.x > dustCanvas.width + 10) { this.x = Math.random() * dustCanvas.width; this.y = dustCanvas.height + 10; } }
-draw(ctx) { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = '#f4c896'; ctx.shadowBlur = 6; ctx.shadowColor = '#f4c896'; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+draw(ctx) { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color; ctx.shadowBlur = 6; ctx.shadowColor = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
 for (var i = 0; i < 60; i++) dustParticles.push(new Dust());
 var dustRunning = true;
