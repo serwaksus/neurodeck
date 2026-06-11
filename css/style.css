@@ -635,6 +635,7 @@ margin-top: 8px; font-style: italic;
 .paperdoll { width: 220px; height: 330px; }
 .slot { width: 44px; height: 44px; }
 .slot .slot-icon { font-size: 20px; }
+#view-boss > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
 }
 @media (max-width: 600px) {
 .goal-type-selector { grid-template-columns: 1fr; }

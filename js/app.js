@@ -285,9 +285,10 @@ showToast('✅ Выполнено', '+' + finalXp + ' XP' + adaptTxt + ' · +' +
 saveGameState();
 }
 function failCard(e, id) {
+const card = findCard(id);
+if (!card) return;
 spawnBloodRain(25);
 screenShake(10, 500);
-const card = findCard(id);
 HERO.dailySkips++;
 const gear = getTotalGearBonuses();
 const totalWil = STATS.wil.value + gear.wil;
@@ -756,6 +757,7 @@ document.getElementById('bossInfo').innerHTML = '<span class="boss-defeated-text
 setTimeout(() => {
 bossDefeated = false;
 bossStage = 0;
+chimeraShield = 5;
 const newBoss = getCurrentBoss();
 bossHp = newBoss.stages[0].maxHp;
 // Скрываем оверлеи
@@ -946,6 +948,7 @@ const item = INVENTORY.backpack.find(i => i.uid === uid);
 if (!item) return;
 let targetSlot = item.slot;
 if (item.slot === 'ring1' && INVENTORY.equipped.ring1 && !INVENTORY.equipped.ring2) targetSlot = 'ring2';
+if (item.slot === 'ring2' && INVENTORY.equipped.ring2 && !INVENTORY.equipped.ring1) targetSlot = 'ring1';
 const current = INVENTORY.equipped[targetSlot];
 if (current) INVENTORY.backpack.push(Object.assign({}, current, { slot: current.slot === 'ring2' ? 'ring1' : current.slot }));
 INVENTORY.equipped[targetSlot] = null;
@@ -973,7 +976,7 @@ function unequipItem(slotName) {
 const item = INVENTORY.equipped[slotName];
 if (!item) return;
 if (INVENTORY.backpack.length >= INVENTORY.maxSlots) { showToast('🎒 Рюкзак полон', 'Освободи место', 'blood'); return; }
-INVENTORY.backpack.push(Object.assign({}, item, { slot: item.slot === 'ring2' ? 'ring1' : item.slot }));
+INVENTORY.backpack.push(Object.assign({}, item));
 INVENTORY.equipped[slotName] = null;
 showToast('↶ Снято', item.name);
 selectedItemId = null;
@@ -1068,6 +1071,10 @@ function createGoal() {
 const name = document.getElementById('goalName').value.trim();
 if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
 const deadline = document.getElementById('goalDeadline').value;
+if (deadline) {
+const dl = new Date(deadline + 'T23:59:59');
+if (dl < new Date()) { showToast('⚠ Ошибка', 'Дедлайн не может быть в прошлом', 'blood'); return; }
+}
 const totalSteps = parseInt(document.getElementById('goalSteps').value) || 5;
 const desc = document.getElementById('goalDesc').value.trim();
 const rewards = GOAL_REWARDS[selectedGoalType];
@@ -1225,7 +1232,6 @@ const ESCAPE_MAX = 140;
 const ROOMS_STEP = 10;
 let escapeProgress = 0;
 let lastDayReset = null;
-let lastPunishDate = null;
 function renderMap(progress) {
 const container = document.getElementById('mapRooms');
 if (!container) return;
@@ -1252,6 +1258,8 @@ function updateEscapeDisplay() {
 document.getElementById('progressVal').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
 document.getElementById('mapProgressNum').textContent = escapeProgress;
 document.getElementById('mapProgressFill').style.width = ((escapeProgress / ESCAPE_MAX) * 100) + '%';
+const slider = document.getElementById('progressSlider');
+if (slider) slider.value = escapeProgress;
 const idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
 document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[idx].name;
 updateAtmosphereByEscape();
@@ -1305,7 +1313,20 @@ document.getElementById('bossLoreText').innerHTML =
 '• <b style="color:var(--blood-bright)">-' + (15 * stage.dmgMult) + ' HP</b> за каждую невыполненную цель<br><br>' +
 'Каждая выполненная карточка — удар, от которого я трескаюсь. Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.';
 }
-function updatePunishCountdown() { /* stub */ }
+function updatePunishCountdown() {
+var el = document.getElementById('punishCountdown');
+if (!el) return;
+var now = new Date();
+var mskNow = new Date(now.getTime() + MSK_OFFSET_MS);
+var h = mskNow.getUTCHours(), m = mskNow.getUTCMinutes(), s = mskNow.getUTCSeconds();
+var targetH = 23;
+var diff = ((targetH - h) * 60 - m) * 60 - s;
+if (diff <= 0) diff += 86400;
+var hh = Math.floor(diff / 3600);
+var mm = Math.floor((diff % 3600) / 60);
+var ss = diff % 60;
+el.textContent = '⚔ Наказание через ' + hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+}
 let xpHistory = [];
 function recordXpEvent(amount) {
 const todayKey = getMSKDayKey();
@@ -1316,10 +1337,6 @@ xpHistory[xpHistory.length - 1].xp += amount;
 if (xpHistory.length > 90) xpHistory = xpHistory.slice(-90);
 }
 function recordDailySnapshot() {
-const todayKey = getMSKDayKey();
-if (xpHistory.length === 0 || xpHistory[xpHistory.length - 1].date !== todayKey) {
-xpHistory.push({ date: todayKey, xp: 0 });
-}
 }
 function renderStatsView() {
 const container = document.getElementById('statsContent');
@@ -1458,44 +1475,22 @@ function saveGameState() {
 try {
 const snapshot = {
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, bossHp, bossStage, bossDefeated, lastPunishDate, lastDayReset, chimeraShield,
+escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, savedAt: Date.now()
 };
 localStorage.setItem('neurodeck_full_save', JSON.stringify(snapshot));
 saveGoals();
-} catch (e) { console.warn('Save failed:', e); }
+} catch (e) {
+console.warn('Save failed:', e);
+showToast('⚠ Ошибка сохранения', 'Хранилище переполнено — экспортируйте данные!', 'blood');
+}
 }
 function loadGameState() {
 try {
 const raw = localStorage.getItem('neurodeck_full_save');
 if (!raw) return;
 const data = JSON.parse(raw);
-if (data.hero) Object.assign(HERO, data.hero);
-if (data.stats) {
-Object.keys(data.stats).forEach(k => {
-if (STATS[k]) {
-Object.assign(STATS[k], data.stats[k]);
-if (typeof STATS[k].attributePoints !== 'number') STATS[k].attributePoints = 0;
-}
-});
-}
-if (data.forged) FORGED = data.forged;
-if (data.goals) GOALS = data.goals;
-if (data.inventory) {
-INVENTORY.backpack = data.inventory.backpack || [];
-INVENTORY.equipped = data.inventory.equipped || INVENTORY.equipped;
-}
-if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgress;
-if (typeof data.bossHp === 'number') bossHp = data.bossHp;
-if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
-if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
-if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
-if (data.lastDayReset) lastDayReset = data.lastDayReset;
-if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
-if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
-if (data.uidCounter) uidCounter = data.uidCounter;
-if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
-if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
+applySyncData(data, true);
 } catch (e) { console.warn('Load failed:', e); }
 }
 setInterval(() => { checkDailyReset(); updatePunishCountdown(); }, 60 * 1000);
@@ -1510,7 +1505,7 @@ function buildSyncData() {
 return {
 v: 'nd-sync-v4', t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, bossHp, bossStage, bossDefeated, lastPunishDate, lastDayReset, chimeraShield,
+escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory
 };
 }
@@ -1715,7 +1710,7 @@ saveGameState();
 reader.readAsText(file);
 event.target.value = '';
 }
-function applySyncData(data) {
+function applySyncData(data, skipRender) {
 if (data.hero) Object.assign(HERO, data.hero);
 if (data.stats) {
 Object.keys(data.stats).forEach(k => {
@@ -1735,17 +1730,18 @@ if (typeof data.escapeProgress === 'number') escapeProgress = data.escapeProgres
 if (typeof data.bossHp === 'number') bossHp = data.bossHp;
 if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
-if (data.lastPunishDate) lastPunishDate = data.lastPunishDate;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
 if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
 if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
 if (data.uidCounter) uidCounter = data.uidCounter;
 if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
 if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
+if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
 updateEscapeDisplay(); renderMap(escapeProgress);
 changeBossHp(0);
+}
 }
 function resetAllData() {
 if (!confirm('🗑 Удалить ВСЕ данные? Это действие нельзя отменить.')) return;
@@ -1832,12 +1828,7 @@ setTimeout(() => el.classList.remove('show'), 3500);
 }
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
 const progressSlider = document.getElementById('progressSlider');
-progressSlider.addEventListener('input', () => {
-const v = parseInt(progressSlider.value);
-escapeProgress = v;
-updateEscapeDisplay();
-renderMap(v);
-});
+progressSlider.disabled = true;
 document.addEventListener('mousemove', (e) => {
 const r1 = document.getElementById('mistRect1');
 const r2 = document.getElementById('mistRect2');
@@ -1850,9 +1841,10 @@ r2.setAttribute('transform', 'translate(' + (-x * 0.5) + ', ' + (-y * 0.5) + ')'
 loadGameState();
 checkDailyReset();
 if (bossDefeated) {
-    bossDefeated = false;
-    bossStage = 0;
-    const newBoss = getCurrentBoss();
+bossDefeated = false;
+bossStage = 0;
+chimeraShield = 5;
+const newBoss = getCurrentBoss();
     bossHp = newBoss.stages[0].maxHp;
     saveGameState();
 }
