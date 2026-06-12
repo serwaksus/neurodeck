@@ -1746,20 +1746,73 @@ hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, savedAt: Date.now()
 };
-localStorage.setItem('neurodeck_full_save', JSON.stringify(snapshot));
+var json = JSON.stringify(snapshot);
+localStorage.setItem('neurodeck_full_save', json);
+try { localStorage.setItem('neurodeck_backup', json); } catch(e) {}
 saveGoals();
+autoCloudSave(json);
 } catch (e) {
 console.warn('Save failed:', e);
 showToast('⚠ Ошибка сохранения', 'Хранилище переполнено — экспортируйте данные!', 'blood');
 }
 }
+function autoCloudSave(json) {
+var cs = getCloudStorage();
+if (!cs) return;
+if (Date.now() - (window._lastCloudSave || 0) < 120000) return;
+window._lastCloudSave = Date.now();
+try {
+var chunks = [];
+for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK)); }
+var doneCount = 0;
+chunks.forEach(function(chunk, idx) {
+cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function() {
+doneCount++;
+if (doneCount === chunks.length) {
+cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), function() {});
+}
+});
+});
+} catch(e) {}
+}
 function loadGameState() {
 try {
-const raw = localStorage.getItem('neurodeck_full_save');
-if (!raw) return;
+var raw = localStorage.getItem('neurodeck_full_save');
+if (!raw) raw = localStorage.getItem('neurodeck_backup');
+if (!raw) { autoCloudLoad(); return; }
 const data = JSON.parse(raw);
 applySyncData(data, true);
 } catch (e) { console.warn('Load failed:', e); }
+}
+function autoCloudLoad() {
+var cs = getCloudStorage();
+if (!cs) return;
+cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
+if (err || !metaStr) return;
+try {
+var meta = JSON.parse(metaStr);
+var parts = new Array(meta.n);
+var loaded = 0;
+function check() {
+if (loaded < meta.n) return;
+try {
+var data = JSON.parse(parts.join(''));
+applySyncData(data, true);
+showToast('☁ Восстановлено из облака', 'Локальные данные были потеряны');
+saveGameState();
+} catch(e) {}
+}
+for (var i = 0; i < meta.n; i++) {
+(function(idx) {
+cs.getItem(CLOUD_DATA_PREFIX + idx, function(e2, val) {
+if (!e2 && val) parts[idx] = val;
+loaded++;
+check();
+});
+})(i);
+}
+} catch(e) {}
+});
 }
 function checkGoalDeadlines() {
 var now = Date.now();
@@ -2061,6 +2114,7 @@ dungeonConfirm('🗑 Удалить ВСЕ данные?', 'Это действ�
 if (!ok) return;
 localStorage.removeItem('neurodeck_goals');
 localStorage.removeItem('neurodeck_full_save');
+localStorage.removeItem('neurodeck_backup');
 location.reload();
 });
 }
