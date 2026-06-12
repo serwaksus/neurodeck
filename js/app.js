@@ -1779,12 +1779,15 @@ function loadGameState() {
 try {
 var raw = localStorage.getItem('neurodeck_full_save');
 if (!raw) raw = localStorage.getItem('neurodeck_backup');
-if (!raw) { autoCloudLoad(); return; }
-const data = JSON.parse(raw);
+if (raw) {
+var data = JSON.parse(raw);
 applySyncData(data, true);
-} catch (e) { console.warn('Load failed:', e); }
+return;
 }
-function autoCloudLoad() {
+} catch (e) { console.warn('Load failed:', e); }
+tryCloudRecovery();
+}
+function tryCloudRecovery() {
 var cs = getCloudStorage();
 if (!cs) return;
 cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
@@ -1797,9 +1800,16 @@ function check() {
 if (loaded < meta.n) return;
 try {
 var data = JSON.parse(parts.join(''));
+var savedDate = new Date(data.t || Date.now()).toLocaleString('ru');
+dungeonConfirm('☁ Найдено облачное сохранение!', 'Данные от <b>' + savedDate + '</b>.<br>Герой: <b>ур.' + (data.hero ? data.hero.level : '?') + '</b>, карточек: <b>' + (data.forged ? data.forged.length : 0) + '</b>.<br><br><span style="color:var(--gold-bright)">Восстановить?</span>').then(function(ok) {
+if (!ok) return;
 applySyncData(data, true);
-showToast('☁ Восстановлено из облака', 'Локальные данные были потеряны');
 saveGameState();
+showToast('☁ Прогресс восстановлен!', 'Из облака: ' + savedDate);
+spiritSay('«Облако сохранило твой путь...»');
+screenShake(6, 400);
+location.reload();
+});
 } catch(e) {}
 }
 for (var i = 0; i < meta.n; i++) {
