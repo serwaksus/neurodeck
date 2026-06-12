@@ -118,6 +118,7 @@ case 'choose-sync-file': document.getElementById('syncFileInput').click(); break
 case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
 case 'toggle-notif': toggleNotif(); break;
+case 'close-room-detail': closeRoomDetail(); break;
 case 'open-forge': openForge(); break;
 case 'close-forge': closeForge(); break;
 case 'forge-card': forgeCard(); break;
@@ -1353,20 +1354,20 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 }
 });
 const ROOMS = [
-{ name: 'Камера заключенного', icon: '⛓', lore: 'Здесь начинается твой путь.' },
-{ name: 'Коридор Забытых', icon: '🚪', lore: 'Шаги эхом в пустоте.' },
-{ name: 'Склеп Обетов', icon: '💀', lore: 'Здесь погребены обещания.' },
-{ name: 'Зал Разбитых Зеркал', icon: '🪞', lore: 'Отражения лжи.' },
-{ name: 'Катакомбы Сомнений', icon: '🕳', lore: 'Там, где живут страхи.' },
-{ name: 'Пещера Теней', icon: '🌑', lore: 'Тени шепчут твоё имя.' },
-{ name: 'Библиотека Рун', icon: '📜', lore: 'Знание — оружие.' },
-{ name: 'Тронный Зал', icon: '👑', lore: 'Здесь правил страх.' },
-{ name: 'Сад Забытых', icon: '🌺', lore: 'Мечты, что не сбылись.' },
-{ name: 'Мост Раскаяния', icon: '🌉', lore: 'Переправа через сомнения.' },
-{ name: 'Башня Снов', icon: '🗼', lore: 'Верх мира.' },
-{ name: 'Кузница Воли', icon: '⚒', lore: 'Здесь закаляется характер.' },
-{ name: 'Алтарь Истины', icon: '🕯', lore: 'Правда о себе.' },
-{ name: 'Врата Свободы', icon: '🌅', lore: 'Выход из подземелья.' },
+{ name: 'Камера заключенного', icon: '⛓', lore: 'Сырые стены, запах ржавчины и отчаяния. Здесь начинается твой путь.' },
+{ name: 'Коридор Забытых', icon: '🚪', lore: 'Шаги эхом в пустоте. Здесь бродят те, кто забыл кто они.' },
+{ name: 'Склеп Обетов', icon: '💀', lore: 'Здесь погребены обещания, которые ты так и не сдержал.' },
+{ name: 'Зал Разбитых Зеркал', icon: '🪞', lore: 'Отражения лжи. Каждое зеркало показывает то, чем ты не стал.' },
+{ name: 'Катакомбы Сомнений', icon: '🕳', lore: 'Там, где живут страхи. Узкие ходы сжимаются вокруг тебя.' },
+{ name: 'Пещера Теней', icon: '🌑', lore: 'Тени шепчут твоё имя. Они знают все твои слабости.' },
+{ name: 'Библиотека Рун', icon: '📜', lore: 'Знание — оружие. Книги здесь пишутся кровью прошлых узников.' },
+{ name: 'Тронный Зал', icon: '👑', lore: 'Здесь правил страх. Трон пуст, но он ждёт нового хозяина.' },
+{ name: 'Сад Забытых', icon: '🌺', lore: 'Мечты, что не сбылись. Цветы здесь пахнут тоской и упущенными шансами.' },
+{ name: 'Мост Раскаяния', icon: '🌉', lore: 'Переправа через сомнения. Под мостом — бездна твоих ошибок.' },
+{ name: 'Башня Снов', icon: '🗼', lore: 'Верх мира. Отсюда видно то, чего ты боишься больше всего.' },
+{ name: 'Кузница Воли', icon: '⚒', lore: 'Здесь закаляется характер. Огонь не щадит слабых.' },
+{ name: 'Алтарь Истины', icon: '🕯', lore: 'Правда о себе. Она горькая, но необходимая.' },
+{ name: 'Врата Свободы', icon: '🌅', lore: 'Выход из подземелья. Свет за дверью ждёт только достойных.' }
 ];
 const ROOM_THEMES = [
 { hue: 25, light: 3, sat: 12, mist: 0.7, torch: 0.3, rays: 0, particleColor: '#d4a574' },
@@ -1395,22 +1396,80 @@ container.innerHTML = '';
 document.getElementById('mapProgressNum').textContent = progress;
 document.getElementById('mapProgressFill').style.width = ((progress / ESCAPE_MAX) * 100) + '%';
 var idx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
-document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[idx].name;
+document.getElementById('mapRoomText').textContent = ROOMS[idx].icon + ' Ты в ' + ROOMS[idx].name;
+var fog = document.getElementById('mapFog');
+if (fog) {
+var fogPct = 20 + (progress / ESCAPE_MAX) * 60;
+fog.style.background = 'radial-gradient(circle at 50% 50%, transparent ' + fogPct + '%, rgba(10,10,15,0.92) 95%)';
+}
 ROOMS.forEach(function(room, i) {
 var unlocked = progress >= (i + 1) * ROOMS_STEP;
 var current = progress >= i * ROOMS_STEP && progress < (i + 1) * ROOMS_STEP;
 var el = document.createElement('div');
 el.className = 'map-room ' + (unlocked ? 'unlocked' : current ? 'current' : 'locked');
+el.id = 'map-room-' + i;
 var remaining = current ? ((i + 1) * ROOMS_STEP - progress) : 0;
-el.innerHTML =
-'<div class="map-room-icon" style="filter: ' + (unlocked || current ? 'none' : 'grayscale(1) blur(1px)') + ';">' + room.icon + '</div>' +
-'<div class="map-room-info">' +
+var progressInRoom = current ? (progress - i * ROOMS_STEP) : (unlocked ? ROOMS_STEP : 0);
+var progressPct = Math.round((progressInRoom / ROOMS_STEP) * 100);
+var badgeHtml;
+if (current) badgeHtml = '<div class="map-room-badge current-badge">▶ Сейчас</div>';
+else if (unlocked) badgeHtml = '<div class="map-room-badge unlocked-badge">✓</div>';
+else badgeHtml = '<div class="map-room-badge locked-badge">🔒 ' + ((i + 1) * ROOMS_STEP - progress) + '</div>';
+var statusHtml;
+if (unlocked) statusHtml = '<div class="map-room-status">' + room.lore.split('.')[0] + '</div>';
+else if (current) statusHtml = '<div class="map-room-status">Осталось ' + remaining + ' ранг-апов</div><div class="map-room-progress"><div class="map-room-progress-fill" style="width:' + progressPct + '%"></div></div>';
+else statusHtml = '<div class="map-room-status">' + ((i + 1) * ROOMS_STEP - progress) + ' ранг-апов</div>';
+el.innerHTML = badgeHtml +
+'<div class="map-room-icon-wrap"><div class="map-room-icon">' + room.icon + '</div></div>' +
 '<div class="map-room-name">' + room.name + '</div>' +
-'<div class="map-room-status">' + (unlocked ? '✓ ' + room.lore : current ? '▶ ' + room.lore + ' <span style="color:var(--gold-bright)">(' + remaining + ' до след.)</span>' : '🔒 ' + ((i + 1) * ROOMS_STEP - progress) + ' ранг-апов') + '</div>' +
-'</div>';
+statusHtml;
+el.addEventListener('click', function() {
+if (unlocked || current) openRoomDetail(i);
+});
 container.appendChild(el);
 });
+setTimeout(function() { updatePlayerMarker(idx); }, 50);
 }
+function updatePlayerMarker(idx) {
+var marker = document.getElementById('playerMarker');
+if (!marker) {
+marker = document.createElement('div');
+marker.id = 'playerMarker';
+marker.className = 'player-marker';
+marker.textContent = '🗡';
+document.getElementById('mapContainer').appendChild(marker);
+}
+var room = document.getElementById('map-room-' + idx);
+var mapContainer = document.getElementById('mapContainer');
+if (room && mapContainer) {
+var rect = room.getBoundingClientRect();
+var containerRect = mapContainer.getBoundingClientRect();
+marker.style.left = (rect.left - containerRect.left + rect.width / 2 - 18) + 'px';
+marker.style.top = (rect.top - containerRect.top - 28) + 'px';
+}
+}
+function openRoomDetail(idx) {
+var room = ROOMS[idx];
+var currentIdx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
+var isCurrent = idx === currentIdx;
+var unlocked = escapeProgress >= (idx + 1) * ROOMS_STEP;
+var progressInRoom = isCurrent ? (escapeProgress - idx * ROOMS_STEP) : (unlocked ? ROOMS_STEP : 0);
+var progressPct = Math.round((progressInRoom / ROOMS_STEP) * 100);
+var statusLabel = isCurrent ? 'Текущая локация' : unlocked ? 'Пройдена' : 'Закрыта';
+var statusColor = (isCurrent || unlocked) ? 'var(--green)' : 'var(--text-dim)';
+document.getElementById('roomDetailTitle').textContent = room.icon + ' ' + room.name;
+document.getElementById('roomDetailBody').innerHTML =
+'<div class="room-detail-icon">' + room.icon + '</div>' +
+'<div class="room-detail-name">' + room.name + '</div>' +
+'<div class="room-detail-lore">' + room.lore + '</div>' +
+'<div class="room-detail-stats">' +
+'<div class="room-detail-stat"><div class="room-detail-stat-label">Позиция</div><div class="room-detail-stat-value">' + (idx + 1) + ' / ' + ROOMS.length + '</div></div>' +
+'<div class="room-detail-stat"><div class="room-detail-stat-label">Статус</div><div class="room-detail-stat-value" style="color:' + statusColor + '">' + statusLabel + '</div></div>' +
+'</div>' +
+(isCurrent ? '<div style="padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid var(--gold); border-radius: 4px; text-align: center;"><div style="font-size: 9px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin-bottom: 4px;">Прогресс локации</div><div style="font-size: 22px; color: var(--gold-bright); font-weight: bold;">' + progressPct + '%</div></div>' : '');
+document.getElementById('roomDetailModal').classList.add('show');
+}
+function closeRoomDetail() { document.getElementById('roomDetailModal').classList.remove('show'); }
 renderMap(0);
 function updateEscapeDisplay() {
 document.getElementById('progressVal').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
@@ -2194,6 +2253,7 @@ if (notifEnabled && Notification.permission === 'granted') scheduleNotifs();
 }
 initNotifs();
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
+document.getElementById('roomDetailModal').addEventListener('click', (e) => { if (e.target.id === 'roomDetailModal') closeRoomDetail(); });
 document.getElementById('syncFileInput').addEventListener('change', importSyncFile);
 document.addEventListener('keydown', (e) => {
 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -2205,7 +2265,7 @@ const dustCanvas = document.getElementById('dustCanvas');
 const dustCtx = dustCanvas.getContext('2d');
 let dustParticles = [];
 function resizeDust() { dustCanvas.width = window.innerWidth; dustCanvas.height = window.innerHeight; }
-resizeDust(); window.addEventListener('resize', resizeDust);
+resizeDust(); window.addEventListener('resize', function() { resizeDust(); var idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1); setTimeout(function() { updatePlayerMarker(idx); }, 100); });
 class Dust {
 constructor() { this.x = Math.random() * dustCanvas.width; this.y = Math.random() * dustCanvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = -0.1 - Math.random() * 0.2; this.size = 0.5 + Math.random() * 1.5; this.alpha = 0.2 + Math.random() * 0.4; this.color = ROOM_THEMES[currentRoomIndex].particleColor; }
 update() { this.x += this.vx; this.y += this.vy; this.vx += (Math.random() - 0.5) * 0.02; if (this.y < -10 || this.x < -10 || this.x > dustCanvas.width + 10) { this.x = Math.random() * dustCanvas.width; this.y = dustCanvas.height + 10; } }

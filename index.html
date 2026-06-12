@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
 <div class="app-wrap">
@@ -183,6 +183,13 @@
 </div>
 </div>
 <div class="modal-footer"><button class="demo-btn" data-action="close-sync-modal">Закрыть</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="roomDetailModal">
+<div class="modal">
+<div class="modal-header"><h3 id="roomDetailTitle">📍 Локация</h3><button class="modal-close" data-action="close-room-detail">✕</button></div>
+<div class="modal-body" id="roomDetailBody"></div>
+<div class="modal-footer"><button class="demo-btn primary" data-action="close-room-detail">Закрыть</button></div>
 </div>
 </div>
 <div class="modal-overlay" id="confirmOverlay">
@@ -378,14 +385,17 @@
 </section>
 <section class="view" id="view-map">
 <div class="view-title">🗺 Карта подземелья</div>
-<div class="view-subtitle">Каждые 20 ранг-апов карточек открывают новую локацию</div>
+<div class="view-subtitle">Каждые 10 ранг-апов карточек открывают новую локацию · Пройди все 14 комнат</div>
 <div class="map-header">
-<div style="font-size: 9px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase;">Прогресс побега</div>
-<div class="map-progress-big"><span id="mapProgressNum">0</span> / 140</div>
-<div style="font-size: 9px; color: var(--text-dim); letter-spacing: 1px; font-style: italic;" id="mapRoomText">Ты в Камере заключенного</div>
+<div class="map-progress-label">Прогресс побега</div>
+<div class="map-progress-big"><span id="mapProgressNum">0</span> <span>/ 140</span></div>
+<div class="map-room-text" id="mapRoomText">⛓ Ты в Камере заключенного</div>
 <div class="map-progress-bar"><div class="map-progress-fill" id="mapProgressFill" style="width:0%"></div></div>
 </div>
+<div class="map-container" id="mapContainer">
+<div class="map-fog" id="mapFog"></div>
 <div class="map-rooms" id="mapRooms"></div>
+</div>
 </section>
 <section class="view" id="view-stats">
 <div class="view-title">📊 Статистика</div>
@@ -429,6 +439,6 @@
 </div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=17"></script>
+<script src="js/app.js?v=18"></script>
 </body>
 </html>
