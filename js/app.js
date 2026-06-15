@@ -118,6 +118,7 @@ case 'choose-sync-file': document.getElementById('syncFileInput').click(); break
 case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
 case 'toggle-notif': toggleNotif(); break;
+case 'deep-recovery': deepRecovery(); break;
 case 'close-room-detail': closeRoomDetail(); break;
 case 'open-forge': openForge(); break;
 case 'close-forge': closeForge(); break;
@@ -1800,6 +1801,19 @@ renderCards();
 }
 function saveGameState() {
 try {
+if (FORGED.length === 0) {
+var emergency = localStorage.getItem('neurodeck_cards_backup');
+if (emergency) {
+try {
+var emergData = JSON.parse(emergency);
+if (emergData.forged && emergData.forged.length > 0) {
+FORGED = emergData.forged;
+if (emergData.forgedIdCounter) forgedIdCounter = emergData.forgedIdCounter;
+showToast('♻ Защита данных', 'Карточки восстановлены из аварийной копии (' + FORGED.length + ')');
+}
+} catch(e) {}
+}
+}
 const snapshot = {
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
@@ -1808,6 +1822,9 @@ forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKi
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
 try { localStorage.setItem('neurodeck_backup', json); } catch(e) {}
+if (FORGED.length > 0) {
+try { localStorage.setItem('neurodeck_cards_backup', json); } catch(e) {}
+}
 saveGoals();
 autoCloudSave(json);
 } catch (e) {
@@ -1818,6 +1835,7 @@ showToast('⚠ Ошибка сохранения', 'Хранилище пере�
 function autoCloudSave(json, force) {
     var cs = getCloudStorage();
     if (!cs) return;
+    if (FORGED.length === 0) return;
     if (!force && Date.now() - (window._lastCloudSave || 0) < 30000) return;
     window._lastCloudSave = Date.now();
     try {
@@ -1838,6 +1856,7 @@ function autoCloudSave(json, force) {
 function forceCloudSave() {
     var cs = getCloudStorage();
     if (!cs) return;
+    if (FORGED.length === 0) return;
     window._lastCloudSave = 0;
     var json = JSON.stringify(buildSyncData());
     autoCloudSave(json, true);
@@ -1860,6 +1879,14 @@ function smartCloudSync() {
                     if (loaded < meta.n) return;
                     try {
                         var data = JSON.parse(parts.join(''));
+                        if (data.forged && FORGED.length > 0 && data.forged.length < FORGED.length) {
+                            forceCloudSave();
+                            return;
+                        }
+                        if ((!data.forged || data.forged.length === 0) && FORGED.length > 0) {
+                            forceCloudSave();
+                            return;
+                        }
                         var cloudDate = new Date(cloudTime).toLocaleString('ru');
                         var localDate = localTime ? new Date(localTime).toLocaleString('ru') : 'нет данных';
                         dungeonConfirm('☁ Найдано обновление',
@@ -1919,10 +1946,34 @@ var raw = localStorage.getItem('neurodeck_full_save');
 if (!raw) raw = localStorage.getItem('neurodeck_backup');
 if (raw) {
 var data = JSON.parse(raw);
+if (!data.forged || data.forged.length === 0) {
+var emerg = localStorage.getItem('neurodeck_cards_backup');
+if (emerg) {
+try {
+var emergData = JSON.parse(emerg);
+if (emergData.forged && emergData.forged.length > 0) {
+applySyncData(emergData, true);
+showToast('♻ Восстановлено', emergData.forged.length + ' карточек из аварийной копии');
+return;
+}
+} catch(e) {}
+}
+}
 applySyncData(data, true);
 return;
 }
 } catch (e) { console.warn('Load failed:', e); }
+var emergFinal = localStorage.getItem('neurodeck_cards_backup');
+if (emergFinal) {
+try {
+var emergData2 = JSON.parse(emergFinal);
+if (emergData2.forged && emergData2.forged.length > 0) {
+applySyncData(emergData2, true);
+showToast('♻ Восстановлено', emergData2.forged.length + ' карточек из аварийной копии');
+return;
+}
+} catch(e) {}
+}
 tryCloudRecovery();
 }
 function tryCloudRecovery() {
@@ -1961,6 +2012,84 @@ check();
 }
 } catch(e) {}
 });
+}
+function deepRecovery() {
+var found = [];
+var keys = ['neurodeck_full_save', 'neurodeck_backup', 'neurodeck_cards_backup', 'neurodeck_goals'];
+var bestData = null;
+var bestCount = 0;
+keys.forEach(function(key) {
+try {
+var raw = localStorage.getItem(key);
+if (!raw) return;
+var data = JSON.parse(raw);
+var cardCount = (data.forged && data.forged.length) || (data.goals && data.goals.length) || 0;
+if (cardCount > 0) {
+found.push(key + ': ' + cardCount + ' элем.');
+if (data.forged && data.forged.length > bestCount) {
+bestCount = data.forged.length;
+bestData = data;
+}
+}
+} catch(e) {}
+});
+var cs = getCloudStorage();
+if (cs) {
+cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
+if (err || !metaStr) { finishDeepRecovery(found, bestData, bestCount); return; }
+try {
+var meta = JSON.parse(metaStr);
+var parts = new Array(meta.n);
+var loaded = 0;
+function check() {
+if (loaded < meta.n) return;
+try {
+var data = JSON.parse(parts.join(''));
+var cardCount = (data.forged && data.forged.length) || 0;
+if (cardCount > 0) {
+found.push('Облако: ' + cardCount + ' карточек (от ' + new Date(meta.t).toLocaleString('ru') + ')');
+if (cardCount > bestCount) {
+bestCount = cardCount;
+bestData = data;
+}
+}
+} catch(e) {}
+finishDeepRecovery(found, bestData, bestCount);
+}
+for (var i = 0; i < meta.n; i++) {
+(function(idx) {
+cs.getItem(CLOUD_DATA_PREFIX + idx, function(e2, val) {
+if (!e2 && val) parts[idx] = val;
+loaded++;
+check();
+});
+})(i);
+}
+} catch(e) { finishDeepRecovery(found, bestData, bestCount); }
+});
+} else {
+finishDeepRecovery(found, bestData, bestCount);
+}
+}
+function finishDeepRecovery(found, bestData, bestCount) {
+if (bestData && bestCount > 0) {
+var list = found.length > 0 ? found.join('<br>') : '';
+dungeonConfirm('♻ Глубокое восстановление',
+'Найдено данных с карточками: <b style="color:var(--gold-bright)">' + bestCount + '</b><br>' +
+(list ? '<div style="font-size:10px;color:var(--text-dim);margin-top:6px;">' + list + '</div>' : '') +
+'<br><span style="color:var(--gold-bright)">Восстановить ' + bestCount + ' карточек?</span>'
+).then(function(ok) {
+if (ok) {
+applySyncData(bestData);
+saveGameState();
+showToast('♻ Восстановлено!', bestCount + ' карточек возвращены');
+spiritSay('«То, что было потеряно — найдено.»');
+screenShake(6, 400);
+}
+});
+} else {
+showToast('⚠ Ничего не найдено', 'Нет сохранений с карточками ни локально, ни в облаке', 'blood');
+}
 }
 function checkGoalDeadlines() {
 var now = Date.now();
@@ -2263,6 +2392,7 @@ if (!ok) return;
 localStorage.removeItem('neurodeck_goals');
 localStorage.removeItem('neurodeck_full_save');
 localStorage.removeItem('neurodeck_backup');
+localStorage.removeItem('neurodeck_cards_backup');
 location.reload();
 });
 }
