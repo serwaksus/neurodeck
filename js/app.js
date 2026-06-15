@@ -1799,6 +1799,34 @@ saveGameState();
 renderCards();
 }
 }
+var idb = null;
+function openIDB() {
+    try {
+        var req = indexedDB.open('neurodeck_db', 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore('saves', { keyPath: 'id' });
+        };
+        req.onsuccess = function(e) { idb = e.target.result; };
+        req.onerror = function() { idb = null; };
+    } catch(e) { idb = null; }
+}
+openIDB();
+function saveToIDB(obj) {
+    if (!idb) return;
+    try {
+        var tx = idb.transaction('saves', 'readwrite');
+        tx.objectStore('saves').put({ id: 'latest', data: obj, ts: Date.now() });
+    } catch(e) {}
+}
+function loadFromIDB(callback) {
+    if (!idb) { callback(null); return; }
+    try {
+        var tx = idb.transaction('saves', 'readonly');
+        var req = tx.objectStore('saves').get('latest');
+        req.onsuccess = function(e) { callback(e.target.result ? e.target.result : null); };
+        req.onerror = function() { callback(null); };
+    } catch(e) { callback(null); }
+}
 function saveGameState() {
 try {
 if (FORGED.length === 0) {
@@ -1825,6 +1853,7 @@ try { localStorage.setItem('neurodeck_backup', json); } catch(e) {}
 if (FORGED.length > 0) {
 try { localStorage.setItem('neurodeck_cards_backup', json); } catch(e) {}
 }
+saveToIDB(snapshot);
 saveGoals();
 autoCloudSave(json);
 } catch (e) {
@@ -1975,6 +2004,22 @@ return;
 } catch(e) {}
 }
 tryCloudRecovery();
+loadFromIDB(function(result) {
+    if (result && result.data && result.data.forged && result.data.forged.length > 0 && FORGED.length === 0) {
+        dungeonConfirm('♻ Найдено в IndexedDB',
+            'Обнаружено сохранение с <b>' + result.data.forged.length + '</b> карточками.<br>' +
+            'Дата: ' + new Date(result.ts).toLocaleString('ru') + '<br><br>' +
+            '<span style="color:var(--gold-bright)">Восстановить?</span>'
+        ).then(function(ok) {
+            if (ok) {
+                applySyncData(result.data);
+                saveGameState();
+                showToast('♻ Восстановлено', result.data.forged.length + ' карточек из IndexedDB');
+                screenShake(6, 400);
+            }
+        });
+    }
+});
 }
 function tryCloudRecovery() {
 var cs = getCloudStorage();
@@ -2033,6 +2078,18 @@ bestData = data;
 }
 } catch(e) {}
 });
+loadFromIDB(function(idbResult) {
+if (idbResult && idbResult.data) {
+var idbData = idbResult.data;
+var idbCount = (idbData.forged && idbData.forged.length) || 0;
+if (idbCount > 0) {
+found.push('IndexedDB: ' + idbCount + ' карточек (от ' + new Date(idbResult.ts).toLocaleString('ru') + ')');
+if (idbCount > bestCount) {
+bestCount = idbCount;
+bestData = idbData;
+}
+}
+}
 var cs = getCloudStorage();
 if (cs) {
 cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
@@ -2070,6 +2127,7 @@ check();
 } else {
 finishDeepRecovery(found, bestData, bestCount);
 }
+});
 }
 function finishDeepRecovery(found, bestData, bestCount) {
 if (bestData && bestCount > 0) {
