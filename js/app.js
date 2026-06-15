@@ -73,7 +73,7 @@ level: 1, xp: 0, xpToNext: 100, totalXp: 0,
 hp: 100, maxHp: 100, isHollow: false,
 consecutivePerfectDays: 0, estus: 3,
 lastEstusReset: new Date().getMonth(),
-estusUsedToday: false, dailyCompletions: 0, dailySkips: 0
+estusUsedToday: false, dailyCompletions: 0, dailySkips: 0, actionPoints: 0
 };
 const STATS = {
 str: { name: 'Сила',      icon: '⚔', desc: 'Урон',       color: '#c73e4d', dark: '#8b2635', value: 3, max: 100, attributePoints: 0 },
@@ -150,6 +150,8 @@ currentFilter = el.dataset.filter;
 renderBackpack();
 break;
 case 'drink-estus': drinkEstus(); break;
+case 'attack-boss': attackBoss(); break;
+case 'end-boss-turn': endBossTurn(); break;
 case 'complete-card': completeCard(e, parseInt(el.dataset.id)); break;
 case 'fail-card': failCard(e, parseInt(el.dataset.id)); break;
 case 'edit-card': openEditCardDirect(parseInt(el.dataset.id)); break;
@@ -339,31 +341,16 @@ showToast('👑 МАКСИМУМ!', card.name + ' достигла SSS', 'crit')
 spiritSay('«Легенда... Твоя дисциплина несокрушима.»');
 }
 }
-const totalStr = STATS.str.value + gear.str;
-const totalCha = STATS.cha.value + gear.cha;
-const sumAllStats = Object.values(STATS).reduce((a, s) => a + s.value, 0);
-let baseDmg = BASE_DAMAGE + Math.floor(sumAllStats * 0.5) + Math.floor(gear.str / 5);
-const critChance = Math.min(0.5, totalCha * 0.02);
-const crit = Math.random() < critChance;
-let dmg = crit ? baseDmg * 2 : baseDmg;
-if (HERO.isHollow) dmg = Math.floor(dmg * 0.5);
-changeBossHp(-dmg);
+HERO.actionPoints = (HERO.actionPoints || 0) + 1;
 if (Math.random() < LOOT_CHANCE) dropRandomLoot(x, y);
 checkHeroLevelUp();
 renderCards();
 updateHeroUI();
 renderStats();
 if (!rankUpHappened) {
-if (crit) {
-showToast('⚡ КРИТ!', '-' + dmg + ' HP боссу (шанс: ' + Math.round(critChance*100) + '%)', 'crit');
-burstParticles(x, y, 40, { color: '#fbbf24', speed: 8, decay: 0.015, size: 4, shape: 'star', gravity: 0.1 });
-screenShake(6, 300);
-sfxCrit(); haptic('heavy');
-} else {
 const adaptTxt = adaptationMult < 1 ? ' (адаптация ' + Math.round(adaptationMult*100) + '%)' : '';
-showToast('✅ Выполнено', '+' + finalXp + ' XP' + adaptTxt + ' · +' + masteryGain.toFixed(1) + ' Мастерства');
+showToast('✅ Выполнено', '+' + finalXp + ' XP · +1 ОД' + adaptTxt + ' · +' + masteryGain.toFixed(1) + ' Мастерства');
 sfxHit(); haptic('light');
-}
 }
 saveGameState();
 onBloodOathComplete(id);
@@ -371,19 +358,19 @@ onBloodOathComplete(id);
 function failCard(e, id) {
 const card = findCard(id);
 if (!card) return;
-spawnBloodRain(25);
-screenShake(10, 500);
+spawnBloodRain(15);
+screenShake(6, 300);
 sfxFail(); haptic('error');
 HERO.dailySkips++;
 const gear = getTotalGearBonuses();
 const totalWil = STATS.wil.value + gear.wil;
 if (Math.random() < (totalWil / 300)) {
-showToast('🧘 Воля!', 'Стрик защищён.', 'save');
+showToast('🧘 Воля!', 'Стрик защищён. Ярости нет.', 'save');
 return;
 }
-changeBossHp(BOSS_HEAL_ON_FAIL);
+bossRagePoints++;
 if (card) { card.streak = 0; renderCards(); }
-showToast('💀 Пропуск', 'Босс восстановил +' + BOSS_HEAL_ON_FAIL + ' HP', 'blood');
+showToast('💢 Ярость босса +1', 'Пропуск «' + card.name + '» — босс копит силу (' + bossRagePoints + ')', 'blood');
 updateHeroUI();
 onBloodOathSkip(id);
 saveGameState();
@@ -726,7 +713,20 @@ let bossHp = 100;
 let bossStage = 0;
 let bossDefeated = false;
 let chimeraShield = 5;
+let bossRagePoints = 0;
 window._bossKills = { snake: 0, social: 0, chimera: 0 };
+function getBattlePhase() {
+var msk = new Date(Date.now() + 3 * 3600000);
+var day = msk.getUTCDay();
+return (day >= 5 || day === 0) ? 'battle' : 'accumulate';
+}
+function getBattlePhaseLabel() {
+var phase = getBattlePhase();
+if (phase === 'battle') {
+return '⚔ Фаза схватки (Пт–Вс)';
+}
+return '⛏ Фаза накопления (Пн–Чт)';
+}
 function getCurrentBoss() {
 if (escapeProgress < 40) return {
 name: 'Змей Лени', icon: '🐍', type: 'normal',
@@ -807,6 +807,8 @@ saveGameState();
 }
 function triggerBossExecution() {
 bossDefeated = true;
+bossRagePoints = 0;
+HERO.actionPoints = 0;
 sfxBossDefeated(); haptic('heavy');
 const boss = getCurrentBoss();
 // Запускаем анимацию смерти на спрайтах
@@ -859,6 +861,8 @@ setTimeout(() => {
 bossDefeated = false;
 bossStage = 0;
 chimeraShield = 5;
+bossRagePoints = 0;
+HERO.actionPoints = 0;
 const newBoss = getCurrentBoss();
 bossHp = newBoss.stages[0].maxHp;
 // Скрываем оверлеи
@@ -901,6 +905,112 @@ showToast('⚠ Новый враг!', newBoss.name + ' появляется из
 spiritSay('«' + newBoss.stages[0].desc + '»');
 screenShake(8, 400);
 }, 8000);
+}
+function attackBoss() {
+if (bossDefeated) { showToast('☠ Босс повержен', 'Нечего атаковать', 'blood'); return; }
+if (getBattlePhase() !== 'battle') { showToast('⛏ Не время', 'Фаза схватки: пятница — воскресенье', 'blood'); return; }
+if (!HERO.actionPoints || HERO.actionPoints <= 0) { showToast('⚔ Нет ОД', 'Очки действия закончились. Заверши ход.', 'blood'); sfxError(); return; }
+HERO.actionPoints--;
+var gear = getTotalGearBonuses();
+var totalStr = STATS.str.value + gear.str;
+var totalCha = STATS.cha.value + gear.cha;
+var sumAllStats = Object.values(STATS).reduce(function(a, s) { return a + s.value; }, 0);
+var baseDmg = BASE_DAMAGE + Math.floor(sumAllStats * 0.5) + Math.floor(gear.str / 5);
+var critChance = Math.min(0.5, totalCha * 0.02);
+var crit = Math.random() < critChance;
+var dmg = crit ? baseDmg * 2 : baseDmg;
+if (HERO.isHollow) dmg = Math.floor(dmg * 0.5);
+dmg = Math.max(1, dmg);
+changeBossHp(-dmg);
+spawnFloatNumber(window.innerWidth / 2, window.innerHeight / 2 - 40, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#c73e4d');
+if (crit) { screenShake(6, 300); burstParticles(window.innerWidth / 2, window.innerHeight / 2, 40, { color: '#fbbf24', speed: 8, decay: 0.015, size: 4, shape: 'star', gravity: 0.1 }); sfxCrit(); haptic('heavy'); }
+else { sfxHit(); haptic('medium'); }
+updateBossBattleUI();
+updateHeroUI();
+saveGameState();
+}
+function endBossTurn() {
+if (bossDefeated) { showToast('☠ Босс повержен', 'Бой окончен', 'save'); return; }
+var rageDmg = bossRagePoints * 15;
+var boss = getCurrentBoss();
+if (rageDmg > 0) {
+HERO.hp = Math.max(1, HERO.hp - rageDmg);
+spawnBloodRain(30);
+screenShake(15, 800);
+sfxBossHit(); haptic('heavy');
+burstParticles(window.innerWidth / 2, window.innerHeight / 2 + 60, 60, { color: '#c73e4d', speed: 10, decay: 0.012, size: 4, shape: 'spark', gravity: 0.12 });
+showToast('💢 Ответный удар!', boss.name + ' наносит -' + rageDmg + ' HP (Ярость: ' + bossRagePoints + ')', 'blood');
+if (HERO.hp <= 1 && !HERO.isHollow) {
+HERO.isHollow = true;
+HERO.hp = 1;
+showToast('💀 ТЫ ПАЛ', 'Герой выжил с 1 HP, но стал Полым. Урон -50%.', 'blood');
+spiritSay('«Тьма поглотила твою силу... Но ты всё ещё дышишь.»');
+var masteryCards = FORGED.filter(function(c) { return c.mastery > 0; });
+if (masteryCards.length > 0) {
+var victim = masteryCards[Math.floor(Math.random() * masteryCards.length)];
+var lostMastery = victim.mastery;
+victim.mastery = 0;
+showToast('🔥 Жертва', '«' + victim.name + '» потеряла ' + lostMastery + ' мастерства (ранг сохранён)', 'blood');
+renderCards();
+}
+}
+} else {
+showToast('🛡 Босс спокоен', 'Нет очков ярости — удар слабый.', 'save');
+}
+bossRagePoints = 0;
+HERO.actionPoints = 0;
+updateBossBattleUI();
+updateHeroUI();
+saveGameState();
+}
+function updateBossBattleUI() {
+var area = document.getElementById('bossBattleArea');
+if (!area) return;
+var phase = getBattlePhase();
+var ap = HERO.actionPoints || 0;
+var boss = getCurrentBoss();
+if (bossDefeated) {
+area.innerHTML = '<div style="text-align:center; padding: 16px; color: var(--gold-bright); font-size: 14px;">☠ Босс повержен. Ожидание нового врага...</div>';
+return;
+}
+if (phase === 'accumulate') {
+area.innerHTML =
+'<div style="display:flex; gap:12px; justify-content:center; margin-bottom:12px;">' +
+'<div style="flex:1; text-align:center; padding:10px; background:rgba(96,165,250,0.1); border:1px solid rgba(96,165,250,0.3); border-radius:4px;">' +
+'<div style="font-size:24px; color:#60a5fa; font-weight:bold;">' + ap + '</div>' +
+'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">⚔ ОЧКИ ДЕЙСТВИЯ</div>' +
+'</div>' +
+'<div style="flex:1; text-align:center; padding:10px; background:rgba(199,62,77,0.1); border:1px solid rgba(199,62,77,0.3); border-radius:4px;">' +
+'<div style="font-size:24px; color:var(--blood-bright); font-weight:bold;">' + bossRagePoints + '</div>' +
+'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">💢 ОЧКИ ЯРОСТИ</div>' +
+'</div>' +
+'</div>' +
+'<div style="text-align:center; font-size:11px; color:var(--text-dim); padding:8px;">' +
+'⛏ Накапливай силы. Выполняй карточки — каждый успех даёт <b style="color:#60a5fa">+1 ОД</b>.<br>' +
+'Пропуски дают боссу <b style="color:var(--blood-bright)">+1 Ярости</b>.<br>' +
+'Схватка откроется в <b>пятницу</b>.' +
+'</div>';
+} else {
+var canAttack = ap > 0 && !bossDefeated;
+var canEnd = ap === 0 && !bossDefeated;
+area.innerHTML =
+'<div style="display:flex; gap:12px; justify-content:center; margin-bottom:12px;">' +
+'<div style="flex:1; text-align:center; padding:10px; background:rgba(96,165,250,0.1); border:1px solid rgba(96,165,250,0.3); border-radius:4px;">' +
+'<div style="font-size:24px; color:#60a5fa; font-weight:bold;">' + ap + '</div>' +
+'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">⚔ ОЧКИ ДЕЙСТВИЯ</div>' +
+'</div>' +
+'<div style="flex:1; text-align:center; padding:10px; background:rgba(199,62,77,0.1); border:1px solid rgba(199,62,77,0.3); border-radius:4px;">' +
+'<div style="font-size:24px; color:var(--blood-bright); font-weight:bold;">' + bossRagePoints + '</div>' +
+'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">💢 ОЧКИ ЯРОСТИ (' + (bossRagePoints * 15) + ' урона)</div>' +
+'</div>' +
+'</div>' +
+(canAttack ?
+'<button class="demo-btn primary" data-action="attack-boss" style="width:100%; margin-bottom:8px; font-size:16px;">⚔ АТАКОВАТЬ (-1 ОД)</button>' : '') +
+(canEnd ?
+'<button class="demo-btn" data-action="end-boss-turn" style="width:100%; margin-bottom:8px; font-size:14px; border-color:var(--blood-bright); color:var(--blood-bright);">💢 Завершить ход (принять удар: -' + (bossRagePoints * 15) + ' HP)</button>' : '') +
+(ap === 0 && !canEnd && !bossDefeated ?
+'<div style="text-align:center; padding:8px; color:var(--text-dim); font-size:11px;">ОД закончились. Заверши ход, чтобы босс ответил.</div>' : '');
+}
 }
 function addXpReward(amount) {
 HERO.xp += amount;
@@ -1425,6 +1535,7 @@ if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'map') renderMap(escapeProgress);
+if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); }
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
 if (view === 'boss') updateBossDisplay();
@@ -1622,30 +1733,30 @@ return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') +
 function updateBossDisplay() {
 const boss = getCurrentBoss();
 const stage = boss.stages[bossStage];
+var phase = getBattlePhase();
+var phaseLabel = getBattlePhaseLabel();
 document.getElementById('bossPanelTitle').textContent = boss.icon + ' ' + boss.name + (bossDefeated ? ' (ПОВЕРЖЕН)' : ' (Стадия ' + (bossStage + 1) + '/3)');
 const viewBossTitle = document.querySelector('#view-boss .view-title');
-    if (viewBossTitle) viewBossTitle.textContent = boss.icon + ' Босс локации';
-    document.getElementById('bossSubtitle').textContent = boss.name + ' · ' + (boss.type === 'chimera' ? 'Имеет щит. Нужно 5 карточек за день.' : boss.type === 'social' ? 'Двойной урон за пропуск Воли/Интеллекта' : 'Он ждёт твоего провала');
+    if (viewBossTitle) viewBossTitle.textContent = boss.icon + ' Босс локации · ' + phaseLabel;
+    document.getElementById('bossSubtitle').textContent = boss.name + ' · ' + phaseLabel;
 document.getElementById('bossLoreText').innerHTML =
 '<b style="color:var(--blood-bright)">«' + stage.desc + '»</b><br><br>' +
-'Каждый день в 23:00 МСК я наказываю тебя:<br>' +
-'• <b style="color:var(--blood-bright)">-' + (10 * stage.dmgMult) + ' HP</b> за каждую невыполненную карточку<br><br>' +
-'Цели с дедлайном трескаются при провале и наносят урон автоматически.<br>' +
+'<b style="color:#60a5fa">⛏ Пн–Чт: Накопление</b><br>' +
+'• Выполняй карточки → <b style="color:#60a5fa">+1 ОД</b> за каждую<br>' +
+'• Пропуски → <b style="color:var(--blood-bright)">+1 Ярость</b> боссу<br>' +
+'• Невыполненные за день → <b style="color:var(--blood-bright)">+1 Ярость</b> каждая<br><br>' +
+'<b style="color:var(--gold-bright)">⚔ Пт–Вс: Схватка</b><br>' +
+'• Трать ОД на атаки вручную<br>' +
+'• Когда ОД = 0 → <b>Завершить ход</b><br>' +
+'• Босс бьёт на <b style="color:var(--blood-bright)">' + (bossRagePoints * 15) + ' HP</b> (Ярость × 15)<br>' +
+'• HP ≤ 0 → становишься Полым, случайная карточка теряет мастерство<br><br>' +
 'Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.';
 }
 function updatePunishCountdown() {
 var el = document.getElementById('punishCountdown');
 if (!el) return;
-var now = new Date();
-var mskNow = new Date(now.getTime() + MSK_OFFSET_MS);
-var h = mskNow.getUTCHours(), m = mskNow.getUTCMinutes(), s = mskNow.getUTCSeconds();
-var targetH = 23;
-var diff = ((targetH - h) * 60 - m) * 60 - s;
-if (diff <= 0) diff += 86400;
-var hh = Math.floor(diff / 3600);
-var mm = Math.floor((diff % 3600) / 60);
-var ss = diff % 60;
-el.textContent = '⚔ Наказание через ' + hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+var phase = getBattlePhase();
+el.textContent = phase === 'battle' ? '⚔ Фаза схватки активна!' : '⛏ Накопление сил. Схватка в пятницу.';
 }
 let xpHistory = [];
 function recordXpEvent(amount) {
@@ -1966,25 +2077,9 @@ const uncompletedCards = allCards.filter(c => {
 if (!c.lastCompletedAt) return true;
 return getMSKDayKey(c.lastCompletedAt) !== lastDayReset;
 });
-if (uncompletedCards.length > 0 && !HERO.estusUsedToday) {
-const boss = getCurrentBoss();
-const stage = boss.stages[bossStage];
-const cardDmg = uncompletedCards.length * Math.round(10 * stage.dmgMult);
-const totalDmg = cardDmg;
-if (totalDmg > 0) {
-HERO.hp = Math.max(0, HERO.hp - totalDmg);
-spawnBloodRain(15);
-screenShake(8, 500);
-document.querySelectorAll('.boss-sprite').forEach(function(s) { s.classList.add('boss-attacking'); setTimeout(function() { s.classList.remove('boss-attacking'); }, 900); });
-sfxBossHit(); haptic('heavy');
-showToast('💀 Наказание!', 'Босс нанёс -' + totalDmg + ' HP (' + uncompletedCards.length + ' карточек)', 'blood');
-spiritSay('«Боль — учитель. Завтра будь сильнее.»');
-if (HERO.hp <= 0 && !HERO.isHollow) {
-HERO.isHollow = true;
-HERO.hp = Math.floor(HERO.maxHp * 0.25);
-showToast('💀 ТЫ ПАЛ', 'Стань Полым. Урон -50%. 3 идеальных дня для искупления.', 'blood');
-}
-}
+if (uncompletedCards.length > 0) {
+bossRagePoints += uncompletedCards.length;
+showToast('💢 Ярость босса', '+' + uncompletedCards.length + ' очков ярости за невыполненные карточки (всего: ' + bossRagePoints + ')', 'blood');
 }
 }
         if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
@@ -2067,7 +2162,7 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 const snapshot = {
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, savedAt: Date.now()
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, bossRagePoints: bossRagePoints, savedAt: Date.now()
 };
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
@@ -2410,7 +2505,7 @@ return {
 v: 'nd-sync-v4', t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, bossRagePoints
 };
 }
 function updateCloudStatus() {
@@ -2660,6 +2755,8 @@ if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
 if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 if (data.bossKills) window._bossKills = data.bossKills;
 if (data.bloodOath !== undefined) bloodOath = data.bloodOath;
+if (typeof data.bossRagePoints === 'number') bossRagePoints = data.bossRagePoints;
+if (typeof HERO.actionPoints !== 'number') HERO.actionPoints = 0;
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
