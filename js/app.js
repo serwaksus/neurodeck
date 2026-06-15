@@ -2649,6 +2649,7 @@ renderCards();
 updateBossDisplay();
 changeBossHp(0);
 importFromHash();
+if (FORGED.length === 0) { setTimeout(deepRecovery, 1000); }
 if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }
 else { setTimeout(function() { updateSyncBadge('syncing'); smartCloudSync(); }, 2500); }
 if (!localStorage.getItem('neurodeck_full_save') && !localStorage.getItem('neurodeck_onboarding_done')) {
