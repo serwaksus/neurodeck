@@ -208,8 +208,14 @@ const el = document.createElement('div');
 el.className = 'card rank-' + card.rank;
 const doneToday = card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === getMSKDayKey();
 if (doneToday) el.className += ' done-today';
+if (bloodOath && bloodOath.status === 'active' && bloodOath.cardId === card.id) {
+el.className += ' blood-oath';
+}
 const nextRankText = getNextRank(card.rank) || 'MAX';
+var oathBadge = (bloodOath && bloodOath.status === 'active' && bloodOath.cardId === card.id)
+? '<div class="blood-oath-badge">🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
 el.innerHTML =
+oathBadge +
 '<div class="card-actions">' +
     (doneToday ? '<div class="card-btn done-today-btn" title="Уже выполнено сегодня">✓</div>' : '<div class="card-btn" data-action="complete-card" data-id="' + card.id + '" title="Выполнить">✓</div>') +
    '<div class="card-btn fail" data-action="fail-card" data-id="' + card.id + '" title="Пропустить">✕</div>' +
@@ -360,6 +366,7 @@ sfxHit(); haptic('light');
 }
 }
 saveGameState();
+onBloodOathComplete(id);
 }
 function failCard(e, id) {
 const card = findCard(id);
@@ -378,6 +385,7 @@ changeBossHp(BOSS_HEAL_ON_FAIL);
 if (card) { card.streak = 0; renderCards(); }
 showToast('💀 Пропуск', 'Босс восстановил +' + BOSS_HEAL_ON_FAIL + ' HP', 'blood');
 updateHeroUI();
+onBloodOathSkip(id);
 saveGameState();
 }
 function deleteCard(id) {
@@ -385,6 +393,10 @@ const card = findCard(id);
 if (!card) return;
 dungeonConfirm('🗑 Удалить карточку?', '«' + esc(card.name) + '» — мастерство будет потеряно.').then(function(ok) {
 if (!ok) return;
+if (bloodOath && bloodOath.cardId === id) {
+bloodOath = null;
+showToast('🩸 Клятва отменена', 'Карточка клятвы удалена вручную', 'blood');
+}
 FORGED = FORGED.filter(c => c.id !== id);
 renderCards();
 showToast('🗑 Удалено', card.name, 'blood');
@@ -1823,6 +1835,128 @@ URL.revokeObjectURL(url);
 showToast('📋 JSON экспортирован', 'Файл загружен');
 } catch (e) { showToast('⚠ Ошибка', 'Не удалось экспортировать', 'blood'); }
 }
+var bloodOath = null;
+var BLOOD_OATH_REQUIRED = 5;
+var BLOOD_OATH_BONUS_XP = 500;
+
+function checkBloodOath() {
+    var now = new Date();
+    var mskHours = (now.getUTCHours() + 3) % 24;
+    var mskDay = new Date(now);
+    mskDay.setUTCHours(now.getUTCHours() + 3);
+    var dayOfWeek = mskDay.getUTCDay();
+    if (bloodOath && bloodOath.status === 'active') return;
+    if (dayOfWeek !== 1) return;
+    if (FORGED.length === 0) return;
+    if (bloodOath && bloodOath.status === 'active') return;
+    var lastAssignMonday = bloodOath ? bloodOath.assignedMonday : null;
+    var thisMonday = getMSKDayKey();
+    if (lastAssignMonday === thisMonday) return;
+    assignBloodOath();
+}
+
+function getThisMondayKey() {
+    var now = new Date();
+    var msk = new Date(now.getTime() + 3 * 3600000);
+    var day = msk.getUTCDay();
+    var diff = day === 0 ? 6 : day - 1;
+    msk.setUTCDate(msk.getUTCDate() - diff);
+    return msk.getUTCFullYear() + '-' + String(msk.getUTCMonth()+1).padStart(2,'0') + '-' + String(msk.getUTCDate()).padStart(2,'0');
+}
+
+function assignBloodOath() {
+    if (FORGED.length === 0) return;
+    var eligible = FORGED.filter(function(c) { return !c.lastCompletedAt || getMSKDayKey(c.lastCompletedAt) !== getMSKDayKey(); });
+    if (eligible.length === 0) eligible = FORGED.slice();
+    var card = eligible[Math.floor(Math.random() * eligible.length)];
+    bloodOath = {
+        cardId: card.id,
+        cardName: card.name,
+        streak: 0,
+        requiredDays: BLOOD_OATH_REQUIRED,
+        status: 'active',
+        assignedMonday: getThisMondayKey(),
+        lastCompletedDay: null
+    };
+    sfxForge(); haptic('heavy');
+    burstParticles(window.innerWidth / 2, window.innerHeight / 3, 80, { color: '#c73e4d', speed: 8, decay: 0.012, size: 3, shape: 'spark', gravity: 0.05 });
+    screenShake(8, 600);
+    showToast('🩸 КЛЯТВА НА КРОВИ', '«' + card.name + '» выбрана! 5 дней без пропусков или карточка будет уничтожена.', 'blood');
+    spiritSay('«Кровь запечатала контракт. ' + card.name + '... 5 дней. Ни единого провала.»');
+    renderCards();
+    saveGameState();
+}
+
+function onBloodOathComplete(cardId) {
+    if (!bloodOath || bloodOath.status !== 'active' || bloodOath.cardId !== cardId) return;
+    var todayKey = getMSKDayKey();
+    if (bloodOath.lastCompletedDay === todayKey) return;
+    bloodOath.lastCompletedDay = todayKey;
+    bloodOath.streak++;
+    if (bloodOath.streak >= bloodOath.requiredDays) {
+        completeBloodOath();
+    } else {
+        showToast('🩸 Клятва: ' + bloodOath.streak + '/' + bloodOath.requiredDays, '«' + bloodOath.cardName + '» — держись!', 'blood');
+        sfxEquip(); haptic('medium');
+    }
+    saveGameState();
+}
+
+function onBloodOathSkip(cardId) {
+    if (!bloodOath || bloodOath.status !== 'active' || bloodOath.cardId !== cardId) return;
+    failBloodOath('Ты сорвался! Клятва нарушена.');
+}
+
+function checkBloodOathDaily() {
+    if (!bloodOath || bloodOath.status !== 'active') return;
+    var yesterdayKey = bloodOath.lastCompletedDay;
+    var todayKey = getMSKDayKey();
+    var card = findCard(bloodOath.cardId);
+    if (!card) { bloodOath = null; return; }
+    var cardDoneToday = card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === todayKey;
+    if (!cardDoneToday) {
+        var lastResetKey = lastDayReset || getMSKDayKey();
+        var cardDoneLastDay = bloodOath.lastCompletedDay === lastResetKey;
+        if (!cardDoneLastDay) {
+            failBloodOath('Карточка клятвы не была выполнена! Контракт нарушен.');
+        }
+    }
+}
+
+function failBloodOath(reason) {
+    if (!bloodOath) return;
+    var card = findCard(bloodOath.cardId);
+    var cardName = bloodOath.cardName;
+    if (card) {
+        FORGED = FORGED.filter(function(c) { return c.id !== bloodOath.cardId; });
+    }
+    bloodOath.status = 'failed';
+    spawnBloodRain(40);
+    screenShake(20, 1000);
+    sfxFail(); haptic('error');
+    burstParticles(window.innerWidth / 2, window.innerHeight / 2, 100, { color: '#c73e4d', speed: 10, decay: 0.01, size: 4, shape: 'spark', gravity: 0.15 });
+    showToast('🩸 КЛЯТВА ПРОВАЛЕНА', cardName + ' — уничтожена. ' + reason, 'blood');
+    spiritSay('«Кровь пролита впустую... «' + cardName + '» больше не существует. Пусть это станет уроком.»');
+    bloodOath = null;
+    renderCards();
+    saveGameState();
+}
+
+function completeBloodOath() {
+    if (!bloodOath) return;
+    var cardName = bloodOath.cardName;
+    bloodOath.status = 'completed';
+    addXpReward(BLOOD_OATH_BONUS_XP);
+    sfxBossDefeated(); haptic('success');
+    burstParticles(window.innerWidth / 2, window.innerHeight / 2, 150, { color: '#fbbf24', speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.08, life: 1.3 });
+    burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#c73e4d', speed: 8, decay: 0.01, size: 3, shape: 'spark', gravity: 0.05 });
+    screenShake(12, 600);
+    showToast('🩸⚠️ КЛЯТВА ВЫПОЛНЕНА!', '+' + BLOOD_OATH_BONUS_XP + ' XP! «' + cardName + '» — ты выстоял!', 'crit');
+    spiritSay('«Кровь высохла на клинке. Ты прошёл испытание. ' + cardName + ' — теперь это часть твоей сути.»');
+    bloodOath = null;
+    saveGameState();
+}
+
 function checkDailyReset() {
 const todayKey = getMSKDayKey();
 if (lastDayReset !== todayKey) {
@@ -1881,6 +2015,7 @@ c.daysActive = getCardDaysActive(c);
 }
 });
 recordDailySnapshot();
+checkBloodOathDaily();
 lastDayReset = todayKey;
 saveGameState();
 renderCards();
@@ -1932,7 +2067,7 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 const snapshot = {
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, savedAt: Date.now()
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, savedAt: Date.now()
 };
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
@@ -2260,7 +2395,7 @@ updateHeroUI();
 saveGameState();
 }
 }
-setInterval(function() { checkDailyReset(); updatePunishCountdown(); }, 60 * 1000);
+setInterval(function() { checkDailyReset(); updatePunishCountdown(); checkBloodOath(); }, 60 * 1000);
 setInterval(checkGoalDeadlines, 30000);
 checkGoalDeadlines();
 window.addEventListener('beforeunload', function() { saveGameState(); forceCloudSave(); });
@@ -2275,7 +2410,7 @@ return {
 v: 'nd-sync-v4', t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath
 };
 }
 function updateCloudStatus() {
@@ -2524,6 +2659,7 @@ if (data.uidCounter) uidCounter = data.uidCounter;
 if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
 if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 if (data.bossKills) window._bossKills = data.bossKills;
+if (data.bloodOath !== undefined) bloodOath = data.bloodOath;
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
@@ -2773,6 +2909,7 @@ setTimeout(function() { overlay.classList.add('show'); }, 50);
 }
 loadGameState();
 checkDailyReset();
+checkBloodOath();
 if (bossDefeated) {
 bossDefeated = false;
 bossStage = 0;

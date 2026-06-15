@@ -753,3 +753,29 @@ margin-top: 8px; font-style: italic;
 .goal-step-check { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--text-dim); border-radius: 50%; font-size: 11px; color: var(--text-dim); flex-shrink: 0; transition: all 0.2s; }
 .goal-step.done .goal-step-check { border-color: #34d399; background: rgba(52,211,153,0.15); color: #34d399; }
 .goal-step-text { font-size: 12px; color: var(--text-bright); flex: 1; }
+.card.blood-oath {
+    border-color: #c73e4d !important;
+    box-shadow: 0 0 20px rgba(199,62,77,0.6), 0 0 40px rgba(199,62,77,0.3) !important;
+    animation: bloodOathPulse 1.5s ease-in-out infinite;
+    position: relative;
+}
+@keyframes bloodOathPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(199,62,77,0.6), 0 0 40px rgba(199,62,77,0.3); }
+    50% { box-shadow: 0 0 30px rgba(199,62,77,0.9), 0 0 60px rgba(199,62,77,0.5); }
+}
+.blood-oath-badge {
+    position: absolute;
+    top: -10px;
+    right: -8px;
+    background: linear-gradient(135deg, #c73e4d, #8b0000);
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 3px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(199,62,77,0.6);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
