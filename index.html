@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=23">
 </head>
 <body>
 <div class="app-wrap">
@@ -59,7 +59,11 @@
 <div class="form-row"><label class="form-label">📅 Дедлайн</label><input class="form-input" type="date" id="goalDeadline"></div>
 <div class="form-row"><label class="form-label">🕐 Время</label><input class="form-input" type="time" id="goalDeadlineTime" value="23:00"></div>
 </div>
-<div class="form-row"><label class="form-label">📊 Шагов</label><input class="form-input" type="number" id="goalSteps" value="5" min="1" max="100"></div>
+<div class="form-row"><label class="form-label">📊 Шагов к цели</label><input class="form-input" type="number" id="goalSteps" value="3" min="1" max="20" onchange="renderStepInputs()"></div>
+<div class="form-row" id="goalStepInputsWrap" style="display:none;">
+<label class="form-label">📝 Описание шагов</label>
+<div id="goalStepInputs" style="display:flex;flex-direction:column;gap:8px;"></div>
+</div>
 <div class="form-row">
 <label class="form-label">⚡ Привязанный стат</label>
 <div id="goalStatChips">
@@ -98,7 +102,7 @@
 <div class="form-grid-2">
 <div class="form-row">
 <label class="form-label">🏆 Стартовый ранг</label>
-<select class="form-select" id="forgeRank"><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option></select>
+<select class="form-select" id="forgeRank"><option value="C">C</option><option value="CC">CC</option><option value="CCC">CCC</option><option value="B">B</option><option value="BB">BB</option><option value="BBB">BBB</option><option value="A">A</option><option value="AA">AA</option><option value="AAA">AAA</option><option value="S">S</option><option value="SS">SS</option><option value="SSS">SSS</option></select>
 </div>
 <div class="form-row">
 <label class="form-label">⚔ Выполнений до ранг-апа</label>
@@ -440,6 +444,6 @@
 </div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=22"></script>
+<script src="js/app.js?v=23"></script>
 </body>
 </html>

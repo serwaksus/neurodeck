@@ -158,6 +158,7 @@ case 'equip-item': equipItem(el.dataset.uid); break;
 case 'unequip-item': unequipItem(el.dataset.slot); break;
 case 'discard-item': discardItem(el.dataset.uid); break;
 case 'advance-goal': advanceGoal(parseInt(el.dataset.id)); break;
+case 'toggle-goal-step': toggleGoalStep(parseInt(el.dataset.id), parseInt(el.dataset.step)); break;
 case 'complete-goal': completeGoal(parseInt(el.dataset.id)); break;
 case 'delete-goal': deleteGoal(parseInt(el.dataset.id)); break;
 }
@@ -1141,39 +1142,69 @@ long:   { xp: 120, dmg: 25, statXp: 5, label: 'Долгая' },
 let GOALS = [], goalIdCounter = 1, selectedGoalType = 'short', selectedGoalStat = 'str', currentGoalFilter = 'all';
 try { const saved = localStorage.getItem('neurodeck_goals'); if (saved) { const p = JSON.parse(saved); GOALS = p.goals || []; goalIdCounter = p.counter || 1; } } catch (e) {}
 function saveGoals() { try { localStorage.setItem('neurodeck_goals', JSON.stringify({ goals: GOALS, counter: goalIdCounter })); } catch (e) {} }
+function renderStepInputs() {
+    var n = Math.max(1, Math.min(20, parseInt(document.getElementById('goalSteps').value) || 3));
+    var wrap = document.getElementById('goalStepInputsWrap');
+    var container = document.getElementById('goalStepInputs');
+    if (n < 1) { wrap.style.display = 'none'; return; }
+    var existing = {};
+    container.querySelectorAll('input[data-step]').forEach(function(inp) { existing[inp.dataset.step] = inp.value; });
+    container.innerHTML = '';
+    for (var i = 1; i <= n; i++) {
+        var inp = document.createElement('input');
+        inp.className = 'form-input';
+        inp.dataset.step = i;
+        inp.placeholder = 'Шаг ' + i + ': что сделать...';
+        inp.value = existing[i] || '';
+        container.appendChild(inp);
+    }
+    wrap.style.display = 'flex';
+}
 function openGoalModal() {
-document.getElementById('goalModal').classList.add('show');
-const d = new Date(); d.setDate(d.getDate() + 7);
-document.getElementById('goalDeadline').value = d.toISOString().split('T')[0];
-document.getElementById('goalDeadlineTime').value = '23:00';
-setTimeout(() => document.getElementById('goalName').focus(), 100);
+    document.getElementById('goalModal').classList.add('show');
+    const d = new Date(); d.setDate(d.getDate() + 7);
+    document.getElementById('goalDeadline').value = d.toISOString().split('T')[0];
+    document.getElementById('goalDeadlineTime').value = '23:00';
+    document.getElementById('goalSteps').value = '3';
+    renderStepInputs();
+    setTimeout(() => document.getElementById('goalName').focus(), 100);
 }
 function closeGoalModal() {
-document.getElementById('goalModal').classList.remove('show');
-document.getElementById('goalName').value = '';
-document.getElementById('goalDesc').value = '';
-document.getElementById('goalSteps').value = '5';
-document.getElementById('goalDeadlineTime').value = '23:00';
-selectedGoalType = 'short'; selectedGoalStat = 'str';
-updateGoalTypeSelection(); updateGoalStatChips();
+    document.getElementById('goalModal').classList.remove('show');
+    document.getElementById('goalName').value = '';
+    document.getElementById('goalDesc').value = '';
+    document.getElementById('goalSteps').value = '3';
+    document.getElementById('goalStepInputs').innerHTML = '';
+    document.getElementById('goalStepInputsWrap').style.display = 'none';
+    document.getElementById('goalDeadlineTime').value = '23:00';
+    selectedGoalType = 'short'; selectedGoalStat = 'str';
+    updateGoalTypeSelection(); updateGoalStatChips();
 }
 function updateGoalTypeSelection() { document.querySelectorAll('#goalTypeSelector .goal-type-option').forEach(o => o.classList.toggle('selected', o.dataset.type === selectedGoalType)); }
 function updateGoalStatChips() { document.querySelectorAll('#goalStatChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedGoalStat)); }
 updateGoalTypeSelection(); updateGoalStatChips();
 function createGoal() {
-const name = document.getElementById('goalName').value.trim();
-if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
-const deadlineDate = document.getElementById('goalDeadline').value;
-const deadlineTime = document.getElementById('goalDeadlineTime').value || '23:00';
-var deadline = null;
-if (deadlineDate) {
-deadline = new Date(deadlineDate + 'T' + deadlineTime + ':00');
-if (deadline < new Date()) { showToast('⚠ Ошибка', 'Дедлайн не может быть в прошлом', 'blood'); return; }
-}
-const totalSteps = parseInt(document.getElementById('goalSteps').value) || 5;
-const desc = document.getElementById('goalDesc').value.trim();
-const rewards = GOAL_REWARDS[selectedGoalType];
-const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline: deadline ? deadline.getTime() : null, totalSteps, currentStep: 0, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.statXp, completed: false, failed: false, createdAt: Date.now(), lastStepAt: null };
+    const name = document.getElementById('goalName').value.trim();
+    if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
+    const deadlineDate = document.getElementById('goalDeadline').value;
+    const deadlineTime = document.getElementById('goalDeadlineTime').value || '23:00';
+    var deadline = null;
+    if (deadlineDate) {
+        deadline = new Date(deadlineDate + 'T' + deadlineTime + ':00');
+        if (deadline < new Date()) { showToast('⚠ Ошибка', 'Дедлайн не может быть в прошлом', 'blood'); return; }
+    }
+    const totalSteps = parseInt(document.getElementById('goalSteps').value) || 3;
+    var steps = [];
+    document.querySelectorAll('#goalStepInputs input[data-step]').forEach(function(inp) {
+        var txt = inp.value.trim();
+        steps.push({ text: txt || ('Шаг ' + (steps.length + 1)), done: false });
+    });
+    while (steps.length < totalSteps) {
+        steps.push({ text: 'Шаг ' + (steps.length + 1), done: false });
+    }
+    const desc = document.getElementById('goalDesc').value.trim();
+    const rewards = GOAL_REWARDS[selectedGoalType];
+    const goal = { id: goalIdCounter++, type: selectedGoalType, name, desc, deadline: deadline ? deadline.getTime() : null, totalSteps, currentStep: 0, steps: steps, stat: selectedGoalStat, xp: rewards.xp, dmg: rewards.dmg, statBonus: rewards.statXp, completed: false, failed: false, createdAt: Date.now(), lastStepAt: null };
 GOALS.unshift(goal);
 saveGoals(); saveGameState(); renderGoals(); closeGoalModal();
 const color = selectedGoalType === 'short' ? '#34d399' : selectedGoalType === 'medium' ? '#60a5fa' : '#fbbf24';
@@ -1199,44 +1230,100 @@ list.innerHTML = '<div class="goals-empty">' + (currentGoalFilter === 'all' ? '�
 updateHeroSummary(); return;
 }
 filtered.forEach(goal => {
-const rewards = GOAL_REWARDS[goal.type] || GOAL_REWARDS.short;
-const st = STATS[goal.stat] || STATS.str;
-const progressPct = (goal.currentStep / goal.totalSteps) * 100;
-var countdownHtml = '';
-if (goal.deadline && !goal.completed && !goal.failed) {
-var remaining = goal.deadline - Date.now();
-if (remaining > 0) {
-var d = Math.floor(remaining / 86400000);
-var h = Math.floor((remaining % 86400000) / 3600000);
-var m = Math.floor((remaining % 3600000) / 60000);
-var cdText = d > 0 ? d + 'д ' + h + 'ч' : h > 0 ? h + 'ч ' + m + 'м' : m + 'м';
-var cdClass = remaining < 3600000 ? 'critical' : remaining < 86400000 ? 'warning' : 'safe';
-countdownHtml = '<span class="goal-countdown ' + cdClass + '">⏱ ' + cdText + '</span>';
-} else {
-countdownHtml = '<span class="goal-countdown critical">⏱ ПРОСРОЧЕНО</span>';
-}
-}
-var deadlineStr = goal.deadline ? new Date(goal.deadline).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-const el = document.createElement('div');
-el.className = 'goal-card ' + goal.type + ' ' + (goal.completed ? 'completed' : goal.failed ? 'failed' : '');
-el.innerHTML =
-'<div class="goal-head"><div class="goal-name">' + esc(goal.name) + '</div><div class="goal-type-badge">' + rewards.label + '</div></div>' +
-(goal.desc ? '<div style="font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px;">' + esc(goal.desc) + '</div>' : '') +
-'<div class="goal-meta">' +
-(deadlineStr ? '<span>📅 <b>' + deadlineStr + '</b></span>' : '') +
-countdownHtml +
-'<span>✨ <b>+' + goal.xp + ' XP</b></span>' +
-'<span class="dmg">⚔ <b>-' + goal.dmg + ' HP</b></span>' +
-'<span style="color:' + st.color + '">' + st.icon + ' <b>+' + goal.statBonus + ' пул</b></span>' +
-'</div>' +
-'<div class="goal-progress-wrap"><div class="goal-progress-bar"><div class="goal-progress-fill" style="width:' + progressPct + '%"></div></div><div class="goal-progress-label"><b>' + goal.currentStep + '</b>/' + goal.totalSteps + '</div></div>' +
-'<div class="goal-actions">' +
-(!goal.completed && !goal.failed ? (goal.currentStep < goal.totalSteps - 1 ? '<button class="goal-btn" data-action="advance-goal" data-id="' + goal.id + '">+ Шаг</button>' : '<button class="goal-btn complete" data-action="complete-goal" data-id="' + goal.id + '">✓ Выполнить</button>') : '<button class="goal-btn" disabled style="opacity: 0.5;">' + (goal.failed ? '💀 Провалена' : '✓ Выполнено') + '</button>') +
-'<button class="goal-btn delete" data-action="delete-goal" data-id="' + goal.id + '">✕</button>' +
-'</div>';
-list.appendChild(el);
+    const rewards = GOAL_REWARDS[goal.type] || GOAL_REWARDS.short;
+    const st = STATS[goal.stat] || STATS.str;
+    if (!goal.steps || goal.steps.length === 0) {
+        goal.steps = [];
+        for (var si = 0; si < goal.totalSteps; si++) goal.steps.push({ text: 'Шаг ' + (si + 1), done: si < goal.currentStep });
+    }
+    const progressPct = (goal.currentStep / goal.totalSteps) * 100;
+    var countdownHtml = '';
+    if (goal.deadline && !goal.completed && !goal.failed) {
+        var remaining = goal.deadline - Date.now();
+        if (remaining > 0) {
+            var d = Math.floor(remaining / 86400000);
+            var h = Math.floor((remaining % 86400000) / 3600000);
+            var m = Math.floor((remaining % 3600000) / 60000);
+            var cdText = d > 0 ? d + 'д ' + h + 'ч' : h > 0 ? h + 'ч ' + m + 'м' : m + 'м';
+            var cdClass = remaining < 3600000 ? 'critical' : remaining < 86400000 ? 'warning' : 'safe';
+            countdownHtml = '<span class="goal-countdown ' + cdClass + '">⏱ ' + cdText + '</span>';
+        } else {
+            countdownHtml = '<span class="goal-countdown critical">⏱ ПРОСРОЧЕНО</span>';
+        }
+    }
+    var deadlineStr = goal.deadline ? new Date(goal.deadline).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    var stepsHtml = '';
+    if (!goal.completed && !goal.failed) {
+        stepsHtml = '<div class="goal-steps">';
+        goal.steps.forEach(function(step, idx) {
+            var stepClass = step.done ? 'goal-step done' : 'goal-step';
+            stepsHtml += '<div class="' + stepClass + '" data-action="toggle-goal-step" data-id="' + goal.id + '" data-step="' + idx + '">' +
+                '<span class="goal-step-check">' + (step.done ? '✓' : '○') + '</span>' +
+                '<span class="goal-step-text">' + esc(step.text) + '</span>' +
+                '</div>';
+        });
+        stepsHtml += '</div>';
+    } else {
+        stepsHtml = '<div class="goal-steps">';
+        goal.steps.forEach(function(step, idx) {
+            var stepClass = step.done ? 'goal-step done' : 'goal-step';
+            stepsHtml += '<div class="' + stepClass + '">' +
+                '<span class="goal-step-check">' + (step.done ? '✓' : '○') + '</span>' +
+                '<span class="goal-step-text">' + esc(step.text) + '</span>' +
+                '</div>';
+        });
+        stepsHtml += '</div>';
+    }
+    const el = document.createElement('div');
+    el.className = 'goal-card ' + goal.type + ' ' + (goal.completed ? 'completed' : goal.failed ? 'failed' : '');
+    el.innerHTML =
+        '<div class="goal-head"><div class="goal-name">' + esc(goal.name) + '</div><div class="goal-type-badge">' + rewards.label + '</div></div>' +
+        (goal.desc ? '<div style="font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px;">' + esc(goal.desc) + '</div>' : '') +
+        '<div class="goal-meta">' +
+        (deadlineStr ? '<span>📅 <b>' + deadlineStr + '</b></span>' : '') +
+        countdownHtml +
+        '<span>✨ <b>+' + goal.xp + ' XP</b></span>' +
+        '<span class="dmg">⚔ <b>-' + goal.dmg + ' HP</b></span>' +
+        '<span style="color:' + st.color + '">' + st.icon + ' <b>+' + goal.statBonus + ' пул</b></span>' +
+        '</div>' +
+        stepsHtml +
+        '<div class="goal-progress-wrap"><div class="goal-progress-bar"><div class="goal-progress-fill" style="width:' + progressPct + '%"></div></div><div class="goal-progress-label"><b>' + goal.currentStep + '</b>/' + goal.totalSteps + '</div></div>' +
+        '<div class="goal-actions">' +
+        (!goal.completed && !goal.failed ? '<button class="goal-btn delete" data-action="delete-goal" data-id="' + goal.id + '">✕</button>' : '<button class="goal-btn" disabled style="opacity: 0.5;">' + (goal.failed ? '💀 Провалена' : '✓ Выполнено') + '</button>') +
+        '</div>';
+    list.appendChild(el);
 });
 updateHeroSummary();
+}
+function toggleGoalStep(id, stepIdx) {
+    var goal = GOALS.find(function(g) { return g.id === id; });
+    if (!goal || goal.completed || goal.failed) return;
+    if (!goal.steps) {
+        goal.steps = [];
+        for (var i = 0; i < goal.totalSteps; i++) goal.steps.push({ text: 'Шаг ' + (i + 1), done: i < goal.currentStep });
+    }
+    var step = goal.steps[stepIdx];
+    if (!step) return;
+    if (step.done) {
+        step.done = false;
+        goal.currentStep = goal.steps.filter(function(s) { return s.done; }).length;
+        renderGoals();
+        saveGameState();
+        return;
+    }
+    step.done = true;
+    goal.currentStep = goal.steps.filter(function(s) { return s.done; }).length;
+    addXpReward(Math.round(goal.xp / goal.totalSteps / 2));
+    if (goal.stat && STATS[goal.stat]) {
+        STATS[goal.stat].attributePoints = (STATS[goal.stat].attributePoints || 0) + 1;
+        checkAttributePoolGrowth(goal.stat);
+    }
+    goal.lastStepAt = Date.now();
+    sfxEquip(); haptic('light');
+    renderGoals();
+    showToast('✓ Шаг выполнен', goal.name + ': ' + goal.currentStep + '/' + goal.totalSteps);
+    if (goal.currentStep >= goal.totalSteps) setTimeout(function() { completeGoal(id); }, 500);
+    saveGameState();
 }
 function advanceGoal(id) {
 const goal = GOALS.find(g => g.id === id);
