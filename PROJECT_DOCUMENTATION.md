@@ -62,11 +62,11 @@
 | Анимации | CSS Keyframes + Canvas 2D API |
 | Звук | Web Audio API (синтез 8-bit тонов) |
 | Тактильность | Telegram WebApp HapticFeedback |
-| Хранилище | localStorage + Telegram CloudStorage |
+| Хранилище | localStorage + IndexedDB + Telegram CloudStorage |
 | Платформа | Telegram Mini App |
 | Внешние библиотеки | `telegram-web-app.js` (единственная) |
 
-**Cache-busting:** версии `?v=N` в URL CSS/JS (текущая `?v=18`) — Telegram WebView агрессивно кэширует.
+**Cache-busting:** версии `?v=N` в URL CSS/JS (текущая `?v=23`) — Telegram WebView агрессивно кэширует.
 
 ---
 
@@ -74,11 +74,11 @@
 
 ```
 neurodeck/
-├── index.html          (~444 строки) — разметка, модалки, вкладки
+├── index.html          (~450 строк) — разметка, модалки, вкладки
 ├── css/
-│   └── style.css       (~747 строк) — все стили, анимации, адаптив
+│   └── style.css       (~760 строк) — все стили, анимации, адаптив
 ├── js/
-│   └── app.js          (~2450 строк) — вся логика приложения
+│   └── app.js          (~2750 строк) — вся логика приложения
 └── PROJECT_DOCUMENTATION.md — этот файл
 ```
 
@@ -157,7 +157,8 @@ neurodeck/
 - **🗑 Удалить** — удалить с подтверждением
 
 **Ковка карточки** (`forgeCard()`):
-- Игрок выбирает: название, стат, время суток, длительность, стартовый ранг, порог мастерства
+- Игрок выбирает: название, стат, время суток, длительность, **стартовый ранг (все 12: C→SSS)**, порог мастерства
+- Стартовый ранг можно задать любой — полезно при восстановлении после потери данных
 - При создании: +10 XP, эффект частиц, звук ковки
 - Карточка добавляется в начало массива `FORGED`
 
@@ -361,14 +362,33 @@ Lvl 5:  2,000   Lvl 10: 64,000    Lvl 15: 2,048,000
 - Выбор типа (визуальные карточки)
 - Название, описание
 - Дедлайн: **дата + время** (default 23:00)
-- Количество шагов (default 5)
+- Количество шагов (default 3) + **текстовое описание каждого шага**
 - Привязка к стату
 
-**Выполнение цели:**
-- Кнопка «+ Шаг» — выполняет один шаг цели
-- Каждый шаг: +`xp / totalSteps / 2` XP, +1 очко пула стата
-- Последний шаг → автозавершение → полная награда + анимация
-- Завершение: +XP, +очки пула, -HP боссу, частицы
+**Текстовые шаги:**
+- При изменении количества шагов в форме — автоматически появляются поля для описания каждого шага
+- Каждый шаг имеет текст (например «Купить кроссовки», «Пробежать 3 км»)
+- Если текст не введён — автогенерация «Шаг N»
+
+**Выполнение цели (пошаговое):**
+- Каждый шаг — кликабельная строка с чекбоксом (○ / ✓)
+- Нажатие на шаг → `toggleGoalStep()`: отметка выполнения, +`xp / totalSteps / 2` XP, +1 очко пула стата
+- Повторный клик → снятие отметки (отмена шага)
+- **Авто-завершение**: при выполнении всех шагов цель закрывается автоматически
+- Завершение: +полный XP, +очки пула, -HP боссу, частицы, тряска экрана
+
+**Структура шага в объекте цели:**
+```json
+{
+  "steps": [
+    { "text": "Купить кроссовки", "done": true },
+    { "text": "Пробежать 3 км", "done": false },
+    { "text": "Пробежать 10 км", "done": false }
+  ]
+}
+```
+
+**Обратная совместимость:** старые цели (без массива `steps`) автоматически генерируют шаги вида «Шаг N» при отображении.
 
 **Провал цели (`checkGoalDeadlines()`):**
 - Проверка каждые **30 секунд**
@@ -604,43 +624,75 @@ Lvl 5:  2,000   Lvl 10: 64,000    Lvl 15: 2,048,000
 
 ## 7. Синхронизация данных
 
-### 3 способа + авто-сохранение
+### 4 слоя хранения + многоуровневая защита
 
 #### 7.1 Telegram CloudStorage (автоматически + вручную)
 
+**Smart Cloud Sync** (`smartCloudSync()`):
+- При запуске сравнивает timestamps облака (`meta.t`) и локали (`savedAt`)
+- Если облако новее более чем на 10 сек — предлагает загрузку
+- Если в облаке меньше карточек, чем локально — блокирует загрузку (защита от перезаписи)
+
 **Автосохранение** (`autoCloudSave()`):
 - Срабатывает при каждом `saveGameState()`
-- Throttle: **не чаще, чем раз в 2 минуты**
+- Throttle: **30 секунд** (было 2 мин)
+- **Блокировка:** если `FORGED.length === 0` — не сохраняет (защита от стирания)
 - Чанкинг по **4096 символов** (`CLOUD_MAX_CHUNK`)
 - Ключи: `nd_meta` (метаданные) + `nd_0`, `nd_1`, ... (чанки)
 
+**Принудительное сохранение** (`forceCloudSave()`):
+- Обходит throttle
+- Используется при `beforeunload` и ручном сохранении
+
 **Ручное сохранение** (`saveToCloud()`):
-- Без throttle
 - Таймаут 10 сек (если облако не ответило — предложение использовать файл)
 
 **Загрузка из облака** (`loadFromCloud()`):
 - Чтение `nd_meta` → чтение N чанков → сборка JSON → `applySyncData()`
 
-**Восстановление при потере** (`tryCloudRecovery()`):
-- Если `localStorage` пуст, проверяет облако
-- При наличии данных — диалог с информацией о сохранении
-- При подтверждении — восстановление + `location.reload()`
+**Индикатор синхронизации** (`updateSyncBadge()`):
+- ☁ зелёный — синхронизировано
+- ☁ жёлтый — есть несохраненные изменения
+- ☁ серый — нет связи с облаком
 
-#### 7.2 Share Link
+#### 7.2 IndexedDB (автоматически)
+
+**Назначение:** Telegram WebView не очищает IndexedDB при сбросе кэша, в отличие от localStorage.
+
+- `openIDB()` — открытие БД `neurodeck_db` при старте
+- `saveToIDB(snapshot)` — запись снимка при каждом `saveGameState()`
+- `loadFromIDB(callback)` — чтение для восстановления
+- Проверяется при загрузке если localStorage пуст
+- Проверяется в `deepRecovery()`
+
+#### 7.3 Share Link
 
 - `generateShareLink()`: `buildSyncData()` → JSON → `btoa(encodeURI())` → `#hash`
 - Копирование в буфер обмена или `navigator.share()`
 - `importFromHash()`: при загрузке страницы проверяет `location.hash`
 
-#### 7.3 Файл `.ndsync`
+#### 7.4 Файл `.ndsync`
 
 - `downloadSyncFile()`: JSON → Blob → `.ndsync` файл
 - `importSyncFile()`: FileReader → JSON parse → `applySyncData()`
 
-#### 7.4 JSON Export
+#### 7.5 JSON Export
 
 - `exportJson()`: отдельный экспорт для просмотра/бэкапа
 - Файл: `neurodeck-export-YYYY-MM-DD.json`
+
+#### 7.6 Глубокое восстановление (`deepRecovery()`)
+
+Сканирует **все источники данных** и предлагает восстановить лучший вариант:
+
+1. `localStorage['neurodeck_full_save']`
+2. `localStorage['neurodeck_backup']`
+3. `localStorage['neurodeck_cards_backup']` (третий ключ — обновляется только при FORGED > 0)
+4. `localStorage['neurodeck_goals']` (legacy)
+5. IndexedDB (`neurodeck_db`)
+6. Telegram CloudStorage (`nd_meta` + `nd_N` чанки)
+
+**Авто-восстановление:** при загрузке, если `FORGED.length === 0`, `deepRecovery()` запускается автоматически через 1 секунду.
 
 #### `applySyncData(data, skipRender)`
 
@@ -648,6 +700,7 @@ Lvl 5:  2,000   Lvl 10: 64,000    Lvl 15: 2,048,000
 - Санитизация HERO (HP/XP/level в допустимых пределах)
 - Санитизация STATS (value 0..max, attributePoints ≥ 0)
 - Санитизация FORGED (default rank/mastery/threshold)
+- Защита от загрузки данных с меньшим числом карточек
 - Полный ре-рендер всех UI
 
 ---
@@ -843,25 +896,43 @@ AudioContext создаётся при первом клике пользова�
 | `equip-item` | `equipItem()` |
 | `unequip-item` | `unequipItem()` |
 | `discard-item` | `discardItem()` |
-| `advance-goal` | `advanceGoal()` |
+| `advance-goal` | `advanceGoal()` (legacy) |
+| `toggle-goal-step` | `toggleGoalStep(id, stepIdx)` |
 | `complete-goal` | `completeGoal()` |
 | `delete-goal` | `deleteGoal()` |
+| `deep-recovery` | `deepRecovery()` |
 
 ---
 
 ## 13. Сохранение данных
 
-### Многоуровневая защита от потери данных
+### 4 слоя хранения
 
 ```
 saveGameState()
   │
-  ├── localStorage['neurodeck_full_save']  ← основной
-  ├── localStorage['neurodeck_backup']     ← резервный
-  ├── localStorage['neurodeck_goals']      ← цели (legacy)
-  ├── autoCloudSave() → CloudStorage       ← облако (throttle 2 мин)
-  └── window.beforeunload → saveGameState  ← при закрытии
+  ├── localStorage['neurodeck_full_save']     ← основной (мгновенно)
+  ├── localStorage['neurodeck_backup']        ← резервный (мгновенно)
+  ├── localStorage['neurodeck_cards_backup']  ← только при FORGED > 0
+  ├── IndexedDB ('neurodeck_db')              ← не очищается Telegram
+  ├── autoCloudSave() → CloudStorage          ← облако (throttle 30 сек)
+  ├── saveGoals() → localStorage['neurodeck_goals']  ← legacy
+  └── window.beforeunload → saveGameState + forceCloudSave
 ```
+
+### 5 программных защит от потери данных
+
+1. **Авто-восстановление в saveGameState()** — если `FORGED` пуст, восстанавливает из `neurodeck_cards_backup`
+2. **neurodeck_cards_backup** — третий localStorage ключ, обновляется **только** при `FORGED.length > 0`
+3. **autoCloudSave / forceCloudSave** — return если `FORGED.length === 0` (не перезаписывает облако пустым состоянием)
+4. **smartCloudSync** — не загружает данные из облака, если в них меньше карточек, чем локально
+5. **loadGameState** — проверяет emergency backup при пустом основном
+
+### Авто-восстановление при загрузке
+
+Если `FORGED.length === 0` после `loadGameState()`:
+- `setTimeout(deepRecovery, 1000)` — глубокое сканирование всех 4 слоёв
+- Диалог с предложением восстановить найденные данные
 
 ### Структура `saveGameState()` snapshot
 
@@ -870,7 +941,7 @@ saveGameState()
   "hero": { "name", "level", "xp", "hp", "isHollow", "estus", ... },
   "stats": { "str": {...}, "end": {...}, ... },
   "forged": [ { "id", "name", "rank", "mastery", ... } ],
-  "goals": [ { "id", "type", "name", "deadline", ... } ],
+  "goals": [ { "id", "type", "name", "deadline", "steps": [{"text","done"}], ... } ],
   "inventory": { "backpack": [...], "equipped": {...} },
   "escapeProgress": 0,
   "bossHp": 100,
@@ -891,7 +962,10 @@ saveGameState()
 
 1. Чтение `neurodeck_full_save`
 2. Если нет → чтение `neurodeck_backup`
-3. Если нет → `tryCloudRecovery()` (проверка облака)
+3. Если нет → чтение `neurodeck_cards_backup`
+4. Если нет → `tryCloudRecovery()` (проверка облака)
+5. Если нет → `loadFromIDB()` (проверка IndexedDB)
+6. Если `FORGED.length === 0` → авто-запуск `deepRecovery()`
 
 ---
 
@@ -983,9 +1057,13 @@ saveGameState()
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  saveGameState()                                                        │
-│    ├── localStorage (x2: full_save + backup)     ← мгновенно            │
-│    ├── CloudStorage (auto, throttle 2 мин)       ← фоново               │
-│    └── beforeunload → saveGameState()            ← при закрытии         │
+│    ├── localStorage (x3: full_save + backup + cards_backup)  ← мгновенно│
+│    ├── IndexedDB ('neurodeck_db')                            ← мгновенно │
+│    ├── CloudStorage (auto, throttle 30 сек)                  ← фоново   │
+│    └── beforeunload → saveGameState() + forceCloudSave()     ← при закр.│
+│                                                                         │
+│  Smart Sync при запуске:                                                │
+│    └── smartCloudSync() → сравнение timestamps → предложение загрузки   │
 │                                                                         │
 │  Ручные методы:                                                         │
 │    ├── ☁ Сохранить/Загрузить → CloudStorage (чанкинг 4096)             │
@@ -993,10 +1071,12 @@ saveGameState()
 │    ├── ↗ Поделиться → navigator.share()                                │
 │    ├── 💾 Скачать → .ndsync файл                                       │
 │    ├── 📁 Загрузить → FileReader → JSON                                │
-│    └── 📋 JSON → экспорт для просмотра                                 │
+│    ├── 📋 JSON → экспорт для просмотра                                 │
+│    └── ♻ Восстановить → deepRecovery() (4 слоя)                       │
 │                                                                         │
 │  Восстановление:                                                        │
-│    └── tryCloudRecovery() → диалог → applySyncData() → reload          │
+│    ├── Авто: FORGED пуст → deepRecovery() через 1 сек                  │
+│    └── Ручное: кнопка в окне синхронизации                             │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1018,11 +1098,11 @@ saveGameState()
 | `CLOUD_DATA_PREFIX` | `nd_` | Префикс чанков данных |
 | `MSK_OFFSET_MS` | 3 часа | Смещение Москвы от UTC |
 | `MAX_PARTICLES` | 500 | Лимит частиц на canvas |
-| Auto-cloud throttle | 120000 (2 мин) | Мин. интервал авто-сохранения в облако |
+| Auto-cloud throttle | 30000 (30 сек) | Мин. интервал авто-сохранения в облако |
 | Dust particles | 60 | Кол-во частиц пыли |
 | Heatmap weeks | 8 (56 ячеек) | Размер тепловой карты стиков |
 | XP history limit | 90 дней | Глубина истории XP |
 
 ---
 
-*Документация актуальна на версию `?v=18` (коммит `b381247`).*
+*Документация актуальна на версию `?v=23` (коммит `7e44765`).*
