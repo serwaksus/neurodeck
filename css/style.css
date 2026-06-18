@@ -357,9 +357,8 @@ margin-top: 8px; font-style: italic;
 .stat-attr-label { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 4px; }
 .stat-attr-label b { color: var(--gold-bright); font-weight: normal; }
 .stat-attr-hint { font-size: 8px; color: var(--text-dim); font-style: italic; letter-spacing: 1px; margin-top: 4px; opacity: 0.7; }
-.stat-attr-bar { height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; display: flex; gap: 2px; }
-.stat-attr-segment { flex: 1; background: rgba(255,255,255,0.08); border-radius: 1px; transition: background 0.4s; }
-.stat-attr-segment.filled { background: var(--stat-color, var(--gold)); box-shadow: 0 0 4px var(--stat-glow); }
+.stat-attr-bar { height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+.stat-attr-progress { height: 100%; background: var(--stat-color, var(--gold)); border-radius: 2px; transition: width 0.4s; box-shadow: 0 0 4px var(--stat-glow); }
 .goals-section { background: linear-gradient(180deg, var(--surface-hi), var(--surface)); border: 1px solid var(--border); border-radius: 3px; padding: 16px; position: relative; overflow: hidden; }
 .goals-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 .goals-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }

@@ -50,10 +50,13 @@ function haptic(type) {
 }
 document.addEventListener('click', function() { getAudioCtx(); }, { once: true });
 const ATTR_POOL_THRESHOLD = 5;
-const HERO_XP_CURVE = [100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000, 256000, 512000, 1024000, 2048000];
+function getStatThreshold(value) {
+return 5 + Math.floor(value * 1.5);
+}
+const HERO_XP_CURVE = [50, 100, 200, 380, 700, 1300, 2400, 4500, 8500, 16000, 30000, 58000, 110000, 200000, 360000];
 function getXpToNext(level) {
 if (level - 1 < HERO_XP_CURVE.length) return HERO_XP_CURVE[level - 1];
-return HERO_XP_CURVE[HERO_XP_CURVE.length - 1] * Math.pow(2, level - HERO_XP_CURVE.length);
+return Math.floor(HERO_XP_CURVE[HERO_XP_CURVE.length - 1] * Math.pow(1.8, level - HERO_XP_CURVE.length));
 }
 const RANK_PROGRESSION = ['C', 'CC', 'CCC', 'B', 'BB', 'BBB', 'A', 'AA', 'AAA', 'S', 'SS', 'SSS'];
 const RANK_PHRASES = {
@@ -70,7 +73,7 @@ return RANK_PROGRESSION[idx + 1];
 const HERO = {
 name: 'Странник', title: '«Тот, кто только начал путь»',
 level: 1, xp: 0, xpToNext: 100, totalXp: 0,
-hp: 100, maxHp: 100, isHollow: false,
+hp: 80, maxHp: 80, isHollow: false,
 consecutivePerfectDays: 0,
 dailyCompletions: 0, dailySkips: 0, actionPoints: 0
 };
@@ -83,7 +86,8 @@ wil: { name: 'Воля',      icon: '🧘', desc: 'Стрик',      color: '#34
 agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color: '#fb923c', dark: '#c2410c', value: 3, max: 100, attributePoints: 0 },
 };
 const BASE_DAMAGE = 5;
-const LOOT_CHANCE = 0.08;
+const LOOT_CHANCE = 0.05;
+function getLootChance(card) { return 0.05 + Math.min(0.05, (card.streak || 0) * 0.0025); }
 const RANK_COLORS = {
 C: { color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.15)', glow: 'rgba(156, 163, 175, 0.5)' },
 B: { color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.15)',  glow: 'rgba(96, 165, 250, 0.5)' },
@@ -309,8 +313,12 @@ card.mastery += 1;
 card.totalCompletions = (card.totalCompletions || 0) + 1;
 card.streak = (card.streak || 0) + 1;
 card.lastCompletedAt = Date.now();
-HERO.hp = Math.min(calcMaxHp(), HERO.hp + 2);
+HERO.hp = Math.min(calcMaxHp(), HERO.hp + 1);
 HERO.dailyCompletions++;
+if (card.stat && STATS[card.stat]) {
+STATS[card.stat].attributePoints = (STATS[card.stat].attributePoints || 0) + 1;
+checkAttributePoolGrowth(card.stat);
+}
 let rankUpHappened = false;
 if (card.mastery >= card.masteryThreshold) {
 const nextRank = getNextRank(card.rank);
@@ -318,7 +326,7 @@ if (nextRank) {
 const oldRank = card.rank;
 card.rank = nextRank;
 card.mastery = card.mastery - card.masteryThreshold;
-card.masteryThreshold = Math.max(2, Math.round(card.masteryThreshold * 1.15));
+card.masteryThreshold = Math.max(2, Math.round(card.masteryThreshold * 1.2));
 if (card.stat && STATS[card.stat]) {
 STATS[card.stat].attributePoints = (STATS[card.stat].attributePoints || 0) + 1;
 checkAttributePoolGrowth(card.stat);
@@ -338,7 +346,7 @@ spiritSay('«Легенда... Твоя дисциплина несокруши�
 }
 }
 HERO.actionPoints = (HERO.actionPoints || 0) + 1;
-if (Math.random() < LOOT_CHANCE) dropRandomLoot(x, y);
+if (Math.random() < getLootChance(card)) dropRandomLoot(x, y);
 checkHeroLevelUp();
 renderCards();
 updateHeroUI();
@@ -389,8 +397,8 @@ saveGameState();
 function checkAttributePoolGrowth(statKey) {
 const stat = STATS[statKey];
 let leveledUp = false;
-while (stat.attributePoints >= ATTR_POOL_THRESHOLD && stat.value < stat.max) {
-stat.attributePoints -= ATTR_POOL_THRESHOLD;
+while (stat.attributePoints >= getStatThreshold(stat.value) && stat.value < stat.max) {
+stat.attributePoints -= getStatThreshold(stat.value);
 stat.value += 1;
 leveledUp = true;
 }
@@ -419,10 +427,7 @@ el.style.setProperty('--stat-color', st.color);
 el.style.setProperty('--stat-color-dark', st.dark);
 el.style.setProperty('--stat-color-bg', st.dark + '40');
 el.style.setProperty('--stat-glow', st.color + '60');
-let segmentsHtml = '';
-for (let i = 0; i < ATTR_POOL_THRESHOLD; i++) {
-segmentsHtml += '<div class="stat-attr-segment ' + (i < st.attributePoints ? 'filled' : '') + '"></div>';
-}
+let poolPct = Math.min(100, (st.attributePoints / getStatThreshold(st.value)) * 100);
 el.innerHTML =
 '<div class="stat-card-head">' +
   '<div class="stat-icon">' + st.icon + '<div class="stat-value-big" id="statVal-' + key + '">' + st.value + '</div></div>' +
@@ -431,9 +436,9 @@ el.innerHTML =
 '<div class="stat-bar"><div class="stat-bar-fill" id="statBar-' + key + '" style="width:' + pct + '%"></div></div>' +
 '<div class="stat-bar-label"><span>Атрибут</span><span><b>' + st.value + '</b> / ' + st.max + '</span></div>' +
 '<div class="stat-attr-pool">' +
-  '<div class="stat-attr-label"><span>Пул очков</span><span><b>' + st.attributePoints + '</b> / ' + ATTR_POOL_THRESHOLD + '</span></div>' +
-  '<div class="stat-attr-bar">' + segmentsHtml + '</div>' +
-  '<div class="stat-attr-hint">Растёт при повышении ранга карточек ' + st.name + '</div>' +
+  '<div class="stat-attr-label"><span>Развитие</span><span><b>' + st.attributePoints + '</b> / ' + getStatThreshold(st.value) + '</span></div>' +
+  '<div class="stat-attr-bar"><div class="stat-attr-progress" style="width:' + poolPct + '%"></div></div>' +
+  '<div class="stat-attr-hint">Растёт от выполнения карточек ' + st.icon + '</div>' +
 '</div>';
 grid.appendChild(el);
 });
@@ -452,18 +457,15 @@ label.innerHTML = '<span>Атрибут</span><span><b>' + stat.value + '</b> / 
 }
 const poolEl = document.querySelector('#stat-' + statKey + ' .stat-attr-bar');
 if (poolEl) {
-let segmentsHtml = '';
-for (let i = 0; i < ATTR_POOL_THRESHOLD; i++) {
-segmentsHtml += '<div class="stat-attr-segment ' + (i < stat.attributePoints ? 'filled' : '') + '"></div>';
-}
-poolEl.innerHTML = segmentsHtml;
+var poolPct2 = Math.min(100, (stat.attributePoints / getStatThreshold(stat.value)) * 100);
+poolEl.innerHTML = '<div class="stat-attr-progress" style="width:' + poolPct2 + '%"></div>';
 }
 const poolLabelEl = document.querySelector('#stat-' + statKey + ' .stat-attr-label');
 if (poolLabelEl) {
-poolLabelEl.innerHTML = '<span>Пул очков</span><span><b>' + stat.attributePoints + '</b> / ' + ATTR_POOL_THRESHOLD + '</span>';
+poolLabelEl.innerHTML = '<span>Развитие</span><span><b>' + stat.attributePoints + '</b> / ' + getStatThreshold(stat.value) + '</span>';
 }
 }
-function calcMaxHp() { return 100 + Math.max(0, (HERO.level - 1) * 5) + STATS.end.value; }
+function calcMaxHp() { return 80 + Math.max(0, (HERO.level - 1) * 6) + STATS.end.value * 2; }
 function updateHeroUI() {
 const newMaxHp = calcMaxHp();
 if (newMaxHp !== HERO.maxHp) {
@@ -564,14 +566,10 @@ ov.classList.add('show'); bn.classList.add('show');
 const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 burstParticles(cx, cy, 100, { color: '#fbbf24', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12, life: 1.3 });
 screenShake(8, 400);
-Object.keys(STATS).forEach(k => {
-STATS[k].value = Math.min(STATS[k].max, STATS[k].value + 1);
-updateStatUI(k);
-});
 HERO.maxHp = calcMaxHp();
-const hpGain = HERO.maxHp - HERO.hp;
-HERO.hp = HERO.maxHp;
-document.getElementById('lvlSub2').textContent = '+' + hpGain + ' HP · Все статы +1';
+var healAmount = Math.floor(HERO.maxHp * 0.5);
+HERO.hp = Math.min(HERO.maxHp, HERO.hp + healAmount);
+document.getElementById('lvlSub2').textContent = '+' + healAmount + ' HP · maxHP вырос';
 var avatarWrap = document.querySelector('.hero-avatar-wrap');
 if (avatarWrap) { avatarWrap.classList.add('levelup-glow'); setTimeout(function() { avatarWrap.classList.remove('levelup-glow'); }, 2000); }
 renderStats();
@@ -595,7 +593,7 @@ document.getElementById('rankupCardName').textContent = card.name;
 const st = STATS[card.stat];
 const poolHint = document.getElementById('rankupAttrHint');
 if (st) {
-poolHint.textContent = '+1 к пулу ' + st.name + ' (' + st.attributePoints + '/' + ATTR_POOL_THRESHOLD + ')';
+poolHint.textContent = '+1 к развитию ' + st.name + ' (' + st.attributePoints + '/' + getStatThreshold(st.value) + ')';
 poolHint.style.display = 'inline-block';
 } else {
 poolHint.style.display = 'none';
@@ -815,7 +813,8 @@ spiritSay('«Невозможное совершено. Твоя душа ста
 if (boss.type === 'chimera') window._bossKills.chimera++;
 else if (boss.type === 'social') window._bossKills.social++;
 else window._bossKills.snake++;
-addXpReward(1000);
+var bossKillXp = boss.type === 'chimera' ? 1600 : boss.type === 'social' ? 1200 : 800;
+addXpReward(bossKillXp);
 dropRandomLoot(window.innerWidth / 2, window.innerHeight / 2);
 dropRandomLoot(window.innerWidth / 2 + 50, window.innerHeight / 2 - 50);
 // Постепенное затухание трещин и крови
@@ -923,7 +922,8 @@ saveGameState();
 }
 function endBossTurn() {
 if (bossDefeated) { showToast('☠ Босс повержен', 'Бой окончен', 'save'); return; }
-var rageDmg = bossRagePoints * 15;
+var rageMult = 8 + bossStage * 4;
+var rageDmg = bossRagePoints * rageMult;
 var boss = getCurrentBoss();
 if (rageDmg > 0) {
 HERO.hp = Math.max(1, HERO.hp - rageDmg);
@@ -993,13 +993,13 @@ area.innerHTML =
 '</div>' +
 '<div style="flex:1; text-align:center; padding:10px; background:rgba(199,62,77,0.1); border:1px solid rgba(199,62,77,0.3); border-radius:4px;">' +
 '<div style="font-size:24px; color:var(--blood-bright); font-weight:bold;">' + bossRagePoints + '</div>' +
-'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">💢 ОЧКИ ЯРОСТИ (' + (bossRagePoints * 15) + ' урона)</div>' +
+'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">💢 ОЧКИ ЯРОСТИ (' + (bossRagePoints * (8 + bossStage * 4)) + ' урона)</div>' +
 '</div>' +
 '</div>' +
 (canAttack ?
 '<button class="demo-btn primary" data-action="attack-boss" style="width:100%; margin-bottom:8px; font-size:16px;">⚔ АТАКОВАТЬ (-1 ОД)</button>' : '') +
 (canEnd ?
-'<button class="demo-btn" data-action="end-boss-turn" style="width:100%; margin-bottom:8px; font-size:14px; border-color:var(--blood-bright); color:var(--blood-bright);">💢 Завершить ход (принять удар: -' + (bossRagePoints * 15) + ' HP)</button>' : '') +
+'<button class="demo-btn" data-action="end-boss-turn" style="width:100%; margin-bottom:8px; font-size:14px; border-color:var(--blood-bright); color:var(--blood-bright);">💢 Завершить ход (принять удар: -' + (bossRagePoints * (8 + bossStage * 4)) + ' HP)</button>' : '') +
 (ap === 0 && !canEnd && !bossDefeated ?
 '<div style="text-align:center; padding:8px; color:var(--text-dim); font-size:11px;">ОД закончились. Заверши ход, чтобы босс ответил.</div>' : '');
 }
@@ -1022,15 +1022,15 @@ eye.style.transform = 'translate(' + (Math.cos(a) * d) + 'px, ' + (Math.sin(a) *
 });
 });
 const ARTIFACTS = {
-swordDiscipline: { id: 'swordDiscipline', name: 'Меч Дисциплины', icon: '⚔', rank: 'A', slot: 'weapon', type: 'Оружие', category: 'weapon', lore: 'Выкован из стали тех обещаний, что ты сдержал.', bonuses: [{ stat: 'str', value: 5, label: '⚔ Сила' }, { stat: 'wil', value: 2, label: '🧘 Воля' }], special: '+10% к урону по боссам' },
-shieldWill: { id: 'shieldWill', name: 'Щит Воли', icon: '🛡', rank: 'A', slot: 'shield', type: 'Щит', category: 'armor', lore: 'Тяжесть этого щита — вес твоих решений.', bonuses: [{ stat: 'end', value: 6, label: '🛡 Стойкость' }, { stat: 'wil', value: 3, label: '🧘 Воля' }], special: 'Защита стрика +15%' },
-amuletFocus: { id: 'amuletFocus', name: 'Амулет Фокуса', icon: '💠', rank: 'S', slot: 'amulet', type: 'Амулет', category: 'accessory', lore: 'Кристалл, в котором застыло мгновение полной концентрации.', bonuses: [{ stat: 'int', value: 8, label: '🧠 Интеллект' }, { stat: 'wil', value: 3, label: '🧘 Воля' }], special: '+15% XP за привычки' },
-ringCharisma: { id: 'ringCharisma', name: 'Кольцо Обаяния', icon: '💍', rank: 'B', slot: 'ring1', type: 'Кольцо', category: 'accessory', lore: 'Тёплое на ощупь. Люди оборачиваются, когда ты проходишь.', bonuses: [{ stat: 'cha', value: 5, label: '🎭 Харизма' }], special: 'Шанс крита +5%' },
-bootsWanderer: { id: 'bootsWanderer', name: 'Сапоги Странника', icon: '👢', rank: 'B', slot: 'boots', type: 'Обувь', category: 'armor', lore: 'Сто тысяч шагов впитались в эту кожу.', bonuses: [{ stat: 'agi', value: 5, label: '⚡ Ловкость' }, { stat: 'end', value: 2, label: '🛡 Стойкость' }], special: null },
-crownArchon: { id: 'crownArchon', name: 'Корона Архонта', icon: '👑', rank: 'S', slot: 'head', type: 'Головной убор', category: 'armor', lore: 'Не для слабых. Надевший её уже не сможет вернуться.', bonuses: [{ stat: 'str', value: 3, label: '⚔ Сила' }, { stat: 'end', value: 3, label: '🛡 Стойкость' }, { stat: 'int', value: 3, label: '🧠 Интеллект' }, { stat: 'cha', value: 3, label: '🎭 Харизма' }, { stat: 'wil', value: 3, label: '🧘 Воля' }, { stat: 'agi', value: 3, label: '⚡ Ловкость' }], special: 'Все атрибуты +3' },
-capeShadows: { id: 'capeShadows', name: 'Плащ Теней', icon: '🧣', rank: 'A', slot: 'cape', type: 'Плащ', category: 'armor', lore: 'Соткан из тех ночей, когда ты не сдался.', bonuses: [{ stat: 'wil', value: 5, label: '🧘 Воля' }, { stat: 'agi', value: 3, label: '⚡ Ловкость' }], special: 'Невидимость от искушений' },
-chestVirtue: { id: 'chestVirtue', name: 'Кираса Доблести', icon: '🧥', rank: 'A', slot: 'chest', type: 'Нагрудник', category: 'armor', lore: 'Каждая пластина — выигранная битва с собой.', bonuses: [{ stat: 'end', value: 8, label: '🛡 Стойкость' }, { stat: 'str', value: 3, label: '⚔ Сила' }], special: null },
-ringInsight: { id: 'ringInsight', name: 'Кольцо Прозрения', icon: '💎', rank: 'A', slot: 'ring2', type: 'Кольцо', category: 'accessory', lore: 'В его грани отражаются мысли, что ты не успел забыть.', bonuses: [{ stat: 'int', value: 5, label: '🧠 Интеллект' }, { stat: 'cha', value: 2, label: '🎭 Харизма' }], special: null },
+swordDiscipline: { id: 'swordDiscipline', name: 'Меч Дисциплины', icon: '⚔', rank: 'A', slot: 'weapon', type: 'Оружие', category: 'weapon', reqLevel: 6, lore: 'Выкован из стали тех обещаний, что ты сдержал.', bonuses: [{ stat: 'str', value: 5, label: '⚔ Сила' }, { stat: 'wil', value: 2, label: '🧘 Воля' }], special: '+10% к урону по боссам' },
+shieldWill: { id: 'shieldWill', name: 'Щит Воли', icon: '🛡', rank: 'A', slot: 'shield', type: 'Щит', category: 'armor', reqLevel: 6, lore: 'Тяжесть этого щита — вес твоих решений.', bonuses: [{ stat: 'end', value: 6, label: '🛡 Стойкость' }, { stat: 'wil', value: 3, label: '🧘 Воля' }], special: 'Защита стрика +15%' },
+amuletFocus: { id: 'amuletFocus', name: 'Амулет Фокуса', icon: '💠', rank: 'S', slot: 'amulet', type: 'Амулет', category: 'accessory', reqLevel: 10, lore: 'Кристалл, в котором застыло мгновение полной концентрации.', bonuses: [{ stat: 'int', value: 8, label: '🧠 Интеллект' }, { stat: 'wil', value: 3, label: '🧘 Воля' }], special: '+15% XP за привычки' },
+ringCharisma: { id: 'ringCharisma', name: 'Кольцо Обаяния', icon: '💍', rank: 'B', slot: 'ring1', type: 'Кольцо', category: 'accessory', reqLevel: 3, lore: 'Тёплое на ощупь. Люди оборачиваются, когда ты проходишь.', bonuses: [{ stat: 'cha', value: 5, label: '🎭 Харизма' }], special: 'Шанс крита +5%' },
+bootsWanderer: { id: 'bootsWanderer', name: 'Сапоги Странника', icon: '👢', rank: 'B', slot: 'boots', type: 'Обувь', category: 'armor', reqLevel: 3, lore: 'Сто тысяч шагов впитались в эту кожу.', bonuses: [{ stat: 'agi', value: 5, label: '⚡ Ловкость' }, { stat: 'end', value: 2, label: '🛡 Стойкость' }], special: null },
+crownArchon: { id: 'crownArchon', name: 'Корона Архонта', icon: '👑', rank: 'S', slot: 'head', type: 'Головной убор', category: 'armor', reqLevel: 10, lore: 'Не для слабых. Надевший её уже не сможет вернуться.', bonuses: [{ stat: 'str', value: 3, label: '⚔ Сила' }, { stat: 'end', value: 3, label: '🛡 Стойкость' }, { stat: 'int', value: 3, label: '🧠 Интеллект' }, { stat: 'cha', value: 3, label: '🎭 Харизма' }, { stat: 'wil', value: 3, label: '🧘 Воля' }, { stat: 'agi', value: 3, label: '⚡ Ловкость' }], special: 'Все атрибуты +3' },
+capeShadows: { id: 'capeShadows', name: 'Плащ Теней', icon: '🧣', rank: 'A', slot: 'cape', type: 'Плащ', category: 'armor', reqLevel: 6, lore: 'Соткан из тех ночей, когда ты не сдался.', bonuses: [{ stat: 'wil', value: 5, label: '🧘 Воля' }, { stat: 'agi', value: 3, label: '⚡ Ловкость' }], special: 'Невидимость от искушений' },
+chestVirtue: { id: 'chestVirtue', name: 'Кираса Доблести', icon: '🧥', rank: 'A', slot: 'chest', type: 'Нагрудник', category: 'armor', reqLevel: 6, lore: 'Каждая пластина — выигранная битва с собой.', bonuses: [{ stat: 'end', value: 8, label: '🛡 Стойкость' }, { stat: 'str', value: 3, label: '⚔ Сила' }], special: null },
+ringInsight: { id: 'ringInsight', name: 'Кольцо Прозрения', icon: '💎', rank: 'A', slot: 'ring2', type: 'Кольцо', category: 'accessory', reqLevel: 6, lore: 'В его грани отражаются мысли, что ты не успел забыть.', bonuses: [{ stat: 'int', value: 5, label: '🧠 Интеллект' }, { stat: 'cha', value: 2, label: '🎭 Харизма' }], special: null },
 };
 const INVENTORY = {
 backpack: [],
@@ -1149,6 +1149,12 @@ item.bonuses.map(b => '<div class="item-bonus"><span class="item-bonus-name">' +
 function equipItem(uid) {
 const item = INVENTORY.backpack.find(i => i.uid === uid);
 if (!item) return;
+var reqLevel = item.reqLevel || 1;
+if (HERO.level < reqLevel) {
+showToast('⚠ Недостаточный уровень', 'Требуется уровень ' + reqLevel + ' для «' + item.name + '»', 'blood');
+sfxError(); haptic('warning');
+return;
+}
 let targetSlot = item.slot;
 if (item.slot === 'ring1' && INVENTORY.equipped.ring1 && !INVENTORY.equipped.ring2) targetSlot = 'ring2';
 if (item.slot === 'ring2' && INVENTORY.equipped.ring2 && !INVENTORY.equipped.ring1) targetSlot = 'ring1';
@@ -1249,9 +1255,9 @@ return '<div class="total-bonus-row ' + (v > 0 ? 'has-bonus' : '') + '"><span>' 
 }
 renderBackpack(); renderSlots(); updateTotalBonuses();
 const GOAL_REWARDS = {
-short:  { xp: 20, dmg: 5, statXp: 1, label: 'Краткая' },
-medium: { xp: 50, dmg: 12, statXp: 2, label: 'Средняя' },
-long:   { xp: 120, dmg: 25, statXp: 5, label: 'Долгая' },
+short:  { xp: 30, dmg: 5, statXp: 1, label: 'Краткая' },
+medium: { xp: 80, dmg: 12, statXp: 2, label: 'Средняя' },
+long:   { xp: 200, dmg: 25, statXp: 5, label: 'Долгая' },
 };
 let GOALS = [], goalIdCounter = 1, selectedGoalType = 'short', selectedGoalStat = 'str', currentGoalFilter = 'all';
 try { const saved = localStorage.getItem('neurodeck_goals'); if (saved) { const p = JSON.parse(saved); GOALS = p.goals || []; goalIdCounter = p.counter || 1; } } catch (e) {}
@@ -1505,7 +1511,7 @@ if (!name) { showToast('⚠ Ошибка', 'Введите название', 'b
 const time = document.getElementById('forgeTime').value;
 const duration = parseInt(document.getElementById('forgeDuration').value) || 15;
 const rank = document.getElementById('forgeRank').value;
-const masteryThreshold = Math.max(2, parseInt(document.getElementById('forgeMastery').value) || 7);
+const masteryThreshold = Math.max(2, parseInt(document.getElementById('forgeMastery').value) || 5);
 const st = STATS[selectedStat];
 const card = {
 id: forgedIdCounter++, name, meta: st.icon + ' ' + duration + ' мин · ' + time,
@@ -1734,7 +1740,7 @@ document.getElementById('bossLoreText').innerHTML =
 '<b style="color:var(--gold-bright)">⚔ Пт–Вс: Схватка</b><br>' +
 '• Трать ОД на атаки вручную<br>' +
 '• Когда ОД = 0 → <b>Завершить ход</b><br>' +
-'• Босс бьёт на <b style="color:var(--blood-bright)">' + (bossRagePoints * 15) + ' HP</b> (Ярость × 15)<br>' +
+'• Босс бьёт на <b style="color:var(--blood-bright)">' + (bossRagePoints * (8 + bossStage * 4)) + ' HP</b> (Ярость × ' + (8 + bossStage * 4) + ')<br>' +
 '• HP ≤ 0 → становишься Полым, случайная карточка теряет мастерство<br><br>' +
 'Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.';
 }
@@ -2074,7 +2080,7 @@ HERO.consecutivePerfectDays = 0;
 }
 if (HERO.isHollow && HERO.consecutivePerfectDays >= 3) {
 HERO.isHollow = false;
-HERO.hp = Math.floor(HERO.maxHp * 0.5);
+HERO.hp = Math.floor(HERO.maxHp * 0.3);
 showToast('✨ Искупление совершено!', 'Вы вернули свою человечность. HP восстановлено.', 'crit');
 spiritSay('«Тьма отступает. Ты снова чувствуешь тепло.»');
 screenShake(8, 400);
