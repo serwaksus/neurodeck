@@ -170,16 +170,16 @@ if (!card.firstCompletedAt) return 0;
 const diffMs = Date.now() - card.firstCompletedAt;
 return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
-function getAdaptationMultiplier(card) {
-const days = card.daysActive || 0;
-if (days < 7) return 1.0;
-if (days < 15) return 0.5;
-return 0.1;
+function getStreakBonus(card) {
+var streak = card.streak || 0;
+return 1.0 + Math.min(1.0, streak * 0.05);
 }
-function getAdaptationLabel(mult) {
-if (mult >= 1.0) return { label: '100%', cls: 'adapt-100' };
-if (mult >= 0.5) return { label: '50%', cls: 'adapt-50' };
-return { label: '10%', cls: 'adapt-10' };
+function getStreakBonusLabel(mult) {
+var pct = Math.round((mult - 1.0) * 100);
+if (mult >= 2.0) return { label: '🔥 ×2.0 MAX', cls: 'streak-max' };
+if (mult >= 1.5) return { label: '🔥 ×' + mult.toFixed(2) + ' (+' + pct + '%)', cls: 'streak-high' };
+if (mult >= 1.2) return { label: '🔥 ×' + mult.toFixed(2) + ' (+' + pct + '%)', cls: 'streak-mid' };
+return { label: '🔥 ×' + mult.toFixed(2), cls: 'streak-low' };
 }
 function renderCards() {
 const grid = document.getElementById('cardGrid');
@@ -199,8 +199,8 @@ if (typeof card.masteryThreshold !== 'number') card.masteryThreshold = 7;
 if (typeof card.totalCompletions !== 'number') card.totalCompletions = 0;
 if (typeof card.daysActive !== 'number') card.daysActive = 0;
 card.daysActive = getCardDaysActive(card);
-const adaptationMult = getAdaptationMultiplier(card);
-const adaptInfo = getAdaptationLabel(adaptationMult);
+const streakMult = getStreakBonus(card);
+const streakInfo = getStreakBonusLabel(streakMult);
 const st = STATS[card.stat] || STATS.str;
 const progressPct = Math.min(100, Math.round((card.mastery / card.masteryThreshold) * 100));
 const el = document.createElement('div');
@@ -228,7 +228,7 @@ oathBadge +
   '<span class="card-stat-tag" style="color: ' + st.color + '; border-color: ' + st.color + '40;">' +
     '<span>' + st.icon + '</span> ' + st.name +
   '</span>' +
-  '<span class="card-adaptation-tag ' + adaptInfo.cls + '">⚡ ' + adaptInfo.label + '</span>' +
+  '<span class="card-adaptation-tag ' + streakInfo.cls + '">' + streakInfo.label + '</span>' +
 '</div>' +
 '<div class="card-stats-line">Выполнено: <b>' + (card.totalCompletions || 0) + '</b> · 🔥 <b>' + (card.streak || 0) + '</b></div>' +
 '<div class="card-mastery">Мастерство: <b>' + card.mastery + '/' + card.masteryThreshold + '</b> до ранга ' + nextRankText + '</div>' +
@@ -292,7 +292,7 @@ const rect = btn.getBoundingClientRect();
 const x = rect.left + rect.width/2, y = rect.top + rect.height/2;
 burstParticles(x, y, 28, { color: '#f4c896', speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
 card.daysActive = getCardDaysActive(card);
-const adaptationMult = getAdaptationMultiplier(card);
+const streakMult = getStreakBonus(card);
 if (!card.firstCompletedAt) {
 card.firstCompletedAt = Date.now();
 card.daysActive = 0;
@@ -301,12 +301,11 @@ const baseCardXp = 15;
 const gear = getTotalGearBonuses();
 const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
-const finalXp = Math.round(baseCardXp * adaptationMult * heroIntBonus);
+const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus);
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
-const masteryGain = adaptationMult;
-card.mastery += masteryGain;
+card.mastery += 1;
 card.totalCompletions = (card.totalCompletions || 0) + 1;
 card.streak = (card.streak || 0) + 1;
 card.lastCompletedAt = Date.now();
@@ -345,8 +344,8 @@ renderCards();
 updateHeroUI();
 renderStats();
 if (!rankUpHappened) {
-const adaptTxt = adaptationMult < 1 ? ' (адаптация ' + Math.round(adaptationMult*100) + '%)' : '';
-showToast('✅ Выполнено', '+' + finalXp + ' XP · +1 ОД' + adaptTxt + ' · +' + masteryGain.toFixed(1) + ' Мастерства');
+const streakBonusTxt = streakMult > 1.0 ? ' (🔥 ×' + streakMult.toFixed(2) + ')' : '';
+showToast('✅ Выполнено', '+' + finalXp + ' XP' + streakBonusTxt + ' · +1 ОД · 🔥 ' + card.streak + ' дней');
 sfxHit(); haptic('light');
 }
 saveGameState();
@@ -637,17 +636,17 @@ document.getElementById('editCardMastery').value = card.masteryThreshold;
 document.querySelectorAll('#editStatChips .stat-chip').forEach(c => {
 c.classList.toggle('selected', c.dataset.stat === card.stat);
 });
-const adaptationMult = getAdaptationMultiplier(card);
-const adaptInfo = getAdaptationLabel(adaptationMult);
+const streakMult1 = getStreakBonus(card);
+const streakInfo1 = getStreakBonusLabel(streakMult1);
 const hintEl = document.getElementById('editCardAdaptHint');
-hintEl.innerHTML = 'Текущая адаптация: <b style="color:var(--blood-bright)">' + adaptInfo.label + '</b>. Усложни карточку (увеличь время или порог), чтобы вернуть 100%!';
+hintEl.innerHTML = '🔥 Бонус стика: <b style="color:var(--gold-bright)">' + streakInfo1.label + '</b>. Каждый день выполнения = +5% XP (макс ×2.0). Пропуск обнуляет стик!';
 const warningEl = document.getElementById('editCardWarning');
-if (adaptationMult < 1.0) {
+if (streakMult1 > 1.0) {
 warningEl.style.display = 'block';
-warningEl.innerHTML = '⚠ Ранг повышен! Текущая адаптация ' + adaptInfo.label + ' — усложни карточку, чтобы вернуть 100% эффективности!';
+warningEl.innerHTML = '⚠ Ранг повышен! Усложни карточку (увеличь время/порог). Текущий стик: <b>' + (card.streak || 0) + ' дней</b>.';
 } else {
 warningEl.style.display = 'block';
-warningEl.innerHTML = '⚠ Ранг повышен! Усложни карточку, чтобы предотвратить снижение эффективности в будущем.';
+warningEl.innerHTML = '⚠ Ранг повышен! Усложни карточку для нового вызова.';
 }
 document.getElementById('editCardModal').classList.add('show');
 }
@@ -663,10 +662,10 @@ function openEditCardDirect(cardId) {
     document.querySelectorAll('#editStatChips .stat-chip').forEach(c => {
         c.classList.toggle('selected', c.dataset.stat === card.stat);
     });
-    const adaptationMult = getAdaptationMultiplier(card);
-    const adaptInfo = getAdaptationLabel(adaptationMult);
+const streakMult = getStreakBonus(card);
+const streakInfo = getStreakBonusLabel(streakMult);
     const hintEl = document.getElementById('editCardAdaptHint');
-    hintEl.innerHTML = 'Текущая адаптация: <b style="color:var(--blood-bright)">' + adaptInfo.label + '</b>. Усложни карточку (увеличь время или порог), чтобы вернуть 100%!';
+    hintEl.innerHTML = '🔥 Бонус стика: <b style="color:var(--gold-bright)">' + streakInfo.label + '</b>. Каждый день выполнения = +5% XP (макс ×2.0). Пропуск обнуляет стик!';
     const warningEl = document.getElementById('editCardWarning');
     warningEl.style.display = 'none';
     document.getElementById('editCardModal').classList.add('show');
@@ -695,7 +694,6 @@ card.meta = st.icon + ' ' + newDuration + ' мин · ' + newTime;
 card.masteryThreshold = newMastery;
 if (card.meta !== oldMeta || newStat !== oldStat) {
 card.firstCompletedAt = Date.now();
-card.daysActive = 0;
 }
 closeEditCard();
 renderCards();

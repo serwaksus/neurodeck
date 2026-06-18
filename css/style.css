@@ -162,9 +162,10 @@ background: rgba(0,0,0,0.4);
 border: 1px solid var(--border);
 margin-left: 4px;
 }
-.card-adaptation-tag.adapt-100 { color: var(--green); border-color: rgba(52, 211, 153, 0.4); }
-.card-adaptation-tag.adapt-50 { color: var(--yellow); border-color: rgba(251, 191, 36, 0.4); }
-.card-adaptation-tag.adapt-10 { color: var(--blood-bright); border-color: rgba(199, 62, 77, 0.4); }
+.card-adaptation-tag.streak-max { color: var(--gold-bright); border-color: rgba(251, 191, 36, 0.5); }
+.card-adaptation-tag.streak-high { color: var(--green); border-color: rgba(52, 211, 153, 0.4); }
+.card-adaptation-tag.streak-mid { color: var(--yellow); border-color: rgba(251, 191, 36, 0.4); }
+.card-adaptation-tag.streak-low { color: var(--text-dim); border-color: var(--border); }
 .card-mastery {
 position: absolute; bottom: 30px; left: 12px; right: 12px;
 font-size: 9px; color: var(--text-dim);
