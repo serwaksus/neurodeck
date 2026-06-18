@@ -71,9 +71,8 @@ const HERO = {
 name: 'Странник', title: '«Тот, кто только начал путь»',
 level: 1, xp: 0, xpToNext: 100, totalXp: 0,
 hp: 100, maxHp: 100, isHollow: false,
-consecutivePerfectDays: 0, estus: 3,
-lastEstusReset: new Date().getMonth(),
-estusUsedToday: false, dailyCompletions: 0, dailySkips: 0, actionPoints: 0
+consecutivePerfectDays: 0,
+dailyCompletions: 0, dailySkips: 0, actionPoints: 0
 };
 const STATS = {
 str: { name: 'Сила',      icon: '⚔', desc: 'Урон',       color: '#c73e4d', dark: '#8b2635', value: 3, max: 100, attributePoints: 0 },
@@ -85,7 +84,6 @@ agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color
 };
 const BASE_DAMAGE = 5;
 const LOOT_CHANCE = 0.08;
-const BOSS_HEAL_ON_FAIL = 8;
 const RANK_COLORS = {
 C: { color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.15)', glow: 'rgba(156, 163, 175, 0.5)' },
 B: { color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.15)',  glow: 'rgba(96, 165, 250, 0.5)' },
@@ -149,7 +147,6 @@ el.classList.add('active');
 currentFilter = el.dataset.filter;
 renderBackpack();
 break;
-case 'drink-estus': drinkEstus(); break;
 case 'attack-boss': attackBoss(); break;
 case 'end-boss-turn': endBossTurn(); break;
 case 'complete-card': completeCard(e, parseInt(el.dataset.id)); break;
@@ -514,10 +511,6 @@ if (hpPct <= 0) warnEl.innerHTML = '<span class="hp-warn" style="color: var(--bl
 else if (hpPct <= 30) warnEl.innerHTML = '<span class="hp-warn">⚠ Критическое состояние</span>';
 else warnEl.textContent = '';
 document.getElementById('heroEndStat').textContent = STATS.end.value;
-document.getElementById('estusCount').textContent = HERO.estus;
-const estusBtn = document.getElementById('estusBtn');
-if (HERO.estusUsedToday || HERO.estus <= 0) estusBtn.disabled = true;
-else estusBtn.disabled = false;
 updateHeroSummary(); updateDamageInfo(); updatePunishCountdown();
 updateBossDisplay();
 }
@@ -548,7 +541,7 @@ document.getElementById('damageInfo').innerHTML =
 '+ снаряга: <b style="color:var(--gold-bright)">+' + Math.floor(gear.str/5) + '</b><br>' +
 'Шанс крита: <b style="color:var(--gold-bright)">' + Math.round(critChance*100) + '%</b><br>' +
 (HERO.isHollow ? '<b style="color:var(--blood-bright)">Полый: урон -50%</b><br>' : '') +
-'Итого: <b style="color:var(--blood-bright)">' + total + '</b> за ✓';
+'Итого: <b style="color:var(--blood-bright)">' + total + '</b> за атаку (фаза схватки)';
 }
 function checkHeroLevelUp() {
 while (HERO.xp >= HERO.xpToNext) {
@@ -714,6 +707,7 @@ let bossStage = 0;
 let bossDefeated = false;
 let chimeraShield = 5;
 let bossRagePoints = 0;
+var lastWeekReset = getThisMondayKey();
 window._bossKills = { snake: 0, social: 0, chimera: 0 };
 function getBattlePhase() {
 var msk = new Date(Date.now() + 3 * 3600000);
@@ -1429,7 +1423,15 @@ function toggleGoalStep(id, stepIdx) {
     if (step.done) {
         step.done = false;
         goal.currentStep = goal.steps.filter(function(s) { return s.done; }).length;
+        var partialXp = Math.round(goal.xp / goal.totalSteps / 2);
+        HERO.xp = Math.max(0, HERO.xp - partialXp);
+        HERO.totalXp = Math.max(0, HERO.totalXp - partialXp);
+        if (goal.stat && STATS[goal.stat]) {
+            STATS[goal.stat].attributePoints = Math.max(0, (STATS[goal.stat].attributePoints || 0) - 1);
+        }
+        updateHeroUI();
         renderGoals();
+        showToast('↩ Шаг отменён', '-' + partialXp + ' XP · -1 пул ' + (STATS[goal.stat] ? STATS[goal.stat].name : ''), 'blood');
         saveGameState();
         return;
     }
@@ -1475,9 +1477,9 @@ if (goal.stat && STATS[goal.stat]) {
 STATS[goal.stat].attributePoints = (STATS[goal.stat].attributePoints || 0) + goal.statBonus;
 checkAttributePoolGrowth(goal.stat);
 }
-    changeBossHp(-goal.dmg);
+    HERO.actionPoints = (HERO.actionPoints || 0) + goal.dmg;
     const statIcon = goal.stat && STATS[goal.stat] ? STATS[goal.stat].icon + ' ' + STATS[goal.stat].name : '';
-    showToast('🏆 Цель достигнута!', '+' + goal.xp + ' XP · -' + goal.dmg + ' HP' + (statIcon ? ' · +' + goal.statBonus + ' к пулу ' + statIcon : ''), 'crit');
+    showToast('🏆 Цель достигнута!', '+' + goal.xp + ' XP · +' + goal.dmg + ' ОД' + (statIcon ? ' · +' + goal.statBonus + ' к пулу ' + statIcon : ''), 'crit');
 spiritSay('«' + goal.name + '... Ты стал сильнее.»');
 renderGoals();
 saveGameState();
@@ -1709,20 +1711,6 @@ dustParticles.forEach(function(d) { d.color = theme.particleColor; });
 document.querySelectorAll('.boss-sprite').forEach(function(s) {
 s.style.filter = 'hue-rotate(' + (theme.hue - 25) + 'deg)';
 });
-}
-function drinkEstus() {
-if (HERO.estus > 0 && !HERO.estusUsedToday) {
-HERO.estus--;
-HERO.estusUsedToday = true;
-updateHeroUI();
-showToast('🧪 Эстус выпит', 'Босс не нанесёт урон сегодня в 23:00', 'save');
-spiritSay('«Теплое пламя наполняет тебя решимостью...»');
-saveGameState();
-} else if (HERO.estusUsedToday) {
-showToast('⚠ Уже выпито сегодня', 'Эстус действует только раз в день', 'blood');
-} else {
-showToast('⚠ Нет фляг', 'Дождитесь следующего месяца', 'blood');
-}
 }
 const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
 function getMSKDate(ts) { return new Date((ts || Date.now()) + MSK_OFFSET_MS); }
@@ -2020,7 +2008,6 @@ function onBloodOathSkip(cardId) {
 
 function checkBloodOathDaily() {
     if (!bloodOath || bloodOath.status !== 'active') return;
-    var yesterdayKey = bloodOath.lastCompletedDay;
     var todayKey = getMSKDayKey();
     var card = findCard(bloodOath.cardId);
     if (!card) { bloodOath = null; return; }
@@ -2096,13 +2083,13 @@ screenShake(8, 400);
 }
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
-HERO.estusUsedToday = false;
 chimeraShield = 5;
-const currentMonth = new Date().getMonth();
-if (currentMonth !== HERO.lastEstusReset) {
-HERO.estus = 3;
-HERO.lastEstusReset = currentMonth;
-showToast('🧪 Эстус обновлён', 'Фляги восстановлены на новый месяц', 'save');
+var currentMonday = getThisMondayKey();
+if (lastWeekReset !== currentMonday) {
+HERO.actionPoints = 0;
+bossRagePoints = 0;
+lastWeekReset = currentMonday;
+showToast('🗓 Новая неделя', 'Очки действия и ярости сброшены', 'save');
 }
 FORGED.forEach(c => {
 if (c.firstCompletedAt) {
@@ -2162,7 +2149,7 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 const snapshot = {
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, bossRagePoints: bossRagePoints, savedAt: Date.now()
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, bossRagePoints: bossRagePoints, lastWeekReset: lastWeekReset, savedAt: Date.now()
 };
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
@@ -2471,18 +2458,17 @@ var now = Date.now();
 var changed = false;
 GOALS.forEach(function(goal) {
 if (goal.completed || goal.failed || !goal.deadline) return;
-if (now >= goal.deadline) {
-goal.failed = true;
-changed = true;
-var dmg = goal.dmg * 2;
-HERO.hp = Math.max(0, HERO.hp - dmg);
-screenShake(10, 600);
-spawnBloodRain(20);
-sfxFail(); haptic('error');
-showToast('💀 Цель провалена!', '«' + goal.name + '» — треснула. -' + dmg + ' HP', 'blood');
-spiritSay('«Обещание разбилось о камень реальности...»');
-sfxBossHit();
-}
+        if (now >= goal.deadline) {
+            goal.failed = true;
+            changed = true;
+            var rageGain = goal.dmg;
+            bossRagePoints += rageGain;
+            screenShake(10, 600);
+            spawnBloodRain(20);
+            sfxFail(); haptic('error');
+            showToast('💀 Цель провалена!', '«' + goal.name + '» — треснула. +' + rageGain + ' Ярости боссу', 'blood');
+            spiritSay('«Обещание разбилось о камень реальности...»');
+        }
 });
 if (changed) {
 renderGoals();
@@ -2505,7 +2491,7 @@ return {
 v: 'nd-sync-v4', t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, bossRagePoints
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, bossRagePoints, lastWeekReset
 };
 }
 function updateCloudStatus() {
@@ -2720,7 +2706,6 @@ HERO.maxHp = Math.max(1, HERO.maxHp || 1);
 HERO.xp = Math.max(0, HERO.xp || 0);
 HERO.xpToNext = Math.max(1, HERO.xpToNext || 1);
 HERO.level = Math.max(1, Math.min(99, HERO.level || 1));
-HERO.estus = Math.max(0, Math.min(3, HERO.estus || 0));
 }
 if (data.stats) {
 Object.keys(data.stats).forEach(k => {
@@ -2756,6 +2741,7 @@ if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 if (data.bossKills) window._bossKills = data.bossKills;
 if (data.bloodOath !== undefined) bloodOath = data.bloodOath;
 if (typeof data.bossRagePoints === 'number') bossRagePoints = data.bossRagePoints;
+if (typeof data.lastWeekReset === 'string') lastWeekReset = data.lastWeekReset;
 if (typeof HERO.actionPoints !== 'number') HERO.actionPoints = 0;
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
@@ -2959,11 +2945,11 @@ r2.setAttribute('transform', 'translate(' + (-x * 0.5) + ', ' + (-y * 0.5) + ')'
 });
 var ONBOARDING_STEPS = [
 { icon: '⚔', title: 'Добро пожаловать в NeuroDeck', text: 'Это геймифицированный трекер привычек.<br>Ты — узник подземелья. Твоё оружие — дисциплина.' },
-{ icon: '📖', title: 'Колода карточек', text: 'Каждая карточка — привычка, которую нужно выполнять ежедневно.<br>Нажми <b>✓</b> чтобы выполнить, <b>✕</b> чтобы пропустить.<br>Пропуск = босс восстанавливает HP.' },
+{ icon: '📖', title: 'Колода карточек', text: 'Каждая карточка — привычка, которую нужно выполнять ежедневно.<br>Нажми <b>✓</b> чтобы выполнить, <b>✕</b> чтобы пропустить.<br>Пропуск = босс копит <b style="color:var(--blood-bright)">Ярость</b>.' },
 { icon: '🔥', title: 'Ранги и мастерство', text: 'Выполняй карточку — растёт Мастерство.<br>При достижении порога карточка повышает ранг: C → CC → CCC → B → ... → SSS.<br>Ранг-ап = +1 к пулу атрибута.' },
-{ icon: '🐍', title: 'Босс подземелья', text: 'Каждый день в 23:00 МСК босс наказывает за невыполненные карточки и цели.<br>Выполняй — босс получает урон и трескается.<br>Победи босса — получи награду.' },
+{ icon: '🐍', title: 'Босс подземелья', text: 'Бой идёт <b>понедельно</b>:<br>⛏ <b>Пн–Чт</b> — накапливай <b style="color:#60a5fa">Очки Действия</b> за выполнение карточек.<br>⚔ <b>Пт–Вс</b> — атакуй босса вручную, тратя ОД.<br>Когда ОД = 0 — босс бьёт в ответ (Ярость × 15 HP).' },
 { icon: '👤', title: 'Герой и атрибуты', text: '5 очков пула = +1 к атрибуту.<br>Сила = урон, Интеллект = XP бонус, Харизма = шанс крита.<br>Уровень даёт +1 ко всем статам.' },
-{ icon: '🎯', title: 'Цели', text: 'Ставь цели с дедлайном: краткие (1-7 дней), средние, долгие.<br>Выполнение цели = XP + урон боссу + очки атрибута.' },
+{ icon: '🎯', title: 'Цели', text: 'Ставь цели с дедлайном и текстовыми шагами.<br>Выполнение цели = XP + Очки Действия + очки атрибута.<br>Провал по дедлайну = +Ярость боссу.' },
 { icon: '🎒', title: 'Инвентарь', text: 'Случайные артефакты падают при выполнении карточек.<br>Экипируй их для бонусов к атрибутам.<br>Все бонусы суммируются.' },
 { icon: '🚀', title: 'Начни свой побег', text: 'Ты в Камере заключенного. Выкуй первую карточку — и начни свой путь к Вратам Свободы.<br><br><span style="color:var(--gold-bright)">Да пребудет с тобой дисциплина.</span>' }
 ];

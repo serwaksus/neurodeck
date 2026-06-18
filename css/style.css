@@ -320,12 +320,6 @@ margin-top: 8px; font-style: italic;
 .hero-hp-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); animation: hpShine 2.5s infinite; }
 .hero-hp-meta { display: flex; justify-content: space-between; margin-top: 6px; font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
 .hero-hp-meta b { color: var(--blood-bright); font-weight: normal; }
-.estus-section { margin-top: 12px; padding: 10px; background: rgba(251, 146, 60, 0.1); border: 1px solid #fb923c; border-radius: 2px; display: flex; justify-content: space-between; align-items: center; }
-.estus-info { font-size: 11px; color: var(--text); letter-spacing: 1px; }
-.estus-info b { color: #fb923c; font-weight: bold; font-size: 14px; }
-.estus-btn { padding: 6px 12px; background: linear-gradient(180deg, rgba(251, 146, 60, 0.3), rgba(251, 146, 60, 0.1)); border: 1px solid #fb923c; color: #fb923c; font-family: inherit; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; border-radius: 2px; transition: all 0.2s; }
-.estus-btn:hover:not(:disabled) { background: rgba(251, 146, 60, 0.4); box-shadow: 0 0 12px rgba(251, 146, 60, 0.4); }
-.estus-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: var(--text-dim); color: var(--text-dim); }
 .atonement-bar { margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px; }
 .atonement-label { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
 .atonement-track { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; display: flex; gap: 2px; }
@@ -713,13 +707,6 @@ margin-top: 8px; font-style: italic;
 50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.3); }
 }
 .card.rankup-glow { animation: cardGlowPulse 0.6s ease-in-out 3; }
-@keyframes bossAttackFlash {
-0%, 100% { opacity: 1; }
-25% { opacity: 0.3; }
-50% { opacity: 1; }
-75% { opacity: 0.5; }
-}
-.boss-sprite.boss-attacking { animation: bossAttackFlash 0.3s ease-in-out 3; }
 @keyframes heroLevelUpGlow {
 0% { box-shadow: 0 0 0 rgba(244, 200, 150, 0); }
 50% { box-shadow: 0 0 30px rgba(244, 200, 150, 0.6), 0 0 60px rgba(251, 191, 36, 0.3); }
