@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=29">
+<link rel="stylesheet" href="css/style.css?v=30">
 </head>
 <body>
 <div class="app-wrap">
@@ -233,7 +233,7 @@
 <main class="content">
 <section class="view active" id="view-deck">
 <div class="view-title">📖 Колода</div>
-<div class="view-subtitle">Каждая выполненная привычка — шаг из тьмы. Чем дольше карточка активна, тем ниже адаптация — усложняй её!</div>
+<div id="dashboardBar" style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:4px; padding:8px 12px; margin-bottom:12px; font-size:11px; line-height:1.8;"></div>
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap;">
 <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px;">Всего карточек: <b id="deckCount" style="color: var(--gold-bright); font-weight: normal;">0</b></div>
 <button class="forge-btn" data-action="open-forge">🔨 Выковать карточку</button>
@@ -434,7 +434,44 @@
 </footer>
 </div>
 </div>
+<div class="modal-overlay" id="returnModal">
+<div class="modal">
+<div class="modal-header"><h3>📅 С возвращением</h3><button class="modal-close" data-action="close-return-modal">✕</button></div>
+<div class="modal-body"></div>
+<div class="modal-footer"><button class="demo-btn primary" data-action="close-return-modal">Продолжить</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="evolutionModal">
+<div class="modal">
+<div class="modal-header"><h3>🌟 Эволюция карточки</h3><button class="modal-close" data-action="close-evolution-modal">✕</button></div>
+<div class="modal-body">
+<div style="text-align:center; margin-bottom:16px;">Карточка <b class="evolution-card-name"></b> повысила ранг!<br>Выбери путь эволюции:</div>
+<div style="display:grid; grid-template-columns:1fr; gap:10px;">
+<div data-action="apply-evolution-depth" style="cursor:pointer; padding:14px; background:rgba(192,132,252,0.08); border:1px solid rgba(192,132,252,0.3); border-radius:4px;">
+<div style="font-size:14px; color:#c084fc; margin-bottom:4px;">🧘 Глубже</div>
+<div style="font-size:11px; color:var(--text-dim);">+50% мастерства за выполнение<br>Но XP -20%</div>
+</div>
+<div data-action="apply-evolution-frequency" style="cursor:pointer; padding:14px; background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.3); border-radius:4px;">
+<div style="font-size:14px; color:#60a5fa; margin-bottom:4px;">⚡ Чаще</div>
+<div style="font-size:11px; color:var(--text-dim);">+1 к пулу стата за каждое выполнение<br>Ускоренный рост атрибута</div>
+</div>
+<div data-action="apply-evolution-stability" style="cursor:pointer; padding:14px; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.3); border-radius:4px;">
+<div style="font-size:14px; color:#34d399; margin-bottom:4px;">🌟 Стабильнее</div>
+<div style="font-size:11px; color:var(--text-dim);">Двойная защита стрика<br>Один пропуск простителен</div>
+</div>
+</div>
+</div>
+<div class="modal-footer"><button class="demo-btn" data-action="evolution-skip">Пропустить</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="weeklyReportModal">
+<div class="modal">
+<div class="modal-header"><h3>📊 Недельный отчёт</h3><button class="modal-close" data-action="close-weekly-report">✕</button></div>
+<div class="modal-body"></div>
+<div class="modal-footer"><button class="demo-btn primary" data-action="close-weekly-report">К новой неделе</button></div>
+</div>
+</div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=29"></script>
+<script src="js/app.js?v=30"></script>
 </body>
 </html>

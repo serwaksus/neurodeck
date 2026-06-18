@@ -72,10 +72,11 @@ return RANK_PROGRESSION[idx + 1];
 }
 const HERO = {
 name: 'Странник', title: '«Тот, кто только начал путь»',
-level: 1, xp: 0, xpToNext: 100, totalXp: 0,
+level: 1, xp: 0, xpToNext: 50, totalXp: 0,
 hp: 80, maxHp: 80, isHollow: false,
 consecutivePerfectDays: 0,
-dailyCompletions: 0, dailySkips: 0, actionPoints: 0
+dailyCompletions: 0, dailySkips: 0, actionPoints: 0,
+lastSessionAt: Date.now(), dailyUniqueStats: {}, cardHistory: {}, lastWeeklyReport: null
 };
 const STATS = {
 str: { name: 'Сила',      icon: '⚔', desc: 'Урон',       color: '#c73e4d', dark: '#8b2635', value: 3, max: 100, attributePoints: 0 },
@@ -121,6 +122,14 @@ case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
 case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
+case 'close-return-modal': closeReturnModal(); break;
+case 'close-evolution-modal': closeEvolutionModal(); break;
+case 'apply-evolution-depth': applyEvolution('depth'); break;
+case 'apply-evolution-frequency': applyEvolution('frequency'); break;
+case 'apply-evolution-stability': applyEvolution('stability'); break;
+case 'evolution-skip': closeEvolutionModal(); var ecid = parseInt(document.getElementById('evolutionModal').dataset.cardId); if (ecid) openEditCardAfterRankup(ecid); break;
+case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
+case 'close-weekly-report': closeWeeklyReportModal(); break;
 case 'close-room-detail': closeRoomDetail(); break;
 case 'open-forge': openForge(); break;
 case 'close-forge': closeForge(); break;
@@ -224,6 +233,7 @@ oathBadge +
    '<div class="card-btn fail" data-action="fail-card" data-id="' + card.id + '" title="Пропустить">✕</div>' +
    '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать">✎</div>' +
    '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить">🗑</div>' +
+   (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" style="color:var(--gold-bright)">⭐</div>' : '') +
 '</div>' +
 '<div class="card-rank">' + card.rank + '</div>' +
 '<div class="card-name">' + esc(card.name) + '</div>' +
@@ -305,16 +315,24 @@ const baseCardXp = 15;
 const gear = getTotalGearBonuses();
 const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
-const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus);
+const comboMult = getComboMultiplier();
+const prestigeMult = getPrestigeXPBonus(card.stat);
+const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult);
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
-card.mastery += 1;
+card.mastery += card.evolutionPath === 'depth' ? 1.5 : 1;
 card.totalCompletions = (card.totalCompletions || 0) + 1;
 card.streak = (card.streak || 0) + 1;
 card.lastCompletedAt = Date.now();
 HERO.hp = Math.min(calcMaxHp(), HERO.hp + 1);
 HERO.dailyCompletions++;
+HERO.dailyUniqueStats = HERO.dailyUniqueStats || {};
+HERO.dailyUniqueStats[card.stat] = true;
+var todayKey = getMSKDayKey();
+HERO.cardHistory = HERO.cardHistory || {};
+HERO.cardHistory[todayKey] = HERO.cardHistory[todayKey] || {};
+HERO.cardHistory[todayKey][card.id] = true;
 if (card.stat && STATS[card.stat]) {
 STATS[card.stat].attributePoints = (STATS[card.stat].attributePoints || 0) + 1;
 checkAttributePoolGrowth(card.stat);
@@ -349,8 +367,8 @@ HERO.actionPoints = (HERO.actionPoints || 0) + 1;
 if (Math.random() < getLootChance(card)) dropRandomLoot(x, y);
 checkHeroLevelUp();
 renderCards();
+renderDashboard();
 updateHeroUI();
-renderStats();
 if (!rankUpHappened) {
 const streakBonusTxt = streakMult > 1.0 ? ' (🔥 ×' + streakMult.toFixed(2) + ')' : '';
 showToast('✅ Выполнено', '+' + finalXp + ' XP' + streakBonusTxt + ' · +1 ОД · 🔥 ' + card.streak + ' дней');
@@ -615,10 +633,11 @@ screenShake(7, 400);
 spiritSay('«' + newRank + '... ' + phrase.toLowerCase() + '.»');
 showToast('⚔ Ранг повышен!', card.name + ': ' + oldRank + ' → ' + newRank, 'crit');
 }
-setTimeout(() => {
+ setTimeout(() => {
 rankupOverlay.classList.remove('show');
 rankupBanner.classList.remove('show');
-openEditCardAfterRankup(card.id);
+if (!card.evolutionPath) { showEvolutionChoices(card); }
+else { openEditCardAfterRankup(card.id); }
 }, 2200);
 }
 let editingCardId = null;
@@ -1516,7 +1535,7 @@ const st = STATS[selectedStat];
 const card = {
 id: forgedIdCounter++, name, meta: st.icon + ' ' + duration + ' мин · ' + time,
 rank, streak: 0, stat: selectedStat, progress: 0,
-mastery: 0, masteryThreshold, totalCompletions: 0,
+mastery: 0, masteryThreshold, totalCompletions: 0, prestige: 0, evolutionPath: null,
 daysActive: 0, firstCompletedAt: null, lastCompletedAt: null
 };
 FORGED.unshift(card);
@@ -1542,6 +1561,7 @@ document.getElementById('view-' + view).classList.add('active');
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'map') renderMap(escapeProgress);
 if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); }
+if (view === 'deck') renderDashboard();
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
 if (view === 'boss') updateBossDisplay();
@@ -1819,7 +1839,9 @@ return '<div style="background: ' + rc.bg + '; border: 1px solid ' + rc.color + 
 '</div>';
 }).join('') +
 (FORGED.length === 0 ? '<div style="color: var(--text-dim); font-size: 12px;">Пока нет карточек</div>' : '') +
-'</div></div>';
+'</div></div>' +
+renderCardHeatmap() +
+renderInsights();
 }
 function buildStreakHeatmap() {
 var today = new Date();
@@ -2056,8 +2078,285 @@ function completeBloodOath() {
     showToast('🩸⚠️ КЛЯТВА ВЫПОЛНЕНА!', '+' + BLOOD_OATH_BONUS_XP + ' XP! «' + cardName + '» — ты выстоял!', 'crit');
     spiritSay('«Кровь высохла на клинке. Ты прошёл испытание. ' + cardName + ' — теперь это часть твоей сути.»');
     bloodOath = null;
+     saveGameState();
+}
+
+function showReturnScreen() {
+    var now = Date.now();
+    var last = HERO.lastSessionAt || now;
+    var gapMs = now - last;
+    var gapDays = Math.floor(gapMs / 86400000);
+    if (gapDays < 1) return;
+    HERO.lastSessionAt = now;
+    var phase = getBattlePhase();
+    var phaseLabel = phase === 'battle' ? '⚔ Фаза схватки' : '⛏ Фаза накопления';
+    var todayKey = getMSKDayKey();
+    var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
+    var oathInfo = bloodOath && bloodOath.status === 'active' ? '🩸 Клятва: ' + bloodOath.streak + '/' + bloodOath.requiredDays + ' дней' : '🩸 Клятва: не активна';
+    var failedGoals = GOALS.filter(function(g) { return g.failed && g.lastStepAt && (now - g.lastStepAt) < gapMs + 86400000; }).length;
+    var completionRate = '—';
+    var historyKeys = Object.keys(HERO.cardHistory || {});
+    if (historyKeys.length > 0) {
+        var recent = historyKeys.slice(-7);
+        var totalDone = 0, totalPossible = 0;
+        recent.forEach(function(k) {
+            var dayData = HERO.cardHistory[k];
+            if (dayData) {
+                totalDone += Object.values(dayData).filter(function(v) { return v; }).length;
+                totalPossible += FORGED.length || 1;
+            }
+        });
+        completionRate = totalPossible > 0 ? Math.round(totalDone / totalPossible * 100) + '%' : '—';
+    }
+    var html = '<div style="font-size:13px; line-height:2; color:var(--text-bright);">' +
+        '<div style="text-align:center; font-size:18px; color:var(--gold-bright); margin-bottom:12px;">📅 Ты отсутствовал ' + gapDays + ' ' + (gapDays === 1 ? 'день' : gapDays < 5 ? 'дня' : 'дней') + '</div>' +
+        '<div>📊 <b>Текущая фаза:</b> ' + phaseLabel + '</div>' +
+        '<div>⚔ <b>Очки действия:</b> ' + (HERO.actionPoints || 0) + ' · 💢 <b>Ярость:</b> ' + bossRagePoints + '</div>' +
+        '<div>📖 <b>Сегодня:</b> ' + doneToday + '/' + FORGED.length + ' карточек</div>' +
+        '<div>' + oathInfo + '</div>' +
+        (failedGoals > 0 ? '<div style="color:var(--blood-bright)">💀 Провалено целей: ' + failedGoals + '</div>' : '') +
+        '<div>📈 <b>Completion rate за неделю:</b> ' + completionRate + '</div>' +
+        '<div style="text-align:center; margin-top:12px; color:var(--text-dim); font-size:11px;">С возвращением. Подземелье ждало.</div>' +
+        '</div>';
+    var modal = document.getElementById('returnModal');
+    if (modal) {
+        modal.querySelector('.modal-body').innerHTML = html;
+        modal.classList.add('show');
+    }
     saveGameState();
 }
+function closeReturnModal() { document.getElementById('returnModal').classList.remove('show'); }
+
+function renderDashboard() {
+    var bar = document.getElementById('dashboardBar');
+    if (!bar) return;
+    var phase = getBattlePhase();
+    var todayKey = getMSKDayKey();
+    var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
+    var remaining = FORGED.length - doneToday;
+    var phaseIcon = phase === 'battle' ? '⚔' : '⛏';
+    var phaseText = phase === 'battle' ? 'Фаза схватки (Пт–Вс)' : 'Фаза накопления (Пн–Чт)';
+    var daysToBattle = '';
+    if (phase !== 'battle') {
+        var msk = new Date(Date.now() + 3 * 3600000);
+        var day = msk.getUTCDay();
+        var daysLeft = day === 0 ? 0 : day === 1 ? 4 : day === 2 ? 3 : day === 3 ? 2 : day === 4 ? 1 : 0;
+        daysToBattle = ' · До схватки: ' + (daysLeft === 0 ? 'завтра!' : daysLeft + ' дн.');
+    }
+    var oathProgress = bloodOath && bloodOath.status === 'active' ? ' · 🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays : '';
+    var comboMult = getComboMultiplier();
+    var comboInfo = comboMult > 1.0 ? ' · 🎯 Комбо ×' + comboMult.toFixed(2) : '';
+    var maxStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
+    bar.innerHTML =
+        '<div class="dashboard-row"><span>' + phaseIcon + ' ' + phaseText + daysToBattle + '</span></div>' +
+        '<div class="dashboard-row"><span>⚔ ОД: <b style="color:#60a5fa">' + (HERO.actionPoints||0) + '</b></span><span>💢 Ярость: <b style="color:var(--blood-bright)">' + bossRagePoints + '</b></span><span>📖 ' + doneToday + '/' + FORGED.length + ' сегодня' + (remaining > 0 ? ' (осталось ' + remaining + ')' : '') + '</span></div>' +
+        '<div class="dashboard-row"><span>🔥 Макс. стик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>';
+}
+
+var COMBO_THRESHOLD = 3;
+var COMBO_BONUS = 0.20;
+function getComboMultiplier() {
+    var count = Object.keys(HERO.dailyUniqueStats || {}).length;
+    return count >= COMBO_THRESHOLD ? 1 + COMBO_BONUS : 1.0;
+}
+
+function showEvolutionChoices(card) {
+    var modal = document.getElementById('evolutionModal');
+    if (!modal) return;
+    modal.querySelector('.evolution-card-name').textContent = card.name;
+    modal.dataset.cardId = card.id;
+    modal.classList.add('show');
+    sfxRankUp(); haptic('medium');
+}
+function closeEvolutionModal() { document.getElementById('evolutionModal').classList.remove('show'); }
+function applyEvolution(path) {
+    var modal = document.getElementById('evolutionModal');
+    var cardId = parseInt(modal.dataset.cardId);
+    var card = findCard(cardId);
+    if (!card) { closeEvolutionModal(); return; }
+    card.evolutionPath = path;
+    var labels = { depth: '🧘 Глубже', frequency: '⚡ Чаще', stability: '🌟 Стабильнее' };
+    var effects = {
+        depth: '+50% мастерства, но XP -20%',
+        frequency: '+1 к пулу стата за выполнение',
+        stability: 'Двойная защита стрика для этой карточки'
+    };
+    showToast('🌟 Эволюция!', labels[path] + ': ' + effects[path], 'crit');
+    spiritSay('«Карточка эволюционировала. Её суть изменилась навсегда.»');
+    closeEvolutionModal();
+    renderCards();
+    saveGameState();
+}
+
+function prestigeCard(id) {
+    var card = findCard(id);
+    if (!card || card.rank !== 'SSS') return;
+    dungeonConfirm('⭐ Переродить карточку?',
+        '«' + esc(card.name) + '» вернётся к рангу C, но даст <b style="color:var(--gold-bright)">+5% XP</b> всем карточкам стата ' + STATS[card.stat].icon + ' ' + STATS[card.stat].name + ' навсегда.<br><br>Текущее перерождение: ' + (card.prestige || 0) + '/3'
+    ).then(function(ok) {
+        if (!ok) return;
+        card.prestige = (card.prestige || 0) + 1;
+        card.rank = 'C';
+        card.mastery = 0;
+        card.masteryThreshold = 5;
+        card.streak = 0;
+        card.evolutionPath = null;
+        sfxBossDefeated(); haptic('heavy');
+        burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color: '#fbbf24', speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.5 });
+        screenShake(10, 500);
+        showToast('⭐ ПЕРЕРОЖДЕНИЕ!', card.name + ' возродилась! (⭐'.repeat(card.prestige) + ')', 'crit');
+        spiritSay('«Пепел стал золотом. Эта карточка — вечна.»');
+        renderCards(); renderStats();
+        saveGameState();
+    });
+}
+function getPrestigeXPBonus(cardStat) {
+    var bonus = 0;
+    FORGED.forEach(function(c) {
+        if (c.stat === cardStat && c.prestige) bonus += c.prestige * 0.05;
+    });
+    return 1 + bonus;
+}
+
+function renderCardHeatmap() {
+    var days = 28;
+    var today = getMSKDayKey();
+    var keys = [];
+    var dayNames = [];
+    for (var i = days - 1; i >= 0; i--) {
+        var d = new Date(Date.now() + 3 * 3600000);
+        d.setUTCDate(d.getUTCDate() - i);
+        var key = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+        keys.push(key);
+        dayNames.push(['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getUTCDay()]);
+    }
+    var html = '<div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); padding:12px; margin-bottom:16px;">' +
+        '<div style="font-size:11px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:10px;">📊 Карточки × Дни (4 недели)</div>' +
+        '<div style="overflow-x:auto;"><table style="font-size:9px; border-collapse:collapse; width:100%;">';
+    html += '<tr><td style="padding:2px 4px;"></td>';
+    keys.forEach(function(k, i) {
+        var isWeekend = i % 7 >= 5;
+        html += '<td style="padding:1px; text-align:center; color:' + (isWeekend ? 'var(--blood-bright)' : 'var(--text-dim)') + ';">' + dayNames[i] + '</td>';
+    });
+    html += '</tr>';
+    FORGED.forEach(function(card) {
+        html += '<tr><td style="padding:2px 4px; white-space:nowrap; color:var(--text-bright); max-width:80px; overflow:hidden; text-overflow:ellipsis;">' + esc(card.name.substring(0, 12)) + '</td>';
+        keys.forEach(function(k) {
+            var dayData = HERO.cardHistory && HERO.cardHistory[k];
+            var done = dayData && dayData[card.id];
+            var bg = done ? 'var(--green)' : 'rgba(255,255,255,0.05)';
+            var symbol = done ? '✓' : '';
+            html += '<td style="padding:1px; text-align:center; background:' + bg + '; color:#fff; border-radius:1px; min-width:18px;">' + symbol + '</td>';
+        });
+        html += '</tr>';
+    });
+    html += '</table></div></div>';
+    return html;
+}
+
+function renderInsights() {
+    var history = HERO.cardHistory || {};
+    var keys = Object.keys(history).sort().slice(-28);
+    if (keys.length < 7) return '';
+    var cardStats = {};
+    var dayStats = {};
+    var bestCard = null, bestCardRate = 0;
+    var worstCard = null, worstCardRate = 1;
+    FORGED.forEach(function(card) {
+        var done = 0;
+        keys.forEach(function(k) {
+            if (history[k] && history[k][card.id]) done++;
+        });
+        var rate = done / keys.length;
+        cardStats[card.id] = rate;
+        if (rate > bestCardRate) { bestCardRate = rate; bestCard = card; }
+        if (rate < worstCardRate) { worstCardRate = rate; worstCard = card; }
+    });
+    var insights = [];
+    if (bestCard) insights.push('🔥 Лучше всего идёт <b style="color:var(--green)">' + esc(bestCard.name) + '</b> — ' + Math.round(bestCardRate * 100) + '% выполнения');
+    if (worstCard && worstCard !== bestCard) insights.push('⚠ Хуже всего <b style="color:var(--blood-bright)">' + esc(worstCard.name) + '</b> — ' + Math.round(worstCardRate * 100) + '% выполнения');
+    var dayRates = [0,0,0,0,0,0,0];
+    var dayCounts = [0,0,0,0,0,0,0];
+    keys.forEach(function(k) {
+        var d = new Date(k + 'T00:00:00+03:00');
+        var dow = d.getUTCDay();
+        var dayData = history[k];
+        if (dayData) {
+            dayCounts[dow]++;
+            dayRates[dow] += Object.values(dayData).filter(function(v) { return v; }).length;
+        }
+    });
+    var bestDay = -1, bestDayRate = 0, worstDay = -1, worstDayRate = 999;
+    for (var i = 0; i < 7; i++) {
+        if (dayCounts[i] > 0) {
+            var avg = dayRates[i] / dayCounts[i];
+            if (avg > bestDayRate) { bestDayRate = avg; bestDay = i; }
+            if (avg < worstDayRate) { worstDayRate = avg; worstDay = i; }
+        }
+    }
+    var dayNames = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+    if (bestDay >= 0 && bestDay !== worstDay) insights.push('📅 Лучший день — <b>' + dayNames[bestDay] + '</b> (' + Math.round(bestDayRate) + ' карточек в среднем)');
+    if (worstDay >= 0 && worstDay !== bestDay) insights.push('📅 Худший день — <b>' + dayNames[worstDay] + '</b> (' + Math.round(worstDayRate) + ' карточек в среднем)');
+    var bestStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
+    if (bestStreak >= 7) insights.push('🔥 Текущий рекорд стрика: <b>' + bestStreak + ' дней</b>');
+    if (insights.length === 0) return '';
+    var html = '<div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); padding:12px; margin-bottom:16px;">' +
+        '<div style="font-size:11px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:10px;">🧠 Инсайты (анализ паттернов)</div>';
+    insights.forEach(function(ins) {
+        html += '<div style="font-size:11px; color:var(--text-bright); padding:4px 0; border-bottom:1px dashed var(--border);">• ' + ins + '</div>';
+    });
+    html += '</div>';
+    return html;
+}
+
+function showWeeklyReport() {
+    var weekKey = getThisMondayKey();
+    if (HERO.lastWeeklyReport === weekKey) return;
+    HERO.lastWeeklyReport = weekKey;
+    var todayKey = getMSKDayKey();
+    var weekStart = new Date(weekKey + 'T00:00:00+03:00');
+    var doneCount = 0, totalCount = 0;
+    var weekDays = [];
+    for (var i = 0; i < 7; i++) {
+        var d = new Date(weekStart);
+        d.setUTCDate(d.getUTCDate() + i);
+        var k = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+        if (k > todayKey) break;
+        var dayData = HERO.cardHistory && HERO.cardHistory[k];
+        var dayDone = dayData ? Object.values(dayData).filter(function(v) { return v; }).length : 0;
+        doneCount += dayDone;
+        totalCount += FORGED.length;
+        weekDays.push(dayDone);
+    }
+    var rate = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
+    var bestStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
+    var goalsDone = GOALS.filter(function(g) { return g.completed && g.lastStepAt && (Date.now() - g.lastStepAt) < 604800000; }).length;
+    var goalsFailed = GOALS.filter(function(g) { return g.failed && g.lastStepAt && (Date.now() - g.lastStepAt) < 604800000; }).length;
+    var barChart = weekDays.map(function(n, i) {
+        var h = Math.max(2, n * 8);
+        var dayName = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][i];
+        return '<div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1;">' +
+            '<div style="height:' + h + 'px; width:100%; max-width:24px; background:linear-gradient(to top, var(--gold), var(--gold-bright)); border-radius:2px 2px 0 0; min-height:2px;"></div>' +
+            '<div style="font-size:8px; color:var(--text-dim);">' + dayName + '</div>' +
+            '</div>';
+    }).join('');
+    var html = '<div style="text-align:center; font-size:18px; color:var(--gold-bright); margin-bottom:12px;">📊 Недельный отчёт</div>' +
+        '<div style="display:flex; gap:12px; justify-content:center; align-items:flex-end; height:60px; margin-bottom:16px;">' + barChart + '</div>' +
+        '<div style="font-size:13px; line-height:2; color:var(--text-bright);">' +
+        '<div>✓ <b>Выполнено:</b> ' + doneCount + '/' + totalCount + ' карточек (' + rate + '%)</div>' +
+        '<div>🔥 <b>Лучший стрик:</b> ' + bestStreak + ' дней</div>' +
+        '<div>🎯 <b>Цели:</b> ' + goalsDone + ' выполнено' + (goalsFailed > 0 ? ', ' + goalsFailed + ' провалено' : '') + '</div>' +
+        '<div>⚔ <b>ОД накоплено:</b> ' + (HERO.actionPoints||0) + ' · 💢 <b>Ярость:</b> ' + bossRagePoints + '</div>' +
+        '</div>' +
+        '<div style="text-align:center; margin-top:12px; color:var(--text-dim); font-size:11px;">Новая неделя начинается. Используй опыт прошлой.</div>';
+    var modal = document.getElementById('weeklyReportModal');
+    if (modal) {
+        modal.querySelector('.modal-body').innerHTML = html;
+        modal.classList.add('show');
+    }
+    saveGameState();
+}
+function closeWeeklyReportModal() { document.getElementById('weeklyReportModal').classList.remove('show'); }
 
 function checkDailyReset() {
 const todayKey = getMSKDayKey();
@@ -2087,6 +2386,7 @@ screenShake(8, 400);
 }
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
+HERO.dailyUniqueStats = {};
 chimeraShield = 5;
 var currentMonday = getThisMondayKey();
 if (lastWeekReset !== currentMonday) {
@@ -2094,6 +2394,7 @@ HERO.actionPoints = 0;
 bossRagePoints = 0;
 lastWeekReset = currentMonday;
 showToast('🗓 Новая неделя', 'Очки действия и ярости сброшены', 'save');
+setTimeout(showWeeklyReport, 2000);
 }
 FORGED.forEach(c => {
 if (c.firstCompletedAt) {
@@ -3015,12 +3316,18 @@ updateDamageInfo();
 updateEscapeDisplay();
 renderMap(escapeProgress);
 renderCards();
+renderDashboard();
 updateBossDisplay();
 changeBossHp(0);
 importFromHash();
 if (FORGED.length === 0) { setTimeout(deepRecovery, 1000); }
 if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }
 else { setTimeout(function() { updateSyncBadge('syncing'); smartCloudSync(); }, 2500); }
+if (HERO.lastSessionAt && Date.now() - HERO.lastSessionAt > 86400000 && FORGED.length > 0) {
+setTimeout(showReturnScreen, 1500);
+} else {
+HERO.lastSessionAt = Date.now();
+}
 if (!localStorage.getItem('neurodeck_full_save') && !localStorage.getItem('neurodeck_onboarding_done')) {
 setTimeout(function() { startOnboarding(); }, 1200);
 } else {
