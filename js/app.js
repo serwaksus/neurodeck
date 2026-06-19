@@ -927,9 +927,16 @@ var combatState = {
     heroAnimStart: 0, bossAnimStart: 0,
     heroOffsetX: 0, heroOffsetY: 0, heroRot: 0,
     bossOffsetX: 0, bossOffsetY: 0, bossRot: 0,
+    heroSquashX: 1, heroSquashY: 1, bossSquashX: 1, bossSquashY: 1,
     heroFilter: '', bossFilter: '',
     flashAlpha: 0, flashColor: '255,255,255',
     shakeX: 0, shakeY: 0, shakeAmount: 0,
+    hitStop: 0,
+    torchFlicker: 1.0, fogOffset: 0,
+    slashArc: null,
+    impactRings: [],
+    chromaticAberration: 0,
+    bossAuraAlpha: 0, rageVignette: 0,
     heroHpPct: 1.0, bossHpPct: 1.0,
     heroHpText: '', bossHpText: '',
     bossName: 'Змей Лени',
@@ -942,9 +949,9 @@ function initCombatCanvas() {
     combatCtx = combatCanvas.getContext('2d');
     var loaded = 0;
     var urls = {
-        bg: 'bg-optimized.jpg?v=33',
-        hero: 'hero-cutout.png?v=33',
-        boss: 'snake-cutout.png?v=33'
+        bg: 'bg-optimized.jpg?v=34',
+        hero: 'hero-cutout.png?v=34',
+        boss: 'snake-cutout.png?v=34'
     };
     Object.keys(urls).forEach(function(key) {
         var img = new Image();
@@ -997,104 +1004,179 @@ function spawnDamageNumber(x, y, text, color) {
 function renderCombat(ts) {
     if (!combatLoaded) { combatRafId = requestAnimationFrame(renderCombat); return; }
     var w = combatCanvas.width, h = combatCanvas.height;
+    var frozen = ts < combatState.hitStop;
     combatCtx.clearRect(0, 0, w, h);
-    if (combatState.shakeAmount > 0.5) {
-        combatState.shakeX = (Math.random() - 0.5) * combatState.shakeAmount;
-        combatState.shakeY = (Math.random() - 0.5) * combatState.shakeAmount;
-        combatState.shakeAmount *= 0.88;
-    } else { combatState.shakeX = 0; combatState.shakeY = 0; }
+    if (!frozen) {
+        combatState.torchFlicker = 0.85 + Math.sin(ts * 0.008) * 0.08 + Math.sin(ts * 0.023) * 0.05 + Math.random() * 0.04;
+        combatState.fogOffset = (combatState.fogOffset + 0.0003) % 1;
+    }
+    var flicker = combatState.torchFlicker;
+    if (!frozen) {
+        if (combatState.shakeAmount > 0.5) {
+            combatState.shakeX = (Math.random() - 0.5) * combatState.shakeAmount;
+            combatState.shakeY = (Math.random() - 0.5) * combatState.shakeAmount;
+            combatState.shakeAmount *= 0.85;
+        } else { combatState.shakeX = 0; combatState.shakeY = 0; }
+        if (combatState.heroSquashX !== 1) { combatState.heroSquashX += (1 - combatState.heroSquashX) * 0.2; combatState.heroSquashY += (1 - combatState.heroSquashY) * 0.2; }
+        if (combatState.bossSquashX !== 1) { combatState.bossSquashX += (1 - combatState.bossSquashX) * 0.2; combatState.bossSquashY += (1 - combatState.bossSquashY) * 0.2; }
+        if (combatState.chromaticAberration > 0.5) combatState.chromaticAberration *= 0.8; else combatState.chromaticAberration = 0;
+        if (combatState.slashArc) { combatState.slashArc.progress += 0.08; if (combatState.slashArc.progress >= 1) combatState.slashArc = null; }
+        for (var ri = combatState.impactRings.length - 1; ri >= 0; ri--) { combatState.impactRings[ri].radius += 8; combatState.impactRings[ri].alpha -= 0.04; if (combatState.impactRings[ri].alpha <= 0) combatState.impactRings.splice(ri, 1); }
+        if (bossStage >= 1) { combatState.bossAuraAlpha = 0.15 + Math.sin(ts * 0.004) * 0.08; } else combatState.bossAuraAlpha = 0;
+        combatState.rageVignette = combatState.bossHpPct < 0.3 ? 0.2 + Math.sin(ts * 0.006) * 0.1 : 0;
+    }
     combatCtx.save();
     combatCtx.translate(combatState.shakeX, combatState.shakeY);
     if (combatImages.bg) combatCtx.drawImage(combatImages.bg, 0, 0, w, h);
-    var grad = combatCtx.createRadialGradient(w*0.15, h*0.4, 50, w*0.15, h*0.4, w*0.6);
-    grad.addColorStop(0, 'rgba(255,160,60,0.12)');
+    var torchX = w * 0.12, torchY = h * 0.35;
+    var grad = combatCtx.createRadialGradient(torchX, torchY, 30, torchX, torchY, w * 0.55 * flicker);
+    grad.addColorStop(0, 'rgba(255,160,60,' + (0.15 * flicker) + ')');
+    grad.addColorStop(0.5, 'rgba(180,80,20,' + (0.05 * flicker) + ')');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     combatCtx.fillStyle = grad;
     combatCtx.fillRect(0, 0, w, h);
-    var grad2 = combatCtx.createRadialGradient(w*0.78, h*0.5, 50, w*0.78, h*0.5, w*0.5);
-    grad2.addColorStop(0, 'rgba(100,40,40,0.15)');
+    var grad2 = combatCtx.createRadialGradient(w*0.78, h*0.5, 40, w*0.78, h*0.5, w*0.45);
+    grad2.addColorStop(0, 'rgba(80,20,20,0.18)');
     grad2.addColorStop(1, 'rgba(0,0,0,0)');
     combatCtx.fillStyle = grad2;
     combatCtx.fillRect(0, 0, w, h);
-    updateCombatAnim(ts);
-    drawCombatShadow(combatState.heroX * w, combatState.heroBaseY * h, 80 * combatState.heroScale);
-    drawCombatShadow(combatState.bossX * w, combatState.bossBaseY * h, 100 * combatState.bossScale);
+    if (!frozen) updateCombatAnim(ts);
+    if (combatState.bossAuraAlpha > 0) {
+        var bx = combatState.bossX * w, by = (combatState.bossBaseY - 0.25) * h;
+        var auraGrad = combatCtx.createRadialGradient(bx, by, 20, bx, by, w * 0.25);
+        var auraCol = bossStage >= 2 ? '180,40,40' : '120,40,160';
+        auraGrad.addColorStop(0, 'rgba(' + auraCol + ',' + combatState.bossAuraAlpha + ')');
+        auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        combatCtx.fillStyle = auraGrad;
+        combatCtx.fillRect(0, 0, w, h);
+    }
+    drawCombatShadow(combatState.heroX * w, combatState.heroBaseY * h, 80 * combatState.heroScale, flicker);
+    drawCombatShadow(combatState.bossX * w, combatState.bossBaseY * h, 100 * combatState.bossScale, 1);
     drawCombatChar('boss', ts);
     drawCombatChar('hero', ts);
+    drawCombatChar('boss', ts, true);
+    if (combatState.slashArc) drawSlashArc(w, h);
+    for (var i2 = 0; i2 < combatState.impactRings.length; i2++) {
+        var ring = combatState.impactRings[i2];
+        combatCtx.save();
+        combatCtx.globalAlpha = ring.alpha;
+        combatCtx.strokeStyle = ring.color;
+        combatCtx.lineWidth = 3;
+        combatCtx.shadowBlur = 15;
+        combatCtx.shadowColor = ring.color;
+        combatCtx.beginPath();
+        combatCtx.arc(ring.x * w, ring.y * h, ring.radius, 0, Math.PI * 2);
+        combatCtx.stroke();
+        combatCtx.restore();
+    }
     for (var i = combatState.particles.length - 1; i >= 0; i--) {
         var p = combatState.particles[i];
-        p.x += p.vx; p.y += p.vy; p.vy += p.gravity;
-        p.life -= p.decay;
+        if (!frozen) { p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.life -= p.decay; }
         if (p.life <= 0) { combatState.particles.splice(i, 1); continue; }
         combatCtx.save();
         combatCtx.globalAlpha = p.life;
         combatCtx.fillStyle = 'rgb(' + p.color + ')';
-        combatCtx.shadowBlur = 8;
+        combatCtx.shadowBlur = 10;
         combatCtx.shadowColor = 'rgb(' + p.color + ')';
         combatCtx.beginPath();
-        combatCtx.arc(p.x * w, p.y * h, p.size, 0, Math.PI * 2);
+        combatCtx.arc(p.x * w, p.y * h, p.size * p.life, 0, Math.PI * 2);
         combatCtx.fill();
+        if (p.trail) { combatCtx.globalAlpha = p.life * 0.3; combatCtx.beginPath(); combatCtx.arc((p.x - p.vx*3) * w, (p.y - p.vy*3) * h, p.size * 0.5, 0, Math.PI * 2); combatCtx.fill(); }
         combatCtx.restore();
     }
     for (var j = combatState.embers.length - 1; j >= 0; j--) {
         var e = combatState.embers[j];
-        e.x += e.vx; e.y += e.vy; e.life -= e.decay;
+        if (!frozen) { e.x += e.vx; e.y += e.vy; e.life -= e.decay; e.flicker = 0.7 + Math.random() * 0.3; }
         if (e.life <= 0 || e.y < -0.1) { combatState.embers.splice(j, 1); continue; }
         combatCtx.save();
-        combatCtx.globalAlpha = e.life * 0.7;
+        combatCtx.globalAlpha = e.life * 0.7 * (e.flicker || 1);
         combatCtx.fillStyle = 'rgb(' + e.color + ')';
-        combatCtx.shadowBlur = 6;
+        combatCtx.shadowBlur = 8;
         combatCtx.shadowColor = 'rgb(' + e.color + ')';
         combatCtx.beginPath();
         combatCtx.arc(e.x * w, e.y * h, e.size, 0, Math.PI * 2);
         combatCtx.fill();
+        if (e.life > 0.3) { combatCtx.globalAlpha = e.life * 0.2; combatCtx.beginPath(); combatCtx.arc((e.x - e.vx * 4) * w, (e.y - e.vy * 4) * h, e.size * 0.4, 0, Math.PI * 2); combatCtx.fill(); }
+        combatCtx.restore();
+    }
+    if (!frozen) {
+        combatCtx.save();
+        var fogY = h * 0.7;
+        for (var fi = 0; fi < 3; fi++) {
+            var fOff = (combatState.fogOffset + fi * 0.33) % 1;
+            var fogAlpha = 0.04 + Math.sin(ts * 0.001 + fi) * 0.02;
+            combatCtx.fillStyle = 'rgba(200,200,210,' + fogAlpha + ')';
+            var fogX = fOff * w * 2 - w * 0.5;
+            combatCtx.beginPath();
+            combatCtx.ellipse(fogX, fogY + fi * 30, w * 0.4, 40, 0, 0, Math.PI * 2);
+            combatCtx.fill();
+        }
         combatCtx.restore();
     }
     if (combatState.flashAlpha > 0.01) {
         combatCtx.fillStyle = 'rgba(' + combatState.flashColor + ',' + combatState.flashAlpha + ')';
         combatCtx.fillRect(0, 0, w, h);
-        combatState.flashAlpha *= 0.82;
+        if (!frozen) combatState.flashAlpha *= 0.80;
     }
-    var vignette = combatCtx.createRadialGradient(w/2, h/2, w*0.3, w/2, h/2, w*0.7);
+    var vignette = combatCtx.createRadialGradient(w/2, h/2, w*0.25, w/2, h/2, w*0.75);
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.5)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.55)');
     combatCtx.fillStyle = vignette;
     combatCtx.fillRect(0, 0, w, h);
+    if (combatState.rageVignette > 0) {
+        var rVig = combatCtx.createRadialGradient(w/2, h/2, w*0.2, w/2, h/2, w*0.6);
+        rVig.addColorStop(0, 'rgba(0,0,0,0)');
+        rVig.addColorStop(1, 'rgba(180,20,20,' + combatState.rageVignette + ')');
+        combatCtx.fillStyle = rVig;
+        combatCtx.fillRect(0, 0, w, h);
+    }
     drawCombatHpBar(20, 18, w * 0.4, 'Герой', combatState.heroHpPct, combatState.heroHpText, '#c73e4d', false);
-    var boss = getCurrentBoss();
     drawCombatHpBar(w - w * 0.4 - 20, 18, w * 0.4, combatState.bossName, combatState.bossHpPct, combatState.bossHpText, '#8b2635', true);
     for (var k = combatState.damageNumbers.length - 1; k >= 0; k--) {
         var d = combatState.damageNumbers[k];
-        d.y += d.vy; d.life -= d.decay;
+        if (!frozen) { d.y += d.vy; d.life -= d.decay; }
         if (d.life <= 0) { combatState.damageNumbers.splice(k, 1); continue; }
         combatCtx.save();
         combatCtx.globalAlpha = Math.min(1, d.life * 1.5);
-        combatCtx.font = 'bold 28px serif';
+        combatCtx.font = 'bold ' + (d.crit ? 36 : 26) + 'px serif';
         combatCtx.textAlign = 'center';
         combatCtx.fillStyle = d.color;
-        combatCtx.shadowBlur = 10;
+        combatCtx.shadowBlur = 12;
         combatCtx.shadowColor = '#000';
         combatCtx.fillText(d.text, d.x * w, d.y * h);
         combatCtx.restore();
     }
     if (combatState.defeated) {
         combatCtx.save();
-        combatCtx.fillStyle = 'rgba(0,0,0,0.7)';
+        combatCtx.fillStyle = 'rgba(0,0,0,0.75)';
         combatCtx.fillRect(0, 0, w, h);
-        combatCtx.font = 'bold 48px serif';
+        combatCtx.font = 'bold 52px serif';
         combatCtx.textAlign = 'center';
-        combatCtx.fillStyle = '#888';
+        combatCtx.fillStyle = '#666';
+        combatCtx.shadowBlur = 20;
+        combatCtx.shadowColor = '#000';
         combatCtx.fillText('☠ ПОВЕРЖЕН ☠', w/2, h/2);
         combatCtx.restore();
     }
     combatCtx.restore();
+    if (combatState.chromaticAberration > 0.5) {
+        combatCtx.save();
+        combatCtx.globalCompositeOperation = 'screen';
+        var ca = combatState.chromaticAberration;
+        combatCtx.globalAlpha = 0.3;
+        combatCtx.drawImage(combatCanvas, ca, 0, w, h, 0, 0, w, h);
+        combatCtx.drawImage(combatCanvas, -ca, 0, w, h, 0, 0, w, h);
+        combatCtx.restore();
+    }
     combatRafId = requestAnimationFrame(renderCombat);
 }
-function drawCombatShadow(x, y, radius) {
+function drawCombatShadow(x, y, radius, flicker) {
     combatCtx.save();
-    combatCtx.fillStyle = 'rgba(0,0,0,0.5)';
+    var alpha = 0.45 * (flicker || 1);
+    combatCtx.fillStyle = 'rgba(0,0,0,' + alpha + ')';
     combatCtx.beginPath();
-    combatCtx.ellipse(x, y, radius, radius * 0.25, 0, 0, Math.PI * 2);
+    var rx = radius * (0.9 + (flicker || 1) * 0.15);
+    combatCtx.ellipse(x, y, rx, rx * 0.22, 0, 0, Math.PI * 2);
     combatCtx.fill();
     combatCtx.restore();
 }
@@ -1150,31 +1232,89 @@ function updateCombatAnim(ts) {
         }
     });
 }
-function drawCombatChar(which, ts) {
+function drawCombatChar(which, ts, overlayOnly) {
     var img = combatImages[which];
     if (!img) return;
     var w = combatCanvas.width, h = combatCanvas.height;
-    var baseX, baseY, scale, ox, oy, rot, filter;
+    var baseX, baseY, scale, ox, oy, rot, filter, sqX, sqY;
     if (which === 'hero') {
         baseX = combatState.heroX; baseY = combatState.heroBaseY;
         scale = combatState.heroScale;
         ox = combatState.heroOffsetX; oy = combatState.heroOffsetY;
         rot = combatState.heroRot; filter = combatState.heroFilter;
+        sqX = combatState.heroSquashX; sqY = combatState.heroSquashY;
     } else {
         baseX = combatState.bossX; baseY = combatState.bossBaseY;
         scale = combatState.bossScale;
         ox = combatState.bossOffsetX; oy = combatState.bossOffsetY;
         rot = combatState.bossRot; filter = combatState.bossFilter;
+        sqX = combatState.bossSquashX; sqY = combatState.bossSquashY;
     }
-    var charH = h * 0.55 * scale;
-    var charW = charH * (img.width / img.height);
+    var charH = h * 0.55 * scale * sqY;
+    var charW = charH * (img.width / img.height) * sqX;
     var cx = (baseX + ox) * w;
     var cy = (baseY + oy) * h;
+    if (!overlayOnly) {
+        combatCtx.save();
+        combatCtx.translate(cx, cy);
+        combatCtx.rotate(rot * Math.PI / 180);
+        if (filter) combatCtx.filter = filter;
+        combatCtx.drawImage(img, -charW/2, -charH, charW, charH);
+        combatCtx.restore();
+    }
     combatCtx.save();
     combatCtx.translate(cx, cy);
     combatCtx.rotate(rot * Math.PI / 180);
-    if (filter) combatCtx.filter = filter;
-    combatCtx.drawImage(img, -charW/2, -charH, charW, charH);
+    var lightGrad = combatCtx.createLinearGradient(-charW/2, 0, charW/2, 0);
+    var lightIntensity = 0.18 * combatState.torchFlicker;
+    if (which === 'hero') {
+        lightGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        lightGrad.addColorStop(0.6, 'rgba(0,0,0,' + (lightIntensity * 0.3) + ')');
+        lightGrad.addColorStop(1, 'rgba(0,0,0,' + lightIntensity + ')');
+    } else {
+        lightGrad.addColorStop(0, 'rgba(0,0,0,' + lightIntensity + ')');
+        lightGrad.addColorStop(0.4, 'rgba(0,0,0,' + (lightIntensity * 0.3) + ')');
+        lightGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    }
+    combatCtx.fillStyle = lightGrad;
+    combatCtx.fillRect(-charW/2, -charH, charW, charH);
+    var warmGrad = combatCtx.createRadialGradient(-charW * 0.3, -charH * 0.7, 10, -charW * 0.3, -charH * 0.7, charW * 0.8);
+    var warmAlpha = 0.08 * combatState.torchFlicker;
+    warmGrad.addColorStop(0, 'rgba(255,140,40,' + warmAlpha + ')');
+    warmGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    combatCtx.fillStyle = warmGrad;
+    combatCtx.fillRect(-charW/2, -charH, charW, charH);
+    combatCtx.restore();
+}
+function drawSlashArc(w, h) {
+    var arc = combatState.slashArc;
+    if (!arc) return;
+    combatCtx.save();
+    var progress = arc.progress;
+    var startX = arc.fromX * w, startY = arc.fromY * h;
+    var endX = arc.toX * w, endY = arc.toY * h;
+    var midX = (startX + endX) / 2, midY = (startY + endY) / 2 - 60;
+    var alpha = Math.sin(progress * Math.PI);
+    combatCtx.globalAlpha = alpha;
+    combatCtx.strokeStyle = arc.color;
+    combatCtx.lineWidth = 4 + (1 - progress) * 6;
+    combatCtx.shadowBlur = 20;
+    combatCtx.shadowColor = arc.color;
+    combatCtx.lineCap = 'round';
+    combatCtx.beginPath();
+    var steps = 20;
+    for (var s = 0; s <= steps * progress; s++) {
+        var t = s / steps;
+        var x = (1-t)*(1-t)*startX + 2*(1-t)*t*midX + t*t*endX;
+        var y = (1-t)*(1-t)*startY + 2*(1-t)*t*midY + t*t*endY;
+        if (s === 0) combatCtx.moveTo(x, y);
+        else combatCtx.lineTo(x, y);
+    }
+    combatCtx.stroke();
+    combatCtx.globalAlpha = alpha * 0.5;
+    combatCtx.lineWidth = 1;
+    combatCtx.strokeStyle = '#fff';
+    combatCtx.stroke();
     combatCtx.restore();
 }
 function drawCombatHpBar(x, y, width, name, pct, text, color, rightAlign) {
@@ -1218,17 +1358,26 @@ function triggerHeroAttack(dmg, crit) {
     combatState.heroAnim = 'attacking'; combatState.heroAnimStart = ts;
     setTimeout(function() {
         combatState.bossAnim = 'hurt'; combatState.bossAnimStart = performance.now();
-        combatState.flashAlpha = 0.7; combatState.flashColor = '255,255,255';
-        combatState.shakeAmount = crit ? 18 : 10;
+        combatState.flashAlpha = crit ? 0.85 : 0.6; combatState.flashColor = '255,255,255';
+        combatState.shakeAmount = crit ? 22 : 12;
+        combatState.hitStop = performance.now() + (crit ? 100 : 70);
+        combatState.bossSquashX = crit ? 0.75 : 0.85; combatState.bossSquashY = crit ? 1.2 : 1.1;
+        combatState.slashArc = { fromX: 0.25, fromY: 0.45, toX: 0.72, toY: 0.4, progress: 0, color: crit ? '251,191,36' : '255,240,200' };
+        combatState.impactRings.push({ x: 0.74, y: 0.38, radius: 10, alpha: 0.9, color: crit ? 'rgba(251,191,36,1)' : 'rgba(255,200,150,1)' });
+        if (crit) { combatState.impactRings.push({ x: 0.74, y: 0.38, radius: 20, alpha: 0.6, color: 'rgba(255,100,50,1)' }); combatState.chromaticAberration = 8; }
         spawnDamageNumber(0.72, 0.35, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#e74c3c');
+        if (crit) spawnDamageNumber.crit = true;
+        combatState.damageNumbers[combatState.damageNumbers.length - 1].crit = crit;
         var pColor = crit ? '251,191,36' : '199,62,77';
-        var pCount = crit ? 35 : 18;
+        var pCount = crit ? 40 : 20;
         for (var i = 0; i < pCount; i++) {
+            var a = Math.random() * Math.PI * 2;
+            var sp = 0.005 + Math.random() * 0.015;
             combatState.particles.push({
-                x: 0.74 + (Math.random()-0.5)*0.05, y: 0.4 + (Math.random()-0.5)*0.1,
-                vx: (Math.random()-0.5)*0.02, vy: -0.005 - Math.random()*0.01,
-                size: 2+Math.random()*4, life: 1, decay: 0.015+Math.random()*0.02,
-                color: pColor, gravity: 0.008
+                x: 0.74 + (Math.random()-0.5)*0.04, y: 0.38 + (Math.random()-0.5)*0.08,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.003,
+                size: 2+Math.random()*5, life: 1, decay: 0.015+Math.random()*0.025,
+                color: pColor, gravity: 0.008, trail: true
             });
         }
     }, 240);
@@ -1238,15 +1387,22 @@ function triggerBossAttack(dmg) {
     combatState.bossAnim = 'attacking'; combatState.bossAnimStart = ts;
     setTimeout(function() {
         combatState.heroAnim = 'hurt'; combatState.heroAnimStart = performance.now();
-        combatState.flashAlpha = 0.6; combatState.flashColor = '199,62,77';
-        combatState.shakeAmount = 22;
+        combatState.flashAlpha = 0.65; combatState.flashColor = '199,62,77';
+        combatState.shakeAmount = 26;
+        combatState.hitStop = performance.now() + 120;
+        combatState.heroSquashX = 0.8; combatState.heroSquashY = 1.15;
+        combatState.chromaticAberration = 5;
+        combatState.impactRings.push({ x: 0.2, y: 0.4, radius: 15, alpha: 0.8, color: 'rgba(199,62,77,1)' });
         spawnDamageNumber(0.22, 0.35, '-' + dmg + ' HP', '#c73e4d');
-        for (var i = 0; i < 25; i++) {
+        combatState.damageNumbers[combatState.damageNumbers.length - 1].crit = false;
+        for (var i = 0; i < 30; i++) {
+            var a = Math.random() * Math.PI * 2;
+            var sp = 0.004 + Math.random() * 0.012;
             combatState.particles.push({
-                x: 0.2 + (Math.random()-0.5)*0.05, y: 0.4 + (Math.random()-0.5)*0.1,
-                vx: (Math.random()-0.5)*0.015, vy: -0.003 - Math.random()*0.008,
+                x: 0.2 + (Math.random()-0.5)*0.04, y: 0.4 + (Math.random()-0.5)*0.08,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.002,
                 size: 2+Math.random()*5, life: 1, decay: 0.012+Math.random()*0.02,
-                color: '139,20,20', gravity: 0.012
+                color: '139,20,20', gravity: 0.012, trail: true
             });
         }
     }, 280);
