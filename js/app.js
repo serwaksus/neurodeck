@@ -916,72 +916,350 @@ spiritSay('«' + newBoss.stages[0].desc + '»');
 screenShake(8, 400);
 }, 8000);
 }
-function floatCombatDamage(text, color, isLeft) {
-var fx = document.getElementById('combatFx');
-if (!fx) return;
-var el = document.createElement('div');
-el.className = 'combat-dmg-float';
-el.textContent = text;
-el.style.color = color || '#fbbf24';
-el.style.left = isLeft ? '20%' : '70%';
-el.style.top = '40%';
-fx.appendChild(el);
-setTimeout(function() { el.remove(); }, 1200);
+var combatCanvas = null, combatCtx = null, combatRafId = null;
+var combatImages = { bg: null, hero: null, boss: null };
+var combatLoaded = false;
+var combatState = {
+    heroX: 0.18, heroBaseY: 0.88,
+    bossX: 0.78, bossBaseY: 0.88,
+    heroScale: 1.0, bossScale: 1.15,
+    heroAnim: 'idle', bossAnim: 'idle',
+    heroAnimStart: 0, bossAnimStart: 0,
+    heroOffsetX: 0, heroOffsetY: 0, heroRot: 0,
+    bossOffsetX: 0, bossOffsetY: 0, bossRot: 0,
+    heroFilter: '', bossFilter: '',
+    flashAlpha: 0, flashColor: '255,255,255',
+    shakeX: 0, shakeY: 0, shakeAmount: 0,
+    heroHpPct: 1.0, bossHpPct: 1.0,
+    heroHpText: '', bossHpText: '',
+    bossName: 'Змей Лени',
+    particles: [], embers: [], damageNumbers: [],
+    defeated: false
+};
+function initCombatCanvas() {
+    combatCanvas = document.getElementById('combatCanvas');
+    if (!combatCanvas) return;
+    combatCtx = combatCanvas.getContext('2d');
+    var loaded = 0;
+    var urls = {
+        bg: 'bg-optimized.jpg?v=33',
+        hero: 'hero-cutout.png?v=33',
+        boss: 'snake-cutout.png?v=33'
+    };
+    Object.keys(urls).forEach(function(key) {
+        var img = new Image();
+        img.onload = function() {
+            combatImages[key] = img;
+            loaded++;
+            if (loaded === 3) {
+                combatLoaded = true;
+                var el = document.getElementById('combatLoading');
+                if (el) el.style.display = 'none';
+                if (!combatRafId) combatRafId = requestAnimationFrame(renderCombat);
+            }
+        };
+        img.onerror = function() { loaded++; };
+        img.src = urls[key];
+    });
+    for (var i = 0; i < 20; i++) spawnEmber();
+    setInterval(function() { if (Math.random() < 0.3) spawnEmber(); }, 300);
 }
-function animateHeroAttack(dmg, crit) {
-var hero = document.getElementById('heroFigure');
-var boss = document.getElementById('bossFigure');
-var flash = document.getElementById('combatFlash');
-if (!hero || !boss) return;
-hero.classList.remove('idle', 'attacking');
-boss.classList.remove('idle', 'hurt');
-void hero.offsetWidth;
-hero.classList.add('attacking');
-setTimeout(function() {
-if (flash) { flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash'); }
-boss.classList.add('hurt');
-floatCombatDamage('-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#e74c3c', false);
-if (crit) { screenShake(8, 400); burstParticles(window.innerWidth * 0.7, window.innerHeight * 0.4, 50, { color: '#fbbf24', speed: 9, decay: 0.012, size: 4, shape: 'star', gravity: 0.1 }); }
-else { screenShake(4, 200); burstParticles(window.innerWidth * 0.7, window.innerHeight * 0.4, 25, { color: '#c73e4d', speed: 6, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 }); }
-}, 250);
-setTimeout(function() { hero.classList.remove('attacking'); hero.classList.add('idle'); boss.classList.remove('hurt'); boss.classList.add('idle'); }, 700);
+function spawnEmber() {
+    combatState.embers.push({
+        x: Math.random(), y: 0.9 + Math.random() * 0.1,
+        vx: (Math.random() - 0.5) * 0.0008,
+        vy: -0.002 - Math.random() * 0.003,
+        size: 1 + Math.random() * 2.5,
+        life: 1, decay: 0.003 + Math.random() * 0.004,
+        color: Math.random() < 0.5 ? '255,160,60' : '255,100,40'
+    });
 }
-function animateBossAttack(dmg) {
-var hero = document.getElementById('heroFigure');
-var boss = document.getElementById('bossFigure');
-var flash = document.getElementById('combatFlash');
-if (!hero || !boss) return;
-boss.classList.remove('idle', 'attacking');
-hero.classList.remove('idle', 'hurt');
-void boss.offsetWidth;
-boss.classList.add('attacking');
-setTimeout(function() {
-if (flash) { flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash'); flash.style.background = 'rgba(199,62,77,0.6)'; }
-hero.classList.add('hurt');
-floatCombatDamage('-' + dmg + ' HP', '#c73e4d', true);
-spawnBloodRain(25);
-screenShake(12, 600);
-}, 250);
-setTimeout(function() { if (flash) flash.style.background = 'rgba(255,255,255,0.8)'; boss.classList.remove('attacking'); boss.classList.add('idle'); hero.classList.remove('hurt'); hero.classList.add('idle'); }, 700);
+function spawnCombatParticles(x, y, count, color, speed) {
+    for (var i = 0; i < count; i++) {
+        var a = Math.random() * Math.PI * 2;
+        var sp = speed * (0.3 + Math.random() * 0.7);
+        combatState.particles.push({
+            x: x, y: y,
+            vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+            size: 2 + Math.random() * 4,
+            life: 1, decay: 0.015 + Math.random() * 0.02,
+            color: color, gravity: 0.15
+        });
+    }
+}
+function spawnDamageNumber(x, y, text, color) {
+    combatState.damageNumbers.push({
+        x: x, y: y, vy: -0.015,
+        text: text, color: color || '#fbbf24',
+        life: 1, decay: 0.012
+    });
+}
+function renderCombat(ts) {
+    if (!combatLoaded) { combatRafId = requestAnimationFrame(renderCombat); return; }
+    var w = combatCanvas.width, h = combatCanvas.height;
+    combatCtx.clearRect(0, 0, w, h);
+    if (combatState.shakeAmount > 0.5) {
+        combatState.shakeX = (Math.random() - 0.5) * combatState.shakeAmount;
+        combatState.shakeY = (Math.random() - 0.5) * combatState.shakeAmount;
+        combatState.shakeAmount *= 0.88;
+    } else { combatState.shakeX = 0; combatState.shakeY = 0; }
+    combatCtx.save();
+    combatCtx.translate(combatState.shakeX, combatState.shakeY);
+    if (combatImages.bg) combatCtx.drawImage(combatImages.bg, 0, 0, w, h);
+    var grad = combatCtx.createRadialGradient(w*0.15, h*0.4, 50, w*0.15, h*0.4, w*0.6);
+    grad.addColorStop(0, 'rgba(255,160,60,0.12)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    combatCtx.fillStyle = grad;
+    combatCtx.fillRect(0, 0, w, h);
+    var grad2 = combatCtx.createRadialGradient(w*0.78, h*0.5, 50, w*0.78, h*0.5, w*0.5);
+    grad2.addColorStop(0, 'rgba(100,40,40,0.15)');
+    grad2.addColorStop(1, 'rgba(0,0,0,0)');
+    combatCtx.fillStyle = grad2;
+    combatCtx.fillRect(0, 0, w, h);
+    updateCombatAnim(ts);
+    drawCombatShadow(combatState.heroX * w, combatState.heroBaseY * h, 80 * combatState.heroScale);
+    drawCombatShadow(combatState.bossX * w, combatState.bossBaseY * h, 100 * combatState.bossScale);
+    drawCombatChar('boss', ts);
+    drawCombatChar('hero', ts);
+    for (var i = combatState.particles.length - 1; i >= 0; i--) {
+        var p = combatState.particles[i];
+        p.x += p.vx; p.y += p.vy; p.vy += p.gravity;
+        p.life -= p.decay;
+        if (p.life <= 0) { combatState.particles.splice(i, 1); continue; }
+        combatCtx.save();
+        combatCtx.globalAlpha = p.life;
+        combatCtx.fillStyle = 'rgb(' + p.color + ')';
+        combatCtx.shadowBlur = 8;
+        combatCtx.shadowColor = 'rgb(' + p.color + ')';
+        combatCtx.beginPath();
+        combatCtx.arc(p.x * w, p.y * h, p.size, 0, Math.PI * 2);
+        combatCtx.fill();
+        combatCtx.restore();
+    }
+    for (var j = combatState.embers.length - 1; j >= 0; j--) {
+        var e = combatState.embers[j];
+        e.x += e.vx; e.y += e.vy; e.life -= e.decay;
+        if (e.life <= 0 || e.y < -0.1) { combatState.embers.splice(j, 1); continue; }
+        combatCtx.save();
+        combatCtx.globalAlpha = e.life * 0.7;
+        combatCtx.fillStyle = 'rgb(' + e.color + ')';
+        combatCtx.shadowBlur = 6;
+        combatCtx.shadowColor = 'rgb(' + e.color + ')';
+        combatCtx.beginPath();
+        combatCtx.arc(e.x * w, e.y * h, e.size, 0, Math.PI * 2);
+        combatCtx.fill();
+        combatCtx.restore();
+    }
+    if (combatState.flashAlpha > 0.01) {
+        combatCtx.fillStyle = 'rgba(' + combatState.flashColor + ',' + combatState.flashAlpha + ')';
+        combatCtx.fillRect(0, 0, w, h);
+        combatState.flashAlpha *= 0.82;
+    }
+    var vignette = combatCtx.createRadialGradient(w/2, h/2, w*0.3, w/2, h/2, w*0.7);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.5)');
+    combatCtx.fillStyle = vignette;
+    combatCtx.fillRect(0, 0, w, h);
+    drawCombatHpBar(20, 18, w * 0.4, 'Герой', combatState.heroHpPct, combatState.heroHpText, '#c73e4d', false);
+    var boss = getCurrentBoss();
+    drawCombatHpBar(w - w * 0.4 - 20, 18, w * 0.4, combatState.bossName, combatState.bossHpPct, combatState.bossHpText, '#8b2635', true);
+    for (var k = combatState.damageNumbers.length - 1; k >= 0; k--) {
+        var d = combatState.damageNumbers[k];
+        d.y += d.vy; d.life -= d.decay;
+        if (d.life <= 0) { combatState.damageNumbers.splice(k, 1); continue; }
+        combatCtx.save();
+        combatCtx.globalAlpha = Math.min(1, d.life * 1.5);
+        combatCtx.font = 'bold 28px serif';
+        combatCtx.textAlign = 'center';
+        combatCtx.fillStyle = d.color;
+        combatCtx.shadowBlur = 10;
+        combatCtx.shadowColor = '#000';
+        combatCtx.fillText(d.text, d.x * w, d.y * h);
+        combatCtx.restore();
+    }
+    if (combatState.defeated) {
+        combatCtx.save();
+        combatCtx.fillStyle = 'rgba(0,0,0,0.7)';
+        combatCtx.fillRect(0, 0, w, h);
+        combatCtx.font = 'bold 48px serif';
+        combatCtx.textAlign = 'center';
+        combatCtx.fillStyle = '#888';
+        combatCtx.fillText('☠ ПОВЕРЖЕН ☠', w/2, h/2);
+        combatCtx.restore();
+    }
+    combatCtx.restore();
+    combatRafId = requestAnimationFrame(renderCombat);
+}
+function drawCombatShadow(x, y, radius) {
+    combatCtx.save();
+    combatCtx.fillStyle = 'rgba(0,0,0,0.5)';
+    combatCtx.beginPath();
+    combatCtx.ellipse(x, y, radius, radius * 0.25, 0, 0, Math.PI * 2);
+    combatCtx.fill();
+    combatCtx.restore();
+}
+function updateCombatAnim(ts) {
+    var which = [['hero', 'heroAnim', 'heroAnimStart', 'heroOffsetX', 'heroOffsetY', 'heroRot'],
+                 ['boss', 'bossAnim', 'bossAnimStart', 'bossOffsetX', 'bossOffsetY', 'bossRot']];
+    which.forEach(function(arr) {
+        var key = arr[0], animProp = arr[1], startProp = arr[2], oxProp = arr[3], oyProp = arr[4], rotProp = arr[5];
+        var anim = combatState[animProp];
+        var t = (ts - combatState[startProp]) / 1000;
+        if (anim === 'idle') {
+            combatState[oxProp] = 0;
+            combatState[oyProp] = Math.sin(ts * 0.002 + (key === 'boss' ? 1.5 : 0)) * 0.005;
+            combatState[rotProp] = Math.sin(ts * 0.0015 + (key === 'boss' ? 1 : 0)) * 1;
+            if (key === 'hero') combatState.heroFilter = '';
+            if (key === 'boss') combatState.bossFilter = '';
+        } else if (anim === 'attacking') {
+            var dir = key === 'hero' ? 1 : -1;
+            if (t < 0.15) {
+                var p = t / 0.15;
+                combatState[oxProp] = -0.02 * dir * p;
+                combatState[rotProp] = -3 * dir * p;
+            } else if (t < 0.28) {
+                var p2 = (t - 0.15) / 0.13;
+                combatState[oxProp] = (-0.02 + 0.15 * p2) * dir;
+                combatState[rotProp] = (-3 + 5 * p2) * dir;
+            } else if (t < 0.40) {
+                combatState[oxProp] = 0.13 * dir;
+            } else if (t < 0.65) {
+                var p3 = (t - 0.40) / 0.25;
+                combatState[oxProp] = 0.13 * (1 - p3) * dir;
+                combatState[rotProp] = 2 * (1 - p3) * dir;
+            } else {
+                combatState[animProp] = 'idle';
+                combatState[startProp] = ts;
+            }
+        } else if (anim === 'hurt') {
+            var hdir = key === 'hero' ? -1 : 1;
+            if (t < 0.15) {
+                var hp = t / 0.15;
+                combatState[oxProp] = 0.04 * hdir * hp;
+                combatState[rotProp] = 5 * hdir * hp;
+            } else if (t < 0.45) {
+                var hp2 = (t - 0.15) / 0.30;
+                combatState[oxProp] = 0.04 * hdir * (1 - hp2);
+                combatState[rotProp] = 5 * hdir * (1 - hp2);
+            } else {
+                combatState[animProp] = 'idle';
+                combatState[startProp] = ts;
+            }
+            if (key === 'hero') combatState.heroFilter = t < 0.2 ? 'brightness(2.5) saturate(0.2)' : '';
+            if (key === 'boss') combatState.bossFilter = t < 0.2 ? 'brightness(2) saturate(0.3)' : '';
+        }
+    });
+}
+function drawCombatChar(which, ts) {
+    var img = combatImages[which];
+    if (!img) return;
+    var w = combatCanvas.width, h = combatCanvas.height;
+    var baseX, baseY, scale, ox, oy, rot, filter;
+    if (which === 'hero') {
+        baseX = combatState.heroX; baseY = combatState.heroBaseY;
+        scale = combatState.heroScale;
+        ox = combatState.heroOffsetX; oy = combatState.heroOffsetY;
+        rot = combatState.heroRot; filter = combatState.heroFilter;
+    } else {
+        baseX = combatState.bossX; baseY = combatState.bossBaseY;
+        scale = combatState.bossScale;
+        ox = combatState.bossOffsetX; oy = combatState.bossOffsetY;
+        rot = combatState.bossRot; filter = combatState.bossFilter;
+    }
+    var charH = h * 0.55 * scale;
+    var charW = charH * (img.width / img.height);
+    var cx = (baseX + ox) * w;
+    var cy = (baseY + oy) * h;
+    combatCtx.save();
+    combatCtx.translate(cx, cy);
+    combatCtx.rotate(rot * Math.PI / 180);
+    if (filter) combatCtx.filter = filter;
+    combatCtx.drawImage(img, -charW/2, -charH, charW, charH);
+    combatCtx.restore();
+}
+function drawCombatHpBar(x, y, width, name, pct, text, color, rightAlign) {
+    pct = Math.max(0, Math.min(1, pct));
+    combatCtx.save();
+    combatCtx.font = 'bold 14px serif';
+    combatCtx.textAlign = rightAlign ? 'right' : 'left';
+    combatCtx.fillStyle = '#d4a574';
+    combatCtx.shadowBlur = 4;
+    combatCtx.shadowColor = '#000';
+    combatCtx.fillText(name, rightAlign ? x + width : x, y);
+    var barY = y + 8;
+    var barH = 12;
+    combatCtx.shadowBlur = 0;
+    combatCtx.fillStyle = 'rgba(0,0,0,0.7)';
+    combatCtx.fillRect(x - 1, barY - 1, width + 2, barH + 2);
+    combatCtx.fillStyle = 'rgba(40,40,40,0.8)';
+    combatCtx.fillRect(x, barY, width, barH);
+    combatCtx.fillStyle = color;
+    combatCtx.fillRect(x, barY, width * pct, barH);
+    var gradColor = color === '#c73e4d' ? '199,62,77' : '139,38,53';
+    var hpGrad = combatCtx.createLinearGradient(x, barY, x, barY + barH);
+    hpGrad.addColorStop(0, 'rgba(255,255,255,0.25)');
+    hpGrad.addColorStop(0.5, 'rgba(' + gradColor + ',0)');
+    hpGrad.addColorStop(1, 'rgba(0,0,0,0.3)');
+    combatCtx.fillStyle = hpGrad;
+    combatCtx.fillRect(x, barY, width * pct, barH);
+    combatCtx.strokeStyle = 'rgba(212,165,116,0.4)';
+    combatCtx.lineWidth = 1;
+    combatCtx.strokeRect(x, barY, width, barH);
+    combatCtx.font = '11px monospace';
+    combatCtx.textAlign = rightAlign ? 'right' : 'left';
+    combatCtx.fillStyle = 'rgba(255,255,255,0.8)';
+    combatCtx.shadowBlur = 3;
+    combatCtx.shadowColor = '#000';
+    combatCtx.fillText(text, rightAlign ? x + width : x, barY + barH + 14);
+    combatCtx.restore();
+}
+function triggerHeroAttack(dmg, crit) {
+    var ts = performance.now();
+    combatState.heroAnim = 'attacking'; combatState.heroAnimStart = ts;
+    setTimeout(function() {
+        combatState.bossAnim = 'hurt'; combatState.bossAnimStart = performance.now();
+        combatState.flashAlpha = 0.7; combatState.flashColor = '255,255,255';
+        combatState.shakeAmount = crit ? 18 : 10;
+        spawnDamageNumber(0.72, 0.35, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#e74c3c');
+        var pColor = crit ? '251,191,36' : '199,62,77';
+        var pCount = crit ? 35 : 18;
+        for (var i = 0; i < pCount; i++) {
+            combatState.particles.push({
+                x: 0.74 + (Math.random()-0.5)*0.05, y: 0.4 + (Math.random()-0.5)*0.1,
+                vx: (Math.random()-0.5)*0.02, vy: -0.005 - Math.random()*0.01,
+                size: 2+Math.random()*4, life: 1, decay: 0.015+Math.random()*0.02,
+                color: pColor, gravity: 0.008
+            });
+        }
+    }, 240);
+}
+function triggerBossAttack(dmg) {
+    var ts = performance.now();
+    combatState.bossAnim = 'attacking'; combatState.bossAnimStart = ts;
+    setTimeout(function() {
+        combatState.heroAnim = 'hurt'; combatState.heroAnimStart = performance.now();
+        combatState.flashAlpha = 0.6; combatState.flashColor = '199,62,77';
+        combatState.shakeAmount = 22;
+        spawnDamageNumber(0.22, 0.35, '-' + dmg + ' HP', '#c73e4d');
+        for (var i = 0; i < 25; i++) {
+            combatState.particles.push({
+                x: 0.2 + (Math.random()-0.5)*0.05, y: 0.4 + (Math.random()-0.5)*0.1,
+                vx: (Math.random()-0.5)*0.015, vy: -0.003 - Math.random()*0.008,
+                size: 2+Math.random()*5, life: 1, decay: 0.012+Math.random()*0.02,
+                color: '139,20,20', gravity: 0.012
+            });
+        }
+    }, 280);
 }
 function updateCombatHpBars() {
-var heroEl = document.getElementById('combatHeroHp');
-var heroText = document.getElementById('combatHeroHpText');
-var bossEl = document.getElementById('combatBossHp');
-var bossText = document.getElementById('combatBossHpText');
-var bossNameEl = document.getElementById('combatBossName');
-if (heroEl) { heroEl.style.width = Math.max(0, (HERO.hp / HERO.maxHp) * 100) + '%'; }
-if (heroText) { heroText.textContent = Math.max(0, Math.round(HERO.hp)) + '/' + HERO.maxHp; }
-var boss = getCurrentBoss();
-var stage = boss.stages[bossStage];
-if (bossEl) { bossEl.style.width = Math.max(0, (bossHp / stage.maxHp) * 100) + '%'; }
-if (bossText) { bossText.textContent = Math.max(0, Math.round(bossHp)) + '/' + stage.maxHp; }
-if (bossNameEl) { bossNameEl.textContent = boss.name; }
-var bossImg = document.getElementById('bossSpriteImg');
-if (bossImg) {
-var newSrc = boss.type === 'chimera' ? 'snake.png?v=31' : boss.type === 'social' ? 'snake.png?v=31' : 'snake.png?v=31';
-if (bossImg.src.indexOf(newSrc.split('?')[0]) === -1) bossImg.src = newSrc;
-}
+    combatState.heroHpPct = HERO.hp / HERO.maxHp;
+    combatState.heroHpText = Math.max(0, Math.round(HERO.hp)) + '/' + HERO.maxHp;
+    var boss = getCurrentBoss();
+    var stage = boss.stages[bossStage];
+    combatState.bossHpPct = bossHp / stage.maxHp;
+    combatState.bossHpText = Math.max(0, Math.round(bossHp)) + '/' + stage.maxHp;
+    combatState.bossName = boss.name;
+    combatState.defeated = bossDefeated;
 }
 function attackBoss() {
 if (bossDefeated) { showToast('☠ Босс повержен', 'Нечего атаковать', 'blood'); return; }
@@ -999,7 +1277,7 @@ var dmg = crit ? baseDmg * 2 : baseDmg;
 if (HERO.isHollow) dmg = Math.floor(dmg * 0.5);
 dmg = Math.max(1, dmg);
 changeBossHp(-dmg);
-animateHeroAttack(dmg, crit);
+triggerHeroAttack(dmg, crit);
 if (crit) { sfxCrit(); haptic('heavy'); }
 else { sfxHit(); haptic('medium'); }
 updateBossBattleUI();
@@ -1014,7 +1292,7 @@ var rageDmg = bossRagePoints * rageMult;
 var boss = getCurrentBoss();
 if (rageDmg > 0) {
 HERO.hp = Math.max(1, HERO.hp - rageDmg);
-animateBossAttack(rageDmg);
+triggerBossAttack(rageDmg);
 sfxBossHit(); haptic('heavy');
 showToast('💢 Ответный удар!', boss.name + ' наносит -' + rageDmg + ' HP (Ярость: ' + bossRagePoints + ')', 'blood');
 if (HERO.hp <= 1 && !HERO.isHollow) {
@@ -3405,6 +3683,8 @@ renderCards();
 renderDashboard();
 updateBossDisplay();
 changeBossHp(0);
+initCombatCanvas();
+updateCombatHpBars();
 importFromHash();
 if (FORGED.length === 0) { setTimeout(deepRecovery, 1000); }
 if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }

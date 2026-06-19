@@ -811,6 +811,7 @@ margin-top: 8px; font-style: italic;
 #heroFigure.idle { animation: idleBreathe 3s ease-in-out infinite; }
 #bossFigure.idle { animation: idleBreathe 4s ease-in-out infinite 0.5s; }
 @keyframes idleBreathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.01); } }
+#combatCanvas { width: 100%; height: auto; display: block; border-radius: 4px; border: 1px solid var(--border); background: #0a0a0f; }
 .combat-hp-overlay { position: absolute; top: 8px; z-index: 4; min-width: 35%; max-width: 45%; }
 .combat-hp-overlay.hero { left: 8px; }
 .combat-hp-overlay.boss { right: 8px; text-align: right; }
