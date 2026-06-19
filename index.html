@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=31">
+<link rel="stylesheet" href="css/style.css?v=32">
 </head>
 <body>
 <div class="app-wrap">
@@ -355,29 +355,32 @@
 </section>
 <section class="view" id="view-boss">
 <div class="view-title">🐍 Босс локации</div>
-<div class="view-subtitle" id="bossSubtitle">Змей Лени · Он ждёт твоего провала</div>
-<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-<div class="boss-image" id="bossImageFull" style="aspect-ratio: 4/5;">
-<div class="boss-sprite boss-anim-stage1"></div>
-<div class="boss-eyes"><div class="boss-eye left"></div><div class="boss-eye right"></div></div>
-<div class="boss-blood" id="bossBloodFull"></div>
-<div class="boss-cracks" id="bossCracksFull"></div>
+<div class="view-subtitle" id="bossSubtitle">Змей Лени</div>
+<div id="combatScene">
+<div id="combatBg"></div>
+<div id="combatVignette"></div>
+<div class="combat-hp-overlay hero">
+<div class="combat-hp-name">Герой</div>
+<div class="combat-hp-bar"><div class="combat-hp-fill" id="combatHeroHp" style="width:100%"></div></div>
+<div class="combat-hp-text" id="combatHeroHpText">86/86</div>
+</div>
+<div class="combat-hp-overlay boss">
+<div class="combat-hp-name" id="combatBossName">Змей Лени</div>
+<div class="combat-hp-bar"><div class="combat-hp-fill boss" id="combatBossHp" style="width:100%"></div></div>
+<div class="combat-hp-text" id="combatBossHpText">100/100</div>
+</div>
+<div id="heroFigure" class="combat-figure"><img src="hero.png?v=31" alt="Герой"></div>
+<div id="bossFigure" class="combat-figure"><img src="snake.png?v=31" alt="Босс" id="bossSpriteImg"></div>
+<div id="combatFlash"></div>
+<div id="combatFx"></div>
 <div class="boss-defeated-overlay" id="bossDefeatedFull">
 <div class="skull">☠</div>
 <div class="defeat-text">БОСС ПОВЕРЖЕН</div>
 <div class="defeat-sub">Тьма отступает...</div>
 </div>
 </div>
-<div>
-<div class="boss-hp" id="bossHpBlockFull" style="margin-bottom: 14px;">
-<div class="boss-hp-label"><span>Здоровье</span><b id="bossHpTextFull">100%</b></div>
-<div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFillFull" style="width:100%"></div></div>
-</div>
-<div style="padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); font-size: 11px; line-height: 1.7; color: var(--text-dim);" id="bossLoreText">
-</div>
-<div id="bossBattleArea" style="margin-top: 14px;"></div>
-</div>
-</div>
+<div id="bossLoreText" style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); font-size:11px; line-height:1.7; color:var(--text-dim);"></div>
+<div id="bossBattleArea" style="margin-top:12px;"></div>
 </section>
 <section class="view" id="view-map">
 <div class="view-title">🗺 Карта подземелья</div>
@@ -472,6 +475,6 @@
 </div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=31"></script>
+<script src="js/app.js?v=32"></script>
 </body>
 </html>

@@ -775,11 +775,11 @@ const boss = getCurrentBoss();
     }
     bossHp = Math.max(0, Math.min(stage.maxHp, bossHp + delta));
 const pct = (bossHp / stage.maxHp) * 100;
-document.getElementById('bossHpFill').style.width = pct + '%';
-document.getElementById('bossHpText').textContent = Math.round(pct) + '%';
-const ff = document.getElementById('bossHpFillFull'), ft = document.getElementById('bossHpTextFull');
-if (ff) ff.style.width = pct + '%';
-if (ft) ft.textContent = Math.round(pct) + '%';
+var fillEl = document.getElementById('bossHpFill');
+var textEl = document.getElementById('bossHpText');
+if (fillEl) fillEl.style.width = pct + '%';
+if (textEl) textEl.textContent = Math.round(pct) + '%';
+updateCombatHpBars();
 const crackPct = Math.max(0, (stage.maxHp - bossHp) / stage.maxHp);
 const crackEl = document.getElementById('bossCracks');
 const crackFullEl = document.getElementById('bossCracksFull');
@@ -916,6 +916,73 @@ spiritSay('«' + newBoss.stages[0].desc + '»');
 screenShake(8, 400);
 }, 8000);
 }
+function floatCombatDamage(text, color, isLeft) {
+var fx = document.getElementById('combatFx');
+if (!fx) return;
+var el = document.createElement('div');
+el.className = 'combat-dmg-float';
+el.textContent = text;
+el.style.color = color || '#fbbf24';
+el.style.left = isLeft ? '20%' : '70%';
+el.style.top = '40%';
+fx.appendChild(el);
+setTimeout(function() { el.remove(); }, 1200);
+}
+function animateHeroAttack(dmg, crit) {
+var hero = document.getElementById('heroFigure');
+var boss = document.getElementById('bossFigure');
+var flash = document.getElementById('combatFlash');
+if (!hero || !boss) return;
+hero.classList.remove('idle', 'attacking');
+boss.classList.remove('idle', 'hurt');
+void hero.offsetWidth;
+hero.classList.add('attacking');
+setTimeout(function() {
+if (flash) { flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash'); }
+boss.classList.add('hurt');
+floatCombatDamage('-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#e74c3c', false);
+if (crit) { screenShake(8, 400); burstParticles(window.innerWidth * 0.7, window.innerHeight * 0.4, 50, { color: '#fbbf24', speed: 9, decay: 0.012, size: 4, shape: 'star', gravity: 0.1 }); }
+else { screenShake(4, 200); burstParticles(window.innerWidth * 0.7, window.innerHeight * 0.4, 25, { color: '#c73e4d', speed: 6, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 }); }
+}, 250);
+setTimeout(function() { hero.classList.remove('attacking'); hero.classList.add('idle'); boss.classList.remove('hurt'); boss.classList.add('idle'); }, 700);
+}
+function animateBossAttack(dmg) {
+var hero = document.getElementById('heroFigure');
+var boss = document.getElementById('bossFigure');
+var flash = document.getElementById('combatFlash');
+if (!hero || !boss) return;
+boss.classList.remove('idle', 'attacking');
+hero.classList.remove('idle', 'hurt');
+void boss.offsetWidth;
+boss.classList.add('attacking');
+setTimeout(function() {
+if (flash) { flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash'); flash.style.background = 'rgba(199,62,77,0.6)'; }
+hero.classList.add('hurt');
+floatCombatDamage('-' + dmg + ' HP', '#c73e4d', true);
+spawnBloodRain(25);
+screenShake(12, 600);
+}, 250);
+setTimeout(function() { if (flash) flash.style.background = 'rgba(255,255,255,0.8)'; boss.classList.remove('attacking'); boss.classList.add('idle'); hero.classList.remove('hurt'); hero.classList.add('idle'); }, 700);
+}
+function updateCombatHpBars() {
+var heroEl = document.getElementById('combatHeroHp');
+var heroText = document.getElementById('combatHeroHpText');
+var bossEl = document.getElementById('combatBossHp');
+var bossText = document.getElementById('combatBossHpText');
+var bossNameEl = document.getElementById('combatBossName');
+if (heroEl) { heroEl.style.width = Math.max(0, (HERO.hp / HERO.maxHp) * 100) + '%'; }
+if (heroText) { heroText.textContent = Math.max(0, Math.round(HERO.hp)) + '/' + HERO.maxHp; }
+var boss = getCurrentBoss();
+var stage = boss.stages[bossStage];
+if (bossEl) { bossEl.style.width = Math.max(0, (bossHp / stage.maxHp) * 100) + '%'; }
+if (bossText) { bossText.textContent = Math.max(0, Math.round(bossHp)) + '/' + stage.maxHp; }
+if (bossNameEl) { bossNameEl.textContent = boss.name; }
+var bossImg = document.getElementById('bossSpriteImg');
+if (bossImg) {
+var newSrc = boss.type === 'chimera' ? 'snake.png?v=31' : boss.type === 'social' ? 'snake.png?v=31' : 'snake.png?v=31';
+if (bossImg.src.indexOf(newSrc.split('?')[0]) === -1) bossImg.src = newSrc;
+}
+}
 function attackBoss() {
 if (bossDefeated) { showToast('☠ Босс повержен', 'Нечего атаковать', 'blood'); return; }
 if (getBattlePhase() !== 'battle') { showToast('⛏ Не время', 'Фаза схватки: пятница — воскресенье', 'blood'); return; }
@@ -932,10 +999,11 @@ var dmg = crit ? baseDmg * 2 : baseDmg;
 if (HERO.isHollow) dmg = Math.floor(dmg * 0.5);
 dmg = Math.max(1, dmg);
 changeBossHp(-dmg);
-spawnFloatNumber(window.innerWidth / 2, window.innerHeight / 2 - 40, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#c73e4d');
-if (crit) { screenShake(6, 300); burstParticles(window.innerWidth / 2, window.innerHeight / 2, 40, { color: '#fbbf24', speed: 8, decay: 0.015, size: 4, shape: 'star', gravity: 0.1 }); sfxCrit(); haptic('heavy'); }
+animateHeroAttack(dmg, crit);
+if (crit) { sfxCrit(); haptic('heavy'); }
 else { sfxHit(); haptic('medium'); }
 updateBossBattleUI();
+updateCombatHpBars();
 updateHeroUI();
 saveGameState();
 }
@@ -946,10 +1014,8 @@ var rageDmg = bossRagePoints * rageMult;
 var boss = getCurrentBoss();
 if (rageDmg > 0) {
 HERO.hp = Math.max(1, HERO.hp - rageDmg);
-spawnBloodRain(30);
-screenShake(15, 800);
+animateBossAttack(rageDmg);
 sfxBossHit(); haptic('heavy');
-burstParticles(window.innerWidth / 2, window.innerHeight / 2 + 60, 60, { color: '#c73e4d', speed: 10, decay: 0.012, size: 4, shape: 'spark', gravity: 0.12 });
 showToast('💢 Ответный удар!', boss.name + ' наносит -' + rageDmg + ' HP (Ярость: ' + bossRagePoints + ')', 'blood');
 if (HERO.hp <= 1 && !HERO.isHollow) {
 HERO.isHollow = true;
@@ -1580,7 +1646,7 @@ if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'map') renderMap(escapeProgress);
-if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); }
+if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); updateCombatHpBars(); var hf=document.getElementById('heroFigure'); var bf=document.getElementById('bossFigure'); if(hf) hf.classList.add('idle'); if(bf) bf.classList.add('idle'); }
 if (view === 'deck') renderDashboard();
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
