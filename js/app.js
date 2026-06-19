@@ -1159,20 +1159,40 @@ item.icon +
 item.bonuses.map(b => '<div class="item-bonus"><span class="item-bonus-name">' + b.label + '</span><span class="item-bonus-val">+' + b.value + '</span></div>').join('') +
 (item.special ? '<div class="item-bonus special"><span class="item-bonus-name">★ Особое</span><span class="item-bonus-val">' + item.special + '</span></div>' : '') +
 '</div>' +
+(function() {
+var rr = getArtifactReqRank(item.rank);
+if (!rr) return '';
+var cnt = countCardsAtRankOrHigher(rr);
+var ok = cnt >= 2;
+return '<div style="margin-top:8px; padding:6px 10px; background:rgba(' + (ok ? '52,211,153' : '199,62,77') + ',0.1); border:1px solid rgba(' + (ok ? '52,211,153' : '199,62,77') + ',0.3); border-radius:3px; font-size:10px;">' +
+    (ok ? '✅' : '⚠') + ' Требует: <b>' + cnt + '/2</b> карточек ранга <b>' + rr + '+</b></div>';
+})() +
 '<div class="item-actions">' +
 (isEquipped
 ? '<button class="item-btn danger" data-action="unequip-item" data-slot="' + item.slot + '">↶ Снять</button>'
 : '<button class="item-btn" data-action="equip-item" data-uid="' + item.uid + '">⚔ Экипировать</button><button class="item-btn danger" data-action="discard-item" data-uid="' + item.uid + '">✕ Выбросить</button>') +
 '</div>';
 }
+function getArtifactReqRank(artifactRank) {
+var tierMax = { 'C': null, 'B': 'BBB', 'A': 'AAA', 'S': 'SSS' };
+return tierMax[artifactRank] || null;
+}
+function countCardsAtRankOrHigher(rank) {
+var thresholdIdx = RANK_PROGRESSION.indexOf(rank);
+if (thresholdIdx === -1) return 0;
+return FORGED.filter(function(c) { return RANK_PROGRESSION.indexOf(c.rank) >= thresholdIdx; }).length;
+}
 function equipItem(uid) {
 const item = INVENTORY.backpack.find(i => i.uid === uid);
 if (!item) return;
-var reqLevel = item.reqLevel || 1;
-if (HERO.level < reqLevel) {
-showToast('⚠ Недостаточный уровень', 'Требуется уровень ' + reqLevel + ' для «' + item.name + '»', 'blood');
+var reqRank = getArtifactReqRank(item.rank);
+if (reqRank) {
+var count = countCardsAtRankOrHigher(reqRank);
+if (count < 2) {
+showToast('⚠ Недостаточно карточек', 'Нужно 2 карточки ранга ' + reqRank + '+ для «' + item.name + '» (сейчас: ' + count + ')', 'blood');
 sfxError(); haptic('warning');
 return;
+}
 }
 let targetSlot = item.slot;
 if (item.slot === 'ring1' && INVENTORY.equipped.ring1 && !INVENTORY.equipped.ring2) targetSlot = 'ring2';
