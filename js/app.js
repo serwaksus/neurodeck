@@ -998,7 +998,7 @@ function extractSilhouette(key, img) {
     var d = id.data;
     for (var i = 0; i < d.length; i += 4) {
         var lum = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
-        if (lum < 40) { d[i+3] = 0; }
+        if (d[i+3] < 128 || lum < 40) { d[i+3] = 0; }
         else {
             var edgeAlpha = Math.min(255, (lum - 40) * 3);
             d[i+3] = edgeAlpha;
@@ -2146,7 +2146,7 @@ if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'map') renderMap(escapeProgress);
-if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); updateCombatHpBars(); var hf=document.getElementById('heroFigure'); var bf=document.getElementById('bossFigure'); if(hf) hf.classList.add('idle'); if(bf) bf.classList.add('idle'); }
+if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); updateCombatHpBars(); }
 if (view === 'deck') renderDashboard();
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
