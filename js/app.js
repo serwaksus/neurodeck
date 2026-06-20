@@ -918,10 +918,14 @@ screenShake(8, 400);
 }
 var combatCanvas = null, combatCtx = null, combatRafId = null;
 var combatImages = { bg: null, hero: null, boss: null };
+var combatSilhouettes = { hero: null, boss: null };
+var combatOffscreen = null, combatOffCtx = null;
+var combatBloomCanvas = null, combatBloomCtx = null;
+var combatGrainCanvas = null, combatGrainCtx = null;
 var combatLoaded = false;
 var combatState = {
-    heroX: 0.18, heroBaseY: 0.88,
-    bossX: 0.78, bossBaseY: 0.88,
+    heroX: 0.18, heroBaseY: 0.86,
+    bossX: 0.78, bossBaseY: 0.86,
     heroScale: 1.0, bossScale: 1.15,
     heroAnim: 'idle', bossAnim: 'idle',
     heroAnimStart: 0, bossAnimStart: 0,
@@ -933,30 +937,35 @@ var combatState = {
     shakeX: 0, shakeY: 0, shakeAmount: 0,
     hitStop: 0,
     torchFlicker: 1.0, fogOffset: 0,
-    slashArc: null,
-    impactRings: [],
+    slashArc: null, impactRings: [], decals: [], drips: [],
     chromaticAberration: 0,
     bossAuraAlpha: 0, rageVignette: 0,
     heroHpPct: 1.0, bossHpPct: 1.0,
     heroHpText: '', bossHpText: '',
     bossName: 'Змей Лени',
     particles: [], embers: [], damageNumbers: [],
-    defeated: false
+    cameraX: 0, cameraY: 0, cameraZoom: 1, cameraTargetZoom: 1, cameraBreath: 0,
+    mood: 0, defeated: false
 };
 function initCombatCanvas() {
     combatCanvas = document.getElementById('combatCanvas');
     if (!combatCanvas) return;
     combatCtx = combatCanvas.getContext('2d');
+    var w = combatCanvas.width, h = combatCanvas.height;
+    combatOffscreen = document.createElement('canvas'); combatOffscreen.width = w; combatOffscreen.height = h;
+    combatOffCtx = combatOffscreen.getContext('2d');
+    combatBloomCanvas = document.createElement('canvas'); combatBloomCanvas.width = w/2; combatBloomCanvas.height = h/2;
+    combatBloomCtx = combatBloomCanvas.getContext('2d');
+    combatGrainCanvas = document.createElement('canvas'); combatGrainCanvas.width = 128; combatGrainCanvas.height = 128;
+    combatGrainCtx = combatGrainCanvas.getContext('2d');
+    generateGrain();
     var loaded = 0;
-    var urls = {
-        bg: 'bg-optimized.jpg?v=34',
-        hero: 'hero-cutout.png?v=34',
-        boss: 'snake-cutout.png?v=34'
-    };
+    var urls = { bg: 'bg-optimized.jpg?v=35', hero: 'hero-cutout.png?v=35', boss: 'snake-cutout.png?v=35' };
     Object.keys(urls).forEach(function(key) {
         var img = new Image();
         img.onload = function() {
             combatImages[key] = img;
+            if (key === 'hero' || key === 'boss') extractSilhouette(key, img);
             loaded++;
             if (loaded === 3) {
                 combatLoaded = true;
@@ -968,217 +977,296 @@ function initCombatCanvas() {
         img.onerror = function() { loaded++; };
         img.src = urls[key];
     });
-    for (var i = 0; i < 20; i++) spawnEmber();
-    setInterval(function() { if (Math.random() < 0.3) spawnEmber(); }, 300);
+    for (var i = 0; i < 25; i++) spawnEmber();
+    for (var d = 0; d < 8; d++) spawnDrip();
+    setInterval(function() { if (Math.random() < 0.3) spawnEmber(); if (Math.random() < 0.1) spawnDrip(); }, 300);
+}
+function generateGrain() {
+    var id = combatGrainCtx.createImageData(128, 128);
+    for (var i = 0; i < id.data.length; i += 4) {
+        var v = Math.random() * 255;
+        id.data[i] = v; id.data[i+1] = v; id.data[i+2] = v; id.data[i+3] = 18;
+    }
+    combatGrainCtx.putImageData(id, 0, 0);
+}
+function extractSilhouette(key, img) {
+    var w = img.width, h = img.height;
+    var sc = document.createElement('canvas'); sc.width = w; sc.height = h;
+    var sctx = sc.getContext('2d');
+    sctx.drawImage(img, 0, 0);
+    var id = sctx.getImageData(0, 0, w, h);
+    var d = id.data;
+    for (var i = 0; i < d.length; i += 4) {
+        var lum = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+        if (lum < 40) { d[i+3] = 0; }
+        else {
+            var edgeAlpha = Math.min(255, (lum - 40) * 3);
+            d[i+3] = edgeAlpha;
+            d[i] = 15; d[i+1] = 12; d[i+2] = 10;
+        }
+    }
+    sctx.putImageData(id, 0, 0);
+    combatSilhouettes[key] = sc;
 }
 function spawnEmber() {
     combatState.embers.push({
-        x: Math.random(), y: 0.9 + Math.random() * 0.1,
-        vx: (Math.random() - 0.5) * 0.0008,
-        vy: -0.002 - Math.random() * 0.003,
-        size: 1 + Math.random() * 2.5,
-        life: 1, decay: 0.003 + Math.random() * 0.004,
-        color: Math.random() < 0.5 ? '255,160,60' : '255,100,40'
+        x: 0.05 + Math.random() * 0.25, y: 0.85 + Math.random() * 0.1,
+        vx: (Math.random() - 0.3) * 0.0008, vy: -0.002 - Math.random() * 0.004,
+        size: 1 + Math.random() * 2.5, life: 1, decay: 0.003 + Math.random() * 0.004,
+        color: Math.random() < 0.5 ? '255,160,60' : '255,100,40', flicker: 1
     });
 }
-function spawnCombatParticles(x, y, count, color, speed) {
-    for (var i = 0; i < count; i++) {
-        var a = Math.random() * Math.PI * 2;
-        var sp = speed * (0.3 + Math.random() * 0.7);
-        combatState.particles.push({
-            x: x, y: y,
-            vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-            size: 2 + Math.random() * 4,
-            life: 1, decay: 0.015 + Math.random() * 0.02,
-            color: color, gravity: 0.15
-        });
-    }
+function spawnDrip() {
+    combatState.drips.push({
+        x: 0.1 + Math.random() * 0.8, y: -0.05,
+        vy: 0.003 + Math.random() * 0.004, size: 1 + Math.random(),
+        life: 1, alpha: 0.3 + Math.random() * 0.2
+    });
 }
-function spawnDamageNumber(x, y, text, color) {
+function spawnDamageNumber(x, y, text, color, crit) {
     combatState.damageNumbers.push({
-        x: x, y: y, vy: -0.015,
-        text: text, color: color || '#fbbf24',
-        life: 1, decay: 0.012
+        x: x, y: y, vy: -0.015, text: text, color: color || '#fbbf24',
+        life: 1, decay: 0.011, crit: crit || false
     });
 }
 function renderCombat(ts) {
     if (!combatLoaded) { combatRafId = requestAnimationFrame(renderCombat); return; }
     var w = combatCanvas.width, h = combatCanvas.height;
     var frozen = ts < combatState.hitStop;
-    combatCtx.clearRect(0, 0, w, h);
+    var ctx = combatOffCtx;
+    ctx.clearRect(0, 0, w, h);
     if (!frozen) {
-        combatState.torchFlicker = 0.85 + Math.sin(ts * 0.008) * 0.08 + Math.sin(ts * 0.023) * 0.05 + Math.random() * 0.04;
+        combatState.torchFlicker = 0.82 + Math.sin(ts*0.008)*0.1 + Math.sin(ts*0.023)*0.06 + Math.random()*0.04;
         combatState.fogOffset = (combatState.fogOffset + 0.0003) % 1;
+        combatState.cameraBreath = Math.sin(ts * 0.0008) * 2;
+        combatState.cameraZoom += (combatState.cameraTargetZoom - combatState.cameraZoom) * 0.08;
+        combatState.cameraTargetZoom += (1 - combatState.cameraTargetZoom) * 0.04;
+        combatState.mood = 1 - combatState.bossHpPct * 0.6;
     }
     var flicker = combatState.torchFlicker;
     if (!frozen) {
         if (combatState.shakeAmount > 0.5) {
-            combatState.shakeX = (Math.random() - 0.5) * combatState.shakeAmount;
-            combatState.shakeY = (Math.random() - 0.5) * combatState.shakeAmount;
+            combatState.shakeX = (Math.random()-0.5)*combatState.shakeAmount;
+            combatState.shakeY = (Math.random()-0.5)*combatState.shakeAmount;
             combatState.shakeAmount *= 0.85;
         } else { combatState.shakeX = 0; combatState.shakeY = 0; }
-        if (combatState.heroSquashX !== 1) { combatState.heroSquashX += (1 - combatState.heroSquashX) * 0.2; combatState.heroSquashY += (1 - combatState.heroSquashY) * 0.2; }
-        if (combatState.bossSquashX !== 1) { combatState.bossSquashX += (1 - combatState.bossSquashX) * 0.2; combatState.bossSquashY += (1 - combatState.bossSquashY) * 0.2; }
+        combatState.heroSquashX += (1-combatState.heroSquashX)*0.2;
+        combatState.heroSquashY += (1-combatState.heroSquashY)*0.2;
+        combatState.bossSquashX += (1-combatState.bossSquashX)*0.2;
+        combatState.bossSquashY += (1-combatState.bossSquashY)*0.2;
         if (combatState.chromaticAberration > 0.5) combatState.chromaticAberration *= 0.8; else combatState.chromaticAberration = 0;
-        if (combatState.slashArc) { combatState.slashArc.progress += 0.08; if (combatState.slashArc.progress >= 1) combatState.slashArc = null; }
-        for (var ri = combatState.impactRings.length - 1; ri >= 0; ri--) { combatState.impactRings[ri].radius += 8; combatState.impactRings[ri].alpha -= 0.04; if (combatState.impactRings[ri].alpha <= 0) combatState.impactRings.splice(ri, 1); }
-        if (bossStage >= 1) { combatState.bossAuraAlpha = 0.15 + Math.sin(ts * 0.004) * 0.08; } else combatState.bossAuraAlpha = 0;
-        combatState.rageVignette = combatState.bossHpPct < 0.3 ? 0.2 + Math.sin(ts * 0.006) * 0.1 : 0;
+        if (combatState.slashArc) { combatState.slashArc.progress += 0.07; if (combatState.slashArc.progress >= 1) combatState.slashArc = null; }
+        for (var ri = combatState.impactRings.length-1; ri >= 0; ri--) { combatState.impactRings[ri].radius += 10; combatState.impactRings[ri].alpha -= 0.035; if (combatState.impactRings[ri].alpha <= 0) combatState.impactRings.splice(ri, 1); }
+        for (var di = combatState.decals.length-1; di >= 0; di--) { combatState.decals[di].alpha -= 0.0008; if (combatState.decals[di].alpha <= 0) combatState.decals.splice(di, 1); }
+        if (bossStage >= 1) combatState.bossAuraAlpha = 0.15 + Math.sin(ts*0.004)*0.08; else combatState.bossAuraAlpha = 0;
+        combatState.rageVignette = combatState.bossHpPct < 0.3 ? 0.2 + Math.sin(ts*0.006)*0.1 : 0;
     }
-    combatCtx.save();
-    combatCtx.translate(combatState.shakeX, combatState.shakeY);
-    if (combatImages.bg) combatCtx.drawImage(combatImages.bg, 0, 0, w, h);
-    var torchX = w * 0.12, torchY = h * 0.35;
-    var grad = combatCtx.createRadialGradient(torchX, torchY, 30, torchX, torchY, w * 0.55 * flicker);
-    grad.addColorStop(0, 'rgba(255,160,60,' + (0.15 * flicker) + ')');
-    grad.addColorStop(0.5, 'rgba(180,80,20,' + (0.05 * flicker) + ')');
+    ctx.save();
+    var camX = combatState.shakeX + combatState.cameraX;
+    var camY = combatState.shakeY + combatState.cameraY + combatState.cameraBreath;
+    ctx.translate(w/2, h/2);
+    ctx.scale(combatState.cameraZoom, combatState.cameraZoom);
+    ctx.translate(-w/2 + camX, -h/2 + camY);
+    if (combatImages.bg) ctx.drawImage(combatImages.bg, 0, 0, w, h);
+    var moodDark = combatState.mood * 0.15;
+    if (moodDark > 0.01) { ctx.fillStyle = 'rgba(0,0,0,' + moodDark + ')'; ctx.fillRect(0, 0, w, h); }
+    var torchX = w * 0.1, torchY = h * 0.3;
+    var grad = ctx.createRadialGradient(torchX, torchY, 20, torchX, torchY, w * 0.5 * flicker);
+    grad.addColorStop(0, 'rgba(255,150,50,' + (0.2 * flicker) + ')');
+    grad.addColorStop(0.4, 'rgba(180,80,20,' + (0.08 * flicker) + ')');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
-    combatCtx.fillStyle = grad;
-    combatCtx.fillRect(0, 0, w, h);
-    var grad2 = combatCtx.createRadialGradient(w*0.78, h*0.5, 40, w*0.78, h*0.5, w*0.45);
-    grad2.addColorStop(0, 'rgba(80,20,20,0.18)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    var grad2 = ctx.createRadialGradient(w*0.8, h*0.45, 30, w*0.8, h*0.45, w*0.4);
+    grad2.addColorStop(0, 'rgba(80,20,20,' + (0.2 + combatState.mood*0.1) + ')');
     grad2.addColorStop(1, 'rgba(0,0,0,0)');
-    combatCtx.fillStyle = grad2;
-    combatCtx.fillRect(0, 0, w, h);
-    if (!frozen) updateCombatAnim(ts);
+    ctx.fillStyle = grad2;
+    ctx.fillRect(0, 0, w, h);
     if (combatState.bossAuraAlpha > 0) {
-        var bx = combatState.bossX * w, by = (combatState.bossBaseY - 0.25) * h;
-        var auraGrad = combatCtx.createRadialGradient(bx, by, 20, bx, by, w * 0.25);
+        var bx = combatState.bossX * w, by = (combatState.bossBaseY - 0.28) * h;
+        var auraGrad = ctx.createRadialGradient(bx, by, 15, bx, by, w * 0.22);
         var auraCol = bossStage >= 2 ? '180,40,40' : '120,40,160';
         auraGrad.addColorStop(0, 'rgba(' + auraCol + ',' + combatState.bossAuraAlpha + ')');
         auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
-        combatCtx.fillStyle = auraGrad;
-        combatCtx.fillRect(0, 0, w, h);
+        ctx.fillStyle = auraGrad;
+        ctx.fillRect(0, 0, w, h);
     }
-    drawCombatShadow(combatState.heroX * w, combatState.heroBaseY * h, 80 * combatState.heroScale, flicker);
-    drawCombatShadow(combatState.bossX * w, combatState.bossBaseY * h, 100 * combatState.bossScale, 1);
-    drawCombatChar('boss', ts);
-    drawCombatChar('hero', ts);
-    drawCombatChar('boss', ts, true);
-    if (combatState.slashArc) drawSlashArc(w, h);
+    if (!frozen) updateCombatAnim(ts);
+    for (var dci = 0; dci < combatState.decals.length; dci++) {
+        var dc = combatState.decals[dci];
+        ctx.save();
+        ctx.globalAlpha = dc.alpha;
+        ctx.strokeStyle = dc.color;
+        ctx.lineWidth = dc.width;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = dc.color;
+        ctx.beginPath();
+        for (var seg = 0; seg < dc.points.length - 1; seg++) {
+            ctx.moveTo(dc.points[seg][0]*w, dc.points[seg][1]*h);
+            ctx.lineTo(dc.points[seg+1][0]*w, dc.points[seg+1][1]*h);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawCombatShadow(ctx, combatState.heroX * w, combatState.heroBaseY * h, 75 * combatState.heroScale, flicker);
+    drawCombatShadow(ctx, combatState.bossX * w, combatState.bossBaseY * h, 95 * combatState.bossScale, 1);
+    drawCombatSilhouette(ctx, 'boss', ts, w, h);
+    drawCombatSilhouette(ctx, 'hero', ts, w, h);
+    if (combatState.slashArc) drawSlashArc(ctx, w, h);
     for (var i2 = 0; i2 < combatState.impactRings.length; i2++) {
         var ring = combatState.impactRings[i2];
-        combatCtx.save();
-        combatCtx.globalAlpha = ring.alpha;
-        combatCtx.strokeStyle = ring.color;
-        combatCtx.lineWidth = 3;
-        combatCtx.shadowBlur = 15;
-        combatCtx.shadowColor = ring.color;
-        combatCtx.beginPath();
-        combatCtx.arc(ring.x * w, ring.y * h, ring.radius, 0, Math.PI * 2);
-        combatCtx.stroke();
-        combatCtx.restore();
+        ctx.save();
+        ctx.globalAlpha = ring.alpha;
+        ctx.strokeStyle = ring.color;
+        ctx.lineWidth = 3; ctx.shadowBlur = 18; ctx.shadowColor = ring.color;
+        ctx.beginPath();
+        ctx.arc(ring.x * w, ring.y * h, ring.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1; ctx.strokeStyle = '#fff'; ctx.globalAlpha = ring.alpha * 0.5;
+        ctx.stroke();
+        ctx.restore();
     }
     for (var i = combatState.particles.length - 1; i >= 0; i--) {
         var p = combatState.particles[i];
         if (!frozen) { p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.life -= p.decay; }
         if (p.life <= 0) { combatState.particles.splice(i, 1); continue; }
-        combatCtx.save();
-        combatCtx.globalAlpha = p.life;
-        combatCtx.fillStyle = 'rgb(' + p.color + ')';
-        combatCtx.shadowBlur = 10;
-        combatCtx.shadowColor = 'rgb(' + p.color + ')';
-        combatCtx.beginPath();
-        combatCtx.arc(p.x * w, p.y * h, p.size * p.life, 0, Math.PI * 2);
-        combatCtx.fill();
-        if (p.trail) { combatCtx.globalAlpha = p.life * 0.3; combatCtx.beginPath(); combatCtx.arc((p.x - p.vx*3) * w, (p.y - p.vy*3) * h, p.size * 0.5, 0, Math.PI * 2); combatCtx.fill(); }
-        combatCtx.restore();
+        ctx.save();
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = 'rgb(' + p.color + ')';
+        ctx.shadowBlur = 12; ctx.shadowColor = 'rgb(' + p.color + ')';
+        ctx.beginPath();
+        ctx.arc(p.x * w, p.y * h, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        if (p.trail) { ctx.globalAlpha = p.life * 0.25; ctx.beginPath(); ctx.arc((p.x - p.vx*4)*w, (p.y - p.vy*4)*h, p.size * 0.5 * p.life, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore();
     }
     for (var j = combatState.embers.length - 1; j >= 0; j--) {
         var e = combatState.embers[j];
-        if (!frozen) { e.x += e.vx; e.y += e.vy; e.life -= e.decay; e.flicker = 0.7 + Math.random() * 0.3; }
+        if (!frozen) { e.x += e.vx; e.y += e.vy; e.life -= e.decay; e.flicker = 0.6 + Math.random() * 0.4; }
         if (e.life <= 0 || e.y < -0.1) { combatState.embers.splice(j, 1); continue; }
-        combatCtx.save();
-        combatCtx.globalAlpha = e.life * 0.7 * (e.flicker || 1);
-        combatCtx.fillStyle = 'rgb(' + e.color + ')';
-        combatCtx.shadowBlur = 8;
-        combatCtx.shadowColor = 'rgb(' + e.color + ')';
-        combatCtx.beginPath();
-        combatCtx.arc(e.x * w, e.y * h, e.size, 0, Math.PI * 2);
-        combatCtx.fill();
-        if (e.life > 0.3) { combatCtx.globalAlpha = e.life * 0.2; combatCtx.beginPath(); combatCtx.arc((e.x - e.vx * 4) * w, (e.y - e.vy * 4) * h, e.size * 0.4, 0, Math.PI * 2); combatCtx.fill(); }
-        combatCtx.restore();
+        ctx.save();
+        ctx.globalAlpha = e.life * 0.7 * e.flicker;
+        ctx.fillStyle = 'rgb(' + e.color + ')';
+        ctx.shadowBlur = 8; ctx.shadowColor = 'rgb(' + e.color + ')';
+        ctx.beginPath();
+        ctx.arc(e.x * w, e.y * h, e.size, 0, Math.PI * 2);
+        ctx.fill();
+        if (e.life > 0.3) { ctx.globalAlpha = e.life * 0.15; ctx.beginPath(); ctx.arc((e.x - e.vx*5)*w, (e.y - e.vy*5)*h, e.size*0.4, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore();
+    }
+    for (var dr = combatState.drips.length - 1; dr >= 0; dr--) {
+        var drip = combatState.drips[dr];
+        if (!frozen) { drip.y += drip.vy; drip.life -= 0.002; }
+        if (drip.y > 0.85 || drip.life <= 0) { combatState.drips.splice(dr, 1); continue; }
+        ctx.save();
+        ctx.globalAlpha = drip.alpha * drip.life;
+        ctx.fillStyle = '60,70,80';
+        ctx.fillRect(drip.x * w, drip.y * h, 1.5, 8);
+        ctx.restore();
     }
     if (!frozen) {
-        combatCtx.save();
-        var fogY = h * 0.7;
         for (var fi = 0; fi < 3; fi++) {
             var fOff = (combatState.fogOffset + fi * 0.33) % 1;
-            var fogAlpha = 0.04 + Math.sin(ts * 0.001 + fi) * 0.02;
-            combatCtx.fillStyle = 'rgba(200,200,210,' + fogAlpha + ')';
+            var fogAlpha = 0.05 + Math.sin(ts * 0.001 + fi) * 0.025;
+            ctx.fillStyle = 'rgba(180,180,195,' + fogAlpha + ')';
             var fogX = fOff * w * 2 - w * 0.5;
-            combatCtx.beginPath();
-            combatCtx.ellipse(fogX, fogY + fi * 30, w * 0.4, 40, 0, 0, Math.PI * 2);
-            combatCtx.fill();
+            ctx.beginPath();
+            ctx.ellipse(fogX, h * 0.72 + fi * 25, w * 0.45, 35, 0, 0, Math.PI * 2);
+            ctx.fill();
         }
-        combatCtx.restore();
     }
     if (combatState.flashAlpha > 0.01) {
-        combatCtx.fillStyle = 'rgba(' + combatState.flashColor + ',' + combatState.flashAlpha + ')';
-        combatCtx.fillRect(0, 0, w, h);
-        if (!frozen) combatState.flashAlpha *= 0.80;
+        ctx.fillStyle = 'rgba(' + combatState.flashColor + ',' + combatState.flashAlpha + ')';
+        ctx.fillRect(0, 0, w, h);
+        if (!frozen) combatState.flashAlpha *= 0.78;
     }
-    var vignette = combatCtx.createRadialGradient(w/2, h/2, w*0.25, w/2, h/2, w*0.75);
+    ctx.restore();
+    combatCtx.clearRect(0, 0, w, h);
+    combatCtx.drawImage(combatOffscreen, 0, 0);
+    if (combatState.chromaticAberration > 0.5) {
+        combatCtx.save();
+        combatCtx.globalCompositeOperation = 'screen';
+        combatCtx.globalAlpha = 0.25;
+        var ca = combatState.chromaticAberration;
+        combatCtx.drawImage(combatOffscreen, ca, 0, w, h, 0, 0, w, h);
+        combatCtx.drawImage(combatOffscreen, -ca, 0, w, h, 0, 0, w, h);
+        combatCtx.restore();
+    }
+    combatBloomCtx.clearRect(0, 0, w/2, h/2);
+    combatBloomCtx.filter = 'blur(8px) brightness(1.3)';
+    combatBloomCtx.drawImage(combatOffscreen, 0, 0, w/2, h/2);
+    combatBloomCtx.filter = 'none';
+    combatCtx.save();
+    combatCtx.globalCompositeOperation = 'screen';
+    combatCtx.globalAlpha = 0.35;
+    combatCtx.drawImage(combatBloomCanvas, 0, 0, w, h);
+    combatCtx.restore();
+    var grainOff = (ts * 0.05 | 0) % 128;
+    combatCtx.save();
+    combatCtx.globalAlpha = 0.04;
+    for (var gx = -grainOff; gx < w; gx += 128) {
+        for (var gy = -grainOff; gy < h; gy += 128) {
+            combatCtx.drawImage(combatGrainCanvas, gx, gy);
+        }
+    }
+    combatCtx.restore();
+    combatCtx.save();
+    combatCtx.globalCompositeOperation = 'multiply';
+    combatCtx.fillStyle = 'rgba(210,200,190,1)';
+    combatCtx.fillRect(0, 0, w, h);
+    combatCtx.restore();
+    combatCtx.fillStyle = '#000';
+    combatCtx.fillRect(0, 0, w, h * 0.05);
+    combatCtx.fillRect(0, h * 0.95, w, h * 0.05);
+    var vignette = combatCtx.createRadialGradient(w/2, h/2, w*0.2, w/2, h/2, w*0.75);
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.55)');
+    vignette.addColorStop(1, 'rgba(0,0,0,' + (0.55 + combatState.mood * 0.1) + ')');
     combatCtx.fillStyle = vignette;
     combatCtx.fillRect(0, 0, w, h);
     if (combatState.rageVignette > 0) {
-        var rVig = combatCtx.createRadialGradient(w/2, h/2, w*0.2, w/2, h/2, w*0.6);
+        var rVig = combatCtx.createRadialGradient(w/2, h/2, w*0.15, w/2, h/2, w*0.55);
         rVig.addColorStop(0, 'rgba(0,0,0,0)');
         rVig.addColorStop(1, 'rgba(180,20,20,' + combatState.rageVignette + ')');
         combatCtx.fillStyle = rVig;
         combatCtx.fillRect(0, 0, w, h);
     }
-    drawCombatHpBar(20, 18, w * 0.4, 'Герой', combatState.heroHpPct, combatState.heroHpText, '#c73e4d', false);
-    drawCombatHpBar(w - w * 0.4 - 20, 18, w * 0.4, combatState.bossName, combatState.bossHpPct, combatState.bossHpText, '#8b2635', true);
+    drawCombatHpBar(combatCtx, 20, h * 0.05 + 10, w * 0.4, 'Герой', combatState.heroHpPct, combatState.heroHpText, '#c73e4d', false);
+    drawCombatHpBar(combatCtx, w - w * 0.4 - 20, h * 0.05 + 10, w * 0.4, combatState.bossName, combatState.bossHpPct, combatState.bossHpText, '#8b2635', true);
     for (var k = combatState.damageNumbers.length - 1; k >= 0; k--) {
         var d = combatState.damageNumbers[k];
         if (!frozen) { d.y += d.vy; d.life -= d.decay; }
         if (d.life <= 0) { combatState.damageNumbers.splice(k, 1); continue; }
         combatCtx.save();
         combatCtx.globalAlpha = Math.min(1, d.life * 1.5);
-        combatCtx.font = 'bold ' + (d.crit ? 36 : 26) + 'px serif';
+        combatCtx.font = 'bold ' + (d.crit ? 38 : 28) + 'px serif';
         combatCtx.textAlign = 'center';
         combatCtx.fillStyle = d.color;
-        combatCtx.shadowBlur = 12;
-        combatCtx.shadowColor = '#000';
+        combatCtx.shadowBlur = 14; combatCtx.shadowColor = '#000';
         combatCtx.fillText(d.text, d.x * w, d.y * h);
         combatCtx.restore();
     }
     if (combatState.defeated) {
         combatCtx.save();
-        combatCtx.fillStyle = 'rgba(0,0,0,0.75)';
+        combatCtx.fillStyle = 'rgba(0,0,0,0.78)';
         combatCtx.fillRect(0, 0, w, h);
-        combatCtx.font = 'bold 52px serif';
+        combatCtx.font = 'bold 56px serif';
         combatCtx.textAlign = 'center';
-        combatCtx.fillStyle = '#666';
-        combatCtx.shadowBlur = 20;
-        combatCtx.shadowColor = '#000';
+        combatCtx.fillStyle = '#555';
+        combatCtx.shadowBlur = 25; combatCtx.shadowColor = '#000';
         combatCtx.fillText('☠ ПОВЕРЖЕН ☠', w/2, h/2);
-        combatCtx.restore();
-    }
-    combatCtx.restore();
-    if (combatState.chromaticAberration > 0.5) {
-        combatCtx.save();
-        combatCtx.globalCompositeOperation = 'screen';
-        var ca = combatState.chromaticAberration;
-        combatCtx.globalAlpha = 0.3;
-        combatCtx.drawImage(combatCanvas, ca, 0, w, h, 0, 0, w, h);
-        combatCtx.drawImage(combatCanvas, -ca, 0, w, h, 0, 0, w, h);
         combatCtx.restore();
     }
     combatRafId = requestAnimationFrame(renderCombat);
 }
-function drawCombatShadow(x, y, radius, flicker) {
-    combatCtx.save();
-    var alpha = 0.45 * (flicker || 1);
-    combatCtx.fillStyle = 'rgba(0,0,0,' + alpha + ')';
-    combatCtx.beginPath();
-    var rx = radius * (0.9 + (flicker || 1) * 0.15);
-    combatCtx.ellipse(x, y, rx, rx * 0.22, 0, 0, Math.PI * 2);
-    combatCtx.fill();
-    combatCtx.restore();
+function drawCombatShadow(ctx, x, y, radius, flicker) {
+    ctx.save();
+    var alpha = 0.5 * (flicker || 1);
+    ctx.fillStyle = 'rgba(0,0,0,' + alpha + ')';
+    ctx.beginPath();
+    var rx = radius * (0.85 + (flicker || 1) * 0.2);
+    ctx.ellipse(x, y, rx, rx * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 }
 function updateCombatAnim(ts) {
     var which = [['hero', 'heroAnim', 'heroAnimStart', 'heroOffsetX', 'heroOffsetY', 'heroRot'],
@@ -1189,221 +1277,199 @@ function updateCombatAnim(ts) {
         var t = (ts - combatState[startProp]) / 1000;
         if (anim === 'idle') {
             combatState[oxProp] = 0;
-            combatState[oyProp] = Math.sin(ts * 0.002 + (key === 'boss' ? 1.5 : 0)) * 0.005;
-            combatState[rotProp] = Math.sin(ts * 0.0015 + (key === 'boss' ? 1 : 0)) * 1;
-            if (key === 'hero') combatState.heroFilter = '';
-            if (key === 'boss') combatState.bossFilter = '';
+            combatState[oyProp] = Math.sin(ts * 0.002 + (key === 'boss' ? 1.5 : 0)) * 0.006;
+            combatState[rotProp] = Math.sin(ts * 0.0015 + (key === 'boss' ? 1 : 0)) * 1.5;
         } else if (anim === 'attacking') {
             var dir = key === 'hero' ? 1 : -1;
             if (t < 0.15) {
                 var p = t / 0.15;
-                combatState[oxProp] = -0.02 * dir * p;
-                combatState[rotProp] = -3 * dir * p;
+                combatState[oxProp] = -0.025 * dir * p; combatState[rotProp] = -4 * dir * p;
             } else if (t < 0.28) {
                 var p2 = (t - 0.15) / 0.13;
-                combatState[oxProp] = (-0.02 + 0.15 * p2) * dir;
-                combatState[rotProp] = (-3 + 5 * p2) * dir;
-            } else if (t < 0.40) {
-                combatState[oxProp] = 0.13 * dir;
-            } else if (t < 0.65) {
-                var p3 = (t - 0.40) / 0.25;
-                combatState[oxProp] = 0.13 * (1 - p3) * dir;
-                combatState[rotProp] = 2 * (1 - p3) * dir;
+                combatState[oxProp] = (-0.025 + 0.16 * p2) * dir; combatState[rotProp] = (-4 + 6 * p2) * dir;
+                if (key === 'hero' && p2 > 0.3 && p2 < 0.7) combatState.cameraTargetZoom = 1.08;
+            } else if (t < 0.42) {
+                combatState[oxProp] = 0.135 * dir;
+            } else if (t < 0.68) {
+                var p3 = (t - 0.42) / 0.26;
+                combatState[oxProp] = 0.135 * (1 - p3) * dir; combatState[rotProp] = 3 * (1 - p3) * dir;
             } else {
-                combatState[animProp] = 'idle';
-                combatState[startProp] = ts;
+                combatState[animProp] = 'idle'; combatState[startProp] = ts;
             }
         } else if (anim === 'hurt') {
             var hdir = key === 'hero' ? -1 : 1;
             if (t < 0.15) {
                 var hp = t / 0.15;
-                combatState[oxProp] = 0.04 * hdir * hp;
-                combatState[rotProp] = 5 * hdir * hp;
-            } else if (t < 0.45) {
-                var hp2 = (t - 0.15) / 0.30;
-                combatState[oxProp] = 0.04 * hdir * (1 - hp2);
-                combatState[rotProp] = 5 * hdir * (1 - hp2);
-            } else {
-                combatState[animProp] = 'idle';
-                combatState[startProp] = ts;
-            }
-            if (key === 'hero') combatState.heroFilter = t < 0.2 ? 'brightness(2.5) saturate(0.2)' : '';
-            if (key === 'boss') combatState.bossFilter = t < 0.2 ? 'brightness(2) saturate(0.3)' : '';
+                combatState[oxProp] = 0.05 * hdir * hp; combatState[rotProp] = 6 * hdir * hp;
+            } else if (t < 0.48) {
+                var hp2 = (t - 0.15) / 0.33;
+                combatState[oxProp] = 0.05 * hdir * (1 - hp2); combatState[rotProp] = 6 * hdir * (1 - hp2);
+            } else { combatState[animProp] = 'idle'; combatState[startProp] = ts; }
         }
     });
 }
-function drawCombatChar(which, ts, overlayOnly) {
+function drawCombatSilhouette(ctx, which, ts, w, h) {
+    var sil = combatSilhouettes[which];
     var img = combatImages[which];
-    if (!img) return;
-    var w = combatCanvas.width, h = combatCanvas.height;
-    var baseX, baseY, scale, ox, oy, rot, filter, sqX, sqY;
+    if (!sil && !img) return;
+    var baseX, baseY, scale, ox, oy, rot, sqX, sqY;
     if (which === 'hero') {
-        baseX = combatState.heroX; baseY = combatState.heroBaseY;
-        scale = combatState.heroScale;
-        ox = combatState.heroOffsetX; oy = combatState.heroOffsetY;
-        rot = combatState.heroRot; filter = combatState.heroFilter;
+        baseX = combatState.heroX; baseY = combatState.heroBaseY; scale = combatState.heroScale;
+        ox = combatState.heroOffsetX; oy = combatState.heroOffsetY; rot = combatState.heroRot;
         sqX = combatState.heroSquashX; sqY = combatState.heroSquashY;
     } else {
-        baseX = combatState.bossX; baseY = combatState.bossBaseY;
-        scale = combatState.bossScale;
-        ox = combatState.bossOffsetX; oy = combatState.bossOffsetY;
-        rot = combatState.bossRot; filter = combatState.bossFilter;
+        baseX = combatState.bossX; baseY = combatState.bossBaseY; scale = combatState.bossScale;
+        ox = combatState.bossOffsetX; oy = combatState.bossOffsetY; rot = combatState.bossRot;
         sqX = combatState.bossSquashX; sqY = combatState.bossSquashY;
     }
-    var charH = h * 0.55 * scale * sqY;
-    var charW = charH * (img.width / img.height) * sqX;
+    var srcImg = sil || img;
+    var charH = h * 0.56 * scale * sqY;
+    var charW = charH * (srcImg.width / srcImg.height) * sqX;
     var cx = (baseX + ox) * w;
     var cy = (baseY + oy) * h;
-    if (!overlayOnly) {
-        combatCtx.save();
-        combatCtx.translate(cx, cy);
-        combatCtx.rotate(rot * Math.PI / 180);
-        if (filter) combatCtx.filter = filter;
-        combatCtx.drawImage(img, -charW/2, -charH, charW, charH);
-        combatCtx.restore();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot * Math.PI / 180);
+    if (sil) {
+        ctx.drawImage(sil, -charW/2, -charH, charW, charH);
+        var rimGrad = ctx.createRadialGradient(-charW * 0.15, -charH * 0.5, 5, -charW * 0.15, -charH * 0.5, charW * 0.7);
+        var rimIntensity = 0.35 * combatState.torchFlicker;
+        rimGrad.addColorStop(0, 'rgba(255,140,40,' + rimIntensity + ')');
+        rimGrad.addColorStop(0.5, 'rgba(255,100,30,' + (rimIntensity * 0.3) + ')');
+        rimGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = rimGrad;
+        ctx.fillRect(-charW/2, -charH, charW, charH);
+        ctx.globalCompositeOperation = 'source-over';
+    } else {
+        ctx.drawImage(img, -charW/2, -charH, charW, charH);
     }
-    combatCtx.save();
-    combatCtx.translate(cx, cy);
-    combatCtx.rotate(rot * Math.PI / 180);
-    var lightGrad = combatCtx.createLinearGradient(-charW/2, 0, charW/2, 0);
-    var lightIntensity = 0.18 * combatState.torchFlicker;
+    var lightGrad = ctx.createLinearGradient(-charW/2, 0, charW/2, 0);
+    var lightIntensity = 0.22 * combatState.torchFlicker;
     if (which === 'hero') {
         lightGrad.addColorStop(0, 'rgba(0,0,0,0)');
-        lightGrad.addColorStop(0.6, 'rgba(0,0,0,' + (lightIntensity * 0.3) + ')');
+        lightGrad.addColorStop(0.55, 'rgba(0,0,0,' + (lightIntensity * 0.3) + ')');
         lightGrad.addColorStop(1, 'rgba(0,0,0,' + lightIntensity + ')');
     } else {
         lightGrad.addColorStop(0, 'rgba(0,0,0,' + lightIntensity + ')');
-        lightGrad.addColorStop(0.4, 'rgba(0,0,0,' + (lightIntensity * 0.3) + ')');
+        lightGrad.addColorStop(0.45, 'rgba(0,0,0,' + (lightIntensity * 0.3) + ')');
         lightGrad.addColorStop(1, 'rgba(0,0,0,0)');
     }
-    combatCtx.fillStyle = lightGrad;
-    combatCtx.fillRect(-charW/2, -charH, charW, charH);
-    var warmGrad = combatCtx.createRadialGradient(-charW * 0.3, -charH * 0.7, 10, -charW * 0.3, -charH * 0.7, charW * 0.8);
-    var warmAlpha = 0.08 * combatState.torchFlicker;
-    warmGrad.addColorStop(0, 'rgba(255,140,40,' + warmAlpha + ')');
-    warmGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    combatCtx.fillStyle = warmGrad;
-    combatCtx.fillRect(-charW/2, -charH, charW, charH);
-    combatCtx.restore();
+    ctx.fillStyle = lightGrad;
+    ctx.fillRect(-charW/2, -charH, charW, charH);
+    ctx.restore();
 }
-function drawSlashArc(w, h) {
+function drawSlashArc(ctx, w, h) {
     var arc = combatState.slashArc;
     if (!arc) return;
-    combatCtx.save();
+    ctx.save();
     var progress = arc.progress;
     var startX = arc.fromX * w, startY = arc.fromY * h;
     var endX = arc.toX * w, endY = arc.toY * h;
-    var midX = (startX + endX) / 2, midY = (startY + endY) / 2 - 60;
+    var midX = (startX + endX) / 2, midY = (startY + endY) / 2 - 80;
     var alpha = Math.sin(progress * Math.PI);
-    combatCtx.globalAlpha = alpha;
-    combatCtx.strokeStyle = arc.color;
-    combatCtx.lineWidth = 4 + (1 - progress) * 6;
-    combatCtx.shadowBlur = 20;
-    combatCtx.shadowColor = arc.color;
-    combatCtx.lineCap = 'round';
-    combatCtx.beginPath();
-    var steps = 20;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = arc.color;
+    ctx.lineWidth = 5 + (1 - progress) * 8;
+    ctx.shadowBlur = 25; ctx.shadowColor = arc.color;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    var steps = 25;
     for (var s = 0; s <= steps * progress; s++) {
         var t = s / steps;
         var x = (1-t)*(1-t)*startX + 2*(1-t)*t*midX + t*t*endX;
         var y = (1-t)*(1-t)*startY + 2*(1-t)*t*midY + t*t*endY;
-        if (s === 0) combatCtx.moveTo(x, y);
-        else combatCtx.lineTo(x, y);
+        if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
-    combatCtx.stroke();
-    combatCtx.globalAlpha = alpha * 0.5;
-    combatCtx.lineWidth = 1;
-    combatCtx.strokeStyle = '#fff';
-    combatCtx.stroke();
-    combatCtx.restore();
+    ctx.stroke();
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.lineWidth = 2; ctx.strokeStyle = '#fff';
+    ctx.stroke();
+    ctx.restore();
 }
-function drawCombatHpBar(x, y, width, name, pct, text, color, rightAlign) {
+function drawCombatHpBar(ctx, x, y, width, name, pct, text, color, rightAlign) {
     pct = Math.max(0, Math.min(1, pct));
-    combatCtx.save();
-    combatCtx.font = 'bold 14px serif';
-    combatCtx.textAlign = rightAlign ? 'right' : 'left';
-    combatCtx.fillStyle = '#d4a574';
-    combatCtx.shadowBlur = 4;
-    combatCtx.shadowColor = '#000';
-    combatCtx.fillText(name, rightAlign ? x + width : x, y);
-    var barY = y + 8;
-    var barH = 12;
-    combatCtx.shadowBlur = 0;
-    combatCtx.fillStyle = 'rgba(0,0,0,0.7)';
-    combatCtx.fillRect(x - 1, barY - 1, width + 2, barH + 2);
-    combatCtx.fillStyle = 'rgba(40,40,40,0.8)';
-    combatCtx.fillRect(x, barY, width, barH);
-    combatCtx.fillStyle = color;
-    combatCtx.fillRect(x, barY, width * pct, barH);
+    ctx.save();
+    ctx.font = 'bold 15px serif';
+    ctx.textAlign = rightAlign ? 'right' : 'left';
+    ctx.fillStyle = '#d4a574';
+    ctx.shadowBlur = 5; ctx.shadowColor = '#000';
+    ctx.fillText(name, rightAlign ? x + width : x, y);
+    var barY = y + 8, barH = 13;
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(x - 2, barY - 2, width + 4, barH + 4);
+    ctx.fillStyle = 'rgba(30,25,20,0.9)';
+    ctx.fillRect(x, barY, width, barH);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, barY, width * pct, barH);
     var gradColor = color === '#c73e4d' ? '199,62,77' : '139,38,53';
-    var hpGrad = combatCtx.createLinearGradient(x, barY, x, barY + barH);
-    hpGrad.addColorStop(0, 'rgba(255,255,255,0.25)');
+    var hpGrad = ctx.createLinearGradient(x, barY, x, barY + barH);
+    hpGrad.addColorStop(0, 'rgba(255,255,255,0.3)');
     hpGrad.addColorStop(0.5, 'rgba(' + gradColor + ',0)');
-    hpGrad.addColorStop(1, 'rgba(0,0,0,0.3)');
-    combatCtx.fillStyle = hpGrad;
-    combatCtx.fillRect(x, barY, width * pct, barH);
-    combatCtx.strokeStyle = 'rgba(212,165,116,0.4)';
-    combatCtx.lineWidth = 1;
-    combatCtx.strokeRect(x, barY, width, barH);
-    combatCtx.font = '11px monospace';
-    combatCtx.textAlign = rightAlign ? 'right' : 'left';
-    combatCtx.fillStyle = 'rgba(255,255,255,0.8)';
-    combatCtx.shadowBlur = 3;
-    combatCtx.shadowColor = '#000';
-    combatCtx.fillText(text, rightAlign ? x + width : x, barY + barH + 14);
-    combatCtx.restore();
+    hpGrad.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = hpGrad;
+    ctx.fillRect(x, barY, width * pct, barH);
+    ctx.strokeStyle = 'rgba(212,165,116,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, barY, width, barH);
+    ctx.font = '12px monospace';
+    ctx.textAlign = rightAlign ? 'right' : 'left';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.shadowBlur = 4; ctx.shadowColor = '#000';
+    ctx.fillText(text, rightAlign ? x + width : x, barY + barH + 15);
+    ctx.restore();
 }
 function triggerHeroAttack(dmg, crit) {
     var ts = performance.now();
     combatState.heroAnim = 'attacking'; combatState.heroAnimStart = ts;
+    combatState.cameraTargetZoom = 1.05;
     setTimeout(function() {
         combatState.bossAnim = 'hurt'; combatState.bossAnimStart = performance.now();
         combatState.flashAlpha = crit ? 0.85 : 0.6; combatState.flashColor = '255,255,255';
-        combatState.shakeAmount = crit ? 22 : 12;
+        combatState.shakeAmount = crit ? 24 : 14;
         combatState.hitStop = performance.now() + (crit ? 100 : 70);
-        combatState.bossSquashX = crit ? 0.75 : 0.85; combatState.bossSquashY = crit ? 1.2 : 1.1;
-        combatState.slashArc = { fromX: 0.25, fromY: 0.45, toX: 0.72, toY: 0.4, progress: 0, color: crit ? '251,191,36' : '255,240,200' };
-        combatState.impactRings.push({ x: 0.74, y: 0.38, radius: 10, alpha: 0.9, color: crit ? 'rgba(251,191,36,1)' : 'rgba(255,200,150,1)' });
-        if (crit) { combatState.impactRings.push({ x: 0.74, y: 0.38, radius: 20, alpha: 0.6, color: 'rgba(255,100,50,1)' }); combatState.chromaticAberration = 8; }
-        spawnDamageNumber(0.72, 0.35, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#e74c3c');
-        if (crit) spawnDamageNumber.crit = true;
-        combatState.damageNumbers[combatState.damageNumbers.length - 1].crit = crit;
-        var pColor = crit ? '251,191,36' : '199,62,77';
-        var pCount = crit ? 40 : 20;
+        combatState.cameraTargetZoom = crit ? 1.12 : 1.06;
+        combatState.bossSquashX = crit ? 0.72 : 0.82; combatState.bossSquashY = crit ? 1.25 : 1.12;
+        combatState.slashArc = { fromX: 0.22, fromY: 0.42, toX: 0.74, toY: 0.38, progress: 0, color: crit ? '#fbbf24' : '#fff0d0' };
+        combatState.impactRings.push({ x: 0.74, y: 0.36, radius: 8, alpha: 0.95, color: crit ? 'rgba(251,191,36,1)' : 'rgba(255,200,150,1)' });
+        if (crit) { combatState.impactRings.push({ x: 0.74, y: 0.36, radius: 18, alpha: 0.65, color: 'rgba(255,80,40,1)' }); combatState.chromaticAberration = 10; }
+        var crackPts = [[0.72 + Math.random()*0.04, 0.38], [0.76 + Math.random()*0.04, 0.42], [0.74 + Math.random()*0.06, 0.46], [0.78 + Math.random()*0.04, 0.44]];
+        combatState.decals.push({ points: crackPts, color: crit ? 'rgba(251,191,36,0.6)' : 'rgba(180,160,140,0.4)', width: 2, alpha: 0.8 });
+        spawnDamageNumber(0.72, 0.32, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? '#fbbf24' : '#e74c3c', crit);
+        var pColor = crit ? '251,191,36' : '220,80,80';
+        var pCount = crit ? 45 : 22;
         for (var i = 0; i < pCount; i++) {
             var a = Math.random() * Math.PI * 2;
-            var sp = 0.005 + Math.random() * 0.015;
-            combatState.particles.push({
-                x: 0.74 + (Math.random()-0.5)*0.04, y: 0.38 + (Math.random()-0.5)*0.08,
-                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.003,
-                size: 2+Math.random()*5, life: 1, decay: 0.015+Math.random()*0.025,
-                color: pColor, gravity: 0.008, trail: true
-            });
+            var sp = 0.006 + Math.random() * 0.016;
+            combatState.particles.push({ x: 0.74 + (Math.random()-0.5)*0.04, y: 0.36 + (Math.random()-0.5)*0.06,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.004, size: 2+Math.random()*5, life: 1,
+                decay: 0.015+Math.random()*0.025, color: pColor, gravity: 0.009, trail: true });
         }
     }, 240);
 }
 function triggerBossAttack(dmg) {
     var ts = performance.now();
     combatState.bossAnim = 'attacking'; combatState.bossAnimStart = ts;
+    combatState.cameraTargetZoom = 1.04;
     setTimeout(function() {
         combatState.heroAnim = 'hurt'; combatState.heroAnimStart = performance.now();
-        combatState.flashAlpha = 0.65; combatState.flashColor = '199,62,77';
-        combatState.shakeAmount = 26;
+        combatState.flashAlpha = 0.7; combatState.flashColor = '199,62,77';
+        combatState.shakeAmount = 28;
         combatState.hitStop = performance.now() + 120;
-        combatState.heroSquashX = 0.8; combatState.heroSquashY = 1.15;
-        combatState.chromaticAberration = 5;
-        combatState.impactRings.push({ x: 0.2, y: 0.4, radius: 15, alpha: 0.8, color: 'rgba(199,62,77,1)' });
-        spawnDamageNumber(0.22, 0.35, '-' + dmg + ' HP', '#c73e4d');
-        combatState.damageNumbers[combatState.damageNumbers.length - 1].crit = false;
-        for (var i = 0; i < 30; i++) {
+        combatState.cameraTargetZoom = 1.1;
+        combatState.heroSquashX = 0.78; combatState.heroSquashY = 1.18;
+        combatState.chromaticAberration = 7;
+        combatState.impactRings.push({ x: 0.2, y: 0.38, radius: 12, alpha: 0.85, color: 'rgba(199,62,77,1)' });
+        var heroCrackPts = [[0.18 + Math.random()*0.04, 0.4], [0.22 + Math.random()*0.04, 0.44], [0.2 + Math.random()*0.06, 0.48]];
+        combatState.decals.push({ points: heroCrackPts, color: 'rgba(139,20,20,0.5)', width: 2, alpha: 0.7 });
+        spawnDamageNumber(0.22, 0.32, '-' + dmg + ' HP', '#c73e4d', false);
+        for (var i = 0; i < 35; i++) {
             var a = Math.random() * Math.PI * 2;
-            var sp = 0.004 + Math.random() * 0.012;
-            combatState.particles.push({
-                x: 0.2 + (Math.random()-0.5)*0.04, y: 0.4 + (Math.random()-0.5)*0.08,
-                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.002,
-                size: 2+Math.random()*5, life: 1, decay: 0.012+Math.random()*0.02,
-                color: '139,20,20', gravity: 0.012, trail: true
-            });
+            var sp = 0.005 + Math.random() * 0.014;
+            combatState.particles.push({ x: 0.2 + (Math.random()-0.5)*0.04, y: 0.38 + (Math.random()-0.5)*0.06,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.003, size: 2+Math.random()*5, life: 1,
+                decay: 0.012+Math.random()*0.02, color: '150,25,25', gravity: 0.014, trail: true });
         }
     }, 280);
 }
