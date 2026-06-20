@@ -816,6 +816,7 @@ saveGameState();
 }
 function triggerBossExecution() {
 bossDefeated = true;
+if (window.setBossDefeated) window.setBossDefeated(true);
 bossRagePoints = 0;
 HERO.actionPoints = 0;
 sfxBossDefeated(); haptic('heavy');
@@ -869,11 +870,13 @@ document.getElementById('bossInfo').innerHTML = '<span class="boss-defeated-text
 // Через 8 секунд - возрождение нового босса
 setTimeout(() => {
 bossDefeated = false;
+if (window.setBossDefeated) window.setBossDefeated(false);
 bossStage = 0;
 chimeraShield = 5;
 bossRagePoints = 0;
 HERO.actionPoints = 0;
 const newBoss = getCurrentBoss();
+if (window.setBossType) window.setBossType(newBoss.type);
 bossHp = newBoss.stages[0].maxHp;
 // Скрываем оверлеи
 const defeatedFull = document.getElementById('bossDefeatedFull');
@@ -948,38 +951,9 @@ var combatState = {
     mood: 0, defeated: false
 };
 function initCombatCanvas() {
-    combatCanvas = document.getElementById('combatCanvas');
-    if (!combatCanvas) return;
-    combatCtx = combatCanvas.getContext('2d');
-    var w = combatCanvas.width, h = combatCanvas.height;
-    combatOffscreen = document.createElement('canvas'); combatOffscreen.width = w; combatOffscreen.height = h;
-    combatOffCtx = combatOffscreen.getContext('2d');
-    combatBloomCanvas = document.createElement('canvas'); combatBloomCanvas.width = w/2; combatBloomCanvas.height = h/2;
-    combatBloomCtx = combatBloomCanvas.getContext('2d');
-    combatGrainCanvas = document.createElement('canvas'); combatGrainCanvas.width = 128; combatGrainCanvas.height = 128;
-    combatGrainCtx = combatGrainCanvas.getContext('2d');
-    generateGrain();
-    var loaded = 0;
-    var urls = { bg: 'bg-optimized.jpg?v=35', hero: 'hero-cutout.png?v=35', boss: 'snake-cutout.png?v=35' };
-    Object.keys(urls).forEach(function(key) {
-        var img = new Image();
-        img.onload = function() {
-            combatImages[key] = img;
-            if (key === 'hero' || key === 'boss') extractSilhouette(key, img);
-            loaded++;
-            if (loaded === 3) {
-                combatLoaded = true;
-                var el = document.getElementById('combatLoading');
-                if (el) el.style.display = 'none';
-                if (!combatRafId) combatRafId = requestAnimationFrame(renderCombat);
-            }
-        };
-        img.onerror = function() { loaded++; };
-        img.src = urls[key];
-    });
-    for (var i = 0; i < 25; i++) spawnEmber();
-    for (var d = 0; d < 8; d++) spawnDrip();
-    setInterval(function() { if (Math.random() < 0.3) spawnEmber(); if (Math.random() < 0.1) spawnDrip(); }, 300);
+    var boss = getCurrentBoss();
+    if (window.setBossType) window.setBossType(boss.type);
+    updateCombatHpBars();
 }
 function generateGrain() {
     var id = combatGrainCtx.createImageData(128, 128);
@@ -1474,14 +1448,14 @@ function triggerBossAttack(dmg) {
     }, 280);
 }
 function updateCombatHpBars() {
-    combatState.heroHpPct = HERO.hp / HERO.maxHp;
-    combatState.heroHpText = Math.max(0, Math.round(HERO.hp)) + '/' + HERO.maxHp;
     var boss = getCurrentBoss();
     var stage = boss.stages[bossStage];
-    combatState.bossHpPct = bossHp / stage.maxHp;
-    combatState.bossHpText = Math.max(0, Math.round(bossHp)) + '/' + stage.maxHp;
-    combatState.bossName = boss.name;
-    combatState.defeated = bossDefeated;
+    if (window.updateHP) window.updateHP(
+        Math.max(0, HERO.hp), HERO.maxHp,
+        Math.max(0, bossHp), stage.maxHp,
+        boss.name, bossStage, boss.type
+    );
+    if (bossDefeated && window.setBossDefeated) window.setBossDefeated(true);
 }
 function attackBoss() {
 if (bossDefeated) { showToast('☠ Босс повержен', 'Нечего атаковать', 'blood'); return; }
@@ -1499,7 +1473,7 @@ var dmg = crit ? baseDmg * 2 : baseDmg;
 if (HERO.isHollow) dmg = Math.floor(dmg * 0.5);
 dmg = Math.max(1, dmg);
 changeBossHp(-dmg);
-triggerHeroAttack(dmg, crit);
+if (window.startHeroAttack) window.startHeroAttack(dmg, crit);
 if (crit) { sfxCrit(); haptic('heavy'); }
 else { sfxHit(); haptic('medium'); }
 updateBossBattleUI();
@@ -1514,7 +1488,7 @@ var rageDmg = bossRagePoints * rageMult;
 var boss = getCurrentBoss();
 if (rageDmg > 0) {
 HERO.hp = Math.max(1, HERO.hp - rageDmg);
-triggerBossAttack(rageDmg);
+if (window.startBossAttack) window.startBossAttack(rageDmg);
 sfxBossHit(); haptic('heavy');
 showToast('💢 Ответный удар!', boss.name + ' наносит -' + rageDmg + ' HP (Ярость: ' + bossRagePoints + ')', 'blood');
 if (HERO.hp <= 1 && !HERO.isHollow) {

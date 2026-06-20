@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=36">
+<link rel="stylesheet" href="css/style.css?v=38">
 </head>
 <body>
 <div class="app-wrap">
@@ -356,7 +356,7 @@
 <section class="view" id="view-boss">
 <div class="view-title">🐍 Босс локации</div>
 <div class="view-subtitle" id="bossSubtitle">Змей Лени</div>
-<canvas id="combatCanvas" width="1280" height="720"></canvas>
+<div id="combatContainer" style="width:100%; aspect-ratio:16/9; overflow:hidden; border-radius:4px; border:1px solid var(--border); background:#000;"></div>
 <div id="combatLoading" style="text-align:center; padding:40px; color:var(--text-dim);">⚔ Загрузка арены...</div>
 <div id="bossLoreText" style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); font-size:11px; line-height:1.7; color:var(--text-dim);"></div>
 <div id="bossBattleArea" style="margin-top:12px;"></div>
@@ -454,6 +454,9 @@
 </div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/app.js?v=36"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-filters@5.3.0/dist/browser/pixi-filters.min.js"></script>
+<script src="js/combat-pixi.js?v=38"></script>
+<script src="js/app.js?v=38"></script>
 </body>
 </html>
