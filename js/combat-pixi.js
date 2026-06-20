@@ -58,9 +58,9 @@ async function init() {
     app.stage.addChild(sceneRoot);
 
     try {
-        const bgTex = PIXI.Texture.from('bg-optimized.jpg');
-        const heroTex = PIXI.Texture.from('hero-cutout.png');
-        const bossTex = PIXI.Texture.from('snake-cutout.png');
+        const bgTex = PIXI.Texture.from('dd-bg-final.jpg');
+        const heroTex = PIXI.Texture.from('dd-hero-cutout.png');
+        const bossTex = PIXI.Texture.from('dd-snake-cutout.png');
         await Promise.all([bgTex, heroTex, bossTex].map(t => new Promise(res => {
             if (t.baseTexture.valid) res(); else t.baseTexture.on('loaded', res);
             setTimeout(res, 5000);
