@@ -103,6 +103,7 @@ if (rank === 'SS' || rank === 'SSS') return RANK_COLORS.S;
 return RANK_COLORS[rank] || RANK_COLORS.C;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+const STATE_GUARDS = window.NeuroDeckStateGuards;
 
 document.addEventListener('click', function(e) {
 var el = e.target.closest('[data-action]');
@@ -2089,7 +2090,7 @@ const name = document.getElementById('forgeName').value.trim();
 if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
 const time = document.getElementById('forgeTime').value;
 const duration = parseInt(document.getElementById('forgeDuration').value) || 15;
-const rank = document.getElementById('forgeRank').value;
+const rank = 'C';
 const masteryThreshold = Math.max(2, parseInt(document.getElementById('forgeMastery').value) || 5);
 const st = STATS[selectedStat];
 const card = {
@@ -2102,8 +2103,7 @@ FORGED.unshift(card);
 renderCards(); closeForge();
 sfxForge(); haptic('medium');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: st.color, speed: 10, decay: 0.01, size: 3, shape: 'spark', gravity: 0.1 });
-    if (FORGED.length <= 50) addXpReward(10);
-    showToast('🔥 Выковано!', name + ' (ранг ' + rank + ', ' + masteryThreshold + ' выполн. до след. ранга)');
+    showToast('🔥 Выковано!', name + ' (ранг C, ' + masteryThreshold + ' выполн. до след. ранга)');
 spiritSay('«Новое испытание выковано. Покажи, на что ты способен.»');
 switchView('deck');
 saveGameState();
@@ -3002,10 +3002,10 @@ if (FORGED.length === 0) {
 var emergency = localStorage.getItem('neurodeck_cards_backup');
 if (emergency) {
 try {
-var emergData = JSON.parse(emergency);
+        var emergData = JSON.parse(emergency);
 if (emergData.forged && emergData.forged.length > 0) {
-FORGED = emergData.forged;
-if (emergData.forgedIdCounter) forgedIdCounter = emergData.forgedIdCounter;
+FORGED = emergData.forged.map(function(c, i) { return STATE_GUARDS.sanitizeCard(c, i + 1); });
+if (emergData.forgedIdCounter) forgedIdCounter = STATE_GUARDS.sanitizeCounter(emergData.forgedIdCounter, 100);
 showToast('♻ Защита данных', 'Карточки восстановлены из аварийной копии (' + FORGED.length + ')');
 }
 } catch(e) {}
@@ -3581,17 +3581,13 @@ STATS[k].attributePoints = Math.max(0, STATS[k].attributePoints || 0);
 }
 });
 }
-if (data.forged) FORGED = data.forged.map(function(c) {
-if (!c.rank) c.rank = 'C';
-if (typeof c.mastery !== 'number') c.mastery = 0;
-if (typeof c.masteryThreshold !== 'number') c.masteryThreshold = 7;
-if (typeof c.streak !== 'number') c.streak = 0;
-return c;
-});
+if (data.forged) FORGED = Array.isArray(data.forged) ? data.forged.map(function(c, i) { return STATE_GUARDS.sanitizeCard(c, i + 1); }) : [];
 if (data.goals) GOALS = Array.isArray(data.goals) ? data.goals : [];
 if (data.inventory) {
-INVENTORY.backpack = Array.isArray(data.inventory.backpack) ? data.inventory.backpack : [];
-INVENTORY.equipped = data.inventory.equipped || INVENTORY.equipped;
+var cleanInventory = STATE_GUARDS.sanitizeInventory(data.inventory, ARTIFACTS, INVENTORY.maxSlots);
+INVENTORY.backpack = cleanInventory.backpack;
+INVENTORY.equipped = cleanInventory.equipped;
+INVENTORY.maxSlots = cleanInventory.maxSlots;
 }
 if (typeof data.escapeProgress === 'number') escapeProgress = Math.max(0, Math.min(ESCAPE_MAX, data.escapeProgress));
 if (typeof data.bossHp === 'number') bossHp = Math.max(0, data.bossHp);
@@ -3599,9 +3595,9 @@ if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossS
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
 if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
-if (data.forgedIdCounter) forgedIdCounter = data.forgedIdCounter;
-if (data.uidCounter) uidCounter = data.uidCounter;
-if (data.goalIdCounter) goalIdCounter = data.goalIdCounter;
+if (data.forgedIdCounter) forgedIdCounter = STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100);
+if (data.uidCounter) uidCounter = STATE_GUARDS.sanitizeCounter(data.uidCounter, 10);
+if (data.goalIdCounter) goalIdCounter = STATE_GUARDS.sanitizeCounter(data.goalIdCounter, 1);
 if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
 if (data.bossKills) window._bossKills = data.bossKills;
 if (data.bloodOath !== undefined) bloodOath = data.bloodOath;

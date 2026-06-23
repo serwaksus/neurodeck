@@ -1,0 +1,11 @@
+{
+  "name": "neurodeck",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "check:js": "node --check js/state-guards.js && node --check js/combat-pixi.js && node --check js/app.js",
+    "test": "node --test tests/*.test.js",
+    "ci": "npm run check:js && npm test"
+  }
+}
