@@ -4,7 +4,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "check:js": "node --check js/state-guards.js && node --check js/combat-pixi.js && node --check js/app.js",
+    "check:js": "node --check js/state-guards.js && node --check js/storage.js && node --check js/combat-pixi.js && node --check js/app.js",
     "test": "node --test tests/*.test.js",
     "ci": "npm run check:js && npm test"
   }
