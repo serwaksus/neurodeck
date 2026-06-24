@@ -89,6 +89,12 @@ agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color
 const BASE_DAMAGE = 5;
 const LOOT_CHANCE = 0.05;
 function getLootChance(card) { return 0.05 + Math.min(0.05, (card.streak || 0) * 0.0025); }
+const STARTER_DECK = [
+    { name: 'Зарядка 10 мин',     stat: 'str', time: 'утро',  duration: 10 },
+    { name: 'Читать 20 мин',      stat: 'int', time: 'вечер', duration: 20 },
+    { name: 'Цифровой детокс',    stat: 'wil', time: 'утро',  duration: 0  },
+    { name: 'Прогулка 30 мин',    stat: 'end', time: 'день',  duration: 30 }
+];
 const RANK_COLORS = {
 C: { color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.15)', glow: 'rgba(156, 163, 175, 0.5)' },
 B: { color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.15)',  glow: 'rgba(96, 165, 250, 0.5)' },
@@ -132,6 +138,9 @@ case 'evolution-skip': closeEvolutionModal(); var ecid = parseInt(document.getEl
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
 case 'close-room-detail': closeRoomDetail(); break;
+case 'accept-starter-deck': acceptStarterDeck(); break;
+case 'close-starter-deck': closeStarterDeck(); break;
+case 'toggle-help': toggleHelp(); break;
 case 'open-forge': openForge(); break;
 case 'close-forge': closeForge(); break;
 case 'forge-card': forgeCard(); break;
@@ -1149,6 +1158,21 @@ tooltipEl.style.left = Math.min(x, window.innerWidth - 240) + 'px';
 tooltipEl.style.top = Math.min(y, window.innerHeight - 150) + 'px';
 }
 function hideTooltip() { tooltipEl.classList.remove('show'); }
+function showTextTooltip(title, subtitle, lines, anchor) {
+    if (!tooltipEl) return;
+    var html = '<div class="tt-name" style="color:' + (anchor && anchor.color ? anchor.color : '#d4a574') + '">' + title + '</div>';
+    if (subtitle) html += '<div class="tt-type">' + subtitle + '</div>';
+    lines.forEach(function(line) { html += '<div class="tt-bonus">' + line + '</div>'; });
+    tooltipEl.innerHTML = html;
+    if (anchor && anchor.rect) {
+        var x = anchor.rect.left + anchor.rect.width + 8;
+        var y = anchor.rect.top;
+        tooltipEl.style.left = Math.min(x, window.innerWidth - 280) + 'px';
+        tooltipEl.style.top = Math.max(8, y) + 'px';
+    }
+    tooltipEl.classList.add('show');
+}
+function hideTextTooltip() { if (tooltipEl) tooltipEl.classList.remove('show'); }
 function selectItem(uid) {
 selectedItemId = uid;
 const item = INVENTORY.backpack.find(i => i.uid === uid);
@@ -1586,6 +1610,85 @@ switchView('deck');
 saveGameState();
 }
 document.getElementById('forgeModal').addEventListener('click', (e) => { if (e.target.id === 'forgeModal') closeForge(); });
+
+function makeStarterCard(spec) {
+    if (!spec || !STATS[spec.stat]) return null;
+    var st = STATS[spec.stat];
+    return {
+        id: forgedIdCounter++,
+        name: spec.name,
+        meta: st.icon + ' ' + spec.duration + ' мин · ' + spec.time,
+        rank: 'C',
+        streak: 0,
+        stat: spec.stat,
+        progress: 0,
+        mastery: 0,
+        masteryThreshold: 5,
+        totalCompletions: 0,
+        prestige: 0,
+        evolutionPath: null,
+        daysActive: 0,
+        firstCompletedAt: null,
+        lastCompletedAt: null
+    };
+}
+
+function renderStarterDeck() {
+    var list = document.getElementById('starterDeckList');
+    if (!list) return;
+    var html = '';
+    STARTER_DECK.forEach(function(spec, idx) {
+        var st = STATS[spec.stat];
+        if (!st) return;
+        var checked = ' checked';
+        html += '<label class="starter-card" style="border-color:' + st.color + '; background:' + st.dark + '20;">' +
+                '<input type="checkbox" class="starter-cb" data-idx="' + idx + '"' + checked + '>' +
+                '<div class="starter-info">' +
+                '<div class="starter-icon" style="color:' + st.color + ';">' + st.icon + '</div>' +
+                '<div class="starter-meta">' +
+                '<div class="starter-name">' + esc(spec.name) + '</div>' +
+                '<div class="starter-desc" style="color:var(--text-dim);">+1 к пулу ' + st.name + ' · ' + spec.duration + ' мин · ' + spec.time + '</div>' +
+                '</div></div></label>';
+    });
+    list.innerHTML = html;
+}
+
+function showStarterDeck() {
+    if (FORGED.length > 0) return;
+    if (localStorage.getItem('neurodeck_starter_done') === '1') return;
+    renderStarterDeck();
+    document.getElementById('starterDeckModal').classList.add('show');
+}
+
+function acceptStarterDeck() {
+    var list = document.getElementById('starterDeckList');
+    if (!list) return;
+    var cbs = list.querySelectorAll('.starter-cb');
+    var added = 0;
+    cbs.forEach(function(cb) {
+        if (!cb.checked) return;
+        var spec = STARTER_DECK[parseInt(cb.dataset.idx)];
+        var card = makeStarterCard(spec);
+        if (card) { FORGED.unshift(card); added++; }
+    });
+    localStorage.setItem('neurodeck_starter_done', '1');
+    closeStarterDeck();
+    if (added > 0) {
+        renderCards();
+        saveGameState();
+        showToast('🎴 Колода создана', added + ' ' + (added === 1 ? 'карточка добавлена' : (added < 5 ? 'карточки добавлены' : 'карточек добавлены')) + '. Добро пожаловать в подземелье.');
+        spiritSay('«Первые испытания выкованы. Время показать, на что ты способен.»');
+        sfxForge();
+        burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: '#d4a574', speed: 8, decay: 0.01, size: 3, shape: 'spark', gravity: 0.08 });
+    } else {
+        showToast('ℹ Без карточек', 'Выковай свою колоду через «🔨 Выковать»');
+    }
+}
+
+function closeStarterDeck() {
+    document.getElementById('starterDeckModal').classList.remove('show');
+    localStorage.setItem('neurodeck_starter_done', '1');
+}
 function switchView(view) {
 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 document.querySelectorAll('.bnav-btn').forEach(t => t.classList.remove('active'));
@@ -2164,9 +2267,80 @@ function showReturnScreen() {
 }
 function closeReturnModal() { document.getElementById('returnModal').classList.remove('show'); }
 
+function toggleHelp(e) {
+    if (e) e.stopPropagation();
+    var btn = (e && e.currentTarget) || document.querySelector('[data-action="toggle-help"]');
+    if (tooltipEl && tooltipEl.classList.contains('show') && btn && btn.dataset.helpOpen === '1') {
+        hideTextTooltip();
+        if (btn) { btn.dataset.helpOpen = '0'; btn.classList.remove('active'); }
+        return;
+    }
+    if (btn && btn.getBoundingClientRect) {
+        var r = btn.getBoundingClientRect();
+        showTextTooltip(
+            '📖 Награды и риски',
+            'Что получишь и чем рискуешь',
+            [
+                '✅ За выполнение: +15 XP, +1 ОД, +1 очко атрибута',
+                '✅ За ранг-ап: карточка растёт, +1 очко атрибута, +1 к побегу',
+                '⚠️ За пропуск: босс получает +1 ярость (минус твоё HP в пятницу)',
+                '⚠️ За пропуск: стрик сбрасывается (но Волей можно защитить)',
+                '🔥 Стрик: каждый день делает карточку сильнее (макс ×2)',
+                '⛏ Пн–Чт: копишь ОД. ⚔ Пт–Вс: тратишь ОД на удары боссу'
+            ],
+            { color: '#fbbf24', rect: r }
+        );
+        btn.dataset.helpOpen = '1';
+        btn.classList.add('active');
+        setTimeout(function() {
+            document.addEventListener('click', function closeHelp(ev) {
+                if (!ev.target.closest('[data-action="toggle-help"]') && !ev.target.closest('#tooltip')) {
+                    hideTextTooltip();
+                    if (btn) { btn.dataset.helpOpen = '0'; btn.classList.remove('active'); }
+                    document.removeEventListener('click', closeHelp);
+                }
+            });
+        }, 50);
+    } else {
+        showTextTooltip(
+            '📖 Награды и риски',
+            'Что получишь и чем рискуешь',
+            [
+                '✅ За выполнение: +15 XP, +1 ОД, +1 очко атрибута',
+                '✅ За ранг-ап: +1 очко атрибута, +1 к побегу',
+                '⚠️ За пропуск: +1 ярость боссу',
+                '⚠️ За пропуск: стрик сбрасывается (но Волей можно защитить)',
+                '🔥 Стрик: каждый день делает карточку сильнее (макс ×2)'
+            ],
+            null
+        );
+    }
+}
+
 function renderDashboard() {
     var bar = document.getElementById('dashboardBar');
     if (!bar) return;
+    var isBeginner = (HERO.level || 1) <= 2 && FORGED.length > 0 && FORGED.length <= 5;
+    var html = '<button class="info-btn" data-action="toggle-help" title="Что получишь и чем рискуешь" style="position:absolute; right:6px; top:6px;">?</button>';
+    html += isBeginner ? renderDashboardBeginner() : renderDashboardVeteran();
+    bar.innerHTML = html;
+}
+
+function renderDashboardBeginner() {
+    var todayKey = getMSKDayKey();
+    var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
+    var remaining = FORGED.length - doneToday;
+    var phaseText = (getBattlePhase() === 'battle') ? '⚔ Сейчас фаза схватки — атакуй босса.' : '⛏ Копишь силы: каждый день даёт тебе ОД.';
+    return '<div style="padding-right:22px;">' +
+        '<div style="color:var(--gold-bright); font-size:13px; margin-bottom:4px;">⚔ ДЕНЬ ' + Math.max(1, HERO.level) + '</div>' +
+        '<div>' + phaseText + '</div>' +
+        '<div style="margin-top:6px;">📖 Сегодня сделано: <b>' + doneToday + '</b> из <b>' + FORGED.length + '</b> · осталось <b>' + remaining + '</b></div>' +
+        '<div style="margin-top:6px; font-size:10px; color:var(--text-dim);">✅ За выполнение: <b style="color:#34d399">+15 XP · +1 ОД · +1 очко атрибута</b></div>' +
+        '<div style="font-size:10px; color:var(--text-dim);">⚠️ За пропуск: <b style="color:var(--blood-bright)">+1 ярость боссу</b> и стрик сбросится</div>' +
+        '</div>';
+}
+
+function renderDashboardVeteran() {
     var phase = getBattlePhase();
     var todayKey = getMSKDayKey();
     var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
@@ -2184,10 +2358,11 @@ function renderDashboard() {
     var comboMult = getComboMultiplier();
     var comboInfo = comboMult > 1.0 ? ' · 🎯 Комбо ×' + comboMult.toFixed(2) : '';
     var maxStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
-    bar.innerHTML =
+    return '<div style="padding-right:22px;">' +
         '<div class="dashboard-row"><span>' + phaseIcon + ' ' + phaseText + daysToBattle + '</span></div>' +
         '<div class="dashboard-row"><span>⚔ ОД: <b style="color:#60a5fa">' + (HERO.actionPoints||0) + '</b></span><span>💢 Ярость: <b style="color:var(--blood-bright)">' + bossRagePoints + '</b></span><span>📖 ' + doneToday + '/' + FORGED.length + ' сегодня' + (remaining > 0 ? ' (осталось ' + remaining + ')' : '') + '</span></div>' +
-        '<div class="dashboard-row"><span>🔥 Макс. стик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>';
+        '<div class="dashboard-row"><span>🔥 Макс. стик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>' +
+        '</div>';
 }
 
 var COMBO_THRESHOLD = 3;
@@ -2729,6 +2904,9 @@ initCombatCanvas();
 updateCombatHpBars();
 importFromHash();
 if (FORGED.length === 0) { setTimeout(deepRecovery, 1000); }
+if (!localStorage.getItem('neurodeck_starter_done') && FORGED.length === 0) {
+    setTimeout(showStarterDeck, 900);
+}
 if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }
 else { setTimeout(function() { updateSyncBadge('syncing'); smartCloudSync(); }, 2500); }
 if (HERO.lastSessionAt && Date.now() - HERO.lastSessionAt > 86400000 && FORGED.length > 0) {
