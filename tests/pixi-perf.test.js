@@ -141,9 +141,12 @@ test('pixi-perf: shake is gated by pixiSkipEffects', function () {
 
 test('pixi-perf: particles are gated by isEffectsOff', function () {
   var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'combat-pixi.js'), 'utf8');
-  // spawnParticles(W * 0.5, H * 0.35, ...) должен быть обёрнут в if с isEffectsOff
-  var match = src.match(/if\s*\(\s*!\s*pixiLowSpec\(\)\s*\|\|\s*!\s*window\.NeuroDeckPerf\.isEffectsOff\(\)\s*\)\s*spawnParticles/);
-  assert.ok(match, 'spawnParticles должен быть условным при effects-off');
+  // spawnParticles wrapped in if (!pixiSkipParticles()) — which defers to isEffectsOff
+  var match = src.match(/if\s*\(\s*!\s*pixiSkipParticles\(\)\s*\)\s*spawnParticles/);
+  assert.ok(match, 'spawnParticles должен быть обёрнут в условный if (!pixiSkipParticles())');
+  // Verify pixiSkipParticles itself returns isEffectsOff
+  var helper = src.match(/function\s+pixiSkipParticles\s*\([^)]*\)\s*\{[^}]*isEffectsOff[^}]*\}/);
+  assert.ok(helper, 'pixiSkipParticles должен использовать isEffectsOff');
 });
 
 // ----------------------------------------------------------------
@@ -151,9 +154,9 @@ test('pixi-perf: particles are gated by isEffectsOff', function () {
 // ----------------------------------------------------------------
 test('pixi-perf: pixiSkipEffects handled defensively (no crash if perf absent)', function () {
   var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'combat-pixi.js'), 'utf8');
-  // Должно быть `window.NeuroDeckPerf && ...`
-  var match = src.match(/window\.NeuroDeckPerf\s*&&\s*window\.NeuroDeckPerf\.prefersReducedMotion\s*&&\s*window\.NeuroDeckPerf\.prefersReducedMotion\(\)/);
-  assert.ok(match, 'pixiSkipEffects должен защитно проверять наличие NeuroDeckPerf');
+  // pixiSkipEffects должен защитно проверять наличие NeuroDeckPerf через pixiPerf() → null-safe
+  var match = src.match(/function\s+pixiSkipEffects\s*\([^)]*\)\s*\{[^}]*\(\s*p\s*&&\s*p\.prefersReducedMotion\s*&&\s*p\.prefersReducedMotion\(\)\s*\)/);
+  assert.ok(match, 'pixiSkipEffects должен защитно проверять наличие NeuroDeckPerf через pixiPerf()');
 });
 
 // ----------------------------------------------------------------
