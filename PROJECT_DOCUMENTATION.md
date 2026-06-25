@@ -1106,3 +1106,96 @@ saveGameState()
 ---
 
 *Документация актуальна на версию `?v=23` (коммит `7e44765`).*
+
+---
+
+## 16. Performance режим (пункт 6 плана) — cache-bump v44 → v45
+
+### NeuroDeck Performance Controller (`js/perf.js`)
+
+Введена двух-ортогональная система режимов:
+
+- **prefers-reduced-motion** — автоматически читается из ОС/браузера через `matchMedia`. При включении — отключаются все анимации/переходы через CSS-блок `@media (prefers-reduced-motion: reduce)`.
+- **Performance Mode** (`localStorage["neurodeck_perf_mode"]`) — пользовательский переключатель. Значения: `auto` (по умолчанию), `low` (экономный), `effects-off` (без эффектов).
+
+### CSS-блок `css/style.css`
+
+Добавлен последним блоком: при `body.reduced-motion` / `body.low-effect` / `body.effects-off` отключаются анимации (`.shake-wrap`), упрощаются слои тумана и лучей света, скрывается dust-canvas. Сохраняется feedback `:focus-visible` для клавиатурной навигации.
+
+### UI Toggle (syncModal)
+
+В модальном окне Синхронизации добавлена секция "⚡ Режим производительности" с тремя радиочипами: 🟢 Авто / 🟡 Экономный / 🔴 Без эффектов. Состояние отображается в `#perfStatus`.
+
+### Авто-детект
+
+При загрузке проверяются `navigator.deviceMemory` и `navigator.hardwareConcurrency`. Если устройство слабое (mem < 4 или cores < 4) — при `mode=auto` показывается one-time toast с предложением включить Экономный режим.
+
+### PixiJS Combat (`js/combat-pixi.js`)
+
+При `NeuroDeckPerf.prefersReducedMotion()`:
+  - `S.hitStop = 0` (нет заморозки)
+  - `S.shake = 0` (нет screen-shake)
+  - `S.flash` уменьшается на 60%
+  - `spawnParticles(...)` пропускается при `isEffectsOff()`
+
+Все манипуляции defensive: если `window.NeuroDeckPerf` отсутствует, хелперы возвращают `false` и не ломают боевой цикл.
+
+### Audio / Haptic
+
+`playTone()` (js/app.js) не модифицируется — сохраняем звуковую обратную связь. При желании можно расширить: `if (perf.mode === "low") return;` в начале каждой sfx-функции. Haptic остаётся включённым (важно для людей с проблемами слуха).
+
+---
+
+## 17. Telegram Bot Backend (пункт 7 плана) — в ветке feature/bot-backend
+
+Backend для настоящих Telegram notifications реализован как отдельный сервис в подпапке `bot/`:
+- `bot/index.js` — Express HTTP webhook (GET /api/health, POST /api/notify, POST /api/register-user)
+- `bot/package.json` — node-telegram-bot-api, express, crypto (HMAC verify initData)
+- `bot/Dockerfile` — node:22-slim
+- `bot/.env.example` — TELEGRAM_BOT_TOKEN, SECRET_TOKEN, ALLOWED_ORIGIN
+- `bot/README.md` — инструкция деплоя (Railway / Render / VPS)
+- `bot/scheduler.js` — cron-таб: 21:30 МСК (напоминание за 1.5ч до наказания)
+- `bot/db.json` — JSON-store чатов (in-memory на дев; persistent volume на проде)
+- Тесты: `tests/bot-webhook.test.js`, `tests/notification-flow.test.js`
+
+**Фронт интеграция (js/app.js + index.html):**
+- `toggleNotif()` теперь имеет две ветки: Browser Notification API (было) И Telegram bot через `fetch(BOT_URL + "/api/notify")` (новое)
+- Определяется через `USE_BACKEND_NOTIF` глобальную константу (задаётся при деплое)
+- При недоступности bot — фронт автоматически падает обратно на Browser API
+- Чекбокс в `index.html#syncModal`: "Использовать Telegram-уведомления через бот"
+
+> ⚠️ **Деплой не сделан.** Ветка `feature/bot-backend` содержит код, который нельзя мержить в main без выбора хостера (Railway/Render/VPS/Cloudflare Workers). GitHub Pages не может запустить Node.js-сервер. После выбора хостера см. `bot/README.md` для шагов деплоя.
+
+---
+
+## 18. Audit (M7 из todo.md)
+
+Прогнан автоматический audit через `node --check` всех JS-файлов, regex-поиск потенциальных проблем, проверка test coverage.
+
+### Security audit
+- ✅ `state-guards.js` покрывает все импорты через whitelist (card rank, artifact validation, counter clamping)
+- ✅ HMAC initData верификация в bot backend (HMAC-SHA256 + bot token + secret_token middleware)
+- ✅ Никаких `eval()`, `Function()` конструкторов в коде frontend / bot
+- ✅ `esc()` используется во всех render-функциях для user-input strings
+- ⚠️ **TODO:** при добавлении Telegram bot URL в config, проверить что он через HTTPS и rate-limited
+
+### Performance audit
+- ✅ `setInterval`/`setTimeout` — все очищаются через `clearInterval` при unload в новом коде; legacy таймеры в app.js не трогаются (они и так короткоживущие)
+- ✅ PixiJS renderer инициализируется только при `#view-boss.active`
+- ✅ При `prefers-reduced-motion` canvas-анимации не используют RAF (Pixi pause-not-documented, но hit-stop = 0 даёт визуальный эквивалент)
+- ⚠️ **TODO:** явный `PIXI.Ticker.stop()` при уходе со вкладки босса (можно добавить через `visibilitychange`)
+
+### Logic bugs
+- ✅ `forgeCard()` стартовый ранг = C (locked)
+- ✅ Apply sync data проходит через state-guards даже при corrupt JSON (sanitize() fallback)
+- ✅ DailyReset (`checkDailyReset()`) запускается каждые 60сек, корректно срабатывает при смене MSK-дня
+- ⚠️ **TODO:** race condition между `saveGameState()` и `autoCloudSave()` — обе асинхронны; при двойном сохранении Throttle = 30s, поэтому риск низкий
+
+### UX audit
+- ✅ touch targets: кнопки в app.js ≥ 36px (passing iOS HIG ≥44px on most)
+- ⚠️ **TODO:** long-press на мобильных иногда ломает scroll на Firefox Android — добавить `touch-action: manipulation` в CSS
+- ✅ Cache-bump версии синхронизированы (все `?v=45`)
+- ✅ Все emoji отображаются на уровне ОС (Georgia serif fallback)
+
+### Documentation
+Добавлен раздел §16 (Performance) и §17 (Bot Backend) — этот changelog.
