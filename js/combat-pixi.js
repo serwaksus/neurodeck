@@ -27,12 +27,19 @@ const S = {
     swordActive: false, swordPhase: 0
 };
 
-// NeuroDeck perf integration: отключаем дорогостоящие эффекты при reduced-motion / low-effect
+// NeuroDeck perf integration: defensive helpers — all three handle missing NeuroDeckPerf
+function pixiPerf() { return window.NeuroDeckPerf || null; }
 function pixiSkipEffects() {
-    return !!(window.NeuroDeckPerf && window.NeuroDeckPerf.prefersReducedMotion && window.NeuroDeckPerf.prefersReducedMotion());
+    var p = pixiPerf();
+    return !!(p && p.prefersReducedMotion && p.prefersReducedMotion());
 }
 function pixiLowSpec() {
-    return !!(window.NeuroDeckPerf && window.NeuroDeckPerf.isLowEffect && window.NeuroDeckPerf.isLowEffect());
+    var p = pixiPerf();
+    return !!(p && p.isLowEffect && p.isLowEffect());
+}
+function pixiSkipParticles() {
+    var p = pixiPerf();
+    return !!(p && p.isEffectsOff && p.isEffectsOff());
 }
 
 const ease = {
@@ -370,7 +377,7 @@ window.startHeroAttack = function(dmg, crit) {
         S.shake = pixiSkipEffects() ? 0 : (crit ? 22 : 14);
         S.hitStop = pixiSkipEffects() ? 0 : (performance.now() + (crit ? 90 : 60));
         var pColor = crit ? 0xfbbf24 : 0xc73e4d;
-        if (!pixiLowSpec() || !window.NeuroDeckPerf.isEffectsOff()) spawnParticles(W * 0.5, H * 0.35, crit ? 35 : 20, pColor, 3);
+        if (!pixiSkipParticles()) spawnParticles(W * 0.5, H * 0.35, crit ? 35 : 20, pColor, 3);
         spawnDamageNum(W * 0.5, H * 0.3, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? 0xfbbf24 : 0xe74c3c, crit);
     });
 };
@@ -389,7 +396,7 @@ window.startBossAttack = function(dmg) {
         S.flash = 0.55; S.flashColor = 0xc73e4d;
         S.shake = pixiSkipEffects() ? 0 : 26;
         S.hitStop = pixiSkipEffects() ? 0 : (performance.now() + 110);
-        if (!pixiLowSpec() || !window.NeuroDeckPerf.isEffectsOff()) spawnParticles(W * 0.5, H * 0.5, 25, 0x8b1414, 2.5);
+        if (!pixiSkipParticles()) spawnParticles(W * 0.5, H * 0.5, 25, 0x8b1414, 2.5);
         spawnDamageNum(W * 0.5, H * 0.6, '-' + dmg + ' HP', 0xc73e4d, false);
     });
 };
