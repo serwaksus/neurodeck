@@ -834,3 +834,31 @@ margin-top: 8px; font-style: italic;
 .starter-card .starter-desc { font-size: 11px; }
 .info-btn { width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: rgba(0,0,0,0.5); color: var(--text-dim); font-size: 13px; line-height: 22px; cursor: pointer; transition: all 0.15s ease; }
 .info-btn:hover, .info-btn.active { color: var(--gold-bright); border-color: var(--gold-bright); background: rgba(251,191,36,0.1); }
+// ============================================================
+// NeuroDeck perf + reduced motion — patch from cache 45
+// ============================================================
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+body.reduced-motion .card { transform: none !important; }
+body.reduced-motion .shake-wrap { animation: none !important; transform: none !important; }
+body.reduced-motion .torch-flicker { animation: none !important; }
+body.reduced-motion .blood-drop { animation: none !important; opacity: 0 !important; }
+body.reduced-motion .levelup-banner, body.reduced-motion .rankup-banner { animation: none !important; transform: translate(-50%, -50%) !important; }
+body.reduced-motion .modal-overlay { animation: none !important; }
+body.reduced-motion .card.rank-AAA { animation: none !important; }
+body.low-effect #dustCanvas { opacity: 0.3 !important; }
+body.low-effect .mist-layer { opacity: calc(var(--mist-opacity) * 0.5) !important; }
+body.effects-off #dustCanvas { display: none !important; }
+body.effects-off .mist-layer { opacity: calc(var(--mist-opacity) * 0.25) !important; }
+body.effects-off .light-rays { opacity: calc(var(--light-rays-opacity) * 0.4) !important; }
