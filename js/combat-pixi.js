@@ -27,6 +27,14 @@ const S = {
     swordActive: false, swordPhase: 0
 };
 
+// NeuroDeck perf integration: отключаем дорогостоящие эффекты при reduced-motion / low-effect
+function pixiSkipEffects() {
+    return !!(window.NeuroDeckPerf && window.NeuroDeckPerf.prefersReducedMotion && window.NeuroDeckPerf.prefersReducedMotion());
+}
+function pixiLowSpec() {
+    return !!(window.NeuroDeckPerf && window.NeuroDeckPerf.isLowEffect && window.NeuroDeckPerf.isLowEffect());
+}
+
 const ease = {
     out: t => 1 - Math.pow(1 - t, 3),
     inOut: t => t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2,
@@ -359,10 +367,10 @@ window.startHeroAttack = function(dmg, crit) {
         // Impact at sword midpoint
         S.flash = crit ? 0.7 : 0.45;
         S.flashColor = 0xffffff;
-        S.shake = crit ? 22 : 14;
-        S.hitStop = performance.now() + (crit ? 90 : 60);
+        S.shake = pixiSkipEffects() ? 0 : (crit ? 22 : 14);
+        S.hitStop = pixiSkipEffects() ? 0 : (performance.now() + (crit ? 90 : 60));
         var pColor = crit ? 0xfbbf24 : 0xc73e4d;
-        spawnParticles(W * 0.5, H * 0.35, crit ? 35 : 20, pColor, 3);
+        if (!pixiLowSpec() || !window.NeuroDeckPerf.isEffectsOff()) spawnParticles(W * 0.5, H * 0.35, crit ? 35 : 20, pColor, 3);
         spawnDamageNum(W * 0.5, H * 0.3, '-' + dmg + (crit ? ' КРИТ!' : ''), crit ? 0xfbbf24 : 0xe74c3c, crit);
     });
 };
@@ -379,9 +387,9 @@ window.startBossAttack = function(dmg) {
 
     tween(function(t) {}, 0.25, function() {
         S.flash = 0.55; S.flashColor = 0xc73e4d;
-        S.shake = 26;
-        S.hitStop = performance.now() + 110;
-        spawnParticles(W * 0.5, H * 0.5, 25, 0x8b1414, 2.5);
+        S.shake = pixiSkipEffects() ? 0 : 26;
+        S.hitStop = pixiSkipEffects() ? 0 : (performance.now() + 110);
+        if (!pixiLowSpec() || !window.NeuroDeckPerf.isEffectsOff()) spawnParticles(W * 0.5, H * 0.5, 25, 0x8b1414, 2.5);
         spawnDamageNum(W * 0.5, H * 0.6, '-' + dmg + ' HP', 0xc73e4d, false);
     });
 };
