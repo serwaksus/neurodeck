@@ -129,6 +129,7 @@ case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
 case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
+case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf) { window.NeuroDeckPerf.setMode(el.dataset.mode); renderPerfStatus(); showToast('⚡ Режим', 'Производительность: ' + (window.NeuroDeckPerf.getMode() || 'auto')); } break;
 case 'close-return-modal': closeReturnModal(); break;
 case 'close-evolution-modal': closeEvolutionModal(); break;
 case 'apply-evolution-depth': applyEvolution('depth'); break;
@@ -2706,6 +2707,46 @@ new Notification('NeuroDeck 🎯', { body: '«' + goal.name + '» — скоро
 });
 }, 5000);
 }
+function renderPerfStatus() {
+    if (!window.NeuroDeckPerf) return;
+    var m = window.NeuroDeckPerf.getMode();
+    var prm = window.NeuroDeckPerf.prefersReducedMotion();
+    var low = window.NeuroDeckPerf.isLowEffect();
+    var status = document.getElementById('perfStatus');
+    if (!status) return;
+    var txt = 'Активно: <b>' + m + '</b>';
+    if (prm) txt += ' · <span style="color:var(--gold)">reduced-motion</span>';
+    if (low) txt += ' · <span style="color:var(--green)">low-effect</span>';
+    if (m === 'effects-off') txt += ' · <span style="color:var(--blood-bright)">анимации отключены</span>';
+    status.innerHTML = txt;
+    ['perfAutoBtn','perfLowBtn','perfOffBtn'].forEach(function(id){
+        var b = document.getElementById(id);
+        if (b) { b.style.borderColor = (b.dataset.mode === m) ? 'var(--gold-bright)' : ''; b.style.background = (b.dataset.mode === m) ? 'rgba(212,165,116,0.15)' : ''; }
+    });
+}
+function initPerf() {
+    if (!window.NeuroDeckPerf) return;
+    window.NeuroDeckPerf.attachListeners();
+    window.NeuroDeckPerf.onChange(renderPerfStatus);
+    renderPerfStatus();
+    // Re-render status whenever sync modal becomes visible (low-cost mutation observer)
+    try {
+        var mo = new MutationObserver(function(muts){
+            for (var i=0;i<muts.length;i++) { if (muts[i].target && muts[i].target.classList && muts[i].target.classList.contains('show')) { renderPerfStatus(); break; } }
+        });
+        var sm = document.getElementById('syncModal');
+        if (sm) mo.observe(sm, { attributes: true, attributeFilter: ['class'] });
+    } catch(e) {}
+    // Suggestions при auto+low-spec detect (без автопереключения, только тост)
+    try {
+        var lowSpec = window.NeuroDeckPerf.isLowEffect() && window.NeuroDeckPerf.getMode() === 'auto';
+        if (lowSpec && !localStorage.getItem('neurodeck_perf_suggested')) {
+            localStorage.setItem('neurodeck_perf_suggested', '1');
+            setTimeout(function(){ showToast('💡 Совет', 'Слабое устройство? Включите Экономный режим в Синхронизации → ⚡ Режим производительности.'); }, 3500);
+        }
+    } catch(e) {}
+}
+initPerf();
 function initNotifs() {
 updateNotifBtn();
 if (notifEnabled && Notification.permission === 'granted') scheduleNotifs();
