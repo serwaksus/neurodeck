@@ -180,6 +180,16 @@
 </div>
 <input type="file" id="syncFileInput" accept=".ndsync,.json" style="display: none;">
 </div>
+<div class="sync-section">
+<div class="sync-section-title">⚡ Режим производительности</div>
+<div class="sync-section-desc">Управление анимациями для слабых устройств или людей с проблемами вестибулярного аппарата.</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+<button class="demo-btn" data-action="set-perf" data-mode="auto" id="perfAutoBtn" style="flex: 1;">🟢 Авто</button>
+<button class="demo-btn" data-action="set-perf" data-mode="low" id="perfLowBtn" style="flex: 1;">🟡 Экономный</button>
+<button class="demo-btn" data-action="set-perf" data-mode="effects-off" id="perfOffBtn" style="flex: 1;">🔴 Без эффектов</button>
+</div>
+<div id="perfStatus" style="font-size: 11px; color: var(--text-dim); margin-top: 6px;"></div>
+</div>
 <div style="display: flex; gap: 8px; margin-top: 8px;">
 <button class="demo-btn" data-action="export-json" style="flex: 1;">📋 JSON</button>
 <button class="demo-btn" id="notifToggleBtn" data-action="toggle-notif" style="flex: 1;">🔔 Уведомления</button>
