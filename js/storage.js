@@ -15,6 +15,7 @@ function saveToIDB(obj) {
     try {
         var tx = idb.transaction('saves', 'readwrite');
         tx.objectStore('saves').put({ id: 'latest', data: obj, ts: Date.now() });
+        window._lastIDBSaveAt = Date.now();
     } catch(e) {}
 }
 function loadFromIDB(callback) {
@@ -68,7 +69,8 @@ function autoCloudSave(json, force) {
     window._lastCloudSave = Date.now();
     try {
         var chunks = [];
-        for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK)); }
+        for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
+        { if (chunks.length >= 200) return; /* cap */ } }
         var doneCount = 0;
         chunks.forEach(function(chunk, idx) {
             cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function() {
@@ -391,7 +393,8 @@ var el = document.getElementById('cloudStatus');
 if (el) el.textContent = '☁ Сохраняю...';
 var json = JSON.stringify(buildSyncData());
 var chunks = [];
-for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK)); }
+for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
+        { if (chunks.length >= 200) return; /* cap */ } }
 var finished = false;
 setTimeout(function() {
 if (!finished) {
@@ -402,6 +405,7 @@ showToast('⚠ Таймаут', 'Облако не ответило. Скача�
 }, 10000);
 var doneCount = 0;
 function saveMeta() {
+    if (finished) return;  // belt-and-suspenders, никогда не nullаем ненулевой finished
 cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), function(err) {
 if (finished) return;
 finished = true;
