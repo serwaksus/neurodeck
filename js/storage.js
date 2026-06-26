@@ -568,12 +568,13 @@ event.target.value = '';
 }
 function applySyncData(data, skipRender) {
 if (data.hero) {
-Object.assign(HERO, data.hero);
-HERO.hp = Math.max(0, HERO.hp || 0);
-HERO.maxHp = Math.max(1, HERO.maxHp || 1);
-HERO.xp = Math.max(0, HERO.xp || 0);
-HERO.xpToNext = Math.max(1, HERO.xpToNext || 1);
-HERO.level = Math.max(1, Math.min(99, HERO.level || 1));
+var sanitizedHero = STATE_GUARDS.sanitizeHero(data.hero);
+Object.keys(sanitizedHero).forEach(function(k) {
+    HERO[k] = sanitizedHero[k];
+});
+// actionPoints added later when keys were added after sanitizeHero
+// duplicate-fix: ensure backwards compat for older saves without actionPoints
+if (typeof HERO.actionPoints !== 'number' || !Number.isFinite(HERO.actionPoints)) HERO.actionPoints = 0;
 }
 if (data.stats) {
 Object.keys(data.stats).forEach(k => {
@@ -585,7 +586,7 @@ STATS[k].attributePoints = Math.max(0, STATS[k].attributePoints || 0);
 });
 }
 if (data.forged) FORGED = Array.isArray(data.forged) ? data.forged.map(function(c, i) { return STATE_GUARDS.sanitizeCard(c, i + 1); }) : [];
-if (data.goals) GOALS = Array.isArray(data.goals) ? data.goals : [];
+if (data.goals) { var cleanGoals = STATE_GUARDS.sanitizeGoals(data.goals); GOALS.length = 0; cleanGoals.forEach(function(g){ GOALS.push(g); }); }
 if (data.inventory) {
 var cleanInventory = STATE_GUARDS.sanitizeInventory(data.inventory, ARTIFACTS, INVENTORY.maxSlots);
 INVENTORY.backpack = cleanInventory.backpack;
@@ -597,16 +598,16 @@ if (typeof data.bossHp === 'number') bossHp = Math.max(0, data.bossHp);
 if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
-if (typeof data.chimeraShield === 'number') chimeraShield = data.chimeraShield;
+if (typeof data.chimeraShield === 'number') chimeraShield = Math.max(0, Math.min(10, data.chimeraShield));
 if (data.forgedIdCounter) forgedIdCounter = STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100);
 if (data.uidCounter) uidCounter = STATE_GUARDS.sanitizeCounter(data.uidCounter, 10);
 if (data.goalIdCounter) goalIdCounter = STATE_GUARDS.sanitizeCounter(data.goalIdCounter, 1);
-if (Array.isArray(data.xpHistory)) xpHistory = data.xpHistory;
-if (data.bossKills) window._bossKills = data.bossKills;
+if (Array.isArray(data.xpHistory)) xpHistory = STATE_GUARDS.sanitizeXpHistory(data.xpHistory);
+if (data.bossKills) window._bossKills = STATE_GUARDS.sanitizeBossKills(data.bossKills);
 if (data.bloodOath !== undefined) bloodOath = data.bloodOath;
-if (typeof data.bossRagePoints === 'number') bossRagePoints = data.bossRagePoints;
+if (typeof data.bossRagePoints === 'number') bossRagePoints = Math.max(0, Math.min(1000000, data.bossRagePoints));
 if (typeof data.lastWeekReset === 'string') lastWeekReset = data.lastWeekReset;
-if (typeof HERO.actionPoints !== 'number') HERO.actionPoints = 0;
+// actionPoints now lives in sanitizeHero; no need to bridge here
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
@@ -617,10 +618,13 @@ changeBossHp(0);
 function resetAllData() {
 dungeonConfirm('🗑 Удалить ВСЕ данные?', 'Это действие <b>нельзя отменить</b>. Весь прогресс будет потерян навсегда.').then(function(ok) {
 if (!ok) return;
-localStorage.removeItem('neurodeck_goals');
-localStorage.removeItem('neurodeck_full_save');
-localStorage.removeItem('neurodeck_backup');
-localStorage.removeItem('neurodeck_cards_backup');
+// Clear all NeuroDeck keys (covers current and future keys; performant for the <=20 keys we use).
+try {
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('neurodeck_') === 0) localStorage.removeItem(k);
+    }
+} catch(e) {}
 location.reload();
 });
 }
