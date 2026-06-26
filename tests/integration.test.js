@@ -275,3 +275,30 @@ test('Storage snapshot includes all critical game fields', () => {
         assert.ok(m[1].indexOf(f) > -1, 'snapshot missing field: ' + f);
     });
 });
+
+// ============================================================
+// v47 audit fixes — tests for chunk cap, IDB timestamp, saveMeta guard
+// ============================================================
+
+test('Storage: chunks.push loop has emergency cap at 200 iterations', function () {
+    // Verify that the chunk-slice loop has the emergency guard
+    const matches = storage.match(/chunks\.push\(json\.slice\(i, i \+ CLOUD_MAX_CHUNK\)\);/g);
+    assert.ok(matches && matches.length >= 2, 'should have at least 2 chunk loops');
+    assert.ok(matches.length === 2, 'expected exactly 2: in autoCloudSave and saveToCloud');
+    // Check the emergency cap exists
+    const cap = storage.match(/chunks\.length >= 200.*?return/);
+    assert.ok(cap, 'chunk-loop emergency cap should exist');
+});
+
+test('Storage: saveToIDB sets window._lastIDBSaveAt hook', function () {
+    // After a successful IDB write, we set a timestamp so callers can
+    // detect duplicate-writes; this is purely informational.
+    assert.ok(storage.indexOf('window._lastIDBSaveAt = Date.now()') !== -1,
+        'saveToIDB should expose window._lastIDBSaveAt');
+});
+
+test('Storage: saveMeta guards against finished=true (defensive)', function () {
+    // The defensive guard prevents re-entrancy under race (chunks.length === 0 edge)
+    assert.ok(storage.indexOf('if (finished) return;') !== -1,
+        'saveMeta should have finished guard');
+});
