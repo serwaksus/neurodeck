@@ -862,3 +862,67 @@ body.low-effect .mist-layer { opacity: calc(var(--mist-opacity) * 0.5) !importan
 body.effects-off #dustCanvas { display: none !important; }
 body.effects-off .mist-layer { opacity: calc(var(--mist-opacity) * 0.25) !important; }
 body.effects-off .light-rays { opacity: calc(var(--light-rays-opacity) * 0.4) !important; }
+
+
+/* ============================================================
+   v46 — audit LOW fixes (closes findings #8 #9 #10 #11)
+   ============================================================ */
+
+/* LOW #8: :focus-visible — keyboard nav feedback. WCAG 2.1 focus indicator. */
+*:focus { outline: none; }
+*:focus-visible {
+  outline: 2px solid var(--gold-bright) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.45) !important;
+  border-radius: 2px;
+}
+/* tab buttons heavier emphasis */
+.tab:focus-visible {
+  background: rgba(212, 165, 116, 0.12);
+  border-left-color: var(--gold-bright);
+}
+/* modal close/primary buttons */
+.modal-footer .demo-btn:focus-visible,
+button:focus-visible {
+  background: rgba(212, 165, 116, 0.18);
+  border-color: var(--gold-bright);
+}
+/* form inputs need separate visual */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--gold-bright);
+  outline: 2px solid rgba(251, 191, 36, 0.5) !important;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* LOW #9: touch-action on cards — Firefox Android long-press eats scroll.
+   Also prevent double-tap-to-zoom (teleports, and tearfocus on inputs). */
+.card,
+.starter-card,
+.goal-card,
+.stat-card,
+.bp-cell,
+.slot,
+.item-btn,
+.boss-panel { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button, [data-action], .tab, .demo-btn { touch-action: manipulation; }
+
+/* LOW #10: backpack grid — auto-fill min 56px (≥ 44px touch target). */
+.backpack-grid {
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+}
+
+/* LOW #11: backdrop-filter — keep on critical overlays only (header, modal, boss panel).
+   Currently applied broadly — keeps at ~3 elements. */
+.header, .modal, .boss-panel { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+/* smaller blur for secondary panels to reduce GPU pressure */
+.tabs, .content, .item-panel, .backpack, .sync-section, .paperdoll-wrap {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Healthy body overflow handling for iOS */
+@supports (-webkit-touch-callout: none) {
+  .app-wrap { -webkit-overflow-scrolling: touch; }
+}
