@@ -441,5 +441,28 @@ function swapBossImage(type) {
     }
 }
 
+// ===================== Performance Mode =====================
+// __ndApplyEcoToPixi is invoked by app.js when js/perf.js flips the eco flag.
+// In eco mode we drop PixiJS resolution (less GPU) and hide expensive overlays
+// (torch glow, vignette). Function is a no-op until init() has populated app.
+// In combat-pixi.js we don't pause the ticker entirely because the ticker drives
+// combat attacks; instead we cut its per-frame workload.
+window.__ndApplyEcoToPixi = function(isEco) {
+    try {
+        if (app && typeof app.renderer === 'object' && app.renderer) {
+            var dpr = window.devicePixelRatio || 1;
+            var target = isEco ? 1 : Math.min(2, dpr);
+            if (typeof app.renderer.resolution === 'number' && app.renderer.resolution !== target) {
+                app.renderer.resolution = target;
+            }
+        }
+    } catch (e) { /* renderer not initialised yet */ }
+    try {
+        if (torchGfx) { torchGfx.visible = !isEco; }
+        if (vignetteGfx) { vignetteGfx.visible = !isEco; }
+        if (grainGfx) { grainGfx.visible = !isEco; }
+    } catch (e) { /* graphics layers not created yet */ }
+};
+
 init();
 })();

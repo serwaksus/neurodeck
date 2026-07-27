@@ -196,6 +196,15 @@
 <button class="demo-btn" data-action="deep-recovery" style="flex: 1; color: var(--green); border-color: var(--green);">♻ Восстановить</button>
 <button class="demo-btn" data-action="reset-all-data" style="flex: 1; color: var(--blood-bright); border-color: var(--blood);">🗑 Сброс</button>
 </div>
+<div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+  <label class="form-label" style="display:block; margin-bottom:6px;">⚡ Режим производительности</label>
+  <select id="perfModeSelect" class="form-select" style="width:100%;">
+    <option value="auto">Авто (определять по устройству)</option>
+    <option value="performance">⚡ Производительность (все эффекты)</option>
+    <option value="eco">🌿 Eco (минимальная графика)</option>
+  </select>
+  <div id="perfModeHint" style="font-size:10px; color:var(--text-dim); margin-top:4px;">Auto — эффекты зависят от системных настроек.</div>
+</div>
 </div>
 <div class="modal-footer"><button class="demo-btn" data-action="close-sync-modal">Закрыть</button></div>
 </div>

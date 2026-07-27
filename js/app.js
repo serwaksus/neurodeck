@@ -1174,6 +1174,16 @@ function showTextTooltip(title, subtitle, lines, anchor) {
     tooltipEl.classList.add('show');
 }
 function hideTextTooltip() { if (tooltipEl) tooltipEl.classList.remove('show'); }
+
+// ===================== Performance Mode integration =====================
+// __ndSetEcoMode is invoked by js/perf.js whenever the effective eco flag
+// changes. We pause the dust + burst particle loops when eco is on so the
+// CPU drops close to idle. The dust canvas / mist layer are also hidden via
+// CSS :root.perf-eco rule, so even passive frames stop drawing.
+window.__ndSetEcoMode = function(isEco) {
+    try { dustRunning = !isEco; if (!isEco) animateDust(); } catch (e) { /* bot restored mid-init */ }
+    try { particlesRunning = !isEco; if (!isEco) animate(); } catch (e) { /* same */ }
+};
 function selectItem(uid) {
 selectedItemId = uid;
 const item = INVENTORY.backpack.find(i => i.uid === uid);
@@ -2752,6 +2762,47 @@ updateNotifBtn();
 if (notifEnabled && Notification.permission === 'granted') scheduleNotifs();
 }
 initNotifs();
+function initPerfMode() {
+    var P = window.NeuroDeckPerf;
+    if (!P) return;
+    // Sync UI selection with stored preference
+    var select = document.getElementById('perfModeSelect');
+    if (select) {
+        try { select.value = P.getMode(); } catch (e) { /* ignore */ }
+        select.addEventListener('change', function() {
+            var mode = select.value;
+            if (P.setMode(mode)) {
+                var hints = {
+                    'auto': 'Auto — эффекты зависят от системных настроек.',
+                    'eco': 'Eco — выключены пыль, частицы, лёгкие эффекты.',
+                    'performance': 'Производительность — все эффекты включены.'
+                };
+                var hint = document.getElementById('perfModeHint');
+                if (hint) hint.textContent = hints[mode] || hints.auto;
+                showToast('⚡ Режим изменён', {
+                    'auto': 'Авто-определение',
+                    'eco': 'Минимальная графика',
+                    'performance': 'Все эффекты'
+                }[mode] || mode);
+            }
+        });
+    }
+    // When perf.js flips the eco flag, push the resolution change into PixiJS.
+    P.onEcoModeChange(function(isEco, userMode) {
+        try {
+            if (window.__ndApplyEcoToPixi) window.__ndApplyEcoToPixi(isEco);
+        } catch (e) { /* pixi may not be initialised yet */ }
+    });
+    // Apply current effective state immediately (covers the case where user
+    // toggled this setting in a previous session and reloaded).
+    if (typeof window.__ndSetEcoMode === 'function') {
+        window.__ndSetEcoMode(P.isEco());
+    }
+    if (typeof window.__ndApplyEcoToPixi === 'function') {
+        window.__ndApplyEcoToPixi(P.isEco());
+    }
+}
+initPerfMode();
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
 document.getElementById('roomDetailModal').addEventListener('click', (e) => { if (e.target.id === 'roomDetailModal') closeRoomDetail(); });
 document.getElementById('syncFileInput').addEventListener('change', importSyncFile);

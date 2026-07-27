@@ -834,9 +834,6 @@ margin-top: 8px; font-style: italic;
 .starter-card .starter-desc { font-size: 11px; }
 .info-btn { width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: rgba(0,0,0,0.5); color: var(--text-dim); font-size: 13px; line-height: 22px; cursor: pointer; transition: all 0.15s ease; }
 .info-btn:hover, .info-btn.active { color: var(--gold-bright); border-color: var(--gold-bright); background: rgba(251,191,36,0.1); }
-// ============================================================
-// NeuroDeck perf + reduced motion — patch from cache 45
-// ============================================================
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -925,4 +922,38 @@ button, [data-action], .tab, .demo-btn { touch-action: manipulation; }
 /* Healthy body overflow handling for iOS */
 @supports (-webkit-touch-callout: none) {
   .app-wrap { -webkit-overflow-scrolling: touch; }
+}
+
+
+// ===================== Performance / Reduced Motion =====================
+// :root.perf-eco is added by js/perf.js when:
+//   (a) user chooses 'eco' in the sync modal, OR
+//   (b) the OS reports prefers-reduced-motion: reduce and user mode is 'auto'.
+// Heuristic: cut every CSS animation/transition down to ~0ms and disable
+// expensive GPU effects (backdrop-filter, dust canvas). Loops on the JS
+// side (dust, particles, combat lighting) are also paused by __ndSetEcoMode
+// callbacks; the display:none on canvas elements stops even the frame loop.
+:root.perf-eco *,
+:root.perf-eco *::before,
+:root.perf-eco *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+:root.perf-eco .header,
+:root.perf-eco .tabs,
+:root.perf-eco .content,
+:root.perf-eco .boss-panel,
+:root.perf-eco .toast,
+:root.perf-eco .modal-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:root.perf-eco #dustCanvas,
+:root.perf-eco #mistLayer {
+  display: none !important;
+}
+:root.perf-eco .map-stars {
+  animation: none !important;
 }

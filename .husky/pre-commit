@@ -1,0 +1,2 @@
+npm run check:js
+npx lint-staged

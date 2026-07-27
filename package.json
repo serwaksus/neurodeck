@@ -4,8 +4,25 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "check:js": "node --check js/state-guards.js && node --check js/storage.js && node --check js/combat-pixi.js && node --check js/app.js",
+    "check:js": "node --check js/state-guards.js && node --check js/perf.js && node --check js/storage.js && node --check js/combat-pixi.js && node --check js/app.js",
     "test": "node --test tests/*.test.js",
-    "ci": "npm run check:js && npm test"
+    "ci": "npm run check:js && npm test && npm run test:e2e && npm run test:e2e:visual",
+    "test:e2e": "npx playwright test tests/e2e/neurodeck.test.js",
+    "test:e2e:visual": "npx playwright test tests/e2e/visual-regression.test.js",
+    "test:e2e:visual:update": "npm run test:e2e:visual -- --update-snapshots",
+    "test:e2e:all": "npx playwright test tests/e2e/",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.js": "node --check",
+    "*.css": "node -e \"require('fs').readFileSync(process.argv[1])\" --"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "http-server": "^14.1.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.2.0",
+    "playwright": "^1.62.0",
+    "prettier": "^3.9.6"
   }
 }
