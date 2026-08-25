@@ -5,9 +5,10 @@
     'use strict';
 
     var RANK_PROGRESSION = ['C', 'CC', 'CCC', 'B', 'BB', 'BBB', 'A', 'AA', 'AAA', 'S', 'SS', 'SSS'];
-    var VALID_STATS = { str: true, end: true, int: true, cha: true, wil: true, agi: true };
+    var VALID_STATS = Object.assign(Object.create(null), { str: true, end: true, int: true, cha: true, wil: true, agi: true });
+    var GOAL_TYPES = Object.assign(Object.create(null), { short: true, medium: true, long: true });
     var EQUIP_SLOTS = ['head', 'amulet', 'chest', 'cape', 'weapon', 'shield', 'ring1', 'ring2', 'boots'];
-    var EQUIP_SLOT_SET = EQUIP_SLOTS.reduce(function(acc, slot) { acc[slot] = true; return acc; }, {});
+    var EQUIP_SLOT_SET = EQUIP_SLOTS.reduce(function(acc, slot) { acc[slot] = true; return acc; }, Object.create(null));
 
     function clampNumber(value, min, max, fallback) {
         var n = Number(value);
@@ -46,7 +47,8 @@
             evolutionPath: ['depth', 'frequency', 'stability'].indexOf(card.evolutionPath) === -1 ? null : card.evolutionPath,
             daysActive: Math.round(clampNumber(card.daysActive, 0, 36500, 0)),
             firstCompletedAt: Number.isFinite(Number(card.firstCompletedAt)) ? Number(card.firstCompletedAt) : null,
-            lastCompletedAt: Number.isFinite(Number(card.lastCompletedAt)) ? Number(card.lastCompletedAt) : null
+            lastCompletedAt: Number.isFinite(Number(card.lastCompletedAt)) ? Number(card.lastCompletedAt) : null,
+            lastFailDay: typeof card.lastFailDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(card.lastFailDay) ? card.lastFailDay : null
         };
     }
 
@@ -64,9 +66,9 @@
     }
 
     function sanitizeInventory(input, catalog, maxSlots) {
-        var clean = { backpack: [], equipped: createEmptyEquipped(), maxSlots: Math.max(1, (Number.isFinite(Number(maxSlots)) ? Math.min(60, Math.max(0, Number(maxSlots))) : 30)) };
-        var usedIds = {};
-        var usedUids = {};
+        var clean = { backpack: [], equipped: createEmptyEquipped(), maxSlots: Math.max(1, Math.min(60, maxSlots || 30)) };
+        var usedIds = Object.create(null);
+        var usedUids = Object.create(null);
         input = input && typeof input === 'object' ? input : {};
 
         EQUIP_SLOTS.forEach(function(slot, idx) {
@@ -118,13 +120,11 @@
             dailyUniqueStats: (hero.dailyUniqueStats && typeof hero.dailyUniqueStats === 'object') ? hero.dailyUniqueStats : {},
             cardHistory: (hero.cardHistory && typeof hero.cardHistory === 'object') ? hero.cardHistory : {},
             lastWeeklyReport: hero.lastWeeklyReport || null,
-            estus: Math.round(clampNumber(hero.estus, 0, 5, 3)),
-            estusUsedToday: typeof hero.estusUsedToday === 'boolean' ? hero.estusUsedToday : false,
-            lastEstusReset: (typeof hero.lastEstusReset === 'string' && hero.lastEstusReset) ? hero.lastEstusReset : null
+            shards: Math.round(clampNumber(hero.shards, 0, 1e6, 0)),
+            flasks: Math.round(clampNumber(hero.flasks, 0, 5, 0)),
         };
     }
 
-    var GOAL_TYPES = { short: true, medium: true, long: true };
     function sanitizeGoalStep(step, idx) {
         if (!step || typeof step !== 'object') return { text: 'Шаг ' + (idx + 1), done: false };
         return {
@@ -189,6 +189,41 @@
             chimera:  Math.round(clampNumber(input.chimera, 0, 1e6, 0))
         };
     }
+    function sanitizeGoal(goal, fallbackId) {
+        goal = goal && typeof goal === 'object' ? goal : {};
+        var totalSteps = Math.round(clampNumber(goal.totalSteps, 1, 50, 3));
+        var rawDeadline = Number(goal.deadline);
+        var steps = [];
+        if (Array.isArray(goal.steps)) {
+            goal.steps.slice(0, totalSteps).forEach(function(s) {
+                s = s && typeof s === 'object' ? s : {};
+                var txt = safeString(s.text, '', 300);
+                steps.push({ text: txt || ('Шаг ' + (steps.length + 1)), done: s.done === true });
+            });
+        }
+        while (steps.length < totalSteps) {
+            steps.push({ text: 'Шаг ' + (steps.length + 1), done: false });
+        }
+        var rawId = Number(goal.id);
+        return {
+            id: Number.isFinite(rawId) && rawId >= 1 ? Math.round(Math.min(1000000000, rawId)) : (fallbackId || 1),
+            type: GOAL_TYPES[goal.type] ? goal.type : 'short',
+            name: safeString(goal.name, 'Безымянная цель', 120),
+            desc: safeString(goal.desc, '', 500),
+            deadline: Number.isFinite(rawDeadline) && rawDeadline > 0 ? Math.round(rawDeadline) : null,
+            totalSteps: totalSteps,
+            currentStep: Math.round(clampNumber(goal.currentStep, 0, totalSteps, 0)),
+            steps: steps,
+            stat: VALID_STATS[goal.stat] ? goal.stat : 'str',
+            xp: Math.round(clampNumber(goal.xp, 0, 100000, 30)),
+            dmg: Math.round(clampNumber(goal.dmg, 0, 100, 5)),
+            statBonus: Math.round(clampNumber(goal.statBonus, 0, 1000, 1)),
+            completed: goal.completed === true,
+            failed: goal.failed === true,
+            createdAt: Number.isFinite(Number(goal.createdAt)) ? Number(goal.createdAt) : Date.now(),
+            lastStepAt: Number.isFinite(Number(goal.lastStepAt)) ? Number(goal.lastStepAt) : null
+        };
+    }
 
     return {
         RANK_PROGRESSION: RANK_PROGRESSION,
@@ -200,6 +235,7 @@
         sanitizeHero: sanitizeHero,
         sanitizeGoals: sanitizeGoals,
         sanitizeXpHistory: sanitizeXpHistory,
-        sanitizeBossKills: sanitizeBossKills
+        sanitizeBossKills: sanitizeBossKills,
+        sanitizeGoal: sanitizeGoal
     };
 });

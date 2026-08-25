@@ -103,8 +103,8 @@ test('localStorage round-trip: set eco, require fresh, getMode reflects storage'
     // Verify via second load after wipe — simulation: re-require cached, cleaner: read storage directly
     var raw = null;
     try { raw = globalThis.localStorage && globalThis.localStorage.getItem('neurodeck_perf_mode'); } catch (e) { /* ignore */ }
-    // Some test envs may not have localStorage. If not, skip the assert.
-    if (raw !== null) {
+    // Some test envs may not have localStorage (plain node). If not, skip the assert.
+    if (raw !== null && raw !== undefined) {
         assert.equal(raw, 'eco');
     }
 });
@@ -144,13 +144,13 @@ test('index.html loads perf.js after state-guards.js and before storage.js', () 
     assert.ok(pf < st, 'perf must load before storage');
 });
 
-test('index.html cache-bust v45 is uniform across all 4 JS files', () => {
+test('index.html cache-bust v46 is uniform across all 4 JS files', () => {
     ['js/state-guards.js', 'js/perf.js', 'js/storage.js', 'js/combat-pixi.js', 'js/app.js']
         .forEach(function(rel) {
             var re = new RegExp(rel.replace(/\./g, '\\.') + '\\?v=(\\d+)');
             var m = html.match(re);
             assert.ok(m, 'expected entry for ' + rel);
-            assert.equal(m[1], '45', 'cache-bust for ' + rel + ' should be v45, got ' + m[1]);
+            assert.equal(m[1], '46', 'cache-bust for ' + rel + ' should be v46, got ' + m[1]);
         });
 });
 

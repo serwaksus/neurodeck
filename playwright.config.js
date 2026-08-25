@@ -1,5 +1,4 @@
 const { defineConfig } = require('@playwright/test');
-const CHROMIUM_PATH = '/root/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome';
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
@@ -13,8 +12,7 @@ module.exports = defineConfig({
     headless: true,
     viewport: { width: 390, height: 844 },
     launchOptions: {
-      executablePath: CHROMIUM_PATH,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--use-gl=angle'],
+      args: [...(process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : []), '--use-gl=angle'],
     },
   },
   webServer: {

@@ -286,3 +286,96 @@ test('sanitizeBossKills: drops unknown boss names', function () {
   var keys = Object.keys(out).sort();
   assert.deepEqual(keys, ['chimera','snake','social']);
 });
+
+test('sanitizeGoal round-trips a valid goal', () => {
+  const goal = guards.sanitizeGoal({
+    id: 7, type: 'medium', name: 'Выучить главу', desc: 'Прочитать и законспектировать',
+    deadline: 1756000000000, totalSteps: 3, currentStep: 2,
+    steps: [{ text: 'Прочитать', done: true }, { text: 'Конспект', done: true }, { text: 'Повторить', done: false }],
+    stat: 'int', xp: 80, dmg: 12, statBonus: 2,
+    completed: false, failed: false, createdAt: 1755000000000, lastStepAt: 1755000100000
+  }, 1);
+
+  assert.equal(goal.id, 7);
+  assert.equal(goal.type, 'medium');
+  assert.equal(goal.name, 'Выучить главу');
+  assert.equal(goal.desc, 'Прочитать и законспектировать');
+  assert.equal(goal.deadline, 1756000000000);
+  assert.equal(goal.totalSteps, 3);
+  assert.equal(goal.currentStep, 2);
+  assert.equal(goal.steps.length, 3);
+  assert.deepEqual(goal.steps[0], { text: 'Прочитать', done: true });
+  assert.equal(goal.stat, 'int');
+  assert.equal(goal.xp, 80);
+  assert.equal(goal.dmg, 12);
+  assert.equal(goal.completed, false);
+  assert.equal(goal.failed, false);
+
+  // JSON round-trip stability (persisted shape survives reload)
+  const again = guards.sanitizeGoal(JSON.parse(JSON.stringify(goal)), 1);
+  assert.deepEqual(again, goal);
+});
+
+test('sanitizeGoal rejects junk input with safe defaults', () => {
+  const empty = guards.sanitizeGoal(null, 5);
+  assert.equal(empty.id, 5);
+  assert.equal(empty.type, 'short');
+  assert.equal(empty.name, 'Безымянная цель');
+  assert.equal(empty.desc, '');
+  assert.equal(empty.deadline, null);
+  assert.equal(empty.totalSteps, 3);
+  assert.equal(empty.steps.length, 3);
+  assert.equal(empty.completed, false);
+  assert.equal(empty.failed, false);
+
+  const junk = guards.sanitizeGoal({
+    id: -3, type: 'impossible', stat: 'luck', xp: -50, dmg: 9999,
+    currentStep: 99, steps: 'nope', deadline: 'garbage', completed: 'yes'
+  }, 1);
+  assert.equal(junk.id, 1);
+  assert.equal(junk.type, 'short');
+  assert.equal(junk.stat, 'str');
+  assert.equal(junk.xp, 0);
+  assert.equal(junk.dmg, 100);
+  assert.equal(junk.currentStep, 3);
+  assert.equal(junk.steps.length, 3);
+  assert.equal(junk.deadline, null);
+  assert.equal(junk.completed, false);
+});
+
+test('sanitizeCard round-trips lastFailDay day-key', () => {
+  const card = guards.sanitizeCard({ id: 1, lastFailDay: '2026-08-25' }, 1);
+  assert.equal(card.lastFailDay, '2026-08-25');
+  assert.equal(guards.sanitizeCard({ id: 1, lastFailDay: 'tomorrow' }, 1).lastFailDay, null);
+  assert.equal(guards.sanitizeCard({}, 1).lastFailDay, null);
+});
+
+test('sanitizeCard rejects inherited stat names like toString', () => {
+  const card = guards.sanitizeCard({ id: 1, stat: 'toString' }, 1);
+  assert.equal(card.stat, 'str');
+});
+
+test('sanitizeGoal rejects inherited goal types like constructor', () => {
+  const goal = guards.sanitizeGoal({ id: 1, type: 'constructor' }, 1);
+  assert.equal(goal.type, 'short');
+});
+
+test('sanitizeGoal truncates oversized strings and arrays', () => {
+  const goal = guards.sanitizeGoal({
+    id: 1,
+    name: 'И'.repeat(500),
+    desc: 'Д'.repeat(2000),
+    totalSteps: 99,
+    steps: Array.from({ length: 99 }, (_, i) => ({ text: 'Ш'.repeat(1000), done: i % 2 === 0 })),
+    xp: 999999999,
+    dmg: -10
+  }, 1);
+
+  assert.equal(goal.name.length, 120);
+  assert.equal(goal.desc.length, 500);
+  assert.equal(goal.totalSteps, 50);
+  assert.equal(goal.steps.length, 50);
+  assert.ok(goal.steps.every(s => s.text.length <= 300));
+  assert.equal(goal.xp, 100000);
+  assert.equal(goal.dmg, 0);
+});

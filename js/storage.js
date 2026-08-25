@@ -27,6 +27,60 @@ function loadFromIDB(callback) {
         req.onerror = function() { callback(null); };
     } catch(e) { callback(null); }
 }
+const EVER_SAVED_KEY = 'neurodeck_ever_saved';
+function hasEverSaved() {
+    try { return localStorage.getItem(EVER_SAVED_KEY) === '1'; } catch(e) { return false; }
+}
+const SCHEMA_VERSION = 6;
+const MIGRATIONS = {};
+MIGRATIONS[6] = function(data) {
+    try {
+        if (data && data.hero && typeof data.hero === 'object' &&
+            (typeof data.hero.flasks !== 'number' || !Number.isFinite(data.hero.flasks))) {
+            data.hero.flasks = 2;
+        }
+    } catch(e) {}
+};
+function migrateSyncData(data) {
+    var v = typeof data.v === 'number' ? data.v : 4;
+    while (v < SCHEMA_VERSION) {
+        v++;
+        if (typeof MIGRATIONS[v] === 'function') MIGRATIONS[v](data);
+    }
+    data.v = SCHEMA_VERSION;
+    return data;
+}
+const HERO_KEYS = Object.assign(Object.create(null), {
+    name: true, title: true, level: true, xp: true, xpToNext: true, totalXp: true,
+    hp: true, maxHp: true, isHollow: true, consecutivePerfectDays: true,
+    dailyCompletions: true, dailySkips: true, actionPoints: true, lastSessionAt: true,
+    dailyUniqueStats: true, cardHistory: true, lastWeeklyReport: true, shards: true, flasks: true
+});
+function mskDayKey(ts) {
+    var d = new Date((ts || Date.now()) + 3 * 3600000);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+}
+function pruneAgedHistory(hero, keepDays) {
+    try {
+        if (!hero || typeof hero !== 'object') return;
+        var cutoffKey = mskDayKey(Date.now() - keepDays * 86400000);
+        ['cardHistory', 'dailyUniqueStats'].forEach(function(field) {
+            var map = hero[field];
+            if (!map || typeof map !== 'object') return;
+            Object.keys(map).forEach(function(key) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(key) && key < cutoffKey) delete map[key];
+            });
+        });
+    } catch(e) {}
+}
+function maxExistingId(arr) {
+    var m = 0;
+    (Array.isArray(arr) ? arr : []).forEach(function(item) {
+        var n = Number(item && item.id);
+        if (Number.isFinite(n) && n > m) m = n;
+    });
+    return m;
+}
 function saveGameState() {
 try {
 if (FORGED.length === 0) {
@@ -43,12 +97,14 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 }
 }
 const snapshot = {
-hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
+v: SCHEMA_VERSION, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, bossRagePoints: bossRagePoints, lastWeekReset: lastWeekReset, savedAt: Date.now()
 };
+pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
+try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {}
 try { localStorage.setItem('neurodeck_backup', json); } catch(e) {}
 if (FORGED.length > 0) {
 try { localStorage.setItem('neurodeck_cards_backup', json); } catch(e) {}
@@ -61,96 +117,123 @@ console.warn('Save failed:', e);
 showToast('⚠ Ошибка сохранения', 'Хранилище переполнено — экспортируйте данные!', 'blood');
 }
 }
-function autoCloudSave(json, force) {
+var _pushInFlight = false;
+function autoCloudSave(json, force, bypassConflictCheck) {
     var cs = getCloudStorage();
     if (!cs) return;
     if (FORGED.length === 0) return;
+    if (_pushInFlight) return;
     if (!force && Date.now() - (window._lastCloudSave || 0) < 30000) return;
     window._lastCloudSave = Date.now();
+    var savedAt = 0;
+    try { savedAt = JSON.parse(json).savedAt || 0; } catch(e) {}
+    cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
+        if ((!force || !bypassConflictCheck) && !err && metaStr) {
+            try {
+                var meta = JSON.parse(metaStr);
+                if (meta && meta.t > savedAt + 10000) {
+                    if (force) { updateSyncBadge('offline'); return; }
+                    if (!window._cloudNewerToastShown) {
+                        window._cloudNewerToastShown = true;
+                        showToast('☁ Синхронизация', 'Облако новее — синхронизация отложена');
+                    }
+                    return;
+                }
+            } catch(e) {}
+        }
+        if (_pushInFlight) return;
+        _pushInFlight = true;
+        pushCloudChunks(cs, json, function() { _pushInFlight = false; });
+    });
+}
+function pushCloudChunks(cs, json, onDone) {
+    var settled = false;
+    var hangTimer = setTimeout(function() { settle(); }, 15000);
+    function settle() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(hangTimer);
+        if (typeof onDone === 'function') onDone();
+    }
     try {
         var chunks = [];
         for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
         { if (chunks.length >= 200) return; /* cap */ } }
         var doneCount = 0;
+        var aborted = false;
+        function failChunk(err) {
+            if (aborted) return;
+            aborted = true;
+            updateSyncBadge('offline');
+            if (typeof showToast === 'function') showToast('⚠ Ошибка облака', 'Часть данных не сохранена: ' + String(err), 'blood');
+            settle();
+        }
         chunks.forEach(function(chunk, idx) {
-            cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function() {
+            cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err) {
                 doneCount++;
-                if (doneCount === chunks.length) {
-                    cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), function() {});
-                    updateSyncBadge('synced');
+                if (err) { failChunk(err); return; }
+                if (!aborted && doneCount === chunks.length) {
+                    cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), function(err2) {
+                        if (err2 || aborted) { updateSyncBadge('offline'); settle(); return; }
+                        clearSurplusChunks(chunks.length);
+                        updateSyncBadge('synced');
+                        settle();
+                    });
                 }
             });
         });
-    } catch(e) {}
+    } catch(e) { settle(); }
 }
-function forceCloudSave() {
+function forceCloudSave(bypassConflictCheck) {
     var cs = getCloudStorage();
     if (!cs) return;
     if (FORGED.length === 0) return;
     window._lastCloudSave = 0;
     var json = JSON.stringify(buildSyncData());
-    autoCloudSave(json, true);
+    autoCloudSave(json, true, !!bypassConflictCheck);
 }
 function smartCloudSync() {
     var cs = getCloudStorage();
     if (!cs) return;
     cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
         if (err || !metaStr) return;
-        try {
-            var meta = JSON.parse(metaStr);
-            var cloudTime = meta.t || 0;
-            var localTime = 0;
-            var localRaw = localStorage.getItem('neurodeck_full_save') || localStorage.getItem('neurodeck_backup');
-            if (localRaw) { try { localTime = JSON.parse(localRaw).savedAt || 0; } catch(e) {} }
-            if (cloudTime > localTime + 10000) {
-                var parts = new Array(meta.n);
-                var loaded = 0;
-                function check() {
-                    if (loaded < meta.n) return;
-                    try {
-                        var data = JSON.parse(parts.join(''));
-                        if (data.forged && FORGED.length > 0 && data.forged.length < FORGED.length) {
-                            forceCloudSave();
-                            return;
-                        }
-                        if ((!data.forged || data.forged.length === 0) && FORGED.length > 0) {
-                            forceCloudSave();
-                            return;
-                        }
-                        var cloudDate = new Date(cloudTime).toLocaleString('ru');
-                        var localDate = localTime ? new Date(localTime).toLocaleString('ru') : 'нет данных';
-                        dungeonConfirm('☁ Найдано обновление',
-                            'Облако новее, чем это устройство:<br>' +
-                            '<b>Облако:</b> ' + cloudDate + '<br>' +
-                            '<b>Локально:</b> ' + localDate + '<br><br>' +
-                            '<span style="color:var(--gold-bright)">Загрузить актуальный прогресс?</span>'
-                        ).then(function(ok) {
-                            if (ok) {
-                                applySyncData(data);
-                                saveGameState();
-                                showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
-                                spiritSay('«Облако поделилось воспоминаниями...»');
-                                screenShake(6, 400);
-                            } else {
-                                forceCloudSave();
-                                showToast('☁ Отправлено в облако', 'Локальные данные актуальнее');
-                            }
-                        });
-                    } catch(e) {}
-                }
-                for (var i = 0; i < meta.n; i++) {
-                    (function(idx) {
-                        cs.getItem(CLOUD_DATA_PREFIX + idx, function(e2, val) {
-                            if (!e2 && val) parts[idx] = val;
-                            loaded++;
-                            check();
-                        });
-                    })(i);
-                }
-            } else if (localTime > cloudTime + 5000) {
-                forceCloudSave();
+        var meta;
+        try { meta = JSON.parse(metaStr); } catch(e) { return; }
+        var cloudTime = (meta && meta.t) || 0;
+        if (!(cloudTime > 0)) return;
+        var localTime = 0;
+        var localRaw = localStorage.getItem('neurodeck_full_save') || localStorage.getItem('neurodeck_backup');
+        if (localRaw) { try { localTime = JSON.parse(localRaw).savedAt || 0; } catch(e) {} }
+        if (localTime > cloudTime + 5000) { forceCloudSave(true); return; }
+        if (!(cloudTime > localTime + 10000)) return;
+        loadCloudChunks(meta, function(chunkErr, data) {
+            if (chunkErr || !data) { updateSyncBadge('offline'); return; }
+            var cloudDate = new Date(cloudTime).toLocaleString('ru');
+            var localDate = localTime ? new Date(localTime).toLocaleString('ru') : 'нет данных';
+            if (typeof dungeonConfirm === 'function') {
+                dungeonConfirm('☁ Найдано обновление',
+                    'Облако новее, чем это устройство:<br>' +
+                    '<b>Облако:</b> ' + cloudDate + '<br>' +
+                    '<b>Локально:</b> ' + localDate + '<br><br>' +
+                    '<span style="color:var(--gold-bright)">Загрузить актуальный прогресс?</span>'
+                ).then(function(ok) {
+                    if (ok) {
+                        applySyncData(data);
+                        saveGameState();
+                        showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
+                        spiritSay('«Облако поделилось воспоминаниями...»');
+                        screenShake(6, 400);
+                    } else {
+                        forceCloudSave(true);
+                        showToast('☁ Отправлено в облако', 'Локальные данные актуальнее');
+                    }
+                });
+            } else {
+                applySyncData(data);
+                saveGameState();
+                showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
             }
-        } catch(e) {}
+        }, 15000);
     });
 }
 function updateSyncBadge(state) {
@@ -206,6 +289,7 @@ return;
 }
 tryCloudRecovery();
 loadFromIDB(function(result) {
+    if (!hasEverSaved() && FORGED.length === 0) return;
     if (result && result.data && result.data.forged && result.data.forged.length > 0 && FORGED.length === 0) {
         dungeonConfirm('♻ Найдено в IndexedDB',
             'Обнаружено сохранение с <b>' + result.data.forged.length + '</b> карточками.<br>' +
@@ -223,19 +307,16 @@ loadFromIDB(function(result) {
 });
 }
 function tryCloudRecovery() {
+if (!hasEverSaved() && FORGED.length === 0) return;
 var cs = getCloudStorage();
 if (!cs) return;
 cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
 if (err || !metaStr) return;
-try {
-var meta = JSON.parse(metaStr);
-var parts = new Array(meta.n);
-var loaded = 0;
-function check() {
-if (loaded < meta.n) return;
-try {
-var data = JSON.parse(parts.join(''));
-var savedDate = new Date(data.t || Date.now()).toLocaleString('ru');
+var meta;
+try { meta = JSON.parse(metaStr); } catch(e) { return; }
+loadCloudChunks(meta, function(chunkErr, data) {
+if (chunkErr || !data) return;
+var savedDate = new Date((meta && meta.t) || Date.now()).toLocaleString('ru');
 dungeonConfirm('☁ Найдено облачное сохранение!', 'Данные от <b>' + savedDate + '</b>.<br>Герой: <b>ур.' + (data.hero ? data.hero.level : '?') + '</b>, карточек: <b>' + (data.forged ? data.forged.length : 0) + '</b>.<br><br><span style="color:var(--gold-bright)">Восстановить?</span>').then(function(ok) {
 if (!ok) return;
 applySyncData(data, true);
@@ -245,38 +326,29 @@ spiritSay('«Облако сохранило твой путь...»');
 screenShake(6, 400);
 location.reload();
 });
-} catch(e) {}
-}
-for (var i = 0; i < meta.n; i++) {
-(function(idx) {
-cs.getItem(CLOUD_DATA_PREFIX + idx, function(e2, val) {
-if (!e2 && val) parts[idx] = val;
-loaded++;
-check();
-});
-})(i);
-}
-} catch(e) {}
+}, 15000);
 });
 }
 function deepRecovery() {
+var everSaved = hasEverSaved();
+if (!everSaved && FORGED.length === 0) return;
 var found = [];
-var keys = ['neurodeck_full_save', 'neurodeck_backup', 'neurodeck_cards_backup', 'neurodeck_goals'];
 var bestData = null;
+var bestTs = 0;
 var bestCount = 0;
+function consider(data, ts, label) {
+    var count = (data.forged && data.forged.length) || (data.goals && data.goals.length) || 0;
+    if (count <= 0) return;
+    found.push(label);
+    if (ts > bestTs || !bestData) { bestTs = ts; bestData = data; bestCount = count; }
+}
+var keys = ['neurodeck_full_save', 'neurodeck_backup', 'neurodeck_cards_backup', 'neurodeck_goals'];
 keys.forEach(function(key) {
 try {
 var raw = localStorage.getItem(key);
 if (!raw) return;
 var data = JSON.parse(raw);
-var cardCount = (data.forged && data.forged.length) || (data.goals && data.goals.length) || 0;
-if (cardCount > 0) {
-found.push(key + ': ' + cardCount + ' элем.');
-if (data.forged && data.forged.length > bestCount) {
-bestCount = data.forged.length;
-bestData = data;
-}
-}
+consider(data, data.savedAt || data.t || 0, key + ': ' + (((data.forged && data.forged.length) || (data.goals && data.goals.length)) || 0) + ' элем.');
 } catch(e) {}
 });
 loadFromIDB(function(idbResult) {
@@ -284,50 +356,22 @@ if (idbResult && idbResult.data) {
 var idbData = idbResult.data;
 var idbCount = (idbData.forged && idbData.forged.length) || 0;
 if (idbCount > 0) {
-found.push('IndexedDB: ' + idbCount + ' карточек (от ' + new Date(idbResult.ts).toLocaleString('ru') + ')');
-if (idbCount > bestCount) {
-bestCount = idbCount;
-bestData = idbData;
-}
+consider(idbData, idbResult.ts || 0, 'IndexedDB: ' + idbCount + ' карточек (от ' + new Date(idbResult.ts).toLocaleString('ru') + ')');
 }
 }
 var cs = getCloudStorage();
-if (cs) {
+if (!cs) { finishDeepRecovery(found, bestData, bestCount); return; }
 cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
 if (err || !metaStr) { finishDeepRecovery(found, bestData, bestCount); return; }
-try {
-var meta = JSON.parse(metaStr);
-var parts = new Array(meta.n);
-var loaded = 0;
-function check() {
-if (loaded < meta.n) return;
-try {
-var data = JSON.parse(parts.join(''));
-var cardCount = (data.forged && data.forged.length) || 0;
-if (cardCount > 0) {
-found.push('Облако: ' + cardCount + ' карточек (от ' + new Date(meta.t).toLocaleString('ru') + ')');
-if (cardCount > bestCount) {
-bestCount = cardCount;
-bestData = data;
+var meta;
+try { meta = JSON.parse(metaStr); } catch(e) { finishDeepRecovery(found, bestData, bestCount); return; }
+loadCloudChunks(meta, function(chunkErr, data) {
+if (!chunkErr && data) {
+consider(data, (meta && meta.t) || 0, 'Облако: ' + ((data.forged && data.forged.length) || 0) + ' карточек (от ' + new Date(meta.t).toLocaleString('ru') + ')');
 }
-}
-} catch(e) {}
-finishDeepRecovery(found, bestData, bestCount);
-}
-for (var i = 0; i < meta.n; i++) {
-(function(idx) {
-cs.getItem(CLOUD_DATA_PREFIX + idx, function(e2, val) {
-if (!e2 && val) parts[idx] = val;
-loaded++;
-check();
-});
-})(i);
-}
-} catch(e) { finishDeepRecovery(found, bestData, bestCount); }
-});
-} else {
-finishDeepRecovery(found, bestData, bestCount);
-}
+                finishDeepRecovery(found, bestData, bestCount);
+        }, 15000);
+        });
 });
 }
 function finishDeepRecovery(found, bestData, bestCount) {
@@ -354,11 +398,52 @@ const CLOUD_MAX_CHUNK = 4096;
 const CLOUD_META_KEY = 'nd_meta';
 const CLOUD_DATA_PREFIX = 'nd_';
 function getCloudStorage() {
-try { return window.Telegram && Telegram.WebApp && Telegram.WebApp.CloudStorage ? Telegram.WebApp.CloudStorage : null; } catch(e) { return null; }
+    try { return window.Telegram && Telegram.WebApp && Telegram.WebApp.CloudStorage ? Telegram.WebApp.CloudStorage : null; } catch(e) { return null; }
+}
+function loadCloudChunks(meta, onDone, timeoutMs) {
+    var cs = getCloudStorage();
+    if (!cs || !meta || !(meta.n > 0)) { onDone(new Error('облако недоступно или плохие метаданные'), null); return; }
+    var parts = new Array(meta.n);
+    var loaded = 0;
+    var settled = false;
+    var timer = null;
+    function settle(err, data) {
+        if (settled) return;
+        settled = true;
+        if (timer !== null) { clearTimeout(timer); timer = null; }
+        onDone(err, data);
+    }
+    if (timeoutMs) timer = setTimeout(function() { settle(new Error('таймаут загрузки из облака'), null); }, timeoutMs);
+    function check() {
+        if (loaded < meta.n) return;
+        for (var i = 0; i < meta.n; i++) {
+            if (typeof parts[i] !== 'string') { settle(new Error('чанк ' + i + '/' + meta.n + ' отсутствует'), null); return; }
+        }
+        try { settle(null, JSON.parse(parts.join(''))); }
+        catch(e) { settle(e, null); }
+    }
+    for (var i = 0; i < meta.n; i++) {
+        (function(idx) {
+            cs.getItem(CLOUD_DATA_PREFIX + idx, function(e2, val) {
+                loaded++;
+                if (!e2 && typeof val === 'string') parts[idx] = val;
+                check();
+            });
+        })(i);
+    }
+}
+function clearSurplusChunks(n) {
+    var cs = getCloudStorage();
+    if (!cs || !(n > 0)) return;
+    for (var i = n; i < n + 64; i++) {
+        (function(idx) {
+            try { cs.removeItem(CLOUD_DATA_PREFIX + idx, function() {}); } catch(e) {}
+        })(i);
+    }
 }
 function buildSyncData() {
 return {
-v: 'nd-sync-v4', t: Date.now(),
+v: SCHEMA_VERSION, t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, bossRagePoints, lastWeekReset
@@ -410,10 +495,12 @@ cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), fu
 if (finished) return;
 finished = true;
 if (!err) {
+clearSurplusChunks(chunks.length);
 updateCloudStatus();
 showToast('☁ Сохранено в облако', 'Доступно на всех устройствах');
 spiritSay('«Облако запомнило твой путь.»');
 } else {
+updateSyncBadge('offline');
 if (el) el.textContent = '⚠ Ошибка записи метаданных';
 showToast('⚠ Ошибка', String(err), 'blood');
 }
@@ -422,6 +509,13 @@ showToast('⚠ Ошибка', String(err), 'blood');
 chunks.forEach(function(chunk, idx) {
 cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err) {
 if (finished) return;
+if (err) {
+finished = true;
+updateSyncBadge('offline');
+if (el) el.textContent = '⚠ Ошибка записи в облако';
+showToast('⚠ Ошибка облака', String(err), 'blood');
+return;
+}
 doneCount++;
 if (doneCount === chunks.length) saveMeta();
 });
@@ -451,40 +545,38 @@ showToast('⚠ Пусто', 'В облаке нет сохранений', 'bloo
 updateCloudStatus();
 return;
 }
-var meta;
-try { meta = JSON.parse(metaStr); } catch(e) { finished = true; showToast('⚠ Ошибка', 'Повреждённые данные', 'blood'); return; }
-var parts = new Array(meta.n);
-var loaded = 0;
-function check() {
-if (loaded < meta.n || finished) return;
-finished = true;
-try {
-var data = JSON.parse(parts.join(''));
-applySyncData(data);
-showToast('☁ Загружено', new Date(data.t).toLocaleString('ru'));
-spiritSay('«Облако поделилось воспоминаниями...»');
-screenShake(6, 400);
-closeSyncModal();
-saveGameState();
-} catch(e) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); }
-}
-for (var i = 0; i < meta.n; i++) {
-(function(idx) {
-cs.getItem(CLOUD_DATA_PREFIX + idx, function(err2, val) {
-if (!err2 && val) parts[idx] = val;
-loaded++;
-check();
-});
-})(i);
-}
+            var meta;
+            try { meta = JSON.parse(metaStr); } catch(e) { finished = true; showToast('⚠ Ошибка', 'Повреждённые данные', 'blood'); return; }
+            loadCloudChunks(meta, function(chunkErr, data) {
+                if (finished) return;
+                finished = true;
+                if (chunkErr || !data) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); return; }
+                try {
+                    applySyncData(data);
+                    showToast('☁ Загружено', new Date(data.t).toLocaleString('ru'));
+                    spiritSay('«Облако поделилось воспоминаниями...»');
+                    screenShake(6, 400);
+                    closeSyncModal();
+                    saveGameState();
+                } catch(e) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); }
+            }, 10000);
 });
 });
 }
 function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); }
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }
 function generateShareLink() {
-var json = JSON.stringify(buildSyncData());
-var encoded = btoa(unescape(encodeURIComponent(json)));
+var data = buildSyncData();
+delete data.xpHistory;
+if (data.hero && typeof data.hero === 'object') {
+var heroCopy = Object.assign({}, data.hero);
+delete heroCopy.cardHistory;
+data.hero = heroCopy;
+}
+var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+if (encoded.length > 15000 && typeof showToast === 'function') {
+showToast('⚠ Ссылка очень большая', 'Может не поместиться в сообщение Telegram');
+}
 return window.location.origin + window.location.pathname + '#' + encoded;
 }
 function copyShareLink() {
@@ -571,26 +663,30 @@ reader.readAsText(file);
 event.target.value = '';
 }
 function applySyncData(data, skipRender) {
-if (data.hero) {
+if (!data || typeof data !== 'object') return;
+if (typeof data.v === 'number' && data.v > SCHEMA_VERSION) {
+if (typeof showToast === 'function') showToast('⚠ Слишком новая версия', 'Данные из более новой версии игры — обновите приложение', 'blood');
+return;
+}
+migrateSyncData(data);
+if (data.hero && typeof data.hero === 'object') {
 var sanitizedHero = STATE_GUARDS.sanitizeHero(data.hero);
-Object.keys(sanitizedHero).forEach(function(k) {
-    HERO[k] = sanitizedHero[k];
-});
-// actionPoints added later when keys were added after sanitizeHero
-// duplicate-fix: ensure backwards compat for older saves without actionPoints
-if (typeof HERO.actionPoints !== 'number' || !Number.isFinite(HERO.actionPoints)) HERO.actionPoints = 0;
+Object.keys(sanitizedHero).forEach(function(k) { HERO[k] = sanitizedHero[k]; });
 }
 if (data.stats) {
 Object.keys(data.stats).forEach(k => {
-if (STATS[k]) {
+if (!STATS[k]) return;
+var maxCap = STATS[k].max;
 Object.assign(STATS[k], data.stats[k]);
+if (data.stats[k] && typeof data.stats[k].max === 'number') {
+STATS[k].max = Math.max(1, Math.min(maxCap, Math.round(data.stats[k].max)));
+}
 STATS[k].value = Math.max(0, Math.min(STATS[k].max || 100, STATS[k].value || 0));
 STATS[k].attributePoints = Math.max(0, STATS[k].attributePoints || 0);
-}
 });
 }
 if (data.forged) FORGED = Array.isArray(data.forged) ? data.forged.map(function(c, i) { return STATE_GUARDS.sanitizeCard(c, i + 1); }) : [];
-if (data.goals) { var cleanGoals = STATE_GUARDS.sanitizeGoals(data.goals); GOALS.length = 0; cleanGoals.forEach(function(g){ GOALS.push(g); }); }
+if (data.goals) GOALS = Array.isArray(data.goals) ? data.goals.map(function(g, i) { return STATE_GUARDS.sanitizeGoal(g, i + 1); }) : [];
 if (data.inventory) {
 var cleanInventory = STATE_GUARDS.sanitizeInventory(data.inventory, ARTIFACTS, INVENTORY.maxSlots);
 INVENTORY.backpack = cleanInventory.backpack;
@@ -602,14 +698,18 @@ if (typeof data.bossHp === 'number') bossHp = Math.max(0, data.bossHp);
 if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
-if (typeof data.chimeraShield === 'number') chimeraShield = Math.max(0, Math.min(10, data.chimeraShield));
-if (data.forgedIdCounter) forgedIdCounter = STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100);
+if (typeof data.chimeraShield === 'number') chimeraShield = Math.max(0, Math.min(5, Math.round(data.chimeraShield)));
+if (data.forgedIdCounter) forgedIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100), maxExistingId(FORGED) + 1);
 if (data.uidCounter) uidCounter = STATE_GUARDS.sanitizeCounter(data.uidCounter, 10);
-if (data.goalIdCounter) goalIdCounter = STATE_GUARDS.sanitizeCounter(data.goalIdCounter, 1);
+if (data.goalIdCounter) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.goalIdCounter, 1), maxExistingId(GOALS) + 1);
+else if (data.counter != null) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.counter, 1), maxExistingId(GOALS) + 1);
 if (Array.isArray(data.xpHistory)) xpHistory = STATE_GUARDS.sanitizeXpHistory(data.xpHistory);
 if (data.bossKills) window._bossKills = STATE_GUARDS.sanitizeBossKills(data.bossKills);
-if (data.bloodOath !== undefined) bloodOath = data.bloodOath;
-if (typeof data.bossRagePoints === 'number') bossRagePoints = Math.max(0, Math.min(1000000, data.bossRagePoints));
+if (data.bloodOath !== undefined) {
+bloodOath = (data.bloodOath && typeof data.bloodOath === 'object' && typeof data.bloodOath.status === 'string' && data.bloodOath.cardId !== undefined)
+? data.bloodOath : null;
+}
+if (typeof data.bossRagePoints === 'number') bossRagePoints = Math.max(0, Math.min(999, Math.round(data.bossRagePoints)));
 if (typeof data.lastWeekReset === 'string') lastWeekReset = data.lastWeekReset;
 // actionPoints now lives in sanitizeHero; no need to bridge here
 if (!skipRender) {
@@ -629,6 +729,13 @@ try {
         if (k && k.indexOf('neurodeck_') === 0) localStorage.removeItem(k);
     }
 } catch(e) {}
-location.reload();
+try { var csR = getCloudStorage(); if (csR) csR.removeItem(CLOUD_META_KEY, function() {}); } catch(e) {}
+try {
+    if (!idb) { location.reload(); return; }
+    var tx = idb.transaction('saves', 'readwrite');
+    tx.objectStore('saves').delete('latest');
+    tx.oncomplete = function() { location.reload(); };
+    tx.onerror = function() { location.reload(); };
+} catch(e) { location.reload(); }
 });
 }

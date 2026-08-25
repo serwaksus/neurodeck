@@ -6,7 +6,11 @@ const W = 1280, H = 720;
 let app = null, root = null;
 let bgSprite = null, flashGfx = null, particleLayer = null, slashLayer = null, swordGfx = null;
 let hpGfx = null, heroHpText = null, bossHpText = null, defeatedText = null;
-let vignetteGfx = null, torchGfx = null, grainGfx = null;
+let vignetteGfx = null, torchGfx = null, torchA = null, torchB = null, grainGfx = null;
+let glowTex = null, particleTex = null;
+const grainTexes = [];
+const particlePool = [];
+let bossViewEl = null;
 
 const bossImages = {
     normal: 'boss-snake.jpg',
@@ -22,6 +26,9 @@ const S = {
     heroHpStr: '86/86', bossHpStr: '420/500', bossName: 'Змей Лени',
     bossType: 'normal', bossStage: 1,
     defeated: false,
+    hpDirty: true,
+    combatActive: null,
+    flashDrawn: false,
     particles: [], damageNums: [],
     tweens: [],
     swordActive: false, swordPhase: 0
@@ -50,13 +57,44 @@ const ease = {
 
 function tween(fn, dur, done) { S.tweens.push({ fn, t: 0, dur, done }); }
 
+function buildTextures() {
+    var g = new PIXI.Graphics();
+    g.beginFill(0xffffff);
+    g.drawCircle(4, 4, 4);
+    g.endFill();
+    particleTex = app.renderer.generateTexture(g);
+    g.clear();
+
+    // Radial glow: stacked translucent circles fade toward the edge
+    for (var i = 8; i >= 1; i--) {
+        g.beginFill(0xffffff, 0.045);
+        g.drawCircle(64, 64, 64 * i / 8);
+        g.endFill();
+    }
+    glowTex = app.renderer.generateTexture(g);
+    g.destroy();
+
+    for (var gi = 0; gi < 4; gi++) {
+        var gr = new PIXI.Graphics();
+        for (var k = 0; k < 60; k++) {
+            var x = Math.random() * W, y = Math.random() * H;
+            var v = Math.floor(Math.random() * 200);
+            gr.beginFill((v << 16) | (v << 8) | v, 0.3);
+            gr.drawRect(x, y, 1, 1);
+            gr.endFill();
+        }
+        grainTexes.push(app.renderer.generateTexture(gr));
+        gr.destroy();
+    }
+}
+
 async function init() {
     const container = document.getElementById('combatContainer');
     if (!container) return;
 
     app = new PIXI.Application({
         width: W, height: H,
-        backgroundAlpha: 0, antialias: true,
+        backgroundAlpha: 0, antialias: false,
         resolution: Math.min(2, window.devicePixelRatio || 1),
         autoDensity: true
     });
@@ -74,7 +112,20 @@ async function init() {
     bgSprite.width = W; bgSprite.height = H;
     root.addChild(bgSprite);
 
-    torchGfx = new PIXI.Graphics();
+    buildTextures();
+
+    torchGfx = new PIXI.Container();
+    torchA = new PIXI.Sprite(glowTex);
+    torchA.anchor.set(0.5);
+    torchA.blendMode = PIXI.BLEND_MODES.ADD;
+    torchA.tint = 0xff8c38;
+    torchA.x = W * 0.2; torchA.y = H * 0.3;
+    torchB = new PIXI.Sprite(glowTex);
+    torchB.anchor.set(0.5);
+    torchB.blendMode = PIXI.BLEND_MODES.ADD;
+    torchB.tint = 0xff6020;
+    torchB.x = W * 0.8; torchB.y = H * 0.4;
+    torchGfx.addChild(torchA, torchB);
     root.addChild(torchGfx);
 
     vignetteGfx = new PIXI.Graphics();
@@ -94,7 +145,7 @@ async function init() {
     flashGfx = new PIXI.Graphics();
     root.addChild(flashGfx);
 
-    grainGfx = new PIXI.Graphics();
+    grainGfx = new PIXI.Sprite(grainTexes[0]);
     grainGfx.alpha = 0.03;
     root.addChild(grainGfx);
 
@@ -118,7 +169,18 @@ async function init() {
     const el = document.getElementById('combatLoading');
     if (el) el.style.display = 'none';
 
+    bossViewEl = document.getElementById('view-boss');
+    if (S.combatActive === null) S.combatActive = !!(bossViewEl && bossViewEl.classList.contains('active'));
+    document.addEventListener('visibilitychange', syncTicker);
+
     app.ticker.add(loop);
+    syncTicker();
+}
+
+function syncTicker() {
+    if (!app) return;
+    if (S.combatActive && !document.hidden) app.ticker.start();
+    else app.ticker.stop();
 }
 
 function drawVignette() {
@@ -131,16 +193,12 @@ function drawVignette() {
     vignetteGfx.endHole();
 }
 
-function drawTorch() {
-    const f = S.torch;
-    torchGfx.clear();
-    torchGfx.beginFill(0xff8c38, 0.08 * f);
-    torchGfx.drawEllipse(W * 0.2, H * 0.3, 250 * f, 180 * f);
-    torchGfx.endFill();
-    torchGfx.beginFill(0xff6020, 0.05 * f);
-    torchGfx.drawEllipse(W * 0.8, H * 0.4, 200 * f, 150 * f);
-    torchGfx.endFill();
-    torchGfx.blendMode = PIXI.BLEND_MODES.ADD;
+function updateTorch() {
+    var f = S.torch;
+    torchA.alpha = 0.32 * f;
+    torchA.scale.set(3.9 * f, 2.8 * f);
+    torchB.alpha = 0.22 * f;
+    torchB.scale.set(3.1 * f, 2.3 * f);
 }
 
 function drawSword(progress) {
@@ -184,14 +242,12 @@ function drawSword(progress) {
             var tp2 = (tp - 0.3) / 0.3;
             var tx = W * 0.7 - tp2 * W * 0.5;
             var ty = H * 0.6 - tp2 * H * 0.3;
-            var trot = -0.7 + tp2 * 1.8;
-            slashLayer.save();
-            slashLayer.alpha = trailAlpha * (1 - i * 0.2) * 0.4;
-            slashLayer.lineStyle(3, 0xcccccc, 1);
+            slashLayer.lineStyle(3, 0xcccccc, trailAlpha * (1 - i * 0.2) * 0.4);
             slashLayer.moveTo(tx - 40, ty);
             slashLayer.lineTo(tx + 40, ty);
-            slashLayer.restore();
         }
+    } else if (progress >= 0.65) {
+        slashLayer.clear();
     }
 
     // Iron sword (simple, dark grey)
@@ -250,28 +306,31 @@ function drawHpBars() {
 }
 
 function updateGrain() {
-    grainGfx.clear();
-    for (var i = 0; i < 60; i++) {
-        var x = Math.random() * W, y = Math.random() * H;
-        var v = Math.floor(Math.random() * 200);
-        grainGfx.beginFill((v << 16) | (v << 8) | v, 0.3);
-        grainGfx.drawRect(x, y, 1, 1);
-        grainGfx.endFill();
-    }
+    grainGfx.texture = grainTexes[Math.floor(Math.random() * grainTexes.length)];
+    grainGfx.alpha = 0.02 + Math.random() * 0.02;
+    grainGfx.x = Math.random() * 30 - 15;
+    grainGfx.y = Math.random() * 30 - 15;
 }
 
 function spawnParticles(x, y, count, color, speed) {
     for (var i = 0; i < count; i++) {
-        var g = new PIXI.Graphics();
-        g.beginFill(color); g.drawCircle(0, 0, 2 + Math.random() * 4); g.endFill();
-        g.blendMode = PIXI.BLEND_MODES.ADD;
+        var s = particlePool.pop();
+        if (!s) {
+            if (S.particles.length >= 64) break;
+            s = new PIXI.Sprite(particleTex);
+            s.anchor.set(0.5);
+            s.blendMode = PIXI.BLEND_MODES.ADD;
+        }
+        s.tint = color;
+        s.visible = true;
         var a = Math.random() * Math.PI * 2;
-        g._vx = Math.cos(a) * speed * (0.3 + Math.random() * 0.7);
-        g._vy = Math.sin(a) * speed * (0.3 + Math.random() * 0.7) - 1;
-        g._life = 1; g._dec = 0.02 + Math.random() * 0.02;
-        g.x = x; g.y = y;
-        particleLayer.addChild(g);
-        S.particles.push(g);
+        s._vx = Math.cos(a) * speed * (0.3 + Math.random() * 0.7);
+        s._vy = Math.sin(a) * speed * (0.3 + Math.random() * 0.7) - 1;
+        s._life = 1; s._dec = 0.02 + Math.random() * 0.02;
+        s._base = 0.5 + Math.random();
+        s.x = x; s.y = y;
+        particleLayer.addChild(s);
+        S.particles.push(s);
     }
 }
 
@@ -282,32 +341,41 @@ function spawnDamageNum(x, y, text, color, crit) {
         stroke: 0x000000, strokeThickness: 3
     });
     t.anchor.set(0.5);
-    t.x = x; t.y = y;
+    t.x = x + (Math.random() - 0.5) * 20; t.y = y;
+    t._vx = (Math.random() - 0.5) * 0.3;
     t._vy = -1.5; t._life = 1; t._dec = 0.012;
+    if (crit) {
+        t.scale.set(1.6);
+        tween(function(p) { t.scale.set(1.6 - 0.6 * p); }, 0.15);
+    }
     root.addChild(t);
     S.damageNums.push(t);
 }
 
-function loop(dt) {
+function loop() {
+    var dt = Math.min(3, app.ticker.deltaMS / 16.667);
     S.time += dt / 60;
     var frozen = performance.now() < S.hitStop;
-    var bossView = document.getElementById('view-boss');
-    if (!bossView || !bossView.classList.contains('active')) return;
+    if (!bossViewEl || !bossViewEl.classList.contains('active')) return;
 
     S.torch = 0.82 + Math.sin(S.time * 8) * 0.1 + Math.sin(S.time * 23) * 0.06 + Math.random() * 0.04;
 
     if (!frozen) {
-        drawTorch();
+        updateTorch();
 
         // Flash
-        flashGfx.clear();
         if (S.flash > 0.01) {
+            flashGfx.clear();
             var c = S.flashColor;
             var r = (c >> 16) & 0xff, g = (c >> 8) & 0xff, b = c & 0xff;
             flashGfx.beginFill((r << 16) | (g << 8) | b, S.flash);
             flashGfx.drawRect(0, 0, W, H);
             flashGfx.endFill();
             S.flash *= Math.pow(0.78, dt);
+            S.flashDrawn = true;
+        } else if (S.flashDrawn) {
+            flashGfx.clear();
+            S.flashDrawn = false;
         }
 
         // Shake
@@ -343,13 +411,14 @@ function loop(dt) {
             p.x += p._vx * dt; p.y += p._vy * dt;
             p._vy += 0.05 * dt;
             p._life -= p._dec * dt;
-            p.alpha = p._life; p.scale.set(p._life);
-            if (p._life <= 0) { particleLayer.removeChild(p); p.destroy(); S.particles.splice(i, 1); }
+            p.alpha = p._life; p.scale.set(p._life * p._base);
+            if (p._life <= 0) { particleLayer.removeChild(p); p.visible = false; particlePool.push(p); S.particles.splice(i, 1); }
         }
 
         // Damage numbers
         for (var j = S.damageNums.length - 1; j >= 0; j--) {
             var d = S.damageNums[j];
+            d.x += d._vx * dt;
             d.y += d._vy * dt; d._life -= d._dec * dt;
             d.alpha = Math.min(1, d._life * 1.5);
             if (d._life <= 0) { root.removeChild(d); d.destroy(); S.damageNums.splice(j, 1); }
@@ -358,14 +427,17 @@ function loop(dt) {
         if (Math.random() < 0.1) updateGrain();
     }
 
-    drawHpBars();
-    if (heroHpText) heroHpText.text = '⚔ ' + S.heroHpStr;
-    if (bossHpText) bossHpText.text = (S.bossStage >= 2 ? '⚡ ' : '') + S.bossName + '  ' + S.bossHpStr;
+    if (S.hpDirty) { drawHpBars(); S.hpDirty = false; }
+    var hStr = '⚔ ' + S.heroHpStr;
+    if (heroHpText.text !== hStr) heroHpText.text = hStr;
+    var bStr = (S.bossStage >= 2 ? '⚡ ' : '') + S.bossName + '  ' + S.bossHpStr;
+    if (bossHpText.text !== bStr) bossHpText.text = bStr;
 }
 
 // ============ PUBLIC API ============
 
 window.startHeroAttack = function(dmg, crit) {
+    if (!app || !swordGfx) return;
     if (S.swordActive || S.defeated) return;
     S.swordActive = true; S.swordPhase = 0;
     swordGfx.visible = true;
@@ -383,14 +455,21 @@ window.startHeroAttack = function(dmg, crit) {
 };
 
 window.startBossAttack = function(dmg) {
+    if (!app || !bgSprite) return;
     if (S.defeated) return;
 
-    // Boss lunge (scale up briefly)
+    // Boss lunge: wind-up pull-back, then fast lunge
     var origScaleX = bgSprite.scale.x, origScaleY = bgSprite.scale.y;
     tween(function(t) {
-        bgSprite.scale.x = origScaleX + 0.04 * Math.sin(t * Math.PI);
-        bgSprite.scale.y = origScaleY + 0.04 * Math.sin(t * Math.PI);
-    }, 0.5);
+        var d;
+        if (t < 0.35) d = -0.04 * ease.out(t / 0.35);
+        else d = -0.04 + 0.08 * Math.pow((t - 0.35) / 0.65, 3);
+        bgSprite.scale.x = origScaleX + d;
+        bgSprite.scale.y = origScaleY + d;
+    }, 0.5, function() {
+        bgSprite.scale.x = origScaleX;
+        bgSprite.scale.y = origScaleY;
+    });
 
     tween(function(t) {}, 0.25, function() {
         S.flash = 0.55; S.flashColor = 0xc73e4d;
@@ -406,6 +485,7 @@ window.updateHP = function(heroHp, heroMaxHp, bossHp, bossMaxHp, bossName, stage
     S.bossPct = Math.max(0, bossHp / bossMaxHp);
     S.heroHpStr = Math.round(heroHp) + '/' + heroMaxHp;
     S.bossHpStr = Math.round(bossHp) + '/' + bossMaxHp;
+    S.hpDirty = true;
     if (bossName) S.bossName = bossName;
     if (typeof stageNum === 'number') S.bossStage = stageNum + 1;
     if (bType && bType !== S.bossType) {
@@ -416,13 +496,28 @@ window.updateHP = function(heroHp, heroMaxHp, bossHp, bossMaxHp, bossName, stage
 
 window.setBossDefeated = function(val) {
     S.defeated = !!val;
-    if (defeatedText) defeatedText.visible = !!val;
+    if (!val) {
+        if (defeatedText) defeatedText.visible = false;
+        if (bgSprite) { bgSprite.tint = 0xffffff; bgSprite.alpha = 1; }
+        return;
+    }
+    if (!bgSprite || !app) { if (defeatedText) defeatedText.visible = true; return; }
+    bgSprite.tint = 0x555555;
+    if (defeatedText) defeatedText.visible = false;
+    tween(function(p) { bgSprite.alpha = 1 - p; }, 1.2, function() {
+        if (defeatedText) defeatedText.visible = true;
+    });
 };
 
 window.setBossType = function(type) {
     if (type === S.bossType) return;
     S.bossType = type;
     swapBossImage(type);
+};
+
+window.__ndSetCombatActive = function(active) {
+    S.combatActive = !!active;
+    syncTicker();
 };
 
 function swapBossImage(type) {
@@ -454,6 +549,7 @@ window.__ndApplyEcoToPixi = function(isEco) {
             var target = isEco ? 1 : Math.min(2, dpr);
             if (typeof app.renderer.resolution === 'number' && app.renderer.resolution !== target) {
                 app.renderer.resolution = target;
+                app.renderer.resize(W, H);
             }
         }
     } catch (e) { /* renderer not initialised yet */ }

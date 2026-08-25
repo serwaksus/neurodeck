@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0f">
 <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
 <link rel="stylesheet" href="css/style.css?v=46">
@@ -39,19 +39,19 @@
 <div class="card-name-small" id="rankupCardName"></div>
 <div class="attr-hint" id="rankupAttrHint">+1 к пулу Силы (3/5)</div>
 </div>
-<div class="spirit-msg" id="spiritMsg"></div>
-<div class="toast" id="toast"><div class="t-title"></div><div class="t-body"></div></div>
+<div class="spirit-msg" id="spiritMsg" aria-live="polite"></div>
+<div class="toast" id="toast" aria-live="polite"><div class="t-title"></div><div class="t-body"></div></div>
 <div class="tooltip" id="tooltip"></div>
-<div class="modal-overlay" id="goalModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="goalModal">
 <div class="modal">
 <div class="modal-header"><h3>🎯 Новая цель</h3><button class="modal-close" data-action="close-goal-modal">✕</button></div>
 <div class="modal-body">
 <div class="form-row">
 <label class="form-label">Тип цели</label>
 <div class="goal-type-selector" id="goalTypeSelector">
-<div class="goal-type-option short selected" data-action="select-goal-type" data-type="short"><div class="type-icon">🟢</div><div class="type-name">Краткая</div><div class="type-desc">1-7 дней</div><div class="type-reward">+20 XP · -5 HP</div></div>
-<div class="goal-type-option medium" data-action="select-goal-type" data-type="medium"><div class="type-icon">🔵</div><div class="type-name">Средняя</div><div class="type-desc">1-4 недели</div><div class="type-reward">+50 XP · -12 HP</div></div>
-<div class="goal-type-option long" data-action="select-goal-type" data-type="long"><div class="type-icon">🟡</div><div class="type-name">Долгая</div><div class="type-desc">1+ месяц</div><div class="type-reward">+120 XP · -25 HP</div></div>
+<div class="goal-type-option short selected" data-action="select-goal-type" data-type="short"><div class="type-icon">🟢</div><div class="type-name">Краткая</div><div class="type-desc">1-7 дней</div><div class="type-reward">+30 XP · -5 HP</div></div>
+<div class="goal-type-option medium" data-action="select-goal-type" data-type="medium"><div class="type-icon">🔵</div><div class="type-name">Средняя</div><div class="type-desc">1-4 недели</div><div class="type-reward">+80 XP · -12 HP</div></div>
+<div class="goal-type-option long" data-action="select-goal-type" data-type="long"><div class="type-icon">🟡</div><div class="type-name">Долгая</div><div class="type-desc">1+ месяц</div><div class="type-reward">+200 XP · -25 HP</div></div>
 </div>
 </div>
 <div class="form-row"><label class="form-label">Название</label><input class="form-input" id="goalName" placeholder="Пробежать 10 км"></div>
@@ -80,7 +80,7 @@
 <div class="modal-footer"><button class="demo-btn" data-action="close-goal-modal">Отмена</button><button class="demo-btn primary" data-action="create-goal">🎯 Создать</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="forgeModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="forgeModal">
 <div class="modal">
 <div class="modal-header"><h3>🔥 Выковать карточку</h3><button class="modal-close" data-action="close-forge">✕</button></div>
 <div class="modal-body">
@@ -116,7 +116,7 @@
 <div class="modal-footer"><button class="demo-btn" data-action="close-forge">Отмена</button><button class="demo-btn primary" data-action="forge-card">🔥 Выковать</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="editCardModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="editCardModal">
 <div class="modal">
 <div class="modal-header"><h3>✏ Редактировать карточку</h3><button class="modal-close" data-action="close-edit-card">✕</button></div>
 <div class="modal-body">
@@ -150,7 +150,7 @@
 </div>
 </div>
 </div>
-<div class="modal-overlay" id="syncModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="syncModal">
 <div class="modal">
 <div class="modal-header"><h3>☁ Синхронизация</h3><button class="modal-close" data-action="close-sync-modal">✕</button></div>
 <div class="modal-body">
@@ -209,14 +209,14 @@
 <div class="modal-footer"><button class="demo-btn" data-action="close-sync-modal">Закрыть</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="roomDetailModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="roomDetailModal">
 <div class="modal">
 <div class="modal-header"><h3 id="roomDetailTitle">📍 Локация</h3><button class="modal-close" data-action="close-room-detail">✕</button></div>
 <div class="modal-body" id="roomDetailBody"></div>
 <div class="modal-footer"><button class="demo-btn primary" data-action="close-room-detail">Закрыть</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="confirmOverlay">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="confirmOverlay">
 <div class="modal confirm-modal">
 <div class="confirm-title" id="confirmTitle">Подтверди</div>
 <div class="confirm-body" id="confirmBody">Ты уверен?</div>
@@ -238,16 +238,16 @@
 <div class="hero-mini-xp-wrap"><span id="heroMiniXpText">0/100</span><div class="hero-mini-xp-bar"><div class="hero-mini-xp-fill" id="heroMiniXpFill" style="width:0%"></div></div></div>
 </div>
 </div>
-<div class="progress-control"><span>Побег</span><input type="range" id="progressSlider" min="0" max="140" value="0"><span class="val" id="progressVal">0/140</span></div>
+<div class="progress-control"><span>Побег</span><div id="progressSlider" class="progress-track" role="progressbar" aria-label="Прогресс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progressFill" class="progress-fill"></div></div><span class="val" id="progressVal">0/140</span></div>
 </div>
 <div class="main">
-<nav class="tabs" aria-label="Навигация">
-<div class="tab active" data-action="switch-view" data-view="deck"><span class="icon">📖</span>Колода</div>
-<div class="tab" data-action="switch-view" data-view="hero"><span class="icon">👤</span>Герой</div>
-<div class="tab" data-action="switch-view" data-view="inv"><span class="icon">🎒</span>Инвентарь</div>
-<div class="tab" data-action="switch-view" data-view="boss"><span class="icon">🐍</span>Босс</div>
-<div class="tab" data-action="switch-view" data-view="map"><span class="icon">🗺</span>Карта</div>
-<div class="tab" data-action="switch-view" data-view="stats"><span class="icon">📊</span>Статистика</div>
+<nav class="tabs" aria-label="Навигация" role="tablist">
+<div class="tab active" role="tab" data-action="switch-view" data-view="deck"><span class="icon">📖</span>Колода</div>
+<div class="tab" role="tab" data-action="switch-view" data-view="hero"><span class="icon">👤</span>Герой</div>
+<div class="tab" role="tab" data-action="switch-view" data-view="inv"><span class="icon">🎒</span>Инвентарь</div>
+<div class="tab" role="tab" data-action="switch-view" data-view="boss"><span class="icon">🐍</span>Босс</div>
+<div class="tab" role="tab" data-action="switch-view" data-view="map"><span class="icon">🗺</span>Карта</div>
+<div class="tab" role="tab" data-action="switch-view" data-view="stats"><span class="icon">📊</span>Статистика</div>
 </nav>
 <main class="content">
 <section class="view active" id="view-deck">
@@ -435,14 +435,14 @@
 </footer>
 </div>
 </div>
-<div class="modal-overlay" id="returnModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="returnModal">
 <div class="modal">
 <div class="modal-header"><h3>📅 С возвращением</h3><button class="modal-close" data-action="close-return-modal">✕</button></div>
 <div class="modal-body"></div>
 <div class="modal-footer"><button class="demo-btn primary" data-action="close-return-modal">Продолжить</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="evolutionModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="evolutionModal">
 <div class="modal">
 <div class="modal-header"><h3>🌟 Эволюция карточки</h3><button class="modal-close" data-action="close-evolution-modal">✕</button></div>
 <div class="modal-body">
@@ -450,7 +450,7 @@
 <div style="display:grid; grid-template-columns:1fr; gap:10px;">
 <div data-action="apply-evolution-depth" style="cursor:pointer; padding:14px; background:rgba(192,132,252,0.08); border:1px solid rgba(192,132,252,0.3); border-radius:4px;">
 <div style="font-size:14px; color:#c084fc; margin-bottom:4px;">🧘 Глубже</div>
-<div style="font-size:11px; color:var(--text-dim);">+50% мастерства за выполнение<br>Но XP -20%</div>
+<div style="font-size:11px; color:var(--text-dim);">+50% мастерства за выполнение</div>
 </div>
 <div data-action="apply-evolution-frequency" style="cursor:pointer; padding:14px; background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.3); border-radius:4px;">
 <div style="font-size:14px; color:#60a5fa; margin-bottom:4px;">⚡ Чаще</div>
@@ -465,14 +465,14 @@
 <div class="modal-footer"><button class="demo-btn" data-action="evolution-skip">Пропустить</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="weeklyReportModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="weeklyReportModal">
 <div class="modal">
 <div class="modal-header"><h3>📊 Недельный отчёт</h3><button class="modal-close" data-action="close-weekly-report">✕</button></div>
 <div class="modal-body"></div>
 <div class="modal-footer"><button class="demo-btn primary" data-action="close-weekly-report">К новой неделе</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="starterDeckModal">
+<div class="modal-overlay" role="dialog" aria-modal="true" id="starterDeckModal">
 <div class="modal">
 <div class="modal-header"><h3>🎴 Готовые испытания</h3><button class="modal-close" data-action="close-starter-deck">✕</button></div>
 <div class="modal-body" style="text-align:center; font-size:12px; color:var(--text-dim); margin-bottom:10px;">Эти карточки работают для всех. Выбери сколько хочешь — каждая стартует с ранга C.</div>
@@ -487,7 +487,6 @@
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pixi-filters@5.3.0/dist/browser/pixi-filters.min.js"></script>
 <script src="js/perf.js?v=46"></script>
     <script src="js/state-guards.js?v=46"></script>
     <script src="js/storage.js?v=46"></script>
