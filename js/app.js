@@ -72,7 +72,7 @@ return RANK_PROGRESSION[idx + 1];
 }
 const HERO = {
 name: 'Странник', title: '«Тот, кто только начал путь»',
-level: 1, xp: 0, xpToNext: 50, totalXp: 0, shards: 0,
+level: 1, xp: 0, xpToNext: 50, totalXp: 0, shards: 0, flasks: 0,
 hp: 80, maxHp: 80, isHollow: false,
 consecutivePerfectDays: 0,
 dailyCompletions: 0, dailySkips: 0, actionPoints: 0,
@@ -171,8 +171,16 @@ el.classList.add('active');
 currentFilter = el.dataset.filter;
 renderBackpack();
 break;
-case 'attack-boss': attackBoss(); break;
-case 'end-boss-turn': endBossTurn(); break;
+case 'c-strike': crucibleAction('strike'); break;
+case 'c-stance': crucibleAction('stance'); break;
+case 'c-focus': crucibleAction('focus'); break;
+case 'c-flask': crucibleAction('flask'); break;
+case 'open-shop': openShop(); break;
+case 'close-shop': closeShop(); break;
+case 'buy-flask': buyFlask(); break;
+default:
+if (action.indexOf('buy-artifact-') === 0) buyArtifact(action.slice('buy-artifact-'.length));
+break;
 case 'complete-card': completeCard(e, parseInt(el.dataset.id)); break;
 case 'fail-card': failCard(e, parseInt(el.dataset.id)); break;
 case 'edit-card': openEditCardDirect(parseInt(el.dataset.id)); break;
@@ -565,20 +573,13 @@ document.getElementById('statRankups').textContent = escapeProgress;
 document.getElementById('statEscape').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
 }
 function updateDamageInfo() {
-const gear = getTotalGearBonuses();
-const sumAllStats = Object.values(STATS).reduce((a, s) => a + s.value, 0);
-const totalStr = STATS.str.value + gear.str;
-const totalCha = STATS.cha.value + gear.cha;
-const bonus = Math.floor(sumAllStats * 0.5) + Math.floor(gear.str / 5);
-const total = BASE_DAMAGE + bonus;
-const critChance = Math.min(0.5, totalCha * 0.02);
+const s = getCrucibleStats();
+const critChance = Math.min(0.5, s.cha * 0.02);
 document.getElementById('damageInfo').innerHTML =
-'Базовый: <b style="color:var(--gold-bright)">' + BASE_DAMAGE + '</b><br>' +
-'Сумма атрибутов × 0.5: <b style="color:var(--gold-bright)">+' + Math.floor(sumAllStats*0.5) + '</b><br>' +
-'+ снаряга: <b style="color:var(--gold-bright)">+' + Math.floor(gear.str/5) + '</b><br>' +
+'Удар: <b style="color:var(--gold-bright)">' + (5 + s.str + 10) + '</b><br>' +
 'Шанс крита: <b style="color:var(--gold-bright)">' + Math.round(critChance*100) + '%</b><br>' +
-(HERO.isHollow ? '<b style="color:var(--blood-bright)">Полый: урон -50%</b><br>' : '') +
-'Итого: <b style="color:var(--blood-bright)">' + total + '</b> за атаку (фаза схватки)';
+'Концентрация (×2): до <b style="color:var(--gold-bright)">+' + Math.round(s.int) + '</b> урона и +10% крита<br>' +
+'Стиль деки: <b style="color:var(--gold-bright)">' + getDeckStat() + '</b>';
 }
 function checkHeroLevelUp() {
 while (HERO.xp >= HERO.xpToNext) {
@@ -741,6 +742,13 @@ let bossDefeated = false;
 let chimeraShield = 3;
 let bossRagePoints = 0;
 var lastWeekReset = getThisMondayKey();
+// === CRUCIBLE COMBAT v2: транзиентное состояние боя (не сохраняется —
+// при перезагрузке текущий бой начинается заново; mirror tools/combat-lab/combat_model.gd) ===
+var cHeroShield = 0, cFocus = 0, cFocusMax = 2, cFlaskUsed = false;
+var cRound = 0, cRage = 0, cIntent = 'quick';
+var cPoisonTicks = 0, cPoisonDmg = 0, cStanceCount = 0, cGuard = 0;
+var C_ATTACK = { normal: [9, 11, 13], social: [10, 12, 14], chimera: [12, 14, 16] };
+var C_SPECIAL = { normal: 'poison', social: 'burn', chimera: 'guard' };
 window._bossKills = { snake: 0, social: 0, chimera: 0 };
 function getBattlePhase() {
 var msk = new Date(Date.now() + 3 * 3600000);
@@ -755,7 +763,9 @@ return '⚔ Фаза схватки (Пт–Вс)';
 return '⛏ Фаза накопления (Пн–Чт)';
 }
 function scaleBossStages(stages) {
-var mult = 1 + Math.floor((HERO.level - 1) / 5) * 0.25;
+var lvl = HERO.level || 1;
+var mult = 1 + (lvl - 1) * 0.10;
+if (lvl > 10) mult += (lvl - 10) * 0.18;
 return stages.map(function(s) {
 var hp = Math.round(s.hp * mult);
 return Object.assign({}, s, { hp: hp, maxHp: hp });
@@ -765,25 +775,25 @@ function getCurrentBoss() {
 if (escapeProgress < 40) return {
 name: 'Змей Лени', icon: '🐍', type: 'normal',
 stages: scaleBossStages([
-{ hp: 100, maxHp: 100, dmgMult: 1, animClass: 'boss-anim-stage1', desc: '«Я питаюсь твоим бездействием.»' },
-{ hp: 150, maxHp: 150, dmgMult: 1.5, animClass: 'boss-anim-stage2', desc: '«Ты думаешь, это было сложно? Я лишь разогревался.»' },
-{ hp: 200, maxHp: 200, dmgMult: 2.0, animClass: 'boss-anim-stage3', desc: '«НЕВОЗМОЖНО! Я ПОГЛОЩУ ТЕБЯ ЦЕЛИКОМ!»' }
+{ hp: 100, maxHp: 100, animClass: 'boss-anim-stage1', desc: '«Я питаюсь твоим бездействием.»' },
+{ hp: 150, maxHp: 150, animClass: 'boss-anim-stage2', desc: '«Ты думаешь, это было сложно? Я лишь разогревался.»' },
+{ hp: 200, maxHp: 200, animClass: 'boss-anim-stage3', desc: '«НЕВОЗМОЖНО! Я ПОГЛОЩУ ТЕБЯ ЦЕЛИКОМ!»' }
 ])
 };
 if (escapeProgress < 80) return {
 name: 'Демон Соцсетей', icon: '📱', type: 'social',
 stages: scaleBossStages([
-{ hp: 120, maxHp: 120, dmgMult: 1, animClass: 'boss-anim-stage1', desc: '«Твой скролл — моя пища.»' },
-{ hp: 180, maxHp: 180, dmgMult: 1.5, animClass: 'boss-anim-stage2', desc: '«Ещё один свайп, и ты мой!»' },
-{ hp: 250, maxHp: 250, dmgMult: 2.0, animClass: 'boss-anim-stage3', desc: '«ТЫ НЕ МОЖЕШЬ УЙТИ ОТ ЛЕНТЫ!»' }
+{ hp: 120, maxHp: 120, animClass: 'boss-anim-stage1', desc: '«Твой скролл — моя пища.»' },
+{ hp: 180, maxHp: 180, animClass: 'boss-anim-stage2', desc: '«Ещё один свайп, и ты мой!»' },
+{ hp: 250, maxHp: 250, animClass: 'boss-anim-stage3', desc: '«ТЫ НЕ МОЖЕШЬ УЙТИ ОТ ЛЕНТЫ!»' }
 ])
 };
 return {
 name: 'Химера Выгорания', icon: '🔥', type: 'chimera',
 stages: scaleBossStages([
-{ hp: 150, maxHp: 150, dmgMult: 1, animClass: 'boss-anim-stage1', desc: '«У тебя нет сил...»' },
-{ hp: 220, maxHp: 220, dmgMult: 1.5, animClass: 'boss-anim-stage2', desc: '«Твоя мотивация иссякла.»' },
-{ hp: 300, maxHp: 300, dmgMult: 2.0, animClass: 'boss-anim-stage3', desc: '«СГОРИ В ПЕПЛЕ РУТИНЫ!»' }
+{ hp: 90, maxHp: 90, animClass: 'boss-anim-stage1', desc: '«У тебя нет сил...»' },
+{ hp: 130, maxHp: 130, animClass: 'boss-anim-stage2', desc: '«Твоя мотивация иссякла.»' },
+{ hp: 175, maxHp: 175, animClass: 'boss-anim-stage3', desc: '«СГОРИ В ПЕПЛЕ РУТИНЫ!»' }
 ])
 };
 }
@@ -791,13 +801,6 @@ function changeBossHp(delta) {
 if (bossDefeated) return;
 const boss = getCurrentBoss();
     const stage = boss.stages[bossStage];
-    if (delta !== 0 && boss.type === 'chimera' && chimeraShield > 0) {
-        chimeraShield--;
-        if (chimeraShield > 0) {
-            showToast('🛡 Щит Химеры!', 'Осталось ударов: ' + chimeraShield, 'blood');
-            return;
-        }
-    }
     bossHp = Math.max(0, Math.min(stage.maxHp, bossHp + delta));
 const pct = (bossHp / stage.maxHp) * 100;
 var fillEl = document.getElementById('bossHpFill');
@@ -960,50 +963,228 @@ function updateCombatHpBars() {
     );
     if (bossDefeated && window.setBossDefeated) window.setBossDefeated(true);
 }
-function attackBoss() {
+// === CRUCIBLE COMBAT v2: правила 1:1 из tools/combat-lab/combat_model.gd ===
+function getCrucibleStats() {
+var gear = getTotalGearBonuses();
+var s = {};
+Object.keys(STATS).forEach(function(k) { s[k] = STATS[k].value + gear[k]; });
+return s;
+}
+function getDeckStat() {
+var s = getCrucibleStats();
+var best = 'str';
+['str', 'end', 'int', 'cha', 'wil', 'agi'].forEach(function(k) {
+if (s[k] > s[best]) best = k;
+});
+return best;
+}
+function intentLabel(intent) {
+if (intent === 'heavy') return 'Тяжёлый удар ⚠';
+if (intent === 'quick') return 'Быстрый удар';
+if (intent === 'enrage') return 'Ярость 💢';
+var type = getCurrentBoss().type;
+return type === 'chimera' ? 'Гард 🛡' : type === 'social' ? 'Выжигание 🔥' : 'Яд ☠';
+}
+function updateBossIntentUI() {
+var el = document.getElementById('bossIntent');
+if (!el) return;
+el.textContent = (!bossDefeated && getBattlePhase() === 'battle') ? 'Ход босса: ' + intentLabel(cIntent) : '';
+}
+function rollIntent(first) {
+if (first) return 'quick';
+if (cRound > 0 && cRound % 5 === 0) return 'special';
+var r = Math.random();
+if (r < 0.30) return 'heavy';
+if (r < 0.65) return 'quick';
+if (r < 0.80) return 'enrage';
+return C_SPECIAL[getCurrentBoss().type] ? 'special' : 'quick';
+}
+function crucibleResetTransient() {
+cHeroShield = 0; cFocus = 0; cFlaskUsed = false;
+cPoisonTicks = 0; cPoisonDmg = 0;
+cRage = 0; cGuard = 0; cRound = 0;
+cFocusMax = getDeckStat() === 'int' ? 3 : 2;
+}
+function crucibleStartFight(fight) {
+bossStage = Math.min(Math.max(fight, 0), 2);
+crucibleResetTransient();
+var stage = getCurrentBoss().stages[bossStage];
+bossHp = stage.maxHp;
+cIntent = rollIntent(true);
+updateBossIntentUI();
+changeBossHp(0);
+updateCombatHpBars();
+updateBossDisplay();
+saveGameState();
+}
+function crucibleAction(action) {
 if (bossDefeated) { showToast('☠ Босс повержен', 'Нечего атаковать', 'blood'); return; }
 if (getBattlePhase() !== 'battle') { showToast('⛏ Не время', 'Фаза схватки: пятница — воскресенье', 'blood'); return; }
-if (bossRagePoints > 0) { showToast('💢 Босс в ярости', 'Босс в ярости — сначала завершите ход босса', 'blood'); sfxError(); return; }
-if (!HERO.actionPoints || HERO.actionPoints <= 0) { showToast('⚔ Нет ОД', 'Очки действия закончились. Заверши ход.', 'blood'); sfxError(); return; }
-HERO.actionPoints--;
-var gear = getTotalGearBonuses();
-var totalStr = STATS.str.value + gear.str;
-var totalCha = STATS.cha.value + gear.cha;
-var sumAllStats = Object.values(STATS).reduce(function(a, s) { return a + s.value; }, 0);
-var baseDmg = BASE_DAMAGE + Math.floor(sumAllStats * 0.5) + Math.floor(gear.str / 5);
-var critChance = Math.min(0.5, totalCha * 0.02);
-var crit = Math.random() < critChance;
-var dmg = crit ? baseDmg * 2 : baseDmg;
-if (HERO.isHollow) dmg = Math.floor(dmg * 0.5);
-dmg = Math.max(1, dmg);
-changeBossHp(-dmg);
-if (window.startHeroAttack) window.startHeroAttack(dmg, crit);
-if (crit) { sfxCrit(); haptic('heavy'); }
-else { sfxHit(); haptic('medium'); }
-updateBossBattleUI();
-updateCombatHpBars();
-updateHeroUI();
+crucibleHeroAction(action);
+updateBossBattleUI(); updateCombatHpBars(); updateHeroUI();
+if (bossHp <= 0) { crucibleFightCleared(); return; }
+endBossTurn();
+if (bossHp <= 0) { crucibleFightCleared(); return; }
+if (HERO.hp <= 0) { crucibleRunFailed(); return; }
+updateBossBattleUI(); updateCombatHpBars(); updateHeroUI(); updateBossIntentUI();
 saveGameState();
+}
+function crucibleHeroAction(action) {
+var s = getCrucibleStats();
+var deck = getDeckStat();
+if (action === 'strike') { attackBoss(s, deck); return; }
+if (action === 'stance') { crucibleStance(s, deck); return; }
+if (action === 'flask') { crucibleFlask(); return; }
+cFocus = Math.min(cFocus + 1, cFocusMax);
+sfxEquip();
+showToast('✳ Концентрация', 'Фокус: ' + cFocus + '/' + cFocusMax + ' (+урон и крит)', 'save');
+}
+function attackBoss(s, deck) {
+s = s || getCrucibleStats();
+deck = deck || getDeckStat();
+var stacks = cFocus;
+var base = 5 + s.str * 1.0 + 10 + s.int * 0.5 * stacks;
+var critChance = Math.min(0.5, s.cha * 0.02 + 0.05 * stacks);
+var critMult = deck === 'cha' ? 2.5 : 2.0;
+var crit = Math.random() < critChance;
+var dmg = base * (crit ? critMult : 1.0);
+if (deck === 'agi' && Math.random() < 0.25) dmg *= 2;
+dmg = Math.max(1, Math.round(dmg));
+cFocus = 0;
+var blocked = false;
+if (deck === 'str' && cGuard > 0) cGuard--;
+if (cGuard > 0) {
+cGuard--;
+blocked = true;
+bossHp = Math.max(0, bossHp - Math.round(dmg * 0.3));
+} else {
+bossHp = Math.max(0, bossHp - dmg);
+}
+if (window.startHeroAttack) window.startHeroAttack(dmg, crit);
+if (crit) { sfxCrit(); haptic('heavy'); } else { sfxHit(); haptic('medium'); }
+showToast(blocked ? '🛡 Гард поглотил удар' : crit ? '💥 КРИТ!' : '⚔ Удар',
+'Урон: ' + dmg + (blocked ? ' (30% сквозь гард)' : ''), blocked ? 'blood' : (crit ? 'crit' : undefined));
+}
+function crucibleStance(s, deck) {
+var cost = 1;
+if (deck === 'wil') {
+cStanceCount++;
+if (cStanceCount % 2 === 0) cost = 0;
+}
+if ((HERO.actionPoints || 0) < cost) {
+cFocus = Math.min(cFocus + 1, cFocusMax);
+showToast('✳ Авто-концентрация', 'Не хватило ОД на стойку. Фокус: ' + cFocus + '/' + cFocusMax, 'save');
+return;
+}
+HERO.actionPoints -= cost;
+cHeroShield = Math.round((s.wil * 1.6 + s.end * 0.9) * (deck === 'end' ? 1.5 : 1));
+var cleansed = '';
+if (cPoisonTicks > 0) { cPoisonTicks--; cleansed = ' · Яд ослаблен (' + cPoisonTicks + ' тик.)'; }
+sfxEquip(); haptic('medium');
+showToast('🛡 Стойка', 'Щит: ' + cHeroShield + cleansed, 'save');
+}
+function crucibleFlask() {
+if (cFlaskUsed) { showToast('🧪 Фляга уже использована', 'Одна фляга на бой', 'blood'); sfxError(); return; }
+if (!(HERO.flasks > 0)) { showToast('🧪 Нет фляг', 'Купи флягу в лавке осколков', 'blood'); sfxError(); return; }
+HERO.flasks--;
+cFlaskUsed = true;
+var heal = Math.round(HERO.maxHp * 0.5);
+HERO.hp = Math.min(HERO.maxHp, HERO.hp + heal);
+sfxGoalComplete(); haptic('medium');
+showToast('🧪 Фляга', '+' + heal + ' HP', 'save');
+}
+function crucibleApplyHit(raw, ignoreShield) {
+var dmg = Math.round(raw);
+if (!ignoreShield && cHeroShield > 0) {
+if (cHeroShield >= dmg) {
+cHeroShield -= dmg;
+var reflect = Math.round(getCrucibleStats().agi * 0.4);
+bossHp = Math.max(0, bossHp - reflect);
+showToast('🛡 Полный блок!', 'Урон поглощён · Отражено ' + reflect + ' HP', 'save');
+return dmg;
+}
+dmg -= cHeroShield;
+cHeroShield = 0;
+showToast('💔 Щит разбит', 'Часть урона поглощена щитом', 'blood');
+}
+HERO.hp -= dmg;
+return dmg;
 }
 function endBossTurn() {
-if (bossDefeated) { showToast('☠ Босс повержен', 'Бой окончен', 'save'); return; }
-var rageMult = 8 + bossStage * 4;
-var rageDmg = bossRagePoints * rageMult;
-var boss = getCurrentBoss();
-if (rageDmg > 0) {
-HERO.hp = Math.max(1, HERO.hp - rageDmg);
-if (window.startBossAttack) window.startBossAttack(rageDmg);
-sfxBossHit(); haptic('heavy');
-showToast('💢 Ответный удар!', boss.name + ' наносит -' + rageDmg + ' HP (Ярость: ' + bossRagePoints + ')', 'blood');
-triggerHollowIfFallen();
+var type = getCurrentBoss().type;
+var base = C_ATTACK[type][bossStage] + cRage * 2;
+var dmg = 0;
+if (cIntent === 'heavy') {
+dmg = crucibleApplyHit(base * 1.6, false);
+showToast('⚠ Тяжёлый удар!', '-' + dmg + ' HP', 'blood');
+} else if (cIntent === 'quick') {
+dmg = crucibleApplyHit(base * 0.9, false);
+showToast('⚡ Быстрый удар', '-' + dmg + ' HP', 'blood');
+} else if (cIntent === 'enrage') {
+cRage += 2;
+showToast('💢 Босс ярится', 'Ярость: ' + cRage + ' — удары становятся сильнее', 'blood');
 } else {
-showToast('🛡 Босс спокоен', 'Нет очков ярости — удар слабый.', 'save');
+if (type === 'social') {
+dmg = crucibleApplyHit(4 + bossStage, true);
+showToast('🔥 Выжигание', '-' + dmg + ' HP сквозь щит', 'blood');
+} else if (type === 'chimera') {
+cGuard = 2;
+showToast('🛡 Гард', 'Химера закрылась (2 заряда): удары наносят лишь 30%', 'blood');
+} else {
+cPoisonTicks = 3;
+cPoisonDmg = 2 + bossStage;
+showToast('☠ Яд', '3 тика по ' + cPoisonDmg + ' HP', 'blood');
 }
-bossRagePoints = 0;
-HERO.actionPoints = 0;
+}
+cRound++;
+cRage = Math.max(0, cRage - 1);
+if (cPoisonTicks > 0) {
+cPoisonTicks--;
+HERO.hp -= cPoisonDmg;
+showToast('☠ Яд действует', '-' + cPoisonDmg + ' HP (осталось: ' + cPoisonTicks + ')', 'blood');
+}
+if (dmg > 0) {
+if (window.startBossAttack) window.startBossAttack(dmg);
+sfxBossHit(); haptic('heavy');
+}
+cIntent = rollIntent(false);
+}
+function crucibleFightCleared() {
+addXpReward(150);
+burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color: '#fbbf24', speed: 10, decay: 0.01, size: 4, shape: 'star', gravity: 0.12 });
+screenShake(10, 500);
+if (bossStage < 2) {
+var heal = Math.round(HERO.maxHp * 0.6);
+HERO.hp = Math.min(HERO.maxHp, HERO.hp + heal);
+HERO.actionPoints = (HERO.actionPoints || 0) + 3;
+showToast('⚔ Бой ' + (bossStage + 1) + '/3 пройден!', '+150 XP · Передышка: +' + heal + ' HP, +3 ОД', 'crit');
+spiritSay('«Передышка. Дыши — впереди ещё два круга.»');
+crucibleStartFight(bossStage + 1);
 updateBossBattleUI();
 updateHeroUI();
+} else {
+triggerBossExecution();
+}
 saveGameState();
+}
+function crucibleRunFailed() {
+HERO.hp = 1;
+bossStage = 0;
+crucibleResetTransient();
+cStanceCount = 0;
+cIntent = 'quick';
+bossHp = getCurrentBoss().stages[0].maxHp;
+sfxFail(); haptic('heavy');
+updateCombatHpBars();
+updateBossIntentUI();
+saveGameState();
+showToast('☠ Ран провален', getCurrentBoss().name + ' восстановил все силы.', 'blood');
+dungeonConfirm('☠ Ран провален',
+'Ты пал в бою <b>' + (bossStage + 1) + '/3</b>.<br><br>' +
+'Босс полностью восстановил силы — весь ран сгорел.<br>' +
+'<span style="color:var(--gold-bright)">Копи ОД и фляги до пятницы и попробуй снова.</span>'
+).then(function() { switchView('deck'); });
+updateBossBattleUI();
 }
 function triggerHollowIfFallen() {
 if (HERO.hp <= 1 && !HERO.isHollow) {
@@ -1049,25 +1230,26 @@ area.innerHTML =
 'Схватка откроется в <b>пятницу</b>.' +
 '</div>';
 } else {
-var canAttack = ap > 0 && !bossDefeated;
-var canEnd = ap === 0 && !bossDefeated;
+var deckStat = getDeckStat();
+var stanceCost = (deckStat === 'wil' && (cStanceCount + 1) % 2 === 0) ? 0 : 1;
+var canStance = ap >= stanceCost;
+var flaskReady = !cFlaskUsed && HERO.flasks > 0;
 area.innerHTML =
-'<div style="display:flex; gap:12px; justify-content:center; margin-bottom:12px;">' +
-'<div style="flex:1; text-align:center; padding:10px; background:rgba(96,165,250,0.1); border:1px solid rgba(96,165,250,0.3); border-radius:4px;">' +
-'<div style="font-size:24px; color:#60a5fa; font-weight:bold;">' + ap + '</div>' +
-'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">⚔ ОЧКИ ДЕЙСТВИЯ</div>' +
+'<div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">' +
+'<button class="action-btn" data-action="c-strike"><span>⚔</span><span>Удар</span><span class="ap-cost">—</span></button>' +
+'<button class="action-btn" data-action="c-stance"' + (canStance ? '' : ' disabled') + '><span>🛡</span><span>Стойка</span><span class="ap-cost">' + (stanceCost === 0 ? 'свободно' : '1 ОД') + '</span></button>' +
+'<button class="action-btn" data-action="c-focus"><span>✳</span><span>Концентрация</span><span class="ap-cost">✳</span></button>' +
+'<button class="action-btn" data-action="c-flask"' + (flaskReady ? '' : ' disabled') + '><span>🧪</span><span>Фляга</span><span class="ap-cost">×' + (HERO.flasks || 0) + '</span></button>' +
 '</div>' +
-'<div style="flex:1; text-align:center; padding:10px; background:rgba(199,62,77,0.1); border:1px solid rgba(199,62,77,0.3); border-radius:4px;">' +
-'<div style="font-size:24px; color:var(--blood-bright); font-weight:bold;">' + bossRagePoints + '</div>' +
-'<div style="font-size:10px; color:var(--text-dim); letter-spacing:1px;">💢 ОЧКИ ЯРОСТИ (' + (bossRagePoints * (8 + bossStage * 4)) + ' урона)</div>' +
-'</div>' +
-'</div>' +
-(canAttack ?
-'<button class="demo-btn primary" data-action="attack-boss" style="width:100%; margin-bottom:8px; font-size:16px;">⚔ АТАКОВАТЬ (-1 ОД)</button>' : '') +
-(canEnd ?
-'<button class="demo-btn" data-action="end-boss-turn" style="width:100%; margin-bottom:8px; font-size:14px; border-color:var(--blood-bright); color:var(--blood-bright);">💢 Завершить ход (принять удар: -' + (bossRagePoints * (8 + bossStage * 4)) + ' HP)</button>' : '') +
-(ap === 0 && !canEnd && !bossDefeated ?
-'<div style="text-align:center; padding:8px; color:var(--text-dim); font-size:11px;">ОД закончились. Заверши ход, чтобы босс ответил.</div>' : '');
+'<div style="text-align:center; font-size:11px; color:var(--text-dim); padding:8px; line-height:1.8;">' +
+'Бой <b style="color:var(--gold-bright)">' + (bossStage + 1) + '/3</b> · ОД: <b style="color:#60a5fa">' + ap + '</b>' +
+(cHeroShield > 0 ? ' · 🛡 Щит: <b style="color:#60a5fa">' + cHeroShield + '</b>' : '') +
+(cFocus > 0 ? ' · ✳ Фокус: <b style="color:#c084fc">' + cFocus + '/' + cFocusMax + '</b>' : '') +
+(cGuard > 0 ? ' · 🛡 Гард босса: <b style="color:var(--blood-bright)">' + cGuard + '</b>' : '') +
+(cRage > 0 ? ' · 💢 Ярость: <b style="color:var(--blood-bright)">' + cRage + '</b>' : '') +
+(cPoisonTicks > 0 ? ' · ☠ Яд: <b style="color:#34d399">' + cPoisonTicks + ' тик.</b>' : '') +
+'<br>Колода: <b style="color:var(--gold-bright)">' + STATS[deckStat].name + '</b> · Одно действие за раунд — после него босс отвечает.' +
+'</div>';
 }
 }
 function addXpReward(amount) {
@@ -1132,6 +1314,61 @@ for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) { picked = 
 addArtifactToBackpack(picked);
 const rc = getRankColorInfo(picked.rank);
 burstParticles(x, y, 40, { color: rc.color, speed: 7, decay: 0.015, size: 3, shape: 'star', gravity: 0.1 });
+}
+// === Лавка осколков (CRUCIBLE ECONOMY: фляга 10💰 макс 5 · артефакты S=25/A=15/B=8💰) ===
+var SHOP_PRICES = { S: 25, A: 15, B: 8 };
+function itemOwned(id) {
+return INVENTORY.backpack.some(b => b.id === id) || Object.values(INVENTORY.equipped).some(e => e && e.id === id);
+}
+function openShop() {
+renderShop();
+document.getElementById('shopModal').classList.add('show');
+}
+function closeShop() {
+document.getElementById('shopModal').classList.remove('show');
+}
+function renderShop() {
+var bal = document.getElementById('shopBalance');
+if (bal) bal.textContent = 'Осколки: ' + (HERO.shards || 0);
+var list = document.getElementById('shopList');
+if (!list) return;
+var shards = HERO.shards || 0;
+var html =
+'<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; border:1px solid var(--border); border-radius:4px; margin-bottom:8px;">' +
+'<div><div style="font-size:13px;">🧪 Фляга</div><div style="font-size:10px; color:var(--text-dim);">Лечит 50% HP в бою · максимум 5</div></div>' +
+'<button class="demo-btn primary" data-action="buy-flask"' + ((HERO.flasks || 0) >= 5 || shards < 10 ? ' disabled' : '') + ' style="font-size:11px;">10💰</button>' +
+'</div>';
+Object.values(ARTIFACTS).forEach(function(a) {
+if (itemOwned(a.id)) return;
+var price = SHOP_PRICES[a.rank] || 15;
+html +=
+'<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; border:1px solid var(--border); border-radius:4px; margin-bottom:8px;">' +
+'<div><div style="font-size:13px;">' + a.icon + ' ' + esc(a.name) + ' <span style="color:' + getRankColorInfo(a.rank).color + '">[' + a.rank + ']</span></div>' +
+'<div style="font-size:10px; color:var(--text-dim);">' + esc(a.type) + (a.special ? ' · ★ ' + a.special : '') + '</div></div>' +
+'<button class="demo-btn primary" data-action="buy-artifact-' + a.id + '"' + (shards < price ? ' disabled' : '') + ' style="font-size:11px;">' + price + '💰</button>' +
+'</div>';
+});
+list.innerHTML = html;
+}
+function buyFlask() {
+if ((HERO.flasks || 0) >= 5) { showToast('🧪 Фляги полны', 'Максимум 5 фляг', 'blood'); return; }
+if ((HERO.shards || 0) < 10) { showToast('💰 Мало осколков', 'Фляга стоит 10 осколков', 'blood'); sfxError(); return; }
+HERO.shards -= 10;
+HERO.flasks = (HERO.flasks || 0) + 1;
+sfxEquip();
+showToast('🧪 Фляга куплена', 'В запасе: ' + HERO.flasks + '/5', 'save');
+renderShop(); renderBackpack(); updateHeroUI(); saveGameState();
+}
+function buyArtifact(id) {
+var a = ARTIFACTS[id];
+if (!a || itemOwned(id)) return;
+var price = SHOP_PRICES[a.rank] || 15;
+if ((HERO.shards || 0) < price) { showToast('💰 Мало осколков', 'Нужно ' + price + ' осколков', 'blood'); sfxError(); return; }
+if (INVENTORY.backpack.length >= INVENTORY.maxSlots) { showToast('🎒 Рюкзак полон', 'Освободи место', 'blood'); return; }
+HERO.shards -= price;
+addArtifactToBackpack(a);
+renderShop();
+saveGameState();
 }
 function renderBackpack() {
 const grid = document.getElementById('backpackGrid');
@@ -1720,7 +1957,7 @@ if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'map') renderMap(escapeProgress);
-if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); updateCombatHpBars(); }
+if (view === 'boss') { updateBossDisplay(); updateBossBattleUI(); updateCombatHpBars(); updateBossIntentUI(); }
 if (view === 'deck') renderDashboard();
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
@@ -1917,11 +2154,11 @@ document.getElementById('bossLoreText').innerHTML =
 '• Выполняй карточки → <b style="color:#60a5fa">+1 ОД</b> за каждую<br>' +
 '• Пропуски → <b style="color:var(--blood-bright)">+1 Ярость</b> боссу<br>' +
 '• Невыполненные за день → <b style="color:var(--blood-bright)">+1 Ярость</b> каждая<br><br>' +
-'<b style="color:var(--gold-bright)">⚔ Пт–Вс: Схватка</b><br>' +
-'• Трать ОД на атаки вручную<br>' +
-'• Когда ОД = 0 → <b>Завершить ход</b><br>' +
-'• Босс бьёт на <b style="color:var(--blood-bright)">' + (bossRagePoints * (8 + bossStage * 4)) + ' HP</b> (Ярость × ' + (8 + bossStage * 4) + ')<br>' +
-'• HP ≤ 0 → становишься Полым, случайная карточка теряет мастерство<br><br>' +
+'<b style="color:var(--gold-bright)">⚔ Пт–Вс: Схватка — ран из 3 боёв</b><br>' +
+'• Одно действие за раунд: ⚔ Удар · 🛡 Стойка (1 ОД) · ✳ Концентрация · 🧪 Фляга<br>' +
+'• Босс телеграфирует удар — стойка и фляга решают, кто переживёт ран<br>' +
+'• Победа в бою: +150 XP и передышка (+60% HP, +3 ОД)<br>' +
+'• Падение в бою = ран провален: босс восстанавливает все силы<br><br>' +
 'Экипируй артефакты в <b style="color:var(--gold-bright)">Инвентаре</b> для увеличения урона.';
 }
 function updatePunishCountdown() {
@@ -2835,7 +3072,7 @@ var MODAL_CLOSE_FNS = {
 goalModal: closeGoalModal, forgeModal: closeForge, editCardModal: closeEditCard,
 syncModal: closeSyncModal, roomDetailModal: closeRoomDetail, returnModal: closeReturnModal,
 evolutionModal: closeEvolutionModal, weeklyReportModal: closeWeeklyReportModal,
-starterDeckModal: closeStarterDeck
+starterDeckModal: closeStarterDeck, shopModal: closeShop
 };
 function closeOverlayEl(overlay) {
 var fn = MODAL_CLOSE_FNS[overlay.id];
@@ -2983,7 +3220,7 @@ var ONBOARDING_STEPS = [
 { icon: '⚔', title: 'Добро пожаловать в NeuroDeck', text: 'Это геймифицированный трекер привычек.<br>Ты — узник подземелья. Твоё оружие — дисциплина.' },
 { icon: '📖', title: 'Колода карточек', text: 'Каждая карточка — привычка, которую нужно выполнять ежедневно.<br>Нажми <b>✓</b> чтобы выполнить, <b>✕</b> чтобы пропустить.<br>Пропуск = босс копит <b style="color:var(--blood-bright)">Ярость</b>.' },
 { icon: '🔥', title: 'Ранги и мастерство', text: 'Выполняй карточку — растёт Мастерство.<br>При достижении порога карточка повышает ранг: C → CC → CCC → B → ... → SSS.<br>Ранг-ап = +1 к пулу атрибута.' },
-{ icon: '🐍', title: 'Босс подземелья', text: 'Бой идёт <b>понедельно</b>:<br>⛏ <b>Пн–Чт</b> — накапливай <b style="color:#60a5fa">Очки Действия</b> за выполнение карточек.<br>⚔ <b>Пт–Вс</b> — атакуй босса вручную, тратя ОД.<br>Когда ОД = 0 — босс бьёт в ответ (Ярость × 8–16 HP).' },
+{ icon: '🐍', title: 'Босс подземелья', text: 'Бой идёт <b>понедельно</b>:<br>⛏ <b>Пн–Чт</b> — накапливай <b style="color:#60a5fa">Очки Действия</b> за выполнение карточек.<br>⚔ <b>Пт–Вс</b> — босс-ран из 3 боёв: Удар бесплатен, Стойка — 1 ОД, следи за телеграфами босса.' },
 { icon: '👤', title: 'Герой и атрибуты', text: '5 очков пула = +1 к атрибуту.<br>Сила = урон, Интеллект = XP бонус, Харизма = шанс крита.<br>Уровень даёт +6 к максимальному HP и лечение.' },
 { icon: '🎯', title: 'Цели', text: 'Ставь цели с дедлайном и текстовыми шагами.<br>Выполнение цели = опыт + очки атрибута.<br>Провал по дедлайну = +Ярость боссу.' },
 { icon: '🎒', title: 'Инвентарь', text: 'Случайные артефакты падают при выполнении карточек.<br>Экипируй их для бонусов к атрибутам.<br>Все бонусы суммируются.' },
@@ -3037,6 +3274,12 @@ const newBoss = getCurrentBoss();
     bossHp = newBoss.stages[0].maxHp;
     saveGameState();
 }
+// Crucible: транзиент боя не сохраняется — текущий бой начинается заново
+crucibleResetTransient();
+cStanceCount = 0;
+cIntent = 'quick';
+bossHp = getCurrentBoss().stages[bossStage].maxHp;
+updateBossIntentUI();
 HERO.maxHp = calcMaxHp();
 if (HERO.hp > HERO.maxHp) HERO.hp = HERO.maxHp;
 HERO.xpToNext = getXpToNext(HERO.level);

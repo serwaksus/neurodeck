@@ -20,19 +20,40 @@ async function boot(page) {
   }
 }
 
-test('chimera shield: changeBossHp(0) keeps shield, changeBossHp(-1) consumes one', async ({ page }) => {
+test('crucible guard: blocked strike chips 30% and consumes charge; str pierces extra; legacy API inert', async ({ page }) => {
   await boot(page);
   const r = await page.evaluate(() => {
     escapeProgress = 90; // >=80 => getCurrentBoss().type === 'chimera'
     bossDefeated = false;
-    chimeraShield = 3;
-    changeBossHp(0); // delta===0 bypasses the shield branch entirely
-    const afterZero = chimeraShield;
-    changeBossHp(-1); // shield absorbs: decrement + early return
-    return { afterZero, afterMinus: chimeraShield };
+    STATS.str.value = 5; STATS.end.value = 15; STATS.int.value = 0;
+    STATS.cha.value = 0; STATS.wil.value = 3; STATS.agi.value = 1; // end-dominant, no crit
+    crucibleResetTransient();
+    cIntent = 'quick';
+    bossStage = 0;
+    bossHp = getCurrentBoss().stages[0].maxHp;
+    const dmgEnd = 5 + STATS.str.value + 10;
+    cGuard = 2;
+    const hp0 = bossHp;
+    attackBoss();
+    const chipEnd = hp0 - bossHp;
+    const guardNonStr = cGuard;
+    STATS.str.value = 20; // str-dominant now
+    const dmgStr = 5 + 20 + 10;
+    cGuard = 2;
+    const hp1 = bossHp;
+    attackBoss();
+    const chipStr = hp1 - bossHp;
+    const guardStr = cGuard;
+    changeBossHp(-1); // legacy API: no longer mutates any shield
+    return { chipEnd, guardNonStr, chipStr, guardStr, legacyGuard: cGuard, legacyChimera: chimeraShield,
+      expChipEnd: Math.round(dmgEnd * 0.3), expChipStr: Math.round(dmgStr * 0.3) };
   });
-  expect(r.afterZero).toBe(3);
-  expect(r.afterMinus).toBe(2);
+  expect(r.guardNonStr).toBe(1);
+  expect(r.chipEnd).toBe(r.expChipEnd);
+  expect(r.guardStr).toBe(0);
+  expect(r.chipStr).toBe(r.expChipStr);
+  expect(r.legacyGuard).toBe(0);
+  expect(r.legacyChimera).toBe(3);
 });
 
 test('failCard: twice same MSK day adds exactly +1 bossRagePoints', async ({ page }) => {
@@ -131,7 +152,7 @@ test('XP curve pinned: getXpToNext(15)=68000, (16)=round(68000*1.65)', async ({ 
   expect(r.l16).toBe(Math.round(68000 * 1.65));
 });
 
-test('boss scaling: stage hp scales +0.25 per 5 hero levels above 1', async ({ page }) => {
+test('boss scaling: piecewise ×0.10/lvl, +0.18/lvl past L10', async ({ page }) => {
   await boot(page);
   const r = await page.evaluate(() => {
     const base = [{ hp: 100, maxHp: 100 }];
@@ -141,8 +162,8 @@ test('boss scaling: stage hp scales +0.25 per 5 hero levels above 1', async ({ p
     const bossStageHpL11 = getCurrentBoss().stages[0].maxHp; // escapeProgress 0 => snake
     return { l1, l6, l11, bossStageHpL11 };
   });
-  expect(r.l1).toBe(100);
-  expect(r.l6).toBe(125); // factor 1.25
-  expect(r.l11).toBe(150); // factor 1.5 (formula: 1 + floor((lvl-1)/5)*0.25)
-  expect(r.bossStageHpL11).toBe(150);
+  expect(r.l1).toBe(100); // factor 1.0
+  expect(r.l6).toBe(150); // factor 1 + 5*0.10
+  expect(r.l11).toBe(218); // factor 1 + 10*0.10 + 1*0.18
+  expect(r.bossStageHpL11).toBe(218);
 });

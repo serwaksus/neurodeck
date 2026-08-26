@@ -885,3 +885,18 @@ button, [data-action], .tab, .demo-btn { touch-action: manipulation; }
 :root.perf-eco .light-rays {
   display: none !important;
 }
+
+/* ===================== Combat actions / Boss intent / Shop ===================== */
+.boss-intent { display: inline-block; margin-top: 8px; padding: 4px 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--gold); border-radius: 2px; font-size: 11px; letter-spacing: 1px; color: var(--gold-bright); }
+.combat-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.action-btn { position: relative; min-width: 44px; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 12px; background: linear-gradient(180deg, var(--surface-hi), var(--surface)); border: 1px solid var(--border-hi); border-radius: 3px; color: var(--text); font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+.action-btn:hover:not(:disabled) { border-color: var(--gold); box-shadow: 0 0 12px rgba(212,165,116,0.25); }
+.action-btn:disabled { opacity: 0.45; cursor: default; }
+.ap-cost { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; display: flex; align-items: center; justify-content: center; background: var(--bg-deep); border: 1px solid var(--gold); border-radius: 8px; font-size: 9px; color: var(--gold-bright); }
+.flask-count { color: var(--gold-bright); font-weight: bold; }
+.shop-item { display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px; }
+.shop-item-name { flex: 1; font-size: 12px; }
+.shop-item-price { font-size: 11px; color: var(--gold-bright); white-space: nowrap; }
+.shop-buy-btn { min-width: 44px; min-height: 44px; padding: 6px 14px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-hi); border-radius: 2px; color: var(--gold-bright); font-size: 11px; cursor: pointer; transition: border-color 0.2s; }
+.shop-buy-btn:hover:not(:disabled) { border-color: var(--gold); }
+.shop-buy-btn:disabled { opacity: 0.45; cursor: default; }

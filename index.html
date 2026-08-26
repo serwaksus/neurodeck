@@ -216,6 +216,15 @@
 <div class="modal-footer"><button class="demo-btn primary" data-action="close-room-detail">Закрыть</button></div>
 </div>
 </div>
+<div class="modal-overlay" role="dialog" aria-modal="true" id="shopModal">
+<div class="modal">
+<div class="modal-header"><h3>🏪 Лавка осколков</h3><button class="modal-close" data-action="close-shop">✕</button></div>
+<div class="modal-body">
+<div id="shopBalance"></div>
+<div id="shopList"></div>
+</div>
+</div>
+</div>
 <div class="modal-overlay" role="dialog" aria-modal="true" id="confirmOverlay">
 <div class="modal confirm-modal">
 <div class="confirm-title" id="confirmTitle">Подтверди</div>
@@ -355,6 +364,7 @@
 <div class="backpack">
 <div class="backpack-header">
 <div class="backpack-title">🎒 Рюкзак</div>
+<button class="backpack-tab" data-action="open-shop">🏪 Лавка</button>
 <div class="backpack-info"><b id="bpCount">0</b> / <b id="bpMax">30</b></div>
 </div>
 <div class="backpack-tabs">
@@ -375,6 +385,7 @@
 <section class="view" id="view-boss">
 <div class="view-title">🐍 Босс локации</div>
 <div class="view-subtitle" id="bossSubtitle">Змей Лени</div>
+<div id="bossIntent" class="boss-intent" aria-live="polite"></div>
 <div id="combatContainer" style="width:100%; aspect-ratio:16/9; overflow:hidden; border-radius:4px; border:1px solid var(--border); background:#000;"></div>
 <div id="combatLoading" style="text-align:center; padding:40px; color:var(--text-dim);">⚔ Загрузка арены...</div>
 <div id="bossLoreText" style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); font-size:11px; line-height:1.7; color:var(--text-dim);"></div>
