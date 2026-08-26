@@ -229,6 +229,15 @@
     isEffectsOff: isEffectsOff,
     attachListeners: attachListeners,
     onChange: onChange,
+    // Совместимость с Crucible-портом: старый API эко-режима
+    isEco: function () {
+      return _mode === 'eco' || (_mode === 'auto' && _systemReduced);
+    },
+    onEcoModeChange: function (fn) {
+      onChange(function (status) {
+        fn(status.isLowEffect || status.mode === 'eco', status.mode);
+      });
+    },
     // Полезно для тестов: получить raw состояние системы
     _state: function () {
       return {

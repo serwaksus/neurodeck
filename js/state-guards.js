@@ -1,6 +1,6 @@
 (function(root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory();
-    else root.NeuroDeckStateGuards = factory();
+    else { root.NeuroDeckStateGuards = factory(); root.STATE_GUARDS = root.NeuroDeckStateGuards; }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
     'use strict';
 
@@ -66,7 +66,7 @@
     }
 
     function sanitizeInventory(input, catalog, maxSlots) {
-        var clean = { backpack: [], equipped: createEmptyEquipped(), maxSlots: Math.max(1, Math.min(60, maxSlots || 30)) };
+        var clean = { backpack: [], equipped: createEmptyEquipped(), maxSlots: Math.max(1, (Number.isFinite(Number(maxSlots)) ? Math.min(60, Math.max(0, Number(maxSlots))) : 30)) };
         var usedIds = Object.create(null);
         var usedUids = Object.create(null);
         input = input && typeof input === 'object' ? input : {};

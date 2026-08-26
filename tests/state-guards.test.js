@@ -12,6 +12,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const SG = require('../js/state-guards.js');
+const guards = SG; // алиас легаси-блока тестов
 
 // ----------------------------------------------------------------
 // Existing 14 tests (kept identical to before v46)
@@ -143,7 +144,8 @@ test('sanitizeHero: CRITICAL #1 — unknown fields dropped, no Object.assign lea
   var allowed = ['name','title','level','xp','xpToNext','totalXp','hp','maxHp',
                 'isHollow','consecutivePerfectDays','dailyCompletions','dailySkips',
                 'actionPoints','lastSessionAt','dailyUniqueStats','cardHistory',
-                'lastWeeklyReport','estus','estusUsedToday','lastEstusReset'];
+                'lastWeeklyReport','shards','flasks',
+                'estus','estusUsedToday','lastEstusReset'];
   Object.keys(out).forEach(function(k) {
     assert.ok(allowed.indexOf(k) !== -1, 'unexpected key leaked: ' + k);
   });
@@ -166,7 +168,8 @@ test('sanitizeHero: null/undefined input → safe defaults', function () {
   assert.equal(out.level, 1);
   assert.equal(out.xp, 0);
   assert.equal(out.maxHp, 80, 'default maxHp = 80');
-  assert.equal(out.estus, 3, 'default estus = 3');
+  assert.equal(out.shards, 0, 'default shards = 0');
+  assert.equal(out.flasks, 0, 'default flasks = 0');
   assert.equal(typeof out.lastSessionAt, 'number');
 });
 
