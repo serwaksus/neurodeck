@@ -31,7 +31,7 @@
   'use strict';
 
   var STORAGE_KEY = 'neurodeck_perf_mode';
-  var VALID_MODES = ['auto', 'low', 'effects-off'];
+  var VALID_MODES = ['auto', 'eco', 'performance', 'low', 'effects-off'];
   var DEFAULT_MODE = 'auto';
 
   // ---- State ---------------------------------------------------------
@@ -118,14 +118,16 @@
    * bloom/grain/chromatic, fx homo. Сохраняем: damage numbers, HP bars, базовые tweens.
    */
   function prefersReducedMotion() {
-    if (_mode === 'low' || _mode === 'effects-off') return true;
+    if (_mode === 'performance') return false;
+    if (_mode === 'low' || _mode === 'effects-off' || _mode === 'eco') return true;
     if (_mode === 'auto' && _systemReduced) return true;
     return false;
   }
 
   function isLowEffect() {
-    // 'low' или 'effects-off' ИЛИ auto+reduce → низкие эффекты для производительности
-    if (_mode === 'low' || _mode === 'effects-off') return true;
+    // 'low'/'effects-off'/'eco' ИЛИ auto+reduce → низкие эффекты для производительности
+    if (_mode === 'performance') return false;
+    if (_mode === 'low' || _mode === 'effects-off' || _mode === 'eco') return true;
     if (_mode === 'auto') {
       // Если устройство слабое, автоматически экономим
       var lowSpec = _detectLowSpec();
@@ -181,6 +183,15 @@
     }
   }
 
+  function _resetForTests() {
+    _mode = DEFAULT_MODE;
+    _systemReduced = false;
+    _changeHandlers.length = 0;
+    try { if (root.localStorage) root.localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    try { if (typeof document !== 'undefined' && document.documentElement) document.documentElement.classList.remove('perf-eco'); } catch (e) {}
+    _applyBodyClasses();
+  }
+
   function _emitChange() {
     for (var i = 0; i < _changeHandlers.length; i++) {
       try {
@@ -229,9 +240,13 @@
     isEffectsOff: isEffectsOff,
     attachListeners: attachListeners,
     onChange: onChange,
+    VALID_MODES: VALID_MODES,
+    DEFAULT_MODE: DEFAULT_MODE,
+    STORAGE_KEY: STORAGE_KEY,
+    _resetForTests: _resetForTests,
     // Совместимость с Crucible-портом: старый API эко-режима
     isEco: function () {
-      return _mode === 'eco' || (_mode === 'auto' && _systemReduced);
+      return _mode === 'eco' || _mode === 'low' || _mode === 'effects-off' || (_mode === 'auto' && _systemReduced);
     },
     onEcoModeChange: function (fn) {
       onChange(function (status) {
@@ -249,4 +264,5 @@
       };
     }
   };
+if (typeof module === 'object' && module.exports) module.exports = root.NeuroDeckPerf;
 })(typeof window !== 'undefined' ? window : globalThis);

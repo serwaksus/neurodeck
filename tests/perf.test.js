@@ -2,6 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+require('../js/perf.js');
+require('../js/perf-compat.js');
 
 const root = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
@@ -73,7 +75,7 @@ test('invalid mode is rejected, current mode preserved', () => {
 
 test('VALID_MODES is exposed and reasonable', () => {
     const P = require('../js/perf.js');
-    assert.deepEqual(P.VALID_MODES.sort(), ['auto', 'eco', 'performance']);
+    assert.deepEqual(P.VALID_MODES.sort(), ['auto', 'eco', 'effects-off', 'low', 'performance']);
 });
 
 test('CHANGE event fires listener only on actual eco transition', () => {
@@ -134,23 +136,25 @@ test('applyToCanvasRenderer downgrades resolution when eco is on', () => {
 
 // ===================== index.html / html wiring =====================
 
-test('index.html loads perf.js after state-guards.js and before storage.js', () => {
+test('index.html loads perf-compat right after perf.js, both before state-guards/storage', () => {
     var sg = html.indexOf('js/state-guards.js');
     var pf = html.indexOf('js/perf.js');
+    var pc = html.indexOf('js/perf-compat.js');
     var st = html.indexOf('js/storage.js');
-    assert.ok(sg > -1 && pf > -1 && st > -1,
-        'all three scripts must be referenced in HTML');
-    assert.ok(sg < pf, 'state-guards must load before perf');
-    assert.ok(pf < st, 'perf must load before storage');
+    assert.ok(sg > -1 && pf > -1 && pc > -1 && st > -1,
+        'all four scripts must be referenced in HTML');
+    assert.ok(pf < pc, 'perf-compat must load right after perf');
+    assert.ok(pc < sg, 'compat must load before state-guards');
+    assert.ok(sg < st, 'state-guards must load before storage');
 });
 
-test('index.html cache-bust v46 is uniform across all 4 JS files', () => {
+test('index.html cache-bust v47 is uniform across all 4 JS files', () => {
     ['js/state-guards.js', 'js/perf.js', 'js/storage.js', 'js/combat-pixi.js', 'js/app.js']
         .forEach(function(rel) {
             var re = new RegExp(rel.replace(/\./g, '\\.') + '\\?v=(\\d+)');
             var m = html.match(re);
             assert.ok(m, 'expected entry for ' + rel);
-            assert.equal(m[1], '46', 'cache-bust for ' + rel + ' should be v46, got ' + m[1]);
+            assert.equal(m[1], '47', 'cache-bust for ' + rel + ' should be v47, got ' + m[1]);
         });
 });
 
