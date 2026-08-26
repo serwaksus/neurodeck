@@ -129,7 +129,7 @@ case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
 case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
-case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf) { window.NeuroDeckPerf.setMode(el.dataset.mode); renderPerfStatus(); showToast('⚡ Режим', 'Производительность: ' + (window.NeuroDeckPerf.getMode() || 'auto')); } break;
+case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf && window.NeuroDeckPerf.setMode(el.dataset.mode)) { renderPerfStatus(); showToast('⚡ Режим изменён', { 'auto': 'Авто — эффекты зависят от системных настроек', 'eco': 'Эко — минимальная графика', 'performance': 'Все эффекты включены', 'low': 'Экономный режим — меньше анимаций', 'effects-off': 'Анимации отключены' }[el.dataset.mode] || el.dataset.mode); } break;
 case 'close-return-modal': closeReturnModal(); break;
 case 'close-evolution-modal': closeEvolutionModal(); break;
 case 'apply-evolution-depth': applyEvolution('depth'); break;
@@ -3023,28 +3023,6 @@ initNotifs();
 function initPerfMode() {
     var P = window.NeuroDeckPerf;
     if (!P) return;
-    // Sync UI selection with stored preference
-    var select = document.getElementById('perfModeSelect');
-    if (select) {
-        try { select.value = P.getMode(); } catch (e) { /* ignore */ }
-        select.addEventListener('change', function() {
-            var mode = select.value;
-            if (P.setMode(mode)) {
-                var hints = {
-                    'auto': 'Auto — эффекты зависят от системных настроек.',
-                    'eco': 'Eco — выключены пыль, частицы, лёгкие эффекты.',
-                    'performance': 'Производительность — все эффекты включены.'
-                };
-                var hint = document.getElementById('perfModeHint');
-                if (hint) hint.textContent = hints[mode] || hints.auto;
-                showToast('⚡ Режим изменён', {
-                    'auto': 'Авто-определение',
-                    'eco': 'Минимальная графика',
-                    'performance': 'Все эффекты'
-                }[mode] || mode);
-            }
-        });
-    }
     // When perf.js flips the eco flag, push the resolution change into PixiJS.
     P.onEcoModeChange(function(isEco, userMode) {
         try {

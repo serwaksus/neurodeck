@@ -169,15 +169,6 @@ test('index.html cache-bust v47 is uniform across all 4 JS files', () => {
         });
 });
 
-test('syncModal contains perf mode select', () => {
-    assert.ok(html.indexOf('id="perfModeSelect"') > -1,
-        'perfModeSelect not found in index.html');
-    assert.ok(html.indexOf('value="eco"') > -1, 'eco option missing');
-    assert.ok(html.indexOf('value="performance"') > -1, 'performance option missing');
-    assert.ok(html.indexOf('value="auto"') > -1, 'auto option missing');
-    assert.ok(html.indexOf('id="perfModeHint"') > -1, 'perfModeHint not found');
-});
-
 // ===================== CSS :root.perf-eco rules =====================
 
 test('CSS contains :root.perf-eco selector', () => {
@@ -231,20 +222,22 @@ test('app.js __ndSetEcoMode toggles particlesRunning', () => {
         '__ndSetEcoMode must toggle particlesRunning');
 });
 
-test('app.js initPerfMode wires select handler', () => {
-    var m = app.match(/function initPerfMode\([\s\S]*?\n\}/);
-    assert.ok(m, 'initPerfMode function missing');
-    assert.ok(m[0].indexOf('addEventListener') > -1,
-        'initPerfMode must attach event listener');
-    assert.ok(m[0].indexOf('P.setMode(') > -1,
-        'initPerfMode must call P.setMode on change');
+test('app.js set-perf dispatcher applies mode change', () => {
+    var m = app.match(/case 'set-perf':[\s\S]*?break;/);
+    assert.ok(m, 'set-perf dispatcher case missing');
+    assert.ok(m[0].indexOf('setMode(') > -1,
+        'set-perf must call setMode on button click');
 });
 
-test('app.js initPerfMode notifies on user toggle', () => {
-    var m = app.match(/function initPerfMode\([\s\S]*?\n\}/);
+test('app.js set-perf notifies user with five-mode map', () => {
+    var m = app.match(/case 'set-perf':[\s\S]*?break;/);
     assert.ok(m);
     assert.ok(m[0].indexOf('showToast') > -1,
-        'initPerfMode should toast user feedback on mode change');
+        'set-perf should toast user feedback on mode change');
+    ['auto', 'eco', 'performance', 'low', 'effects-off'].forEach(function(mode) {
+        assert.ok(m[0].indexOf("'" + mode + "'") > -1,
+            'feedback map must cover mode: ' + mode);
+    });
 });
 
 test('combat-pixi.js exposes __ndApplyEcoToPixi global', () => {
