@@ -746,7 +746,7 @@ var lastWeekReset = getThisMondayKey();
 // === CRUCIBLE COMBAT v2: транзиентное состояние боя (не сохраняется —
 // при перезагрузке текущий бой начинается заново; mirror tools/combat-lab/combat_model.gd) ===
 var cHeroShield = 0, cFocus = 0, cFocusMax = 2, cFlaskUsed = false;
-var cRound = 0, cRage = 0, cIntent = 'quick';
+var cRound = 0, cRage = 0, cIntent = 'quick', cRunLocked = false;
 var cPoisonTicks = 0, cPoisonDmg = 0, cStanceCount = 0, cGuard = 0;
 var C_ATTACK = { normal: [9, 11, 13], social: [10, 12, 14], chimera: [12, 14, 16] };
 var C_SPECIAL = { normal: 'poison', social: 'burn', chimera: 'guard' };
@@ -1019,6 +1019,7 @@ updateBossDisplay();
 saveGameState();
 }
 function crucibleAction(action) {
+if (cRunLocked) { showToast('☠ Ран провален', 'Выпей флягу в рюкзаке — вернёшься в бой', 'blood'); sfxError(); return; }
 if (bossDefeated) { showToast('☠ Босс повержен', 'Нечего атаковать', 'blood'); return; }
 if (getBattlePhase() !== 'battle') { showToast('⛏ Не время', 'Фаза схватки: пятница — воскресенье', 'blood'); return; }
 crucibleHeroAction(action);
@@ -1172,6 +1173,7 @@ function crucibleRunFailed() {
 var failedStage = bossStage;
 HERO.hp = 1;
 bossStage = 0;
+cRunLocked = true;
 crucibleResetTransient();
 cStanceCount = 0;
 cIntent = 'quick';
@@ -1377,6 +1379,7 @@ function drinkFlaskOutside() {
 if ((HERO.flasks || 0) <= 0) { showToast('🧪 Фляг нет', 'Купи в Лавке за осколки', 'blood'); sfxError(); return; }
 if (HERO.hp >= HERO.maxHp) { showToast('❤ Здоровье полное', 'Фляга не нужна'); return; }
 HERO.flasks--;
+cRunLocked = false;
 var healed = Math.min(HERO.maxHp - HERO.hp, Math.round(HERO.maxHp * 0.5));
 HERO.hp += healed;
 haptic('light');
@@ -2872,6 +2875,7 @@ screenShake(8, 400);
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
 HERO.dailyUniqueStats = {};
+cRunLocked = false;
 chimeraShield = 3;
 var currentMonday = getThisMondayKey();
 if (lastWeekReset !== currentMonday) {

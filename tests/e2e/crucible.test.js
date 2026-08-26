@@ -384,3 +384,25 @@ test('OUT-OF-COMBAT FLASK: backpack drink heals 50%, decrements, guards full-hp'
   expect(r2.hp).toBe(r2.maxHp);
   expect(r2.flasks).toBe(1);
 });
+
+test('RUN LOCK: strike blocked after run-fail until flask drink or Monday', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(SETUP + `
+    prime({ stats: { str: 12, end: 5, int: 0, cha: 0, wil: 2, agi: 1 }, stage: 0, intent: 'quick' });
+    HERO.hp = 5; HERO.flasks = 1; HERO.maxHp = calcMaxHp();
+    bossHp = getCurrentBoss().stages[0].maxHp;
+    cRunLocked = true;
+    const hpBeforeLock = HERO.hp, bossBeforeLock = bossHp;
+    crucibleAction('strike');
+    const lockedBlocked = bossHp === bossBeforeLock && HERO.hp === hpBeforeLock;
+    drinkFlaskOutside();
+    const unlockedAfterFlask = !cRunLocked;
+    var hpBeforeStrike = HERO.hp, bossBeforeStrike = bossHp;
+    attackBoss(); // напрямую: гейт фазы схватки не должен мешать проверке удара
+    const strikeLanded = bossHp < bossBeforeStrike || HERO.hp < hpBeforeStrike;
+    return { lockedBlocked, unlockedAfterFlask, strikeLanded };
+  })()`);
+  expect(r.lockedBlocked).toBe(true);
+  expect(r.unlockedAfterFlask).toBe(true);
+  expect(r.strikeLanded).toBe(true);
+});

@@ -10,8 +10,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -25,7 +25,7 @@ jobs:
         # Baselines were captured off-CI; ubuntu-latest rendering differs.
         # Non-blocking until CI-native baselines prove stable.
         continue-on-error: true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         # failure() misses the visual step (continue-on-error keeps the job
         # green), so also fire on its raw outcome.
         if: failure() || steps.visual.outcome == 'failure'
@@ -47,7 +47,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: rm -f index_backup.html index768_backup.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
