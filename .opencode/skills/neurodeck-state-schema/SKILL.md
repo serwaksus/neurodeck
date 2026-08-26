@@ -7,7 +7,7 @@ description: Exact data schema for all NeuroDeck game state objects. Use when to
 
 > **LAST UPDATED:** v39 (commit d5c63b2)
 
-## HERO: { name, title, level, xp, xpToNext, totalXp, hp, maxHp, isHollow, consecutivePerfectDays, dailyCompletions, dailySkips, actionPoints, lastSessionAt, dailyUniqueStats:{}, cardHistory:{}, lastWeeklyReport }
+## HERO: { name, title, level, xp, xpToNext, totalXp, hp, maxHp, isHollow, consecutivePerfectDays, dailyCompletions, dailySkips, actionPoints, lastSessionAt, dailyUniqueStats:{}, cardHistory:{}, lastWeeklyReport, shards:0+, flasks:0-5 }
 
 ## STATS (6): { name, icon, desc, color, dark, value:3, max:100, attributePoints:0 }
 - attributePoints: +1 per completion + rank-up. threshold = 5+floor(val×1.5)
@@ -23,4 +23,4 @@ description: Exact data schema for all NeuroDeck game state objects. Use when to
 
 ## Combat state: SEPARATE in combat-pixi.js (IIFE), synced via window.updateHP()
 
-## Save: { hero, stats, forged, goals, inventory, escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield, forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills, bloodOath, bossRagePoints, lastWeekReset, savedAt }
+## Save: { hero, stats, forged, goals, inventory, escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield, forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills, bloodOath, bossRagePoints, lastWeekReset, savedAt } — SCHEMA_VERSION 6 (MIGRATIONS[6]: legacy → hero.flasks=2); uidCounter floored above surviving backpack uids on import

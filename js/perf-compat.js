@@ -44,7 +44,7 @@
   _last = computeEco();
   P.onChange(_bridge);
   function _bridge(status) {
-    var eco = status.mode === 'eco' || (status.mode === 'auto' && !!status.prefersReducedMotion);
+    var eco = status.isLowEffect || status.mode === 'eco';
     if (_last === null) { _last = eco; return; }
     if (eco === _last) return;
     _last = eco;

@@ -466,6 +466,8 @@ margin-top: 8px; font-style: italic;
 .backpack-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
 .backpack-tab { flex: 1; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-dim); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border-radius: 2px; font-family: inherit; min-width: 70px; }
 .backpack-tab.active { background: rgba(212, 165, 116, 0.1); border-color: var(--gold); color: var(--gold-bright); }
+.backpack-tab:disabled { opacity: 0.4; cursor: default; }
+.backpack-tab:disabled:hover { border-color: var(--border); background: rgba(0,0,0,0.3); }
 .backpack-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 .bp-cell { aspect-ratio: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; position: relative; transition: all 0.2s; overflow: hidden; min-width: 40px; }
 .bp-cell:hover { border-color: var(--border-hi); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }

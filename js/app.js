@@ -3005,9 +3005,10 @@ function renderPerfStatus() {
     if (low) txt += ' · <span style="color:var(--green)">low-effect</span>';
     if (m === 'effects-off') txt += ' · <span style="color:var(--blood-bright)">анимации отключены</span>';
     status.innerHTML = txt;
+    var eff = m === 'eco' ? 'low' : (m === 'performance' ? 'auto' : m);
     ['perfAutoBtn','perfLowBtn','perfOffBtn'].forEach(function(id){
         var b = document.getElementById(id);
-        if (b) { b.style.borderColor = (b.dataset.mode === m) ? 'var(--gold-bright)' : ''; b.style.background = (b.dataset.mode === m) ? 'rgba(212,165,116,0.15)' : ''; }
+        if (b) { b.style.borderColor = (b.dataset.mode === eff) ? 'var(--gold-bright)' : ''; b.style.background = (b.dataset.mode === eff) ? 'rgba(212,165,116,0.15)' : ''; }
     });
 }
 function initPerf() {
