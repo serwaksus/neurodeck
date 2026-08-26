@@ -176,6 +176,7 @@ case 'c-stance': crucibleAction('stance'); break;
 case 'c-focus': crucibleAction('focus'); break;
 case 'c-flask': crucibleAction('flask'); break;
 case 'open-shop': openShop(); break;
+case 'drink-flask': drinkFlaskOutside(); break;
 case 'close-shop': closeShop(); break;
 case 'buy-flask': buyFlask(); break;
 default:
@@ -1372,6 +1373,18 @@ renderShop();
 updateHeroUI();
 saveGameState();
 }
+function drinkFlaskOutside() {
+if ((HERO.flasks || 0) <= 0) { showToast('🧪 Фляг нет', 'Купи в Лавке за осколки', 'blood'); sfxError(); return; }
+if (HERO.hp >= HERO.maxHp) { showToast('❤ Здоровье полное', 'Фляга не нужна'); return; }
+HERO.flasks--;
+var healed = Math.min(HERO.maxHp - HERO.hp, Math.round(HERO.maxHp * 0.5));
+HERO.hp += healed;
+haptic('light');
+showToast('🧪 Фляга выпита', '+' + healed + ' HP');
+renderBackpack();
+updateHeroUI();
+saveGameState();
+}
 function renderBackpack() {
 const grid = document.getElementById('backpackGrid');
 if (!grid) return;
@@ -1389,6 +1402,11 @@ bpHead.appendChild(sd);
 }
 var shardEl = document.getElementById('bpShards');
 if (shardEl) shardEl.textContent = 'Осколки: ' + (HERO.shards || 0);
+var flaskBtn = document.getElementById('bpFlaskBtn');
+if (flaskBtn) {
+flaskBtn.textContent = '🧪 Фляга ×' + (HERO.flasks || 0);
+flaskBtn.disabled = (HERO.flasks || 0) <= 0;
+}
 filtered.forEach(item => {
 const rc = getRankColorInfo(item.rank);
 const cell = document.createElement('div');

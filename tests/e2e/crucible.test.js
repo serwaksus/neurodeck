@@ -364,3 +364,23 @@ test('SHOP + PERSISTENCE: flask economy, artifact purchase, save/reload, v5=>v6 
   expect(migrated.flasks).toBe(2);
   expect(migrated.storedV).toBe(6);
 });
+
+test('OUT-OF-COMBAT FLASK: backpack drink heals 50%, decrements, guards full-hp', async ({ page }) => {
+  await boot(page);
+  const r1 = await page.evaluate(() => {
+    HERO.flasks = 2;
+    HERO.maxHp = calcMaxHp();
+    HERO.hp = 10;
+    drinkFlaskOutside();
+    return { hp: HERO.hp, maxHp: HERO.maxHp, flasks: HERO.flasks };
+  });
+  expect(r1.hp).toBe(10 + Math.round(r1.maxHp * 0.5));
+  expect(r1.flasks).toBe(1);
+  const r2 = await page.evaluate(() => {
+    HERO.hp = HERO.maxHp;
+    drinkFlaskOutside();
+    return { hp: HERO.hp, maxHp: HERO.maxHp, flasks: HERO.flasks };
+  });
+  expect(r2.hp).toBe(r2.maxHp);
+  expect(r2.flasks).toBe(1);
+});
