@@ -27,6 +27,17 @@ test('perf.js exposes UMD module via module.exports', () => {
     assert.equal(typeof P.applyToCanvasRenderer, 'function');
 });
 
+test('isEco covers low/effects-off union (compat semantics)', () => {
+    const P = require('../js/perf.js');
+    P._resetForTests();
+    P.setMode('low');
+    assert.equal(P.isEco(), true, 'low must be eco-true');
+    P.setMode('effects-off');
+    assert.equal(P.isEco(), true, 'effects-off must be eco-true');
+    P.setMode('performance');
+    assert.equal(P.isEco(), false, 'performance must be eco-false');
+});
+
 test('default mode is auto, default eco is false', () => {
     const P = require('../js/perf.js');
     // Mode may already be 'eco' or 'performance' if a previous test set it.

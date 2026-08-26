@@ -700,7 +700,14 @@ if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
 if (typeof data.chimeraShield === 'number') chimeraShield = Math.max(0, Math.min(5, Math.round(data.chimeraShield)));
 if (data.forgedIdCounter) forgedIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100), maxExistingId(FORGED) + 1);
-if (data.uidCounter) uidCounter = STATE_GUARDS.sanitizeCounter(data.uidCounter, 10);
+if (data.uidCounter) {
+var maxUid = 0;
+(INVENTORY.backpack || []).forEach(function(it) {
+var n = parseInt(String(it && it.uid ? it.uid : '').replace(/^[^\d]*/, ''), 10);
+if (Number.isFinite(n) && n > maxUid) maxUid = n;
+});
+uidCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.uidCounter, 10), maxUid + 1);
+}
 if (data.goalIdCounter) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.goalIdCounter, 1), maxExistingId(GOALS) + 1);
 else if (data.counter != null) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.counter, 1), maxExistingId(GOALS) + 1);
 if (Array.isArray(data.xpHistory)) xpHistory = STATE_GUARDS.sanitizeXpHistory(data.xpHistory);

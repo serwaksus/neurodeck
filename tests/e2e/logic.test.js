@@ -145,6 +145,23 @@ test('getPrestigeXPBonus caps at 1.5 with high prestige values', async ({ page }
   expect(r.untouched).toBe(1);
 });
 
+test('perf-eco class applied on documentElement in eco and low modes', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    var P = window.NeuroDeckPerf;
+    P.setMode('eco');
+    var ecoApplied = document.documentElement.classList.contains('perf-eco');
+    P.setMode('low');
+    var lowApplied = document.documentElement.classList.contains('perf-eco');
+    P.setMode('performance');
+    var perfCleared = !document.documentElement.classList.contains('perf-eco');
+    return { ecoApplied, lowApplied, perfCleared };
+  });
+  expect(r.ecoApplied).toBe(true);
+  expect(r.lowApplied).toBe(true);
+  expect(r.perfCleared).toBe(true);
+});
+
 test('XP curve pinned: getXpToNext(15)=68000, (16)=round(68000*1.65)', async ({ page }) => {
   await boot(page);
   const r = await page.evaluate(() => ({ l15: getXpToNext(15), l16: getXpToNext(16) }));

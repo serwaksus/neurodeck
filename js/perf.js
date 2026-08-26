@@ -150,6 +150,9 @@
     body.classList.toggle('reduced-motion', prefersReducedMotion());
     body.classList.toggle('low-effect', isLowEffect());
     body.classList.toggle('effects-off', isEffectsOff());
+    if (document.documentElement) {
+      document.documentElement.classList.toggle('perf-eco', prefersReducedMotion() || _mode === 'eco');
+    }
     // mode-* для удобства отладки
     body.setAttribute('data-perf-mode', _mode);
   };

@@ -15,7 +15,7 @@
 
   function computeEco() {
     var mode = P.getMode();
-    return mode === 'eco' || (mode === 'auto' && P.prefersReducedMotion());
+    return mode === 'eco' || mode === 'low' || mode === 'effects-off' || (mode === 'auto' && P.prefersReducedMotion());
   }
 
   P.isEco = function () { return computeEco(); };

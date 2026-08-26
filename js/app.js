@@ -1168,6 +1168,7 @@ triggerBossExecution();
 saveGameState();
 }
 function crucibleRunFailed() {
+var failedStage = bossStage;
 HERO.hp = 1;
 bossStage = 0;
 crucibleResetTransient();
@@ -1180,7 +1181,7 @@ updateBossIntentUI();
 saveGameState();
 showToast('☠ Ран провален', getCurrentBoss().name + ' восстановил все силы.', 'blood');
 dungeonConfirm('☠ Ран провален',
-'Ты пал в бою <b>' + (bossStage + 1) + '/3</b>.<br><br>' +
+'Ты пал в бою <b>' + (failedStage + 1) + '/3</b>.<br><br>' +
 'Босс полностью восстановил силы — весь ран сгорел.<br>' +
 '<span style="color:var(--gold-bright)">Копи ОД и фляги до пятницы и попробуй снова.</span>'
 ).then(function() { switchView('deck'); });
@@ -1368,6 +1369,7 @@ if (INVENTORY.backpack.length >= INVENTORY.maxSlots) { showToast('🎒 Рюкз�
 HERO.shards -= price;
 addArtifactToBackpack(a);
 renderShop();
+updateHeroUI();
 saveGameState();
 }
 function renderBackpack() {
