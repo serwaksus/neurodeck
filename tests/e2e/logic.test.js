@@ -162,6 +162,23 @@ test('perf-eco class applied on documentElement in eco and low modes', async ({ 
   expect(r.perfCleared).toBe(true);
 });
 
+test('perf bridge: legacy listener fires only on eco transitions incl low/effects-off', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    var P = window.NeuroDeckPerf;
+    P._resetForTests();
+    var calls = [];
+    P.onEcoModeChange(function(isEco, mode) { calls.push([isEco, mode]); });
+    P.setMode('low');
+    P.setMode('effects-off');
+    P.setMode('performance');
+    return calls;
+  });
+  expect(r.length).toBe(2);
+  expect(r[0]).toEqual([true, 'low']);
+  expect(r[1]).toEqual([false, 'performance']);
+});
+
 test('XP curve pinned: getXpToNext(15)=68000, (16)=round(68000*1.65)', async ({ page }) => {
   await boot(page);
   const r = await page.evaluate(() => ({ l15: getXpToNext(15), l16: getXpToNext(16) }));
