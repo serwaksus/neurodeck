@@ -98,7 +98,7 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 }
 const snapshot = {
 v: SCHEMA_VERSION, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
+escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, bossRunLocked: cRunLocked,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, bossRagePoints: bossRagePoints, lastWeekReset: lastWeekReset, savedAt: Date.now()
 };
 pruneAgedHistory(HERO, 120);
@@ -445,7 +445,7 @@ function buildSyncData() {
 return {
 v: SCHEMA_VERSION, t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield,
+escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, bossRunLocked: cRunLocked,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, bossRagePoints, lastWeekReset
 };
 }
@@ -698,7 +698,7 @@ if (typeof data.bossHp === 'number') bossHp = Math.max(0, data.bossHp);
 if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
 if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
 if (data.lastDayReset) lastDayReset = data.lastDayReset;
-if (typeof data.chimeraShield === 'number') chimeraShield = Math.max(0, Math.min(5, Math.round(data.chimeraShield)));
+if (typeof data.bossRunLocked === 'boolean') cRunLocked = data.bossRunLocked;
 if (data.forgedIdCounter) forgedIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100), maxExistingId(FORGED) + 1);
 if (data.uidCounter) {
 var maxUid = 0;

@@ -45,7 +45,7 @@ test('crucible guard: blocked strike chips 30% and consumes charge; str pierces 
     const chipStr = hp1 - bossHp;
     const guardStr = cGuard;
     changeBossHp(-1); // legacy API: no longer mutates any shield
-    return { chipEnd, guardNonStr, chipStr, guardStr, legacyGuard: cGuard, legacyChimera: chimeraShield,
+    return { chipEnd, guardNonStr, chipStr, guardStr, legacyGuard: cGuard,
       expChipEnd: Math.round(dmgEnd * 0.3), expChipStr: Math.round(dmgStr * 0.3) };
   });
   expect(r.guardNonStr).toBe(1);
@@ -53,7 +53,6 @@ test('crucible guard: blocked strike chips 30% and consumes charge; str pierces 
   expect(r.guardStr).toBe(0);
   expect(r.chipStr).toBe(r.expChipStr);
   expect(r.legacyGuard).toBe(0);
-  expect(r.legacyChimera).toBe(3);
 });
 
 test('failCard: twice same MSK day adds exactly +1 bossRagePoints', async ({ page }) => {
@@ -200,4 +199,21 @@ test('boss scaling: piecewise ×0.10/lvl, +0.18/lvl past L10', async ({ page }) 
   expect(r.l6).toBe(150); // factor 1 + 5*0.10
   expect(r.l11).toBe(218); // factor 1 + 10*0.10 + 1*0.18
   expect(r.bossStageHpL11).toBe(218);
+});
+
+test('perf UI: perfLowBtn click drives full chain (setMode, bridge, legacy listener)', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    var P = window.NeuroDeckPerf;
+    P._resetForTests();
+    var fired = [];
+    P.onEcoModeChange(function(isEco, mode) { fired.push([isEco, mode]); });
+    var btn = document.getElementById('perfLowBtn');
+    if (!btn) return { error: 'perfLowBtn not found' };
+    btn.click();
+    return { mode: P.getMode(), eco: P.isEco(), fired: fired };
+  });
+  expect(r.mode).toBe('low');
+  expect(r.eco).toBe(true);
+  expect(r.fired).toEqual([[true, 'low']]);
 });

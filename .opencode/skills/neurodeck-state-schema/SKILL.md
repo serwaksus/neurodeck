@@ -19,8 +19,8 @@ description: Exact data schema for all NeuroDeck game state objects. Use when to
 ## ARTIFACT: { id, name, icon, rank, slot, category, bonuses:[{stat,value,label}], special, lore }
 - EQUIP: C=none, B=2+BBB+, A=2+AAA+, S=2+SSS+
 
-## Module state: bossHp, bossStage(0-2), bossDefeated, chimeraShield(5), bossRagePoints(0), lastWeekReset, escapeProgress(0-140), lastDayReset, bloodOath
+## Module state: bossHp, bossStage(0-2), bossDefeated, bossRagePoints(0), bossRunLocked(transient), lastWeekReset, escapeProgress(0-140), lastDayReset, bloodOath
 
 ## Combat state: SEPARATE in combat-pixi.js (IIFE), synced via window.updateHP()
 
-## Save: { hero, stats, forged, goals, inventory, escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, chimeraShield, forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills, bloodOath, bossRagePoints, lastWeekReset, savedAt } — SCHEMA_VERSION 6 (MIGRATIONS[6]: legacy → hero.flasks=2); uidCounter floored above surviving backpack uids on import
+## Save: { hero, stats, forged, goals, inventory, escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, bossRunLocked, forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills, bloodOath, bossRagePoints, lastWeekReset, savedAt } — SCHEMA_VERSION 6 (MIGRATIONS[6]: legacy → hero.flasks=2); uidCounter floored above surviving backpack uids on import; bossRunLocked persists run-fail gate across reload

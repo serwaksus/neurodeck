@@ -740,7 +740,6 @@ saveGameState();
 let bossHp = 100;
 let bossStage = 0;
 let bossDefeated = false;
-let chimeraShield = 3;
 let bossRagePoints = 0;
 var lastWeekReset = getThisMondayKey();
 // === CRUCIBLE COMBAT v2: транзиентное состояние боя (не сохраняется —
@@ -902,7 +901,6 @@ setTimeout(() => {
 bossDefeated = false;
 if (window.setBossDefeated) window.setBossDefeated(false);
 bossStage = 0;
-chimeraShield = 3;
 bossRagePoints = 0;
 HERO.actionPoints = 0;
 const newBoss = getCurrentBoss();
@@ -2875,8 +2873,6 @@ screenShake(8, 400);
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
 HERO.dailyUniqueStats = {};
-cRunLocked = false;
-chimeraShield = 3;
 var currentMonday = getThisMondayKey();
 if (lastWeekReset !== currentMonday) {
 if (bossRagePoints > 0) {
@@ -2890,6 +2886,7 @@ updateHeroUI();
 HERO.actionPoints = 0;
 bossRagePoints = 0;
 lastWeekReset = currentMonday;
+cRunLocked = false;
 showToast('🗓 Новая неделя', 'Очки действия и ярости сброшены', 'save');
 setTimeout(showWeeklyReport, 2000);
 }
@@ -3272,7 +3269,6 @@ checkBloodOath();
 if (bossDefeated) {
 bossDefeated = false;
 bossStage = 0;
-chimeraShield = 3;
 const newBoss = getCurrentBoss();
     bossHp = newBoss.stages[0].maxHp;
     saveGameState();

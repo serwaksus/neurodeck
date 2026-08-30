@@ -268,7 +268,7 @@ test('Storage snapshot includes all critical game fields', () => {
     assert.ok(m, 'snapshot object literal missing in storage.js');
     const fields = ['hero', 'stats', 'forged', 'goals', 'inventory',
         'escapeProgress', 'bossHp', 'bossStage', 'bossDefeated',
-        'lastDayReset', 'chimeraShield', 'forgedIdCounter', 'uidCounter',
+        'lastDayReset', 'bossRunLocked', 'forgedIdCounter', 'uidCounter',
         'goalIdCounter', 'xpHistory', 'bossKills', 'bloodOath',
         'bossRagePoints', 'lastWeekReset', 'savedAt'];
     fields.forEach(f => {

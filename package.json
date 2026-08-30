@@ -7,7 +7,7 @@
     "check:js": "node --check js/state-guards.js && node --check js/perf.js && node --check js/storage.js && node --check js/combat-pixi.js && node --check js/app.js",
     "test": "node --test tests/*.test.js",
     "ci": "npm run check:js && npm test && npm run test:e2e && npm run test:e2e:visual",
-    "test:e2e": "npx playwright test tests/e2e/neurodeck.test.js tests/e2e/logic.test.js",
+    "test:e2e": "npx playwright test tests/e2e/neurodeck.test.js tests/e2e/logic.test.js tests/e2e/crucible.test.js",
     "test:e2e:visual": "npx playwright test tests/e2e/visual-regression.test.js",
     "test:e2e:visual:update": "npm run test:e2e:visual -- --update-snapshots",
     "test:e2e:all": "npx playwright test tests/e2e/",
