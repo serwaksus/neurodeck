@@ -944,39 +944,14 @@
                   <div class="hero-title" id="heroTitle">
                     «Тот, кто только начал путь»
                   </div>
-                  <div class="difficulty-badge">Souls-like</div>
+
                   <div class="hero-hp-block">
                     <div class="hero-hp-header">
-                      <span>❤ Здоровье</span>
-                      <span
-                        ><b id="heroHpCur">100</b> /
-                        <b id="heroHpMax">100</b></span
-                      >
-                    </div>
-                    <div class="hero-hp-bar">
-                      <div
-                        class="hero-hp-fill"
-                        id="heroHpFill"
-                        style="width: 100%"
-                      ></div>
+                      <span>💰 Казна</span
+                      ><span><b id="heroGoldVal">0</b> 💰</span>
                     </div>
                     <div class="hero-hp-meta">
-                      <span id="heroHpWarn"></span>
-                      <span>Стойкость: <b id="heroEndStat">3</b></span>
-                    </div>
-                  </div>
-                  <div
-                    class="atonement-bar"
-                    id="atonementBar"
-                    style="display: none"
-                  >
-                    <div class="atonement-label">
-                      Ритуал Искупления (идеальные дни подряд)
-                    </div>
-                    <div class="atonement-track">
-                      <div class="atonement-segment" id="at1"></div>
-                      <div class="atonement-segment" id="at2"></div>
-                      <div class="atonement-segment" id="at3"></div>
+                      <span>Доход тракта капает каждый день</span>
                     </div>
                   </div>
                   <div class="hero-xp-block">
@@ -1248,67 +1223,6 @@
               <div id="statsContent"></div>
             </section>
           </main>
-          <aside class="boss-panel">
-            <div class="boss-title" id="bossPanelTitle">🐍 Змей Лени</div>
-            <div class="boss-image" id="bossImg">
-              <div class="boss-sprite boss-anim-stage1"></div>
-              <div class="boss-eyes">
-                <div class="boss-eye left"></div>
-                <div class="boss-eye right"></div>
-              </div>
-              <div class="boss-blood" id="bossBlood"></div>
-              <div class="boss-cracks" id="bossCracks"></div>
-              <div class="boss-defeated-overlay" id="bossDefeatedPanel">
-                <div class="skull">☠</div>
-                <div class="defeat-text">ПОВЕРЖЕН</div>
-                <div class="defeat-sub">Тьма отступает...</div>
-              </div>
-            </div>
-            <div class="boss-hp" id="bossHpBlockPanel">
-              <div class="boss-hp-label">
-                <span>HP</span><b id="bossHpText">100%</b>
-              </div>
-              <div class="boss-hp-bar">
-                <div
-                  class="boss-hp-fill"
-                  id="bossHpFill"
-                  style="width: 100%"
-                ></div>
-              </div>
-            </div>
-            <div class="boss-info" id="bossInfo">«Я жду...»</div>
-            <div
-              style="
-                font-size: 10px;
-                color: var(--blood-bright);
-                text-align: center;
-                padding: 2px 0;
-              "
-              id="punishCountdown"
-            ></div>
-            <div
-              style="
-                border-top: 1px solid var(--border);
-                padding-top: 8px;
-                margin-top: auto;
-              "
-            >
-              <div
-                class="boss-title"
-                style="border: none; padding: 0; margin-bottom: 6px"
-              >
-                ⚡ Твой урон
-              </div>
-              <div
-                style="
-                  font-size: 10px;
-                  color: var(--text-dim);
-                  line-height: 1.7;
-                "
-                id="damageInfo"
-              ></div>
-            </div>
-          </aside>
         </div>
         <footer class="bottom-nav">
           <button
@@ -1492,7 +1406,6 @@
       </div>
     </div>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"></script>
     <script src="js/perf.js?v=49"></script>
     <script src="js/perf-compat.js?v=49"></script>
     <script src="js/state-guards.js?v=49"></script>

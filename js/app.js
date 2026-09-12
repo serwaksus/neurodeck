@@ -28,7 +28,6 @@ function sfxCrit() { playTone(400, 0.08, 'square', 0.15); setTimeout(function() 
 function sfxRankUp() { playTone(300, 0.1, 'square', 0.12); setTimeout(function() { playTone(450, 0.1, 'square', 0.12); }, 80); setTimeout(function() { playTone(600, 0.1, 'square', 0.12); }, 160); setTimeout(function() { playTone(900, 0.25, 'triangle', 0.1); }, 240); }
 function sfxLevelUp() { [400,500,600,700,800,1000].forEach(function(f, i) { setTimeout(function() { playTone(f, 0.12, 'square', 0.1); }, i * 70); }); }
 function sfxFail() { playTone(300, 0.15, 'sawtooth', 0.1, 100); }
-function sfxBossHit() { playTone(100, 0.2, 'sawtooth', 0.15, 50); setTimeout(function() { playTone(80, 0.3, 'sawtooth', 0.12, 40); }, 100); }
 function sfxForge() { playTone(150, 0.1, 'square', 0.1); setTimeout(function() { playTone(250, 0.15, 'square', 0.1); }, 100); setTimeout(function() { playTone(400, 0.2, 'triangle', 0.08); }, 200); }
 function sfxGoalComplete() { playTone(500, 0.1, 'square', 0.1); setTimeout(function() { playTone(650, 0.1, 'square', 0.1); }, 80); setTimeout(function() { playTone(800, 0.1, 'square', 0.1); }, 160); setTimeout(function() { playTone(1000, 0.3, 'triangle', 0.08); }, 240); }
 function sfxBossDefeated() { [200,300,400,500,600,800,1000,1200].forEach(function(f, i) { setTimeout(function() { playTone(f, 0.15, 'square', 0.1); }, i * 100); }); }
@@ -85,7 +84,6 @@ cha: { name: 'Харизма',   icon: '🎭', desc: 'Шанс крита', colo
 wil: { name: 'Воля',      icon: '🧘', desc: 'Стрик',      color: '#34d399', dark: '#047857', value: 3, max: 100, attributePoints: 0 },
 agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color: '#fb923c', dark: '#c2410c', value: 3, max: 100, attributePoints: 0 },
 };
-const BASE_DAMAGE = 5;
 function getLootChance(card) { return 0.05 + Math.min(0.05, (card.streak || 0) * 0.0025); }
 const STARTER_DECK = [
     { name: 'Зарядка 10 мин',     stat: 'str', time: 'утро',  duration: 10 },
@@ -513,6 +511,8 @@ const ringR = parseFloat(document.getElementById('ringFill').getAttribute('r')) 
 const ringCirc = 2 * Math.PI * ringR;
 document.getElementById('ringFill').setAttribute('stroke-dasharray', ringCirc);
 document.getElementById('ringFill').setAttribute('stroke-dashoffset', ringCirc * (1 - HERO.xp / HERO.xpToNext));
+var goldEl = document.getElementById('heroGoldVal');
+if (goldEl) goldEl.textContent = (HERO.gold || 0).toLocaleString('ru');
 updateHeroSummary(); renderTract();
 }
 function updateHeroSummary() {
@@ -2363,15 +2363,20 @@ const todayKey = getMSKDayKey();
 const yesterdayKey = getMSKDayKey(Date.now() - 86400000);
 if (lastDayReset !== todayKey) {
 if (lastDayReset !== null) {
-const revenue = tractRevenuePerDay();
+var gapDays = Math.max(1, daysBetween(lastDayReset, todayKey));
+if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7
+var revenue = 0;
+for (var gd = gapDays; gd >= 1; gd--) {
+expireGhostTasks(getMSKDayKey(Date.now() - gd * 86400000));
+advanceTract();
+revenue += tractRevenuePerDay();
+}
 if (revenue > 0) {
 HERO.gold = (HERO.gold || 0) + revenue;
-showToast('💰 Доход тракта', '+' + revenue + ' 💰 за прошлый день (' + (tractState.regions + 1) + ' лок. на тракте)', 'save');
+showToast('💰 Доход тракта', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия (' + (tractState.regions + 1) + ' лок. на тракте)', 'save');
 spiritSay('«Дороги работают. Твоё королевство растёт, даже когда ты спишь.»');
 sfxEquip(); haptic('success');
 }
-expireGhostTasks(yesterdayKey);
-advanceTract();
         if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
 HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
 } else {

@@ -39,7 +39,7 @@ MIGRATIONS[7] = function(data) {
         if (data.hero && typeof data.hero === 'object') {
             var h = data.hero;
             if (typeof h.gold !== 'number' || !Number.isFinite(h.gold)) {
-                h.gold = Math.max(0, Math.round((Number(h.shards) || 0) * 2 + 20));
+                h.gold = Math.max(0, Math.round((Number(h.shards) || 0) * 2 + 30));
             }
             delete h.shards; delete h.flasks;
             delete h.hp; delete h.maxHp; delete h.isHollow;
@@ -732,6 +732,7 @@ return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length
 return { id: STATE_GUARDS.sanitizeCounter(t.id, 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: typeof t.deadline === 'number' ? t.deadline : null, status: t.status, createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(), doneAt: typeof t.doneAt === 'number' ? t.doneAt : null, ghostSince: typeof t.ghostSince === 'number' ? t.ghostSince : null };
 });
 }
+TASKS = TASKS.filter(function(t, i) { return TASKS.findIndex(function(x) { return x.id === t.id; }) === i; });
 if (typeof data.taskIdCounter === 'number') taskIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.taskIdCounter, 1), TASKS.reduce(function(m, t) { return Math.max(m, t.id); }, 0) + 1);
 if (data.tractState && typeof data.tractState === 'object') {
 var regions = STATE_GUARDS.sanitizeCounter(data.tractState.regions, 0);
@@ -746,9 +747,9 @@ tractState.building = null;
 }
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
-renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();
+renderBackpack(); renderSlots(); updateTotalBonuses();
 updateEscapeDisplay(); renderMap(escapeProgress);
-changeBossHp(0);
+renderTasks(); renderDashboard();
 }
 }
 function resetAllData() {
