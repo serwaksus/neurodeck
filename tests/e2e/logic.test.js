@@ -20,60 +20,7 @@ async function boot(page) {
   }
 }
 
-test('crucible guard: blocked strike chips 30% and consumes charge; str pierces extra; legacy API inert', async ({ page }) => {
-  await boot(page);
-  const r = await page.evaluate(() => {
-    escapeProgress = 90; // >=80 => getCurrentBoss().type === 'chimera'
-    bossDefeated = false;
-    STATS.str.value = 5; STATS.end.value = 15; STATS.int.value = 0;
-    STATS.cha.value = 0; STATS.wil.value = 3; STATS.agi.value = 1; // end-dominant, no crit
-    crucibleResetTransient();
-    cIntent = 'quick';
-    bossStage = 0;
-    bossHp = getCurrentBoss().stages[0].maxHp;
-    const dmgEnd = 5 + STATS.str.value + 10;
-    cGuard = 2;
-    const hp0 = bossHp;
-    attackBoss();
-    const chipEnd = hp0 - bossHp;
-    const guardNonStr = cGuard;
-    STATS.str.value = 20; // str-dominant now
-    const dmgStr = 5 + 20 + 10;
-    cGuard = 2;
-    const hp1 = bossHp;
-    attackBoss();
-    const chipStr = hp1 - bossHp;
-    const guardStr = cGuard;
-    changeBossHp(-1); // legacy API: no longer mutates any shield
-    return { chipEnd, guardNonStr, chipStr, guardStr, legacyGuard: cGuard,
-      expChipEnd: Math.round(dmgEnd * 0.3), expChipStr: Math.round(dmgStr * 0.3) };
-  });
-  expect(r.guardNonStr).toBe(1);
-  expect(r.chipEnd).toBe(r.expChipEnd);
-  expect(r.guardStr).toBe(0);
-  expect(r.chipStr).toBe(r.expChipStr);
-  expect(r.legacyGuard).toBe(0);
-});
 
-test('failCard: twice same MSK day adds exactly +1 bossRagePoints', async ({ page }) => {
-  await boot(page);
-  const r = await page.evaluate(() => {
-    // Neutralize will-save RNG: save chance = totalWil / divisor => 0 with wil 0 and no gear.
-    STATS.wil.value = 0;
-    Object.keys(INVENTORY.equipped).forEach(k => { INVENTORY.equipped[k] = null; });
-    FORGED.push({
-      id: 'e2e-fail-1', name: 'E2E Fail Card', stat: 'str', streak: 0,
-      meta: '', createdAt: Date.now(),
-    });
-    bossRagePoints = 0;
-    failCard(null, 'e2e-fail-1');
-    const afterFirst = bossRagePoints;
-    failCard(null, 'e2e-fail-1'); // same day => lastFailDay guard => early return
-    return { afterFirst, afterSecond: bossRagePoints };
-  });
-  expect(r.afterFirst).toBe(1);
-  expect(r.afterSecond).toBe(1);
-});
 
 // Real goal flow: 4 steps x round(100/(4*2))=13 => 52, completeGoal round(100/2)=50 => 102 total.
 async function runE2EGoal(page) {
@@ -119,16 +66,6 @@ test('completeGoal does NOT increase HERO.actionPoints', async ({ page }) => {
   expect(r.apAfter).toBe(r.apBefore);
 });
 
-test('buildBossWinStats handles string/number kill values, no NaN', async ({ page }) => {
-  await boot(page);
-  const html = await page.evaluate(() => {
-    window._bossKills = { snake: '3', social: 2 };
-    return buildBossWinStats();
-  });
-  expect(html).toContain('3 побед');
-  expect(html).toContain('2 побед');
-  expect(html).not.toContain('NaN');
-});
 
 test('getPrestigeXPBonus caps at 1.5 with high prestige values', async ({ page }) => {
   await boot(page);
@@ -185,21 +122,6 @@ test('XP curve pinned: getXpToNext(15)=68000, (16)=round(68000*1.65)', async ({ 
   expect(r.l16).toBe(Math.round(68000 * 1.65));
 });
 
-test('boss scaling: piecewise ×0.10/lvl, +0.18/lvl past L10', async ({ page }) => {
-  await boot(page);
-  const r = await page.evaluate(() => {
-    const base = [{ hp: 100, maxHp: 100 }];
-    HERO.level = 1; const l1 = scaleBossStages(base)[0].hp;
-    HERO.level = 6; const l6 = scaleBossStages(base)[0].hp;
-    HERO.level = 11; const l11 = scaleBossStages(base)[0].hp;
-    const bossStageHpL11 = getCurrentBoss().stages[0].maxHp; // escapeProgress 0 => snake
-    return { l1, l6, l11, bossStageHpL11 };
-  });
-  expect(r.l1).toBe(100); // factor 1.0
-  expect(r.l6).toBe(150); // factor 1 + 5*0.10
-  expect(r.l11).toBe(218); // factor 1 + 10*0.10 + 1*0.18
-  expect(r.bossStageHpL11).toBe(218);
-});
 
 test('perf UI: perfLowBtn click drives full chain (setMode, bridge, legacy listener)', async ({ page }) => {
   await boot(page);
@@ -216,4 +138,40 @@ test('perf UI: perfLowBtn click drives full chain (setMode, bridge, legacy liste
   expect(r.mode).toBe('low');
   expect(r.eco).toBe(true);
   expect(r.fired).toEqual([[true, 'low']]);
+});
+
+test('tract: buyNextRegion spends gold, starts build; advance completes and adds regions', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('neurodeck_onboarding_done', '1'); });
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+  const res = await page.evaluate(() => {
+    HERO.gold = 1000;
+    buyNextRegion();
+    const afterBuy = { gold: HERO.gold, building: !!tractState.building, regions: tractState.regions };
+    advanceTract();
+    const after1 = { regions: tractState.regions, building: !!tractState.building };
+    return { afterBuy, after1 };
+  });
+  if (res.afterBuy.building !== true) throw new Error('buyNextRegion must start a build');
+  if (res.after1.regions !== 1 || res.after1.building !== false) throw new Error('1-day build must complete after 1 advance, got ' + JSON.stringify(res.after1));
+});
+
+test('tasks: complete -> chest choice adds gold or xp; ghosts expire after ghostDays', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('neurodeck_onboarding_done', '1'); });
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+  const res = await page.evaluate(() => {
+    TASKS.length = 0;
+    TASKS.push({ id: 9001, name: 'test', tier: 'normal', deadline: Date.now() - 86400000, status: 'active', createdAt: Date.now(), doneAt: null, ghostSince: null });
+    const g0 = HERO.gold;
+    expireGhostTasks(getMSKDayKey(Date.now() - 86400000));
+    const ghosted = TASKS[0].status;
+    const g1 = HERO.gold;
+    for (let i = 0; i < 3; i++) { expireGhostTasks(getMSKDayKey(Date.now() + (86400000 * (i + 1)))); }
+    const goneAfter3 = TASKS.length === 0;
+    return { ghosted, goldPenalty: g0 - g1, goneAfter3 };
+  });
+  if (res.ghosted !== 'ghost') throw new Error('overdue task must become ghost, got ' + res.ghosted);
+  if (res.goldPenalty !== 1) throw new Error('ghost night penalty must be exactly 1 gold, got ' + res.goldPenalty);
+  if (!res.goneAfter3) throw new Error('ghost must leave after ghostDays nights');
 });

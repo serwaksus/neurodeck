@@ -9,7 +9,6 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const app = read('js/app.js');
 const storage = read('js/storage.js');
 const stateGuards = read('js/state-guards.js');
-const combatPixi = read('js/combat-pixi.js');
 const html = read('index.html');
 
 test('App.js no longer declares storage functions (extracted to storage.js)', () => {
@@ -46,35 +45,22 @@ test('App.js no longer has dead Canvas 2D combat code', () => {
     });
 });
 
-test('App.js retains PIXI combat bridge functions', () => {
-    ['initCombatCanvas', 'updateCombatHpBars', 'attackBoss',
-     'endBossTurn', 'changeBossHp'
+test('App.js has tract and task systems (combat removed)', () => {
+    ['tractRevenuePerDay', 'buyNextRegion', 'renderTract', 'advanceTract',
+     'createTask', 'completeTask', 'claimTaskChest', 'expireGhostTasks', 'renderTasks'
     ].forEach(fn => {
         const re = new RegExp('function\\s+' + fn + '\\b');
         assert.equal(re.test(app), true, fn + ' should stay in app.js');
     });
 });
 
-test('attackBoss calls window.startHeroAttack (PIXI API, not old)', () => {
-    assert.ok(app.indexOf('window.startHeroAttack') > -1,
-        'attackBoss must call window.startHeroAttack');
-    // No standalone triggerHeroAttack (without window.) anywhere
-    const total = (app.match(/\btriggerHeroAttack\b/g) || []).length;
-    const windowed = (app.match(/\bwindow\.triggerHeroAttack\b/g) || []).length;
-    assert.equal(total, windowed, 'triggerHeroAttack must be window-scoped only');
-});
-
-test('endBossTurn calls window.startBossAttack (PIXI API, not old)', () => {
-    assert.ok(app.indexOf('window.startBossAttack') > -1,
-        'endBossTurn must call window.startBossAttack');
-    const total = (app.match(/\btriggerBossAttack\b/g) || []).length;
-    const windowed = (app.match(/\bwindow\.triggerBossAttack\b/g) || []).length;
-    assert.equal(total, windowed, 'triggerBossAttack must be window-scoped only');
-});
-
-test('updateCombatHpBars calls window.updateHP (PIXI API)', () => {
-    assert.ok(app.indexOf('window.updateHP') > -1,
-        'must call window.updateHP');
+test('No combat bridge remnants in app.js', () => {
+    ['startHeroAttack', 'startBossAttack', 'updateHP',
+     'triggerHeroAttack', 'triggerBossAttack', 'initCombatCanvas'
+    ].forEach(t => {
+        const total = (app.match(new RegExp('\\b' + t + '\\b', 'g')) || []).length;
+        assert.equal(total, 0, t + ' must be removed from app.js');
+    });
 });
 
 test('Rank-up flow chains evolution menu', () => {
@@ -267,10 +253,9 @@ test('Storage snapshot includes all critical game fields', () => {
     const m = storage.match(/const snapshot = \{([\s\S]*?)\};/);
     assert.ok(m, 'snapshot object literal missing in storage.js');
     const fields = ['hero', 'stats', 'forged', 'goals', 'inventory',
-        'escapeProgress', 'bossHp', 'bossStage', 'bossDefeated',
-        'lastDayReset', 'bossRunLocked', 'forgedIdCounter', 'uidCounter',
-        'goalIdCounter', 'xpHistory', 'bossKills', 'bloodOath',
-        'bossRagePoints', 'lastWeekReset', 'savedAt'];
+        'escapeProgress', 'lastDayReset', 'forgedIdCounter', 'uidCounter',
+        'goalIdCounter', 'xpHistory', 'bloodOath', 'lastWeekReset',
+        'tasks', 'taskIdCounter', 'tractState', 'savedAt'];
     fields.forEach(f => {
         assert.ok(m[1].indexOf(f) > -1, 'snapshot missing field: ' + f);
     });

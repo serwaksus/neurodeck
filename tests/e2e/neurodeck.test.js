@@ -36,13 +36,14 @@ test('starter deck modal can be closed', async ({ page }) => {
 });
 
 test('tab navigation switches views', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('neurodeck_onboarding_done', '1'));
   await page.goto('/');
   await page.waitForTimeout(2000);
   // close modal if present
   const closeBtn = page.locator('#starterDeckModal .modal-close');
   if (await closeBtn.isVisible()) await closeBtn.click();
   await page.waitForTimeout(500);
-  for (const v of ['deck', 'hero', 'inv', 'map', 'stats']) {
+  for (const v of ['deck', 'tract', 'hero', 'inv', 'map', 'stats']) {
     await page.locator(`.bnav-btn[data-view="${v}"]`).click({ force: true });
     await page.waitForTimeout(300);
     await expect(page.locator(`#view-${v}`)).toBeVisible();
@@ -50,6 +51,7 @@ test('tab navigation switches views', async ({ page }) => {
 });
 
 test('hero view shows character stats', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('neurodeck_onboarding_done', '1'));
   await page.goto('/');
   await page.waitForTimeout(2000);
   const closeBtn = page.locator('#starterDeckModal .modal-close');
@@ -59,10 +61,6 @@ test('hero view shows character stats', async ({ page }) => {
   await page.waitForTimeout(500);
   await expect(page.locator('#heroName')).toHaveText('Странник');
   await expect(page.locator('#heroLevelLabel')).toContainText('LVL');
-  const hpCur = parseInt(await page.locator('#heroHpCur').textContent());
-  expect(hpCur).toBeGreaterThan(0);
-  const hpMax = parseInt(await page.locator('#heroHpMax').textContent());
-  expect(hpMax).toBeGreaterThan(0);
-  await expect(page.locator('#heroHpFill')).toBeVisible();
   await expect(page.locator('#heroXpCur')).toBeVisible();
+  await expect(page.locator('#statsGrid')).toBeVisible();
 });

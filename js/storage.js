@@ -31,14 +31,25 @@ const EVER_SAVED_KEY = 'neurodeck_ever_saved';
 function hasEverSaved() {
     try { return localStorage.getItem(EVER_SAVED_KEY) === '1'; } catch(e) { return false; }
 }
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const MIGRATIONS = {};
-MIGRATIONS[6] = function(data) {
+MIGRATIONS[7] = function(data) {
     try {
-        if (data && data.hero && typeof data.hero === 'object' &&
-            (typeof data.hero.flasks !== 'number' || !Number.isFinite(data.hero.flasks))) {
-            data.hero.flasks = 2;
+        if (!data || typeof data !== 'object') return;
+        if (data.hero && typeof data.hero === 'object') {
+            var h = data.hero;
+            if (typeof h.gold !== 'number' || !Number.isFinite(h.gold)) {
+                h.gold = Math.max(0, Math.round((Number(h.shards) || 0) * 2 + 20));
+            }
+            delete h.shards; delete h.flasks;
+            delete h.hp; delete h.maxHp; delete h.isHollow;
+            delete h.actionPoints; delete h.estus; delete h.estusUsedToday; delete h.lastEstusReset;
         }
+        delete data.bossHp; delete data.bossStage; delete data.bossDefeated;
+        delete data.bossRunLocked; delete data.bossKills; delete data.bossRagePoints;
+        if (!Array.isArray(data.tasks)) data.tasks = [];
+        if (!data.tractState || typeof data.tractState !== 'object') data.tractState = { regions: 0, building: null };
+        if (typeof data.taskIdCounter !== 'number' || !Number.isFinite(data.taskIdCounter)) data.taskIdCounter = 1;
     } catch(e) {}
 };
 function migrateSyncData(data) {
@@ -52,9 +63,9 @@ function migrateSyncData(data) {
 }
 const HERO_KEYS = Object.assign(Object.create(null), {
     name: true, title: true, level: true, xp: true, xpToNext: true, totalXp: true,
-    hp: true, maxHp: true, isHollow: true, consecutivePerfectDays: true,
-    dailyCompletions: true, dailySkips: true, actionPoints: true, lastSessionAt: true,
-    dailyUniqueStats: true, cardHistory: true, lastWeeklyReport: true, shards: true, flasks: true
+    gold: true, consecutivePerfectDays: true,
+    dailyCompletions: true, dailySkips: true, lastSessionAt: true,
+    dailyUniqueStats: true, cardHistory: true, lastWeeklyReport: true
 });
 function mskDayKey(ts) {
     var d = new Date((ts || Date.now()) + 3 * 3600000);
@@ -98,8 +109,9 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 }
 const snapshot = {
 v: SCHEMA_VERSION, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, bossRunLocked: cRunLocked,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bossKills: window._bossKills, bloodOath: bloodOath, bossRagePoints: bossRagePoints, lastWeekReset: lastWeekReset, savedAt: Date.now()
+escapeProgress, lastDayReset,
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
+tasks: TASKS, taskIdCounter, tractState, savedAt: Date.now()
 };
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
@@ -445,8 +457,9 @@ function buildSyncData() {
 return {
 v: SCHEMA_VERSION, t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, bossHp, bossStage, bossDefeated, lastDayReset, bossRunLocked: cRunLocked,
-forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, bossRagePoints, lastWeekReset
+escapeProgress, lastDayReset,
+forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
+tasks: TASKS, taskIdCounter, tractState
 };
 }
 function updateCloudStatus() {
@@ -694,11 +707,6 @@ INVENTORY.equipped = cleanInventory.equipped;
 INVENTORY.maxSlots = cleanInventory.maxSlots;
 }
 if (typeof data.escapeProgress === 'number') escapeProgress = Math.max(0, Math.min(ESCAPE_MAX, data.escapeProgress));
-if (typeof data.bossHp === 'number') bossHp = Math.max(0, data.bossHp);
-if (typeof data.bossStage === 'number') bossStage = Math.min(Math.max(data.bossStage, 0), 2);
-if (typeof data.bossDefeated === 'boolean') bossDefeated = data.bossDefeated;
-if (data.lastDayReset) lastDayReset = data.lastDayReset;
-if (typeof data.bossRunLocked === 'boolean') cRunLocked = data.bossRunLocked;
 if (data.forgedIdCounter) forgedIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100), maxExistingId(FORGED) + 1);
 if (data.uidCounter) {
 var maxUid = 0;
@@ -711,14 +719,31 @@ uidCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.uidCounter, 10), maxUid 
 if (data.goalIdCounter) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.goalIdCounter, 1), maxExistingId(GOALS) + 1);
 else if (data.counter != null) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.counter, 1), maxExistingId(GOALS) + 1);
 if (Array.isArray(data.xpHistory)) xpHistory = STATE_GUARDS.sanitizeXpHistory(data.xpHistory);
-if (data.bossKills) window._bossKills = STATE_GUARDS.sanitizeBossKills(data.bossKills);
 if (data.bloodOath !== undefined) {
 bloodOath = (data.bloodOath && typeof data.bloodOath === 'object' && typeof data.bloodOath.status === 'string' && data.bloodOath.cardId !== undefined)
 ? data.bloodOath : null;
 }
-if (typeof data.bossRagePoints === 'number') bossRagePoints = Math.max(0, Math.min(999, Math.round(data.bossRagePoints)));
 if (typeof data.lastWeekReset === 'string') lastWeekReset = data.lastWeekReset;
-// actionPoints now lives in sanitizeHero; no need to bridge here
+if (Array.isArray(data.tasks)) {
+TASKS = data.tasks.filter(function(t) {
+return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&
+['active', 'done', 'ghost', 'chest_open'].indexOf(t.status) >= 0;
+}).map(function(t) {
+return { id: STATE_GUARDS.sanitizeCounter(t.id, 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: typeof t.deadline === 'number' ? t.deadline : null, status: t.status, createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(), doneAt: typeof t.doneAt === 'number' ? t.doneAt : null, ghostSince: typeof t.ghostSince === 'number' ? t.ghostSince : null };
+});
+}
+if (typeof data.taskIdCounter === 'number') taskIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.taskIdCounter, 1), TASKS.reduce(function(m, t) { return Math.max(m, t.id); }, 0) + 1);
+if (data.tractState && typeof data.tractState === 'object') {
+var regions = STATE_GUARDS.sanitizeCounter(data.tractState.regions, 0);
+if (regions > REGIONS.length - 1) regions = REGIONS.length - 1;
+tractState.regions = regions;
+if (data.tractState.building && typeof data.tractState.building === 'object' && typeof data.tractState.building.regionIdx === 'number') {
+var bi = data.tractState.building.regionIdx;
+tractState.building = (bi > tractState.regions && bi <= REGIONS.length - 1) ? { regionIdx: bi, remaining: STATE_GUARDS.sanitizeCounter(data.tractState.building.remaining, 1), total: STATE_GUARDS.sanitizeCounter(data.tractState.building.total, 1) } : null;
+} else {
+tractState.building = null;
+}
+}
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses(); updateDamageInfo();

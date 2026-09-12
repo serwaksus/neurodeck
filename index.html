@@ -1,501 +1,1502 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0f">
-<title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-<link rel="stylesheet" href="css/style.css?v=47">
-</head>
-<body>
-<div class="app-wrap">
-<div class="dungeon-bg"></div>
-<div class="light-rays"></div>
-<div class="mist-layer" id="mistLayer">
-<svg preserveAspectRatio="none" viewBox="0 0 1920 1080">
-<defs>
-<filter id="mist"><feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="3" seed="5"/><feColorMatrix values="0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.75  0 0 0 0.5 0"/><feGaussianBlur stdDeviation="20"/></filter>
-<filter id="mist2"><feTurbulence type="fractalNoise" baseFrequency="0.004" numOctaves="2" seed="13"/><feColorMatrix values="0 0 0 0 0.7  0 0 0 0 0.6  0 0 0 0 0.8  0 0 0 0.3 0"/><feGaussianBlur stdDeviation="30"/></filter>
-</defs>
-<rect id="mistRect1" width="100%" height="100%" filter="url(#mist)" opacity="0.5"/>
-<rect id="mistRect2" width="100%" height="100%" filter="url(#mist2)" opacity="0.3"/>
-</svg>
-</div>
-<canvas id="dustCanvas"></canvas>
-<div class="torch-flicker"></div>
-<canvas id="particles"></canvas>
-<div class="levelup-overlay" id="lvlOverlay"></div>
-<div class="levelup-banner" id="lvlBanner">
-<div class="lbl">⚔ БРЕМЯ СТАЛО ЛЕГЧЕ ⚔</div>
-<div class="num" id="lvlNum">2</div>
-<div class="sub" id="lvlSub">Новый уровень</div>
-<div class="sub2" id="lvlSub2">+100 HP · Новые возможности открыты</div>
-</div>
-<div class="rankup-overlay" id="rankupOverlay"></div>
-<div class="rankup-banner" id="rankupBanner">
-<div class="lbl">⚔ Ранг повышен ⚔</div>
-<div class="rank-text" id="rankupRankText">CC</div>
-<div class="sub" id="rankupSubText">Сила пробуждается</div>
-<div class="card-name-small" id="rankupCardName"></div>
-<div class="attr-hint" id="rankupAttrHint">+1 к пулу Силы (3/5)</div>
-</div>
-<div class="spirit-msg" id="spiritMsg" aria-live="polite"></div>
-<div class="toast" id="toast" aria-live="polite"><div class="t-title"></div><div class="t-body"></div></div>
-<div class="tooltip" id="tooltip"></div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="goalModal">
-<div class="modal">
-<div class="modal-header"><h3>🎯 Новая цель</h3><button class="modal-close" data-action="close-goal-modal">✕</button></div>
-<div class="modal-body">
-<div class="form-row">
-<label class="form-label">Тип цели</label>
-<div class="goal-type-selector" id="goalTypeSelector">
-<div class="goal-type-option short selected" data-action="select-goal-type" data-type="short"><div class="type-icon">🟢</div><div class="type-name">Краткая</div><div class="type-desc">1-7 дней</div><div class="type-reward">+30 XP · -5 HP</div></div>
-<div class="goal-type-option medium" data-action="select-goal-type" data-type="medium"><div class="type-icon">🔵</div><div class="type-name">Средняя</div><div class="type-desc">1-4 недели</div><div class="type-reward">+80 XP · -12 HP</div></div>
-<div class="goal-type-option long" data-action="select-goal-type" data-type="long"><div class="type-icon">🟡</div><div class="type-name">Долгая</div><div class="type-desc">1+ месяц</div><div class="type-reward">+200 XP · -25 HP</div></div>
-</div>
-</div>
-<div class="form-row"><label class="form-label">Название</label><input class="form-input" id="goalName" placeholder="Пробежать 10 км"></div>
-<div class="form-grid-2">
-<div class="form-row"><label class="form-label">📅 Дедлайн</label><input class="form-input" type="date" id="goalDeadline"></div>
-<div class="form-row"><label class="form-label">🕐 Время</label><input class="form-input" type="time" id="goalDeadlineTime" value="23:00"></div>
-</div>
-<div class="form-row"><label class="form-label">📊 Шагов к цели</label><input class="form-input" type="number" id="goalSteps" value="3" min="1" max="20" onchange="renderStepInputs()"></div>
-<div class="form-row" id="goalStepInputsWrap" style="display:none;">
-<label class="form-label">📝 Описание шагов</label>
-<div id="goalStepInputs" style="display:flex;flex-direction:column;gap:8px;"></div>
-</div>
-<div class="form-row">
-<label class="form-label">⚡ Привязанный стат</label>
-<div id="goalStatChips">
-<div class="stat-chip selected" data-action="select-goal-stat" data-stat="str">⚔ Сила</div>
-<div class="stat-chip" data-action="select-goal-stat" data-stat="end">🛡 Стойкость</div>
-<div class="stat-chip" data-action="select-goal-stat" data-stat="int">🧠 Интеллект</div>
-<div class="stat-chip" data-action="select-goal-stat" data-stat="cha">🎭 Харизма</div>
-<div class="stat-chip" data-action="select-goal-stat" data-stat="wil">🧘 Воля</div>
-<div class="stat-chip" data-action="select-goal-stat" data-stat="agi">⚡ Ловкость</div>
-</div>
-</div>
-<div class="form-row"><label class="form-label">📜 Описание</label><input class="form-input" id="goalDesc" placeholder="Зачем эта цель..."></div>
-</div>
-<div class="modal-footer"><button class="demo-btn" data-action="close-goal-modal">Отмена</button><button class="demo-btn primary" data-action="create-goal">🎯 Создать</button></div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="forgeModal">
-<div class="modal">
-<div class="modal-header"><h3>🔥 Выковать карточку</h3><button class="modal-close" data-action="close-forge">✕</button></div>
-<div class="modal-body">
-<div class="form-row"><label class="form-label">Название</label><input class="form-input" id="forgeName" placeholder="Медитация"></div>
-<div class="form-row"><label class="form-label">⚡ Характеристика</label>
-<div id="statChips">
-<div class="stat-chip" data-action="select-forge-stat" data-stat="str">⚔ Сила</div>
-<div class="stat-chip" data-action="select-forge-stat" data-stat="end">🛡 Стойкость</div>
-<div class="stat-chip" data-action="select-forge-stat" data-stat="int">🧠 Интеллект</div>
-<div class="stat-chip" data-action="select-forge-stat" data-stat="cha">🎭 Харизма</div>
-<div class="stat-chip" data-action="select-forge-stat" data-stat="wil">🧘 Воля</div>
-<div class="stat-chip" data-action="select-forge-stat" data-stat="agi">⚡ Ловкость</div>
-</div>
-</div>
-<div class="form-grid-2">
-<div class="form-row"><label class="form-label">🕐 Время</label><select class="form-select" id="forgeTime"><option>утро</option><option>день</option><option>вечер</option><option>ночь</option></select></div>
-<div class="form-row"><label class="form-label">⏱ Минут</label><input class="form-input" type="number" id="forgeDuration" value="15"></div>
-</div>
-<div class="form-grid-2">
-<div class="form-row">
-<label class="form-label">🏆 Стартовый ранг</label>
-<select class="form-select" id="forgeRank" disabled><option value="C">C</option></select>
-</div>
-<div class="form-row">
-<label class="form-label">⚔ Выполнений до ранг-апа</label>
-<input class="form-input" type="number" id="forgeMastery" value="5" min="2" max="50">
-</div>
-</div>
-<div class="form-hint">
-Новые карточки всегда стартуют с ранга C. Каждое выполнение увеличивает Мастерство на 1. При достижении порога — ранг-ап: <b>C → CC → CCC → B → BB → BBB → A → AA → AAA → S → SS → SSS</b>. После ранг-апа откроется модалка для усложнения карточки.
-</div>
-</div>
-<div class="modal-footer"><button class="demo-btn" data-action="close-forge">Отмена</button><button class="demo-btn primary" data-action="forge-card">🔥 Выковать</button></div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="editCardModal">
-<div class="modal">
-<div class="modal-header"><h3>✏ Редактировать карточку</h3><button class="modal-close" data-action="close-edit-card">✕</button></div>
-<div class="modal-body">
-<div class="form-warning" id="editCardWarning">
-⚠ Ранг повышен! Теперь карточка должна стать сложнее, иначе адаптация снизит получаемое Мастерство и XP.
-</div>
-<div class="form-row"><label class="form-label">Название</label><input class="form-input" id="editCardName" placeholder="Медитация"></div>
-<div class="form-row"><label class="form-label">⚡ Характеристика</label>
-<div id="editStatChips">
-<div class="stat-chip" data-action="select-edit-stat" data-stat="str">⚔ Сила</div>
-<div class="stat-chip" data-action="select-edit-stat" data-stat="end">🛡 Стойкость</div>
-<div class="stat-chip" data-action="select-edit-stat" data-stat="int">🧠 Интеллект</div>
-<div class="stat-chip" data-action="select-edit-stat" data-stat="cha">🎭 Харизма</div>
-<div class="stat-chip" data-action="select-edit-stat" data-stat="wil">🧘 Воля</div>
-<div class="stat-chip" data-action="select-edit-stat" data-stat="agi">⚡ Ловкость</div>
-</div>
-</div>
-<div class="form-grid-2">
-<div class="form-row"><label class="form-label">🕐 Время</label><select class="form-select" id="editCardTime"><option>утро</option><option>день</option><option>вечер</option><option>ночь</option></select></div>
-<div class="form-row"><label class="form-label">⏱ Минут</label><input class="form-input" type="number" id="editCardDuration" value="15"></div>
-</div>
-<div class="form-row">
-<label class="form-label">⚔ Новое кол-во выполнений до следующего ранг-апа</label>
-<input class="form-input" type="number" id="editCardMastery" value="7" min="2" max="50">
-<div class="form-hint" id="editCardAdaptHint">Текущая адаптация: <b>100%</b>. Усложни карточку (увеличь время или порог), чтобы сохранить эффективность!</div>
-</div>
-</div>
-<div class="modal-footer">
-<button class="demo-btn" data-action="skip-edit-card">Пропустить</button>
-<button class="demo-btn primary" data-action="save-edit-card">💾 Сохранить</button>
-</div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="syncModal">
-<div class="modal">
-<div class="modal-header"><h3>☁ Синхронизация</h3><button class="modal-close" data-action="close-sync-modal">✕</button></div>
-<div class="modal-body">
-<div class="sync-section" id="cloudSection">
-<div class="sync-section-title">☁ Облако Telegram</div>
-<div class="sync-section-desc">Автоматическая синхронизация. Работает не на всех устройствах.</div>
-<div id="cloudStatus" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); margin-bottom: 12px; font-size: 12px; color: var(--text-dim);">Проверяю...</div>
-<div style="display: flex; gap: 8px;">
-<button class="demo-btn" data-action="save-cloud" style="flex: 1;">☁ Сохранить</button>
-<button class="demo-btn primary" data-action="load-cloud" style="flex: 1;">☁ Загрузить</button>
-</div>
-</div>
-<div class="sync-section">
-<div class="sync-section-title">🔗 Ссылка</div>
-<div class="sync-section-desc">Создай ссылку с прогрессом и отправь себе в «Избранное» в Telegram. Откроешь на другом устройстве — данные подхватятся автоматически.</div>
-<div style="display: flex; gap: 8px;">
-<button class="demo-btn" data-action="copy-share-link" style="flex: 1;">📋 Копировать</button>
-<button class="demo-btn primary" data-action="share-link" style="flex: 1;">↗ Поделиться</button>
-</div>
-</div>
-<div class="sync-section">
-<div class="sync-section-title">💾 Файл</div>
-<div class="sync-section-desc">Скачай файл на одном устройстве и загрузи на другом.</div>
-<div style="display: flex; gap: 8px;">
-<button class="demo-btn" data-action="download-sync-file" style="flex: 1;">💾 Скачать</button>
-<button class="demo-btn primary" data-action="choose-sync-file" style="flex: 1;">📁 Загрузить</button>
-</div>
-<input type="file" id="syncFileInput" accept=".ndsync,.json" style="display: none;">
-</div>
-<div class="sync-section">
-<div class="sync-section-title">⚡ Режим производительности</div>
-<div class="sync-section-desc">Управление анимациями для слабых устройств или людей с проблемами вестибулярного аппарата.</div>
-<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-<button class="demo-btn" data-action="set-perf" data-mode="auto" id="perfAutoBtn" style="flex: 1;">🟢 Авто</button>
-<button class="demo-btn" data-action="set-perf" data-mode="low" id="perfLowBtn" style="flex: 1;">🟡 Экономный</button>
-<button class="demo-btn" data-action="set-perf" data-mode="effects-off" id="perfOffBtn" style="flex: 1;">🔴 Без эффектов</button>
-</div>
-<div id="perfStatus" style="font-size: 11px; color: var(--text-dim); margin-top: 6px;"></div>
-</div>
-<div style="display: flex; gap: 8px; margin-top: 8px;">
-<button class="demo-btn" data-action="export-json" style="flex: 1;">📋 JSON</button>
-<button class="demo-btn" id="notifToggleBtn" data-action="toggle-notif" style="flex: 1;">🔔 Уведомления</button>
-<button class="demo-btn" data-action="deep-recovery" style="flex: 1; color: var(--green); border-color: var(--green);">♻ Восстановить</button>
-<button class="demo-btn" data-action="reset-all-data" style="flex: 1; color: var(--blood-bright); border-color: var(--blood);">🗑 Сброс</button>
-</div>
-</div>
-<div class="modal-footer"><button class="demo-btn" data-action="close-sync-modal">Закрыть</button></div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="roomDetailModal">
-<div class="modal">
-<div class="modal-header"><h3 id="roomDetailTitle">📍 Локация</h3><button class="modal-close" data-action="close-room-detail">✕</button></div>
-<div class="modal-body" id="roomDetailBody"></div>
-<div class="modal-footer"><button class="demo-btn primary" data-action="close-room-detail">Закрыть</button></div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="shopModal">
-<div class="modal">
-<div class="modal-header"><h3>🏪 Лавка осколков</h3><button class="modal-close" data-action="close-shop">✕</button></div>
-<div class="modal-body">
-<div id="shopBalance"></div>
-<div id="shopList"></div>
-</div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="confirmOverlay">
-<div class="modal confirm-modal">
-<div class="confirm-title" id="confirmTitle">Подтверди</div>
-<div class="confirm-body" id="confirmBody">Ты уверен?</div>
-<div class="confirm-actions">
-<button class="demo-btn" id="confirmNo">Отмена</button>
-<button class="demo-btn primary" id="confirmYes">Подтвердить</button>
-</div>
-</div>
-</div>
-<div class="shake-wrap" id="shakeWrap">
-<div class="app">
-<div class="header">
-<div class="logo">NEURODECK <span>Learn by Doing</span></div>
-<button class="sync-header-btn" data-action="open-sync-modal"><span id="syncBadge" style="font-size:14px;">☁</span> <span>Синхра</span></button>
-<div class="hero-mini">
-<div class="hero-avatar-mini">🗡<div class="hero-lvl-badge" id="heroMiniLvl">1</div></div>
-<div class="hero-mini-info">
-<div class="hero-mini-name" id="heroMiniName">Странник</div>
-<div class="hero-mini-xp-wrap"><span id="heroMiniXpText">0/100</span><div class="hero-mini-xp-bar"><div class="hero-mini-xp-fill" id="heroMiniXpFill" style="width:0%"></div></div></div>
-</div>
-</div>
-<div class="progress-control"><span>Побег</span><div id="progressSlider" class="progress-track" role="progressbar" aria-label="Прогресс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progressFill" class="progress-fill"></div></div><span class="val" id="progressVal">0/140</span></div>
-</div>
-<div class="main">
-<nav class="tabs" aria-label="Навигация" role="tablist">
-<div class="tab active" role="tab" data-action="switch-view" data-view="deck"><span class="icon">📖</span>Колода</div>
-<div class="tab" role="tab" data-action="switch-view" data-view="hero"><span class="icon">👤</span>Герой</div>
-<div class="tab" role="tab" data-action="switch-view" data-view="inv"><span class="icon">🎒</span>Инвентарь</div>
-<div class="tab" role="tab" data-action="switch-view" data-view="boss"><span class="icon">🐍</span>Босс</div>
-<div class="tab" role="tab" data-action="switch-view" data-view="map"><span class="icon">🗺</span>Карта</div>
-<div class="tab" role="tab" data-action="switch-view" data-view="stats"><span class="icon">📊</span>Статистика</div>
-</nav>
-<main class="content">
-<section class="view active" id="view-deck">
-<div class="view-title">📖 Колода</div>
-<div id="dashboardBar" style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:4px; padding:8px 12px; margin-bottom:12px; font-size:11px; line-height:1.8; position:relative;"></div>
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap;">
-<div style="font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px;">Всего карточек: <b id="deckCount" style="color: var(--gold-bright); font-weight: normal;">0</b></div>
-<button class="forge-btn" data-action="open-forge">🔨 Выковать карточку</button>
-</div>
-<div class="cards" id="cardGrid"></div>
-</section>
-<section class="view" id="view-hero">
-<div class="view-title">👤 Герой</div>
-<div class="view-subtitle">Атрибуты растут только через мастерство карточек (5 очков пула = +1 атрибут)</div>
-<div class="hero-layout">
-<div class="hero-card">
-<div class="hero-avatar-wrap">
-<div class="hero-avatar" id="heroAvatar">🗡
-<svg class="hero-level-ring" viewBox="0 0 160 160">
-<defs><linearGradient id="xpGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5a2b"/><stop offset="50%" stop-color="#d4a574"/><stop offset="100%" stop-color="#f4c896"/></linearGradient></defs>
-<circle class="ring-bg" cx="80" cy="80" r="74"/>
-<circle class="ring-fill" id="ringFill" cx="80" cy="80" r="74" stroke-dasharray="465.01" stroke-dashoffset="465.01"/>
-</svg>
-<div class="hero-level" id="heroLevelLabel">LVL 1</div>
-</div>
-</div>
-<div class="hero-name" id="heroName">Странник</div>
-<div class="hero-title" id="heroTitle">«Тот, кто только начал путь»</div>
-<div class="difficulty-badge">Souls-like</div>
-<div class="hero-hp-block">
-<div class="hero-hp-header">
-<span>❤ Здоровье</span>
-<span><b id="heroHpCur">100</b> / <b id="heroHpMax">100</b></span>
-</div>
-<div class="hero-hp-bar"><div class="hero-hp-fill" id="heroHpFill" style="width:100%"></div></div>
-<div class="hero-hp-meta">
-<span id="heroHpWarn"></span>
-<span>Стойкость: <b id="heroEndStat">3</b></span>
-</div>
-</div>
-<div class="atonement-bar" id="atonementBar" style="display: none;">
-<div class="atonement-label">Ритуал Искупления (идеальные дни подряд)</div>
-<div class="atonement-track">
-<div class="atonement-segment" id="at1"></div>
-<div class="atonement-segment" id="at2"></div>
-<div class="atonement-segment" id="at3"></div>
-</div>
-</div>
-<div class="hero-xp-block">
-<div class="hero-xp-header"><span>Опыт</span><span><b id="heroXpCur">0</b> / <b id="heroXpMax">100</b></span></div>
-<div class="hero-xp-bar"><div class="hero-xp-fill" id="heroXpFill" style="width:0%"></div></div>
-</div>
-<div class="hero-summary">
-<div><span>Всего XP</span><b id="statTotalXp">0</b></div>
-<div><span>Сумма атрибутов</span><b id="statSumStats">0</b></div>
-<div><span>Целей активно</span><b id="statGoalsActive">0</b></div>
-<div><span>Целей выполнено</span><b id="statGoalsDone">0</b></div>
-<div><span>Множитель XP</span><b id="statXpMult">×1.00</b></div>
-<div><span>Ранг-апов</span><b id="statRankups">0</b></div>
-<div><span>Прогресс побега</span><b id="statEscape">0 / 140</b></div>
-</div>
-</div>
-<div>
-<div class="stats-grid" id="statsGrid"></div>
-<div class="goals-section">
-<div class="goals-head">
-<div class="goals-title"><div class="goals-title-icon">🎯</div>Цели героя</div>
-<button class="goals-add" data-action="open-goal-modal">+ Добавить</button>
-</div>
-<div class="goals-filters">
-<button class="goal-filter active" data-action="filter-goals" data-filter="all">Все</button>
-<button class="goal-filter" data-action="filter-goals" data-filter="short">🟢 Краткие</button>
-<button class="goal-filter" data-action="filter-goals" data-filter="medium">🔵 Средние</button>
-<button class="goal-filter" data-action="filter-goals" data-filter="long">🟡 Долгие</button>
-</div>
-<div class="goals-list" id="goalsList"></div>
-</div>
-</div>
-</div>
-</section>
-<section class="view" id="view-inv">
-<div class="view-title">🎒 Инвентарь героя</div>
-<div class="view-subtitle">Экипируй артефакты · Получай бонусы к характеристикам</div>
-<div class="inv-layout">
-<div class="inv-main">
-<div class="paperdoll-wrap">
-<div class="paperdoll-title">⚔ Снаряжение</div>
-<div class="paperdoll">
-<div class="paperdoll-silhouette"></div>
-<div class="slot" data-slot="head" data-slot-label="Голова">◇</div>
-<div class="slot" data-slot="amulet" data-slot-label="Амулет">△</div>
-<div class="slot" data-slot="chest" data-slot-label="Торс">□</div>
-<div class="slot" data-slot="cape" data-slot-label="Плащ">◁</div>
-<div class="slot" data-slot="weapon" data-slot-label="Оружие">✕</div>
-<div class="slot" data-slot="shield" data-slot-label="Щит">◯</div>
-<div class="slot" data-slot="ring1" data-slot-label="Кольцо 1">○</div>
-<div class="slot" data-slot="ring2" data-slot-label="Кольцо 2">○</div>
-<div class="slot" data-slot="boots" data-slot-label="Обувь">▽</div>
-</div>
-<div class="total-bonuses">
-<div class="total-bonuses-title">⚡ Бонусы экипировки</div>
-<div class="total-bonuses-grid" id="totalBonuses"></div>
-</div>
-</div>
-<div class="backpack">
-<div class="backpack-header">
-<div class="backpack-title">🎒 Рюкзак</div>
-<button class="backpack-tab" data-action="open-shop">🏪 Лавка</button>
-<button class="backpack-tab" data-action="drink-flask" id="bpFlaskBtn">🧪 Фляга</button>
-<div class="backpack-info"><b id="bpCount">0</b> / <b id="bpMax">30</b></div>
-</div>
-<div class="backpack-tabs">
-<button class="backpack-tab active" data-action="filter-backpack" data-filter="all">Все</button>
-<button class="backpack-tab" data-action="filter-backpack" data-filter="weapon">Оружие</button>
-<button class="backpack-tab" data-action="filter-backpack" data-filter="armor">Броня</button>
-<button class="backpack-tab" data-action="filter-backpack" data-filter="accessory">Аксессуары</button>
-</div>
-<div class="backpack-grid" id="backpackGrid"></div>
-</div>
-</div>
-<div class="item-panel" id="itemPanel">
-<div class="item-panel-header">📜 Свойства предмета</div>
-<div id="itemPanelContent"><div class="empty-state">Выбери предмет в рюкзаке<br>или кликни по слоту экипировки.</div></div>
-</div>
-</div>
-</section>
-<section class="view" id="view-boss">
-<div class="view-title">🐍 Босс локации</div>
-<div class="view-subtitle" id="bossSubtitle">Змей Лени</div>
-<div id="bossIntent" class="boss-intent" aria-live="polite"></div>
-<div id="combatContainer" style="width:100%; aspect-ratio:16/9; overflow:hidden; border-radius:4px; border:1px solid var(--border); background:#000;"><div id="lowHpVignette" class="low-hp-vignette"></div><div id="screenCracks" class="screen-cracks"><div class="crack crack-1"></div><div class="crack crack-2"></div><div class="crack crack-3"></div><div class="crack crack-4"></div></div><div id="speedLines" class="speed-lines"></div></div>
-<div id="combatLoading" style="text-align:center; padding:40px; color:var(--text-dim);">⚔ Загрузка арены...</div>
-<div id="bossLoreText" style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); font-size:11px; line-height:1.7; color:var(--text-dim);"></div>
-<div id="bossBattleArea" style="margin-top:12px;"></div>
-</section>
-<section class="view" id="view-map">
-<div class="view-title">🗺 Карта подземелья</div>
-<div class="view-subtitle">Каждые 10 ранг-апов карточек открывают новую локацию · Пройди все 14 комнат</div>
-<div class="map-header">
-<div class="map-progress-label">Прогресс побега</div>
-<div class="map-progress-big"><span id="mapProgressNum">0</span> <span>/ 140</span></div>
-<div class="map-room-text" id="mapRoomText">⛓ Ты в Камере заключенного</div>
-<div class="map-progress-bar"><div class="map-progress-fill" id="mapProgressFill" style="width:0%"></div></div>
-</div>
-<div class="map-container" id="mapContainer">
-<div class="map-fog" id="mapFog"></div>
-<div class="map-rooms" id="mapRooms"></div>
-</div>
-</section>
-<section class="view" id="view-stats">
-<div class="view-title">📊 Статистика</div>
-<div class="view-subtitle">Дневник прогресса — отслеживай свой путь из тьмы</div>
-<div id="statsContent"></div>
-</section>
-</main>
-<aside class="boss-panel">
-<div class="boss-title" id="bossPanelTitle">🐍 Змей Лени</div>
-<div class="boss-image" id="bossImg">
-<div class="boss-sprite boss-anim-stage1"></div>
-<div class="boss-eyes"><div class="boss-eye left"></div><div class="boss-eye right"></div></div>
-<div class="boss-blood" id="bossBlood"></div>
-<div class="boss-cracks" id="bossCracks"></div>
-<div class="boss-defeated-overlay" id="bossDefeatedPanel">
-<div class="skull">☠</div>
-<div class="defeat-text">ПОВЕРЖЕН</div>
-<div class="defeat-sub">Тьма отступает...</div>
-</div>
-</div>
-<div class="boss-hp" id="bossHpBlockPanel">
-<div class="boss-hp-label"><span>HP</span><b id="bossHpText">100%</b></div>
-<div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill" style="width:100%"></div></div>
-</div>
-<div class="boss-info" id="bossInfo">«Я жду...»</div>
-<div style="font-size: 10px; color: var(--blood-bright); text-align: center; padding: 2px 0;" id="punishCountdown"></div>
-<div style="border-top: 1px solid var(--border); padding-top: 8px; margin-top: auto;">
-<div class="boss-title" style="border: none; padding: 0; margin-bottom: 6px;">⚡ Твой урон</div>
-<div style="font-size: 10px; color: var(--text-dim); line-height: 1.7;" id="damageInfo"></div>
-</div>
-</aside>
-</div>
-<footer class="bottom-nav">
-<button class="bnav-btn active" data-action="switch-view" data-view="deck"><span class="bnav-icon">📖</span>Колода</button>
-<button class="bnav-btn" data-action="switch-view" data-view="hero"><span class="bnav-icon">👤</span>Герой</button>
-<button class="bnav-btn" data-action="switch-view" data-view="inv"><span class="bnav-icon">🎒</span>Инв</button>
-<button class="bnav-btn" data-action="switch-view" data-view="boss"><span class="bnav-icon">🐍</span>Босс</button>
-<button class="bnav-btn" data-action="switch-view" data-view="map"><span class="bnav-icon">🗺</span>Карта</button>
-<button class="bnav-btn" data-action="switch-view" data-view="stats"><span class="bnav-icon">📊</span>Стат</button>
-</footer>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="returnModal">
-<div class="modal">
-<div class="modal-header"><h3>📅 С возвращением</h3><button class="modal-close" data-action="close-return-modal">✕</button></div>
-<div class="modal-body"></div>
-<div class="modal-footer"><button class="demo-btn primary" data-action="close-return-modal">Продолжить</button></div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="evolutionModal">
-<div class="modal">
-<div class="modal-header"><h3>🌟 Эволюция карточки</h3><button class="modal-close" data-action="close-evolution-modal">✕</button></div>
-<div class="modal-body">
-<div style="text-align:center; margin-bottom:16px;">Карточка <b class="evolution-card-name"></b> повысила ранг!<br>Выбери путь эволюции:</div>
-<div style="display:grid; grid-template-columns:1fr; gap:10px;">
-<div data-action="apply-evolution-depth" style="cursor:pointer; padding:14px; background:rgba(192,132,252,0.08); border:1px solid rgba(192,132,252,0.3); border-radius:4px;">
-<div style="font-size:14px; color:#c084fc; margin-bottom:4px;">🧘 Глубже</div>
-<div style="font-size:11px; color:var(--text-dim);">+50% мастерства за выполнение</div>
-</div>
-<div data-action="apply-evolution-frequency" style="cursor:pointer; padding:14px; background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.3); border-radius:4px;">
-<div style="font-size:14px; color:#60a5fa; margin-bottom:4px;">⚡ Чаще</div>
-<div style="font-size:11px; color:var(--text-dim);">+1 к пулу стата за каждое выполнение<br>Ускоренный рост атрибута</div>
-</div>
-<div data-action="apply-evolution-stability" style="cursor:pointer; padding:14px; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.3); border-radius:4px;">
-<div style="font-size:14px; color:#34d399; margin-bottom:4px;">🌟 Стабильнее</div>
-<div style="font-size:11px; color:var(--text-dim);">Двойная защита стрика<br>Один пропуск простителен</div>
-</div>
-</div>
-</div>
-<div class="modal-footer"><button class="demo-btn" data-action="evolution-skip">Пропустить</button></div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="weeklyReportModal">
-<div class="modal">
-<div class="modal-header"><h3>📊 Недельный отчёт</h3><button class="modal-close" data-action="close-weekly-report">✕</button></div>
-<div class="modal-body"></div>
-<div class="modal-footer"><button class="demo-btn primary" data-action="close-weekly-report">К новой неделе</button></div>
-</div>
-</div>
-<div class="modal-overlay" role="dialog" aria-modal="true" id="starterDeckModal">
-<div class="modal">
-<div class="modal-header"><h3>🎴 Готовые испытания</h3><button class="modal-close" data-action="close-starter-deck">✕</button></div>
-<div class="modal-body" style="text-align:center; font-size:12px; color:var(--text-dim); margin-bottom:10px;">Эти карточки работают для всех. Выбери сколько хочешь — каждая стартует с ранга C.</div>
-<div class="modal-body" style="padding:0 20px;">
-<div id="starterDeckList"></div>
-</div>
-<div class="modal-footer">
-<button class="demo-btn" data-action="close-starter-deck">Пропустить</button>
-<button class="demo-btn primary" data-action="accept-starter-deck">⚔ Взять выбранные</button>
-</div>
-</div>
-</div>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"></script>
-<script src="js/perf.js?v=47"></script>
-<script src="js/perf-compat.js?v=47"></script>
-    <script src="js/state-guards.js?v=47"></script>
-    <script src="js/storage.js?v=47"></script>
-    <script src="js/combat-pixi.js?v=47"></script>
-    <script src="js/app.js?v=47"></script>
-</div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0a0a0f" />
+    <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
+    <link rel="stylesheet" href="css/style.css?v=49" />
+  </head>
+  <body>
+    <div class="app-wrap">
+      <div class="dungeon-bg"></div>
+      <div class="light-rays"></div>
+      <div class="mist-layer" id="mistLayer">
+        <svg preserveAspectRatio="none" viewBox="0 0 1920 1080">
+          <defs>
+            <filter id="mist">
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.008"
+                numOctaves="3"
+                seed="5"
+              />
+              <feColorMatrix
+                values="0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.75  0 0 0 0.5 0"
+              />
+              <feGaussianBlur stdDeviation="20" />
+            </filter>
+            <filter id="mist2">
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.004"
+                numOctaves="2"
+                seed="13"
+              />
+              <feColorMatrix
+                values="0 0 0 0 0.7  0 0 0 0 0.6  0 0 0 0 0.8  0 0 0 0.3 0"
+              />
+              <feGaussianBlur stdDeviation="30" />
+            </filter>
+          </defs>
+          <rect
+            id="mistRect1"
+            width="100%"
+            height="100%"
+            filter="url(#mist)"
+            opacity="0.5"
+          />
+          <rect
+            id="mistRect2"
+            width="100%"
+            height="100%"
+            filter="url(#mist2)"
+            opacity="0.3"
+          />
+        </svg>
+      </div>
+      <canvas id="dustCanvas"></canvas>
+      <div class="torch-flicker"></div>
+      <canvas id="particles"></canvas>
+      <div class="levelup-overlay" id="lvlOverlay"></div>
+      <div class="levelup-banner" id="lvlBanner">
+        <div class="lbl">⚔ БРЕМЯ СТАЛО ЛЕГЧЕ ⚔</div>
+        <div class="num" id="lvlNum">2</div>
+        <div class="sub" id="lvlSub">Новый уровень</div>
+        <div class="sub2" id="lvlSub2">+100 HP · Новые возможности открыты</div>
+      </div>
+      <div class="rankup-overlay" id="rankupOverlay"></div>
+      <div class="rankup-banner" id="rankupBanner">
+        <div class="lbl">⚔ Ранг повышен ⚔</div>
+        <div class="rank-text" id="rankupRankText">CC</div>
+        <div class="sub" id="rankupSubText">Сила пробуждается</div>
+        <div class="card-name-small" id="rankupCardName"></div>
+        <div class="attr-hint" id="rankupAttrHint">+1 к пулу Силы (3/5)</div>
+      </div>
+      <div class="spirit-msg" id="spiritMsg" aria-live="polite"></div>
+      <div class="toast" id="toast" aria-live="polite">
+        <div class="t-title"></div>
+        <div class="t-body"></div>
+      </div>
+      <div class="tooltip" id="tooltip"></div>
+      <div class="modal-overlay" role="dialog" aria-modal="true" id="goalModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>🎯 Новая цель</h3>
+            <button class="modal-close" data-action="close-goal-modal">
+              ✕
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <label class="form-label">Тип цели</label>
+              <div class="goal-type-selector" id="goalTypeSelector">
+                <div
+                  class="goal-type-option short selected"
+                  data-action="select-goal-type"
+                  data-type="short"
+                >
+                  <div class="type-icon">🟢</div>
+                  <div class="type-name">Краткая</div>
+                  <div class="type-desc">1-7 дней</div>
+                  <div class="type-reward">+30 XP · -5 HP</div>
+                </div>
+                <div
+                  class="goal-type-option medium"
+                  data-action="select-goal-type"
+                  data-type="medium"
+                >
+                  <div class="type-icon">🔵</div>
+                  <div class="type-name">Средняя</div>
+                  <div class="type-desc">1-4 недели</div>
+                  <div class="type-reward">+80 XP · -12 HP</div>
+                </div>
+                <div
+                  class="goal-type-option long"
+                  data-action="select-goal-type"
+                  data-type="long"
+                >
+                  <div class="type-icon">🟡</div>
+                  <div class="type-name">Долгая</div>
+                  <div class="type-desc">1+ месяц</div>
+                  <div class="type-reward">+200 XP · -25 HP</div>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Название</label
+              ><input
+                class="form-input"
+                id="goalName"
+                placeholder="Пробежать 10 км"
+              />
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label class="form-label">📅 Дедлайн</label
+                ><input class="form-input" type="date" id="goalDeadline" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">🕐 Время</label
+                ><input
+                  class="form-input"
+                  type="time"
+                  id="goalDeadlineTime"
+                  value="23:00"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">📊 Шагов к цели</label
+              ><input
+                class="form-input"
+                type="number"
+                id="goalSteps"
+                value="3"
+                min="1"
+                max="20"
+                onchange="renderStepInputs()"
+              />
+            </div>
+            <div class="form-row" id="goalStepInputsWrap" style="display: none">
+              <label class="form-label">📝 Описание шагов</label>
+              <div
+                id="goalStepInputs"
+                style="display: flex; flex-direction: column; gap: 8px"
+              ></div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">⚡ Привязанный стат</label>
+              <div id="goalStatChips">
+                <div
+                  class="stat-chip selected"
+                  data-action="select-goal-stat"
+                  data-stat="str"
+                >
+                  ⚔ Сила
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="end"
+                >
+                  🛡 Стойкость
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="int"
+                >
+                  🧠 Интеллект
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="cha"
+                >
+                  🎭 Харизма
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="wil"
+                >
+                  🧘 Воля
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="agi"
+                >
+                  ⚡ Ловкость
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">📜 Описание</label
+              ><input
+                class="form-input"
+                id="goalDesc"
+                placeholder="Зачем эта цель..."
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="demo-btn" data-action="close-goal-modal">
+              Отмена</button
+            ><button class="demo-btn primary" data-action="create-goal">
+              🎯 Создать
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        id="forgeModal"
+      >
+        <div class="modal">
+          <div class="modal-header">
+            <h3>🔥 Выковать карточку</h3>
+            <button class="modal-close" data-action="close-forge">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <label class="form-label">Название</label
+              ><input
+                class="form-input"
+                id="forgeName"
+                placeholder="Медитация"
+              />
+            </div>
+            <div class="form-row">
+              <label class="form-label">⚡ Характеристика</label>
+              <div id="statChips">
+                <div
+                  class="stat-chip"
+                  data-action="select-forge-stat"
+                  data-stat="str"
+                >
+                  ⚔ Сила
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-forge-stat"
+                  data-stat="end"
+                >
+                  🛡 Стойкость
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-forge-stat"
+                  data-stat="int"
+                >
+                  🧠 Интеллект
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-forge-stat"
+                  data-stat="cha"
+                >
+                  🎭 Харизма
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-forge-stat"
+                  data-stat="wil"
+                >
+                  🧘 Воля
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-forge-stat"
+                  data-stat="agi"
+                >
+                  ⚡ Ловкость
+                </div>
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label class="form-label">🕐 Время</label
+                ><select class="form-select" id="forgeTime">
+                  <option>утро</option>
+                  <option>день</option>
+                  <option>вечер</option>
+                  <option>ночь</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label class="form-label">⏱ Минут</label
+                ><input
+                  class="form-input"
+                  type="number"
+                  id="forgeDuration"
+                  value="15"
+                />
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label class="form-label">🏆 Стартовый ранг</label>
+                <select class="form-select" id="forgeRank" disabled>
+                  <option value="C">C</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label class="form-label">⚔ Выполнений до ранг-апа</label>
+                <input
+                  class="form-input"
+                  type="number"
+                  id="forgeMastery"
+                  value="5"
+                  min="2"
+                  max="50"
+                />
+              </div>
+            </div>
+            <div class="form-hint">
+              Новые карточки всегда стартуют с ранга C. Каждое выполнение
+              увеличивает Мастерство на 1. При достижении порога — ранг-ап:
+              <b>C → CC → CCC → B → BB → BBB → A → AA → AAA → S → SS → SSS</b>.
+              После ранг-апа откроется модалка для усложнения карточки.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="demo-btn" data-action="close-forge">Отмена</button
+            ><button class="demo-btn primary" data-action="forge-card">
+              🔥 Выковать
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        id="editCardModal"
+      >
+        <div class="modal">
+          <div class="modal-header">
+            <h3>✏ Редактировать карточку</h3>
+            <button class="modal-close" data-action="close-edit-card">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-warning" id="editCardWarning">
+              ⚠ Ранг повышен! Теперь карточка должна стать сложнее, иначе
+              адаптация снизит получаемое Мастерство и XP.
+            </div>
+            <div class="form-row">
+              <label class="form-label">Название</label
+              ><input
+                class="form-input"
+                id="editCardName"
+                placeholder="Медитация"
+              />
+            </div>
+            <div class="form-row">
+              <label class="form-label">⚡ Характеристика</label>
+              <div id="editStatChips">
+                <div
+                  class="stat-chip"
+                  data-action="select-edit-stat"
+                  data-stat="str"
+                >
+                  ⚔ Сила
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-edit-stat"
+                  data-stat="end"
+                >
+                  🛡 Стойкость
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-edit-stat"
+                  data-stat="int"
+                >
+                  🧠 Интеллект
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-edit-stat"
+                  data-stat="cha"
+                >
+                  🎭 Харизма
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-edit-stat"
+                  data-stat="wil"
+                >
+                  🧘 Воля
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-edit-stat"
+                  data-stat="agi"
+                >
+                  ⚡ Ловкость
+                </div>
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label class="form-label">🕐 Время</label
+                ><select class="form-select" id="editCardTime">
+                  <option>утро</option>
+                  <option>день</option>
+                  <option>вечер</option>
+                  <option>ночь</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label class="form-label">⏱ Минут</label
+                ><input
+                  class="form-input"
+                  type="number"
+                  id="editCardDuration"
+                  value="15"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label"
+                >⚔ Новое кол-во выполнений до следующего ранг-апа</label
+              >
+              <input
+                class="form-input"
+                type="number"
+                id="editCardMastery"
+                value="7"
+                min="2"
+                max="50"
+              />
+              <div class="form-hint" id="editCardAdaptHint">
+                Текущая адаптация: <b>100%</b>. Усложни карточку (увеличь время
+                или порог), чтобы сохранить эффективность!
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="demo-btn" data-action="skip-edit-card">
+              Пропустить
+            </button>
+            <button class="demo-btn primary" data-action="save-edit-card">
+              💾 Сохранить
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-overlay" role="dialog" aria-modal="true" id="syncModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>☁ Синхронизация</h3>
+            <button class="modal-close" data-action="close-sync-modal">
+              ✕
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="sync-section" id="cloudSection">
+              <div class="sync-section-title">☁ Облако Telegram</div>
+              <div class="sync-section-desc">
+                Автоматическая синхронизация. Работает не на всех устройствах.
+              </div>
+              <div
+                id="cloudStatus"
+                style="
+                  padding: 10px;
+                  background: rgba(0, 0, 0, 0.2);
+                  border: 1px solid var(--border);
+                  margin-bottom: 12px;
+                  font-size: 12px;
+                  color: var(--text-dim);
+                "
+              >
+                Проверяю...
+              </div>
+              <div style="display: flex; gap: 8px">
+                <button
+                  class="demo-btn"
+                  data-action="save-cloud"
+                  style="flex: 1"
+                >
+                  ☁ Сохранить
+                </button>
+                <button
+                  class="demo-btn primary"
+                  data-action="load-cloud"
+                  style="flex: 1"
+                >
+                  ☁ Загрузить
+                </button>
+              </div>
+            </div>
+            <div class="sync-section">
+              <div class="sync-section-title">🔗 Ссылка</div>
+              <div class="sync-section-desc">
+                Создай ссылку с прогрессом и отправь себе в «Избранное» в
+                Telegram. Откроешь на другом устройстве — данные подхватятся
+                автоматически.
+              </div>
+              <div style="display: flex; gap: 8px">
+                <button
+                  class="demo-btn"
+                  data-action="copy-share-link"
+                  style="flex: 1"
+                >
+                  📋 Копировать
+                </button>
+                <button
+                  class="demo-btn primary"
+                  data-action="share-link"
+                  style="flex: 1"
+                >
+                  ↗ Поделиться
+                </button>
+              </div>
+            </div>
+            <div class="sync-section">
+              <div class="sync-section-title">💾 Файл</div>
+              <div class="sync-section-desc">
+                Скачай файл на одном устройстве и загрузи на другом.
+              </div>
+              <div style="display: flex; gap: 8px">
+                <button
+                  class="demo-btn"
+                  data-action="download-sync-file"
+                  style="flex: 1"
+                >
+                  💾 Скачать
+                </button>
+                <button
+                  class="demo-btn primary"
+                  data-action="choose-sync-file"
+                  style="flex: 1"
+                >
+                  📁 Загрузить
+                </button>
+              </div>
+              <input
+                type="file"
+                id="syncFileInput"
+                accept=".ndsync,.json"
+                style="display: none"
+              />
+            </div>
+            <div class="sync-section">
+              <div class="sync-section-title">⚡ Режим производительности</div>
+              <div class="sync-section-desc">
+                Управление анимациями для слабых устройств или людей с
+                проблемами вестибулярного аппарата.
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <button
+                  class="demo-btn"
+                  data-action="set-perf"
+                  data-mode="auto"
+                  id="perfAutoBtn"
+                  style="flex: 1"
+                >
+                  🟢 Авто
+                </button>
+                <button
+                  class="demo-btn"
+                  data-action="set-perf"
+                  data-mode="low"
+                  id="perfLowBtn"
+                  style="flex: 1"
+                >
+                  🟡 Экономный
+                </button>
+                <button
+                  class="demo-btn"
+                  data-action="set-perf"
+                  data-mode="effects-off"
+                  id="perfOffBtn"
+                  style="flex: 1"
+                >
+                  🔴 Без эффектов
+                </button>
+              </div>
+              <div
+                id="perfStatus"
+                style="font-size: 11px; color: var(--text-dim); margin-top: 6px"
+              ></div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px">
+              <button
+                class="demo-btn"
+                data-action="export-json"
+                style="flex: 1"
+              >
+                📋 JSON
+              </button>
+              <button
+                class="demo-btn"
+                id="notifToggleBtn"
+                data-action="toggle-notif"
+                style="flex: 1"
+              >
+                🔔 Уведомления
+              </button>
+              <button
+                class="demo-btn"
+                data-action="deep-recovery"
+                style="flex: 1; color: var(--green); border-color: var(--green)"
+              >
+                ♻ Восстановить
+              </button>
+              <button
+                class="demo-btn"
+                data-action="reset-all-data"
+                style="
+                  flex: 1;
+                  color: var(--blood-bright);
+                  border-color: var(--blood);
+                "
+              >
+                🗑 Сброс
+              </button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="demo-btn" data-action="close-sync-modal">
+              Закрыть
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        id="roomDetailModal"
+      >
+        <div class="modal">
+          <div class="modal-header">
+            <h3 id="roomDetailTitle">📍 Локация</h3>
+            <button class="modal-close" data-action="close-room-detail">
+              ✕
+            </button>
+          </div>
+          <div class="modal-body" id="roomDetailBody"></div>
+          <div class="modal-footer">
+            <button class="demo-btn primary" data-action="close-room-detail">
+              Закрыть
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" role="dialog" aria-modal="true" id="taskModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>📋 Новая задача</h3>
+          <button class="modal-close" data-action="close-task-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label class="form-label">Что сделать</label
+            ><input
+              class="form-input"
+              id="taskName"
+              placeholder="Сдать отчёт до 13:00"
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-label">Сложность</label>
+            <div id="taskTierChips">
+              <div
+                class="stat-chip"
+                data-action="select-task-tier"
+                data-tier="light"
+              >
+                🌿 Лёгкая (+5💰/20XP)
+              </div>
+              <div
+                class="stat-chip selected"
+                data-action="select-task-tier"
+                data-tier="normal"
+              >
+                ⚔ Обычная (+10💰/40XP)
+              </div>
+              <div
+                class="stat-chip"
+                data-action="select-task-tier"
+                data-tier="urgent"
+              >
+                🔥 Срочная (+20💰/80XP)
+              </div>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label class="form-label">📅 Дедлайн</label
+              ><input class="form-input" type="date" id="taskDeadline" />
+            </div>
+            <div class="form-row">
+              <label class="form-label">🕐 Время</label
+              ><input
+                class="form-input"
+                type="time"
+                id="taskDeadlineTime"
+                value="19:00"
+              />
+            </div>
+          </div>
+          <div class="form-hint">
+            Успел до дедлайна — открой сундук (💰 или XP). Просрочил — призрак
+            задачи ночами забирает −1 💰, пока не сделаешь дело или не изгонишь
+            ✕.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="demo-btn" data-action="close-task-modal">Отмена</button
+          ><button class="demo-btn primary" data-action="create-task">
+            📋 Поставить
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      id="confirmOverlay"
+    >
+      <div class="modal confirm-modal">
+        <div class="confirm-title" id="confirmTitle">Подтверди</div>
+        <div class="confirm-body" id="confirmBody">Ты уверен?</div>
+        <div class="confirm-actions">
+          <button class="demo-btn" id="confirmNo">Отмена</button>
+          <button class="demo-btn primary" id="confirmYes">Подтвердить</button>
+        </div>
+      </div>
+    </div>
+    <div class="shake-wrap" id="shakeWrap">
+      <div class="app">
+        <div class="header">
+          <div class="logo">NEURODECK <span>Learn by Doing</span></div>
+          <button class="sync-header-btn" data-action="open-sync-modal">
+            <span id="syncBadge" style="font-size: 14px">☁</span>
+            <span>Синхра</span>
+          </button>
+          <div class="hero-mini">
+            <div class="hero-avatar-mini">
+              🗡
+              <div class="hero-lvl-badge" id="heroMiniLvl">1</div>
+            </div>
+            <div class="hero-mini-info">
+              <div class="hero-mini-name" id="heroMiniName">Странник</div>
+              <div class="hero-mini-xp-wrap">
+                <span id="heroMiniXpText">0/100</span>
+                <div class="hero-mini-xp-bar">
+                  <div
+                    class="hero-mini-xp-fill"
+                    id="heroMiniXpFill"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="progress-control">
+            <span>Побег</span>
+            <div
+              id="progressSlider"
+              class="progress-track"
+              role="progressbar"
+              aria-label="Прогресс"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            >
+              <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <span class="val" id="progressVal">0/140</span>
+          </div>
+        </div>
+        <div class="main">
+          <nav class="tabs" aria-label="Навигация" role="tablist">
+            <div
+              class="tab active"
+              role="tab"
+              data-action="switch-view"
+              data-view="deck"
+            >
+              <span class="icon">📖</span>Колода
+            </div>
+            <div
+              class="tab"
+              role="tab"
+              data-action="switch-view"
+              data-view="hero"
+            >
+              <span class="icon">👤</span>Герой
+            </div>
+            <div
+              class="tab"
+              role="tab"
+              data-action="switch-view"
+              data-view="inv"
+            >
+              <span class="icon">🎒</span>Инвентарь
+            </div>
+            <div
+              class="tab"
+              role="tab"
+              data-action="switch-view"
+              data-view="tract"
+            >
+              <span class="icon">🏰</span>Тракт
+            </div>
+            <div
+              class="tab"
+              role="tab"
+              data-action="switch-view"
+              data-view="map"
+            >
+              <span class="icon">🗺</span>Карта
+            </div>
+            <div
+              class="tab"
+              role="tab"
+              data-action="switch-view"
+              data-view="stats"
+            >
+              <span class="icon">📊</span>Статистика
+            </div>
+          </nav>
+          <main class="content">
+            <section class="view active" id="view-deck">
+              <div class="view-title">📖 Колода</div>
+              <div
+                id="dashboardBar"
+                style="
+                  background: rgba(0, 0, 0, 0.3);
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  padding: 8px 12px;
+                  margin-bottom: 12px;
+                  font-size: 11px;
+                  line-height: 1.8;
+                  position: relative;
+                "
+              ></div>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  gap: 12px;
+                  margin-bottom: 14px;
+                  padding-bottom: 12px;
+                  border-bottom: 1px solid var(--border);
+                  flex-wrap: wrap;
+                "
+              >
+                <div
+                  style="
+                    font-size: 11px;
+                    color: var(--text-dim);
+                    letter-spacing: 1.5px;
+                  "
+                >
+                  Всего карточек:
+                  <b
+                    id="deckCount"
+                    style="color: var(--gold-bright); font-weight: normal"
+                    >0</b
+                  >
+                </div>
+                <button class="forge-btn" data-action="open-forge">
+                  🔨 Выковать карточку
+                </button>
+              </div>
+              <div class="cards" id="cardGrid"></div>
+            </section>
+            <section class="view" id="view-hero">
+              <div class="view-title">👤 Герой</div>
+              <div class="view-subtitle">
+                Атрибуты растут только через мастерство карточек (5 очков пула =
+                +1 атрибут)
+              </div>
+              <div class="hero-layout">
+                <div class="hero-card">
+                  <div class="hero-avatar-wrap">
+                    <div class="hero-avatar" id="heroAvatar">
+                      🗡
+                      <svg class="hero-level-ring" viewBox="0 0 160 160">
+                        <defs>
+                          <linearGradient
+                            id="xpGrad"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
+                            <stop offset="0%" stop-color="#8b5a2b" />
+                            <stop offset="50%" stop-color="#d4a574" />
+                            <stop offset="100%" stop-color="#f4c896" />
+                          </linearGradient>
+                        </defs>
+                        <circle class="ring-bg" cx="80" cy="80" r="74" />
+                        <circle
+                          class="ring-fill"
+                          id="ringFill"
+                          cx="80"
+                          cy="80"
+                          r="74"
+                          stroke-dasharray="465.01"
+                          stroke-dashoffset="465.01"
+                        />
+                      </svg>
+                      <div class="hero-level" id="heroLevelLabel">LVL 1</div>
+                    </div>
+                  </div>
+                  <div class="hero-name" id="heroName">Странник</div>
+                  <div class="hero-title" id="heroTitle">
+                    «Тот, кто только начал путь»
+                  </div>
+                  <div class="difficulty-badge">Souls-like</div>
+                  <div class="hero-hp-block">
+                    <div class="hero-hp-header">
+                      <span>❤ Здоровье</span>
+                      <span
+                        ><b id="heroHpCur">100</b> /
+                        <b id="heroHpMax">100</b></span
+                      >
+                    </div>
+                    <div class="hero-hp-bar">
+                      <div
+                        class="hero-hp-fill"
+                        id="heroHpFill"
+                        style="width: 100%"
+                      ></div>
+                    </div>
+                    <div class="hero-hp-meta">
+                      <span id="heroHpWarn"></span>
+                      <span>Стойкость: <b id="heroEndStat">3</b></span>
+                    </div>
+                  </div>
+                  <div
+                    class="atonement-bar"
+                    id="atonementBar"
+                    style="display: none"
+                  >
+                    <div class="atonement-label">
+                      Ритуал Искупления (идеальные дни подряд)
+                    </div>
+                    <div class="atonement-track">
+                      <div class="atonement-segment" id="at1"></div>
+                      <div class="atonement-segment" id="at2"></div>
+                      <div class="atonement-segment" id="at3"></div>
+                    </div>
+                  </div>
+                  <div class="hero-xp-block">
+                    <div class="hero-xp-header">
+                      <span>Опыт</span
+                      ><span
+                        ><b id="heroXpCur">0</b> /
+                        <b id="heroXpMax">100</b></span
+                      >
+                    </div>
+                    <div class="hero-xp-bar">
+                      <div
+                        class="hero-xp-fill"
+                        id="heroXpFill"
+                        style="width: 0%"
+                      ></div>
+                    </div>
+                  </div>
+                  <div class="hero-summary">
+                    <div><span>Всего XP</span><b id="statTotalXp">0</b></div>
+                    <div>
+                      <span>Сумма атрибутов</span><b id="statSumStats">0</b>
+                    </div>
+                    <div>
+                      <span>Целей активно</span><b id="statGoalsActive">0</b>
+                    </div>
+                    <div>
+                      <span>Целей выполнено</span><b id="statGoalsDone">0</b>
+                    </div>
+                    <div>
+                      <span>Множитель XP</span><b id="statXpMult">×1.00</b>
+                    </div>
+                    <div><span>Ранг-апов</span><b id="statRankups">0</b></div>
+                    <div>
+                      <span>Прогресс побега</span><b id="statEscape">0 / 140</b>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="stats-grid" id="statsGrid"></div>
+                  <div class="goals-section">
+                    <div class="goals-head">
+                      <div class="goals-title">
+                        <div class="goals-title-icon">🎯</div>
+                        Цели героя
+                      </div>
+                      <button class="goals-add" data-action="open-goal-modal">
+                        + Добавить
+                      </button>
+                    </div>
+                    <div class="goals-filters">
+                      <button
+                        class="goal-filter active"
+                        data-action="filter-goals"
+                        data-filter="all"
+                      >
+                        Все
+                      </button>
+                      <button
+                        class="goal-filter"
+                        data-action="filter-goals"
+                        data-filter="short"
+                      >
+                        🟢 Краткие
+                      </button>
+                      <button
+                        class="goal-filter"
+                        data-action="filter-goals"
+                        data-filter="medium"
+                      >
+                        🔵 Средние
+                      </button>
+                      <button
+                        class="goal-filter"
+                        data-action="filter-goals"
+                        data-filter="long"
+                      >
+                        🟡 Долгие
+                      </button>
+                    </div>
+                    <div class="goals-list" id="goalsList"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="view" id="view-inv">
+              <div class="view-title">🎒 Инвентарь героя</div>
+              <div class="view-subtitle">
+                Экипируй артефакты · Получай бонусы к характеристикам
+              </div>
+              <div class="inv-layout">
+                <div class="inv-main">
+                  <div class="paperdoll-wrap">
+                    <div class="paperdoll-title">⚔ Снаряжение</div>
+                    <div class="paperdoll">
+                      <div class="paperdoll-silhouette"></div>
+                      <div
+                        class="slot"
+                        data-slot="head"
+                        data-slot-label="Голова"
+                      >
+                        ◇
+                      </div>
+                      <div
+                        class="slot"
+                        data-slot="amulet"
+                        data-slot-label="Амулет"
+                      >
+                        △
+                      </div>
+                      <div
+                        class="slot"
+                        data-slot="chest"
+                        data-slot-label="Торс"
+                      >
+                        □
+                      </div>
+                      <div class="slot" data-slot="cape" data-slot-label="Плащ">
+                        ◁
+                      </div>
+                      <div
+                        class="slot"
+                        data-slot="weapon"
+                        data-slot-label="Оружие"
+                      >
+                        ✕
+                      </div>
+                      <div
+                        class="slot"
+                        data-slot="shield"
+                        data-slot-label="Щит"
+                      >
+                        ◯
+                      </div>
+                      <div
+                        class="slot"
+                        data-slot="ring1"
+                        data-slot-label="Кольцо 1"
+                      >
+                        ○
+                      </div>
+                      <div
+                        class="slot"
+                        data-slot="ring2"
+                        data-slot-label="Кольцо 2"
+                      >
+                        ○
+                      </div>
+                      <div
+                        class="slot"
+                        data-slot="boots"
+                        data-slot-label="Обувь"
+                      >
+                        ▽
+                      </div>
+                    </div>
+                    <div class="total-bonuses">
+                      <div class="total-bonuses-title">
+                        ⚡ Бонусы экипировки
+                      </div>
+                      <div class="total-bonuses-grid" id="totalBonuses"></div>
+                    </div>
+                  </div>
+                  <div class="backpack">
+                    <div class="backpack-header">
+                      <div class="backpack-title">🎒 Рюкзак</div>
+                      <div class="backpack-info" id="bpShards"></div>
+                      <div class="backpack-info">
+                        <b id="bpCount">0</b> / <b id="bpMax">30</b>
+                      </div>
+                    </div>
+                    <div class="backpack-tabs">
+                      <button
+                        class="backpack-tab active"
+                        data-action="filter-backpack"
+                        data-filter="all"
+                      >
+                        Все
+                      </button>
+                      <button
+                        class="backpack-tab"
+                        data-action="filter-backpack"
+                        data-filter="weapon"
+                      >
+                        Оружие
+                      </button>
+                      <button
+                        class="backpack-tab"
+                        data-action="filter-backpack"
+                        data-filter="armor"
+                      >
+                        Броня
+                      </button>
+                      <button
+                        class="backpack-tab"
+                        data-action="filter-backpack"
+                        data-filter="accessory"
+                      >
+                        Аксессуары
+                      </button>
+                    </div>
+                    <div class="backpack-grid" id="backpackGrid"></div>
+                  </div>
+                </div>
+                <div class="item-panel" id="itemPanel">
+                  <div class="item-panel-header">📜 Свойства предмета</div>
+                  <div id="itemPanelContent">
+                    <div class="empty-state">
+                      Выбери предмет в рюкзаке<br />или кликни по слоту
+                      экипировки.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="view" id="view-tract">
+              <div class="view-title">🏰 Тракт завоеваний</div>
+              <div class="view-subtitle">
+                Стройка за дни · Доход каждый день · От Сендер-Хутора до
+                Тернового Трона
+              </div>
+              <div id="tractContent"></div>
+              <div class="tasks-section">
+                <div class="tasks-head">
+                  <div class="goals-title">
+                    <div class="goals-title-icon">📋</div>
+                    Задачи дня
+                  </div>
+                  <button class="goals-add" data-action="open-task-modal">
+                    + Задача
+                  </button>
+                </div>
+                <div id="tasksActive"></div>
+                <div id="tasksGone"></div>
+              </div>
+            </section>
+            <section class="view" id="view-map">
+              <div class="view-title">🗺 Карта подземелья</div>
+              <div class="view-subtitle">
+                Каждые 10 ранг-апов карточек открывают новую локацию · Пройди
+                все 14 комнат
+              </div>
+              <div class="map-header">
+                <div class="map-progress-label">Прогресс побега</div>
+                <div class="map-progress-big">
+                  <span id="mapProgressNum">0</span> <span>/ 140</span>
+                </div>
+                <div class="map-room-text" id="mapRoomText">
+                  ⛓ Ты в Камере заключенного
+                </div>
+                <div class="map-progress-bar">
+                  <div
+                    class="map-progress-fill"
+                    id="mapProgressFill"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+              <div class="map-container" id="mapContainer">
+                <div class="map-fog" id="mapFog"></div>
+                <div class="map-rooms" id="mapRooms"></div>
+              </div>
+            </section>
+            <section class="view" id="view-stats">
+              <div class="view-title">📊 Статистика</div>
+              <div class="view-subtitle">
+                Дневник прогресса — отслеживай свой путь из тьмы
+              </div>
+              <div id="statsContent"></div>
+            </section>
+          </main>
+          <aside class="boss-panel">
+            <div class="boss-title" id="bossPanelTitle">🐍 Змей Лени</div>
+            <div class="boss-image" id="bossImg">
+              <div class="boss-sprite boss-anim-stage1"></div>
+              <div class="boss-eyes">
+                <div class="boss-eye left"></div>
+                <div class="boss-eye right"></div>
+              </div>
+              <div class="boss-blood" id="bossBlood"></div>
+              <div class="boss-cracks" id="bossCracks"></div>
+              <div class="boss-defeated-overlay" id="bossDefeatedPanel">
+                <div class="skull">☠</div>
+                <div class="defeat-text">ПОВЕРЖЕН</div>
+                <div class="defeat-sub">Тьма отступает...</div>
+              </div>
+            </div>
+            <div class="boss-hp" id="bossHpBlockPanel">
+              <div class="boss-hp-label">
+                <span>HP</span><b id="bossHpText">100%</b>
+              </div>
+              <div class="boss-hp-bar">
+                <div
+                  class="boss-hp-fill"
+                  id="bossHpFill"
+                  style="width: 100%"
+                ></div>
+              </div>
+            </div>
+            <div class="boss-info" id="bossInfo">«Я жду...»</div>
+            <div
+              style="
+                font-size: 10px;
+                color: var(--blood-bright);
+                text-align: center;
+                padding: 2px 0;
+              "
+              id="punishCountdown"
+            ></div>
+            <div
+              style="
+                border-top: 1px solid var(--border);
+                padding-top: 8px;
+                margin-top: auto;
+              "
+            >
+              <div
+                class="boss-title"
+                style="border: none; padding: 0; margin-bottom: 6px"
+              >
+                ⚡ Твой урон
+              </div>
+              <div
+                style="
+                  font-size: 10px;
+                  color: var(--text-dim);
+                  line-height: 1.7;
+                "
+                id="damageInfo"
+              ></div>
+            </div>
+          </aside>
+        </div>
+        <footer class="bottom-nav">
+          <button
+            class="bnav-btn active"
+            data-action="switch-view"
+            data-view="deck"
+          >
+            <span class="bnav-icon">📖</span>Колода
+          </button>
+          <button class="bnav-btn" data-action="switch-view" data-view="hero">
+            <span class="bnav-icon">👤</span>Герой
+          </button>
+          <button class="bnav-btn" data-action="switch-view" data-view="inv">
+            <span class="bnav-icon">🎒</span>Инв
+          </button>
+          <button class="bnav-btn" data-action="switch-view" data-view="tract">
+            <span class="bnav-icon">🏰</span>Тракт
+          </button>
+          <button class="bnav-btn" data-action="switch-view" data-view="map">
+            <span class="bnav-icon">🗺</span>Карта
+          </button>
+          <button class="bnav-btn" data-action="switch-view" data-view="stats">
+            <span class="bnav-icon">📊</span>Стат
+          </button>
+        </footer>
+      </div>
+    </div>
+    <div class="modal-overlay" role="dialog" aria-modal="true" id="returnModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>📅 С возвращением</h3>
+          <button class="modal-close" data-action="close-return-modal">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body"></div>
+        <div class="modal-footer">
+          <button class="demo-btn primary" data-action="close-return-modal">
+            Продолжить
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      id="evolutionModal"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3>🌟 Эволюция карточки</h3>
+          <button class="modal-close" data-action="close-evolution-modal">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div style="text-align: center; margin-bottom: 16px">
+            Карточка <b class="evolution-card-name"></b> повысила ранг!<br />Выбери
+            путь эволюции:
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 10px">
+            <div
+              data-action="apply-evolution-depth"
+              style="
+                cursor: pointer;
+                padding: 14px;
+                background: rgba(192, 132, 252, 0.08);
+                border: 1px solid rgba(192, 132, 252, 0.3);
+                border-radius: 4px;
+              "
+            >
+              <div style="font-size: 14px; color: #c084fc; margin-bottom: 4px">
+                🧘 Глубже
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim)">
+                +50% мастерства за выполнение
+              </div>
+            </div>
+            <div
+              data-action="apply-evolution-frequency"
+              style="
+                cursor: pointer;
+                padding: 14px;
+                background: rgba(96, 165, 250, 0.08);
+                border: 1px solid rgba(96, 165, 250, 0.3);
+                border-radius: 4px;
+              "
+            >
+              <div style="font-size: 14px; color: #60a5fa; margin-bottom: 4px">
+                ⚡ Чаще
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim)">
+                +1 к пулу стата за каждое выполнение<br />Ускоренный рост
+                атрибута
+              </div>
+            </div>
+            <div
+              data-action="apply-evolution-stability"
+              style="
+                cursor: pointer;
+                padding: 14px;
+                background: rgba(52, 211, 153, 0.08);
+                border: 1px solid rgba(52, 211, 153, 0.3);
+                border-radius: 4px;
+              "
+            >
+              <div style="font-size: 14px; color: #34d399; margin-bottom: 4px">
+                🌟 Стабильнее
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim)">
+                Двойная защита стрика<br />Один пропуск простителен
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="demo-btn" data-action="evolution-skip">
+            Пропустить
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      id="weeklyReportModal"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3>📊 Недельный отчёт</h3>
+          <button class="modal-close" data-action="close-weekly-report">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body"></div>
+        <div class="modal-footer">
+          <button class="demo-btn primary" data-action="close-weekly-report">
+            К новой неделе
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      id="starterDeckModal"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3>🎴 Готовые испытания</h3>
+          <button class="modal-close" data-action="close-starter-deck">
+            ✕
+          </button>
+        </div>
+        <div
+          class="modal-body"
+          style="
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+          "
+        >
+          Эти карточки работают для всех. Выбери сколько хочешь — каждая
+          стартует с ранга C.
+        </div>
+        <div class="modal-body" style="padding: 0 20px">
+          <div id="starterDeckList"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="demo-btn" data-action="close-starter-deck">
+            Пропустить
+          </button>
+          <button class="demo-btn primary" data-action="accept-starter-deck">
+            ⚔ Взять выбранные
+          </button>
+        </div>
+      </div>
+    </div>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"></script>
+    <script src="js/perf.js?v=49"></script>
+    <script src="js/perf-compat.js?v=49"></script>
+    <script src="js/state-guards.js?v=49"></script>
+    <script src="js/storage.js?v=49"></script>
+    <script src="js/app.js?v=49"></script>
+  </body>
 </html>

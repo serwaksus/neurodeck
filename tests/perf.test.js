@@ -13,7 +13,6 @@ const css = read('css/style.css');
 const app = read('js/app.js');
 const perfSh = read('js/state-guards.js'); // sanity
 const perfJs = read('js/perf.js');
-const combatPixi = read('js/combat-pixi.js');
 
 // ===================== js/perf.js logic =====================
 
@@ -159,14 +158,15 @@ test('index.html loads perf-compat right after perf.js, both before state-guards
     assert.ok(sg < st, 'state-guards must load before storage');
 });
 
-test('index.html cache-bust v47 is uniform across all 4 JS files', () => {
-    ['js/state-guards.js', 'js/perf.js', 'js/storage.js', 'js/combat-pixi.js', 'js/app.js']
+test('index.html cache-bust v49 is uniform across all JS files', () => {
+    ['js/state-guards.js', 'js/perf.js', 'js/storage.js', 'js/app.js']
         .forEach(function(rel) {
             var re = new RegExp(rel.replace(/\./g, '\\.') + '\\?v=(\\d+)');
             var m = html.match(re);
             assert.ok(m, 'expected entry for ' + rel);
-            assert.equal(m[1], '47', 'cache-bust for ' + rel + ' should be v47, got ' + m[1]);
+            assert.equal(m[1], '49', 'cache-bust for ' + rel + ' should be v49, got ' + m[1]);
         });
+    assert.equal(html.indexOf('combat-pixi'), -1, 'combat-pixi must not be referenced in index.html');
 });
 
 // ===================== CSS :root.perf-eco rules =====================
@@ -240,38 +240,10 @@ test('app.js set-perf notifies user with five-mode map', () => {
     });
 });
 
-test('combat-pixi.js exposes __ndApplyEcoToPixi global', () => {
-    assert.ok(combatPixi.indexOf('window.__ndApplyEcoToPixi') > -1,
-        '__ndApplyEcoToPixi must be exported globally');
-});
 
-test('combat-pixi.js __ndApplyEcoToPixi adjusts renderer resolution', () => {
-    var m = combatPixi.match(/window\.__ndApplyEcoToPixi\s*=[\s\S]*?\};/);
-    assert.ok(m);
-    assert.ok(m[0].indexOf('resolution') > -1,
-        '__ndApplyEcoToPixi must touch renderer.resolution');
-});
 
-test('combat-pixi.js __ndApplyEcoToPixi hides torchGfx in eco', () => {
-    var m = combatPixi.match(/window\.__ndApplyEcoToPixi\s*=[\s\S]*?\};/);
-    assert.ok(m);
-    assert.ok(m[0].indexOf('torchGfx') > -1,
-        '__ndApplyEcoToPixi must toggle torchGfx visibility');
-});
 
-test('combat-pixi.js __ndApplyEcoToPixi hides vignetteGfx in eco', () => {
-    var m = combatPixi.match(/window\.__ndApplyEcoToPixi\s*=[\s\S]*?\};/);
-    assert.ok(m);
-    assert.ok(m[0].indexOf('vignetteGfx') > -1,
-        '__ndApplyEcoToPixi must toggle vignetteGfx visibility');
-});
 
-test('combat-pixi.js __ndApplyEcoToPixi hides grainGfx in eco', () => {
-    var m = combatPixi.match(/window\.__ndApplyEcoToPixi\s*=[\s\S]*?\};/);
-    assert.ok(m);
-    assert.ok(m[0].indexOf('grainGfx') > -1,
-        '__ndApplyEcoToPixi must toggle grainGfx visibility');
-});
 
 // ===================== Forward paths & safety =====================
 
@@ -288,12 +260,6 @@ test('app.js __ndSetEcoMode is wrapped in try/catch for safety', () => {
         '__ndSetEcoMode must guard against runtime failures');
 });
 
-test('combat-pixi.js __ndApplyEcoToPixi also wrapped in try/catch', () => {
-    var m = combatPixi.match(/window\.__ndApplyEcoToPixi\s*=[\s\S]*?\};/);
-    assert.ok(m);
-    assert.ok(/try\s*\{[\s\S]*?catch/.test(m[0]),
-        '__ndApplyEcoToPixi must guard against runtime failures');
-});
 
 test('perf.js init() does not throw when matchMedia unavailable', () => {
     // Re-require fresh module and call _resetForTests(); if previous test left

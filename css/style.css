@@ -943,3 +943,56 @@ button, [data-action], .tab, .demo-btn { touch-action: manipulation; }
 :root.perf-eco .speed-lines { display: none !important; }
 :root.perf-eco #combatContainer.boss-entry,
 :root.perf-eco .boss-intent.intent-flash { animation: none !important; }
+
+/* ===================== ТРАКТ ЗАВОЕВАНИЙ ===================== */
+.tract-treasury { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid var(--gold); border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; }
+.tract-gold { font-size: 18px; color: var(--gold-bright); }
+.tract-gold b { font-size: 22px; }
+.tract-rev { font-size: 12px; color: var(--text-dim); }
+.tract-building { background: rgba(251,191,36,0.06); border: 1px dashed var(--gold); border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; color: var(--gold-bright); }
+.tract-build-bar { height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+.tract-build-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius: 4px; transition: width 0.6s ease; }
+.tract-road { display: flex; flex-direction: column; gap: 8px; }
+.tract-region { display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; }
+.tract-region.owned { border-color: rgba(52,211,153,0.4); }
+.tract-region.owned .tract-region-icon::after { content: ' ✓'; color: var(--green); }
+.tract-region.building { border-color: var(--gold); background: rgba(251,191,36,0.05); animation: tractPulse 2s ease-in-out infinite; }
+.tract-region.next { border-color: rgba(212,165,116,0.5); }
+.tract-region.locked { opacity: 0.45; }
+@keyframes tractPulse { 0%,100% { box-shadow: 0 0 0 rgba(251,191,36,0); } 50% { box-shadow: 0 0 14px rgba(251,191,36,0.25); } }
+.tract-region-icon { font-size: 26px; width: 40px; text-align: center; flex-shrink: 0; }
+.tract-region-body { flex: 1; min-width: 0; }
+.tract-region-name { font-size: 13px; color: var(--text-bright); }
+.tract-region.owned .tract-region-name { color: var(--gold-bright); }
+.tract-region-status { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.tract-region.owned .tract-region-status { color: var(--green); }
+.tract-buy { min-width: 44px; min-height: 44px; font-size: 18px; background: rgba(0,0,0,0.4); border: 1px solid var(--gold); border-radius: 4px; color: var(--gold-bright); cursor: pointer; transition: box-shadow 0.2s; }
+.tract-buy:hover:not(.cant) { box-shadow: 0 0 12px rgba(251,191,36,0.35); }
+.tract-buy.cant { opacity: 0.4; }
+:root.perf-eco .tract-region.building { animation: none; }
+
+/* ===================== ЗАДАЧИ ДНЯ ===================== */
+.tasks-section { margin-top: 18px; }
+.tasks-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tasks-head .goals-title { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gold-bright); }
+.task-card { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-left: 3px solid var(--tier-color, var(--gold)); border-radius: 4px; padding: 9px 10px; margin-bottom: 7px; }
+.task-card.overdue { border-color: var(--blood); border-left-color: var(--blood-bright); }
+.task-card.done { border-left-color: var(--gold-bright); background: rgba(251,191,36,0.05); }
+.task-card.ghost { opacity: 0.6; border-left-color: var(--text-dim); }
+.task-tier { font-size: 18px; flex-shrink: 0; }
+.task-body { flex: 1; min-width: 0; }
+.task-name { font-size: 12.5px; color: var(--text-bright); word-break: break-word; }
+.task-card.ghost .task-name { text-decoration: line-through; color: var(--text-dim); }
+.task-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
+.task-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.task-btn { min-height: 36px; min-width: 36px; padding: 4px 8px; font-size: 13px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; color: var(--text-bright); cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+.task-btn.primary { color: var(--green); border-color: rgba(52,211,153,0.5); }
+.task-btn.primary:hover { box-shadow: 0 0 10px rgba(52,211,153,0.3); }
+.task-btn.gold { color: var(--gold-bright); border-color: var(--gold); font-size: 11.5px; }
+.task-btn.gold:hover { box-shadow: 0 0 10px rgba(251,191,36,0.3); }
+.task-btn.xp { color: #c084fc; border-color: rgba(192,132,252,0.5); font-size: 11.5px; }
+.task-btn.xp:hover { box-shadow: 0 0 10px rgba(192,132,252,0.3); }
+.task-btn.del { color: var(--text-dim); }
+.task-btn.del:hover { color: var(--blood-bright); border-color: var(--blood); }
+.task-ghost-info { font-size: 10px; color: var(--text-dim); }
+.ghosts-title { font-size: 11px; color: var(--blood-bright); margin: 12px 0 8px; }

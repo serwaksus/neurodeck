@@ -109,19 +109,14 @@
             xp: clampNumber(hero.xp, 0, 1e10, 0),
             xpToNext: Math.round(clampNumber(hero.xpToNext, 1, 1e6, 50)),
             totalXp: clampNumber(hero.totalXp, 0, 1e10, 0),
-            hp: Math.round(clampNumber(hero.hp, 0, 1e6, 80)),
-            maxHp: Math.round(clampNumber(hero.maxHp, 1, 1e6, 80)),
-            isHollow: typeof hero.isHollow === 'boolean' ? hero.isHollow : false,
+            gold: Math.round(clampNumber(hero.gold, 0, 1e9, 30)),
             consecutivePerfectDays: Math.round(clampNumber(hero.consecutivePerfectDays, 0, 1000, 0)),
             dailyCompletions: Math.round(clampNumber(hero.dailyCompletions, 0, 1000, 0)),
             dailySkips: Math.round(clampNumber(hero.dailySkips, 0, 1000, 0)),
-            actionPoints: Math.round(clampNumber(hero.actionPoints, 0, 1e6, 0)),
             lastSessionAt: Number.isFinite(Number(hero.lastSessionAt)) ? Number(hero.lastSessionAt) : Date.now(),
             dailyUniqueStats: (hero.dailyUniqueStats && typeof hero.dailyUniqueStats === 'object') ? hero.dailyUniqueStats : {},
             cardHistory: (hero.cardHistory && typeof hero.cardHistory === 'object') ? hero.cardHistory : {},
             lastWeeklyReport: hero.lastWeeklyReport || null,
-            shards: Math.round(clampNumber(hero.shards, 0, 1e6, 0)),
-            flasks: Math.round(clampNumber(hero.flasks, 0, 5, 0)),
         };
     }
 

@@ -129,10 +129,10 @@ test('Beginner dashboard mentions key numbers', () => {
     assert.ok(m, 'renderDashboardBeginner missing');
     assert.ok(m[0].includes('+15 XP'),
         'beginner dashboard must mention XP reward');
-    assert.ok(m[0].includes('ярость') || m[0].includes('ярос'),
-        'beginner dashboard must mention босс ярость risk');
-    assert.ok(m[0].includes('+1 ОД'),
-        'beginner dashboard must mention Action Points reward');
+    assert.ok(m[0].includes('−1 💰') || m[0].includes('−1'),
+        'beginner dashboard must mention gold penalty for skip');
+    assert.ok(m[0].includes('+1 💰'),
+        'beginner dashboard must mention gold reward');
 });
 
 test('Starter deck is triggered for first-run players', () => {

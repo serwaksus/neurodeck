@@ -141,11 +141,10 @@ test('sanitizeHero: CRITICAL #1 — unknown fields dropped, no Object.assign lea
   assert.equal(out.internalVersion, undefined, 'must NOT leak');
   assert.equal(out.customStat, undefined, 'must NOT leak');
   // only whitelisted keys present
-  var allowed = ['name','title','level','xp','xpToNext','totalXp','hp','maxHp',
-                'isHollow','consecutivePerfectDays','dailyCompletions','dailySkips',
-                'actionPoints','lastSessionAt','dailyUniqueStats','cardHistory',
-                'lastWeeklyReport','shards','flasks',
-                'estus','estusUsedToday','lastEstusReset'];
+  var allowed = ['name','title','level','xp','xpToNext','totalXp','gold',
+                'consecutivePerfectDays','dailyCompletions','dailySkips',
+                'lastSessionAt','dailyUniqueStats','cardHistory',
+                'lastWeeklyReport'];
   Object.keys(out).forEach(function(k) {
     assert.ok(allowed.indexOf(k) !== -1, 'unexpected key leaked: ' + k);
   });
@@ -153,13 +152,12 @@ test('sanitizeHero: CRITICAL #1 — unknown fields dropped, no Object.assign lea
 
 test('sanitizeHero: numeric clamps applied', function () {
   var out = SG.sanitizeHero({
-    level: 9999, xp: -50, hp: 1e9, maxHp: -10,
+    level: 9999, xp: -50, gold: -10,
     consecutivePerfectDays: 1e6
   });
   assert.equal(out.level, 99, 'level clamped to 99');
   assert.equal(out.xp, 0, 'xp clamped to 0');
-  assert.equal(out.hp, 1e6, 'hp clamped to 1e6 max');
-  assert.equal(out.maxHp, 1, 'maxHp >= 1');
+  assert.equal(out.gold, 0, 'gold clamped to 0');
   assert.equal(out.consecutivePerfectDays, 1000);
 });
 
@@ -167,9 +165,7 @@ test('sanitizeHero: null/undefined input → safe defaults', function () {
   var out = SG.sanitizeHero(null);
   assert.equal(out.level, 1);
   assert.equal(out.xp, 0);
-  assert.equal(out.maxHp, 80, 'default maxHp = 80');
-  assert.equal(out.shards, 0, 'default shards = 0');
-  assert.equal(out.flasks, 0, 'default flasks = 0');
+  assert.equal(out.gold, 30, 'default gold = 30');
   assert.equal(typeof out.lastSessionAt, 'number');
 });
 
