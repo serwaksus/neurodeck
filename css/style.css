@@ -902,3 +902,44 @@ button, [data-action], .tab, .demo-btn { touch-action: manipulation; }
 .shop-buy-btn { min-width: 44px; min-height: 44px; padding: 6px 14px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-hi); border-radius: 2px; color: var(--gold-bright); font-size: 11px; cursor: pointer; transition: border-color 0.2s; }
 .shop-buy-btn:hover:not(:disabled) { border-color: var(--gold); }
 .shop-buy-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* ===================== Combat VFX (low HP / speed lines / entry) ===================== */
+#combatContainer { position: relative; }
+
+/* 1. Low HP vignette — position:fixed covers the screen, container overflow:hidden does not clip fixed elements */
+.low-hp-vignette { display: none; position: fixed; inset: 0; z-index: 900; pointer-events: none; box-shadow: inset 0 0 60px 20px rgba(200,30,30,0.5); }
+.low-hp-vignette.active { display: block; animation: lowHpPulse 1.5s ease-in-out infinite; }
+@keyframes lowHpPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+/* 2. Screen cracks — jagged clip-path shards from edges toward center */
+.screen-cracks { display: none; position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
+.screen-cracks.active { display: block; }
+.screen-cracks .crack { position: absolute; background: rgba(255,255,255,0.28); }
+.crack-1 { top: 0; left: 22%; width: 3px; height: 46%; clip-path: polygon(40% 0, 70% 12%, 30% 25%, 65% 38%, 20% 52%, 55% 68%, 35% 82%, 60% 100%, 45% 100%, 15% 80%, 40% 65%, 5% 50%, 45% 36%, 10% 22%, 50% 10%, 30% 0); }
+.crack-2 { top: 30%; right: 0; width: 38%; height: 3px; clip-path: polygon(0 40%, 14% 10%, 26% 60%, 40% 20%, 55% 75%, 68% 30%, 82% 65%, 100% 35%, 100% 65%, 84% 90%, 70% 45%, 56% 95%, 42% 40%, 28% 85%, 12% 55%); }
+.crack-3 { bottom: 0; right: 18%; width: 3px; height: 42%; clip-path: polygon(45% 0, 75% 14%, 35% 28%, 70% 42%, 25% 56%, 60% 72%, 30% 86%, 55% 100%, 40% 100%, 10% 84%, 45% 70%, 0 54%, 50% 40%, 15% 26%, 55% 12%, 35% 0); }
+.crack-4 { top: 12%; left: 0; width: 30%; height: 3px; clip-path: polygon(0 35%, 15% 65%, 28% 20%, 44% 70%, 58% 30%, 74% 60%, 88% 25%, 100% 50%, 100% 60%, 86% 40%, 72% 78%, 56% 45%, 42% 92%, 26% 38%, 14% 80%); }
+
+/* 3. Speed lines — radial stripes from center, flicker */
+.speed-lines { display: none; position: absolute; inset: 0; z-index: 6; pointer-events: none; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.05) 0deg 4deg, transparent 4deg 11deg); }
+.speed-lines.active { display: block; animation: speedFlicker 0.12s steps(2, end) infinite; }
+@keyframes speedFlicker { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+
+/* 4. Action button tactile feel */
+.action-btn:hover:not(:disabled) { box-shadow: 0 0 12px rgba(212,165,116,0.25), 0 0 22px rgba(212,165,116,0.35), inset 0 0 8px rgba(212,165,116,0.15); }
+.action-btn:active:not(:disabled) { transform: scale(0.97); transition: transform 0.05s ease-out; }
+
+/* 5. Boss intent telegraph flash */
+.boss-intent.intent-flash { animation: intentFlash 0.5s ease-out; }
+@keyframes intentFlash { 0% { color: #ffd700; border-color: #ffd700; text-shadow: 0 0 12px rgba(255,215,0,0.9); } 100% { color: var(--gold-bright); border-color: var(--gold); text-shadow: none; } }
+
+/* 6. Boss entry */
+#combatContainer.boss-entry { animation: bossEntry 0.5s ease-out; }
+@keyframes bossEntry { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* 7. perf-eco kill list additions */
+:root.perf-eco .low-hp-vignette,
+:root.perf-eco .screen-cracks,
+:root.perf-eco .speed-lines { display: none !important; }
+:root.perf-eco #combatContainer.boss-entry,
+:root.perf-eco .boss-intent.intent-flash { animation: none !important; }

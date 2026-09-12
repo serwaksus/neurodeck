@@ -745,7 +745,7 @@ var lastWeekReset = getThisMondayKey();
 // === CRUCIBLE COMBAT v2: транзиентное состояние боя (не сохраняется —
 // при перезагрузке текущий бой начинается заново; mirror tools/combat-lab/combat_model.gd) ===
 var cHeroShield = 0, cFocus = 0, cFocusMax = 2, cFlaskUsed = false;
-var cRound = 0, cRage = 0, cIntent = 'quick', cRunLocked = false;
+var cRound = 0, cRage = 0, cIntent = 'quick', cRunLocked = false, cRoundBusy = false;
 var cPoisonTicks = 0, cPoisonDmg = 0, cStanceCount = 0, cGuard = 0;
 var C_ATTACK = { normal: [9, 11, 13], social: [10, 12, 14], chimera: [12, 14, 16] };
 var C_SPECIAL = { normal: 'poison', social: 'burn', chimera: 'guard' };
@@ -1017,17 +1017,24 @@ updateBossDisplay();
 saveGameState();
 }
 function crucibleAction(action) {
+if (cRoundBusy) return;
 if (cRunLocked) { showToast('☠ Ран провален', 'Выпей флягу в рюкзаке — вернёшься в бой', 'blood'); sfxError(); return; }
 if (bossDefeated) { showToast('☠ Босс повержен', 'Нечего атаковать', 'blood'); return; }
 if (getBattlePhase() !== 'battle') { showToast('⛏ Не время', 'Фаза схватки: пятница — воскресенье', 'blood'); return; }
+cRoundBusy = true;
 crucibleHeroAction(action);
 updateBossBattleUI(); updateCombatHpBars(); updateHeroUI();
-if (bossHp <= 0) { crucibleFightCleared(); return; }
+if (bossHp <= 0) { crucibleFightCleared(); cRoundBusy = false; return; }
+setTimeout(function() {
+window.__ndBossTelegraph && window.__ndBossTelegraph(cIntent);
 endBossTurn();
-if (bossHp <= 0) { crucibleFightCleared(); return; }
-if (HERO.hp <= 0) { crucibleRunFailed(); return; }
+window.updateBossBattleUI(); window.updateCombatHpBars();
+if (bossHp <= 0) { crucibleFightCleared(); cRoundBusy = false; return; }
+if (HERO.hp <= 0) { crucibleRunFailed(); cRoundBusy = false; return; }
 updateBossBattleUI(); updateCombatHpBars(); updateHeroUI(); updateBossIntentUI();
 saveGameState();
+setTimeout(function() { cRoundBusy = false; }, 350);
+}, 450);
 }
 function crucibleHeroAction(action) {
 var s = getCrucibleStats();
@@ -1060,7 +1067,7 @@ bossHp = Math.max(0, bossHp - Math.round(dmg * 0.3));
 } else {
 bossHp = Math.max(0, bossHp - dmg);
 }
-if (window.startHeroAttack) window.startHeroAttack(dmg, crit);
+if (window.startHeroAttack) window.startHeroAttack(dmg, crit, blocked);
 if (crit) { sfxCrit(); haptic('heavy'); } else { sfxHit(); haptic('medium'); }
 showToast(blocked ? '🛡 Гард поглотил удар' : crit ? '💥 КРИТ!' : '⚔ Удар',
 'Урон: ' + dmg + (blocked ? ' (30% сквозь гард)' : ''), blocked ? 'blood' : (crit ? 'crit' : undefined));
@@ -1144,7 +1151,7 @@ HERO.hp -= cPoisonDmg;
 showToast('☠ Яд действует', '-' + cPoisonDmg + ' HP (осталось: ' + cPoisonTicks + ')', 'blood');
 }
 if (dmg > 0) {
-if (window.startBossAttack) window.startBossAttack(dmg);
+if (window.startBossAttack) window.startBossAttack(dmg, cIntent);
 sfxBossHit(); haptic('heavy');
 }
 cIntent = rollIntent(false);
@@ -1160,6 +1167,7 @@ HERO.actionPoints = (HERO.actionPoints || 0) + 3;
 showToast('⚔ Бой ' + (bossStage + 1) + '/3 пройден!', '+150 XP · Передышка: +' + heal + ' HP, +3 ОД', 'crit');
 spiritSay('«Передышка. Дыши — впереди ещё два круга.»');
 crucibleStartFight(bossStage + 1);
+window.__ndStageTransition && window.__ndStageTransition(bossStage);
 updateBossBattleUI();
 updateHeroUI();
 } else {

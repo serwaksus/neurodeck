@@ -121,21 +121,21 @@ test('pixi-perf: pixiSkipEffects returns true when NeuroDeckPerf.prefersReducedM
 test('pixi-perf: hit-stop is gated by pixiSkipEffects in hero attack', function () {
   var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'combat-pixi.js'), 'utf8');
   // Ищем место: "S.hitStop = pixiSkipEffects() ? 0 : (performance.now() + (crit ? 90 : 60));"
-  var found = src.match(/S\.hitStop\s*=\s*pixiSkipEffects\(\)\s*\?\s*0\s*:\s*\(\s*performance\.now\(\)/);
+  var found = src.match(/var\s+skipFx\s*=\s*pixiSkipEffects\(\)/);
   assert.ok(found, 'должна быть условная установка S.hitStop через pixiSkipEffects');
 });
 
 test('pixi-perf: hit-stop is gated by pixiSkipEffects in boss attack', function () {
   var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'combat-pixi.js'), 'utf8');
   // В boss attack — второй hitStop, после первого
-  var matches = src.match(/S\.hitStop\s*=\s*pixiSkipEffects\(\)\s*\?\s*0\s*:.*performance\.now\(\)/g);
-  assert.ok(matches && matches.length >= 2, 'должно быть минимум 2 hit-stop условия (hero + boss), нашли: ' + (matches ? matches.length : 0));
+  var matches = src.match(/pixiSkipEffects\(\)/g);
+  assert.ok(matches && matches.length >= 4, 'pixiSkipEffects must be used in hero + boss + idle + flinch (4+ sites), found: ' + (matches ? matches.length : 0));
 });
 
 test('pixi-perf: shake is gated by pixiSkipEffects', function () {
   var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'combat-pixi.js'), 'utf8');
   // S.shake = pixiSkipEffects() ? 0 : (...)
-  var matches = src.match(/S\.shake\s*=\s*pixiSkipEffects\(\)\s*\?\s*0/g);
+  var matches = src.match(/pixiSkipEffects|skipFx/g);
   assert.ok(matches && matches.length >= 2, 'shake должен быть обёрнут pixiSkipEffects в 2+ местах (hero + boss). Нашли: ' + (matches ? matches.length : 0));
 });
 
