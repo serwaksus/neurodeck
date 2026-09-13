@@ -6,7 +6,7 @@ const path = require('node:path');
 const UNIT_PATH = '/etc/systemd/system/neurodeck-bot.service';
 const BOT_DIR = path.join(__dirname, '..', 'bot');
 
-test('neurodeck-bot unit: file exists and parses structurally', () => {
+test('/etc/systemd/system/neurodeck-bot.service: file exists and parses structurally', () => {
     const raw = fs.readFileSync(UNIT_PATH, 'utf8');
     assert.ok(raw.includes('[Unit]'), 'missing [Unit] section');
     assert.ok(raw.includes('[Service]'), 'missing [Service] section');
