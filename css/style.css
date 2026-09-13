@@ -833,3 +833,6 @@ textarea:focus-visible {
 .sh-siege-row.lost { border-left-color: var(--blood-bright); }
 .sh-siege-row.refuge { border-left-color: var(--gold-bright); }
 @media (max-width: 900px) { .sh-grid { grid-template-columns: 1fr; } }
+
+.sh-build-icon img { width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+:root.perf-eco .sh-build-icon img { filter: none; }

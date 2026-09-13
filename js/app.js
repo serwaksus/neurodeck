@@ -1706,6 +1706,7 @@ html += '</div>';
 }
 root.innerHTML = html;
 }
+function shSprite(path, emoji) { return '<img src="' + path + '" alt="" onerror="this.outerHTML=\'' + emoji + '\'">'; }
 function renderStrongholdPanel(idx) {
 ensureStrongholdState();
 if (!SM) return;
@@ -1721,7 +1722,7 @@ var built = builtList(idx);
 if (built.length === 0) html += '<div class="empty-state">Пока ничего не построено.</div>';
 built.forEach(function(id) {
 var bd = BUILDINGS[id], b = s.buildings[id];
-html += '<div class="sh-build-row"><div class="sh-build-icon">' + bd.icon + '</div>' +
+html += '<div class="sh-build-row"><div class="sh-build-icon">' + shSprite('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
 '<div class="sh-build-body"><div class="sh-build-name">' + bd.name + '</div>' +
 '<div class="sh-build-meta">' + buildingEffectText(bd) + ' · содержание ' + bd.upkeep + ' 💰/день</div></div>' +
 stageBadgeHtml(b.corruptionStage) + '</div>';
@@ -1736,7 +1737,7 @@ if (s.buildings[id] && s.buildings[id].built) return;
 anyShown = true;
 var reqOk = !bd.req || (s.buildings[bd.req] && s.buildings[bd.req].built);
 var can = reqOk && slotLeft > 0 && (HERO.gold || 0) >= bd.cost;
-html += '<div class="sh-build-row buy"><div class="sh-build-icon">' + bd.icon + '</div>' +
+html += '<div class="sh-build-row buy"><div class="sh-build-icon">' + shSprite('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
 '<div class="sh-build-body"><div class="sh-build-name">' + bd.name + (reqOk ? '' : ' <span class="sh-req">нужна: ' + BUILDINGS[bd.req].name + '</span>') + '</div>' +
 '<div class="sh-build-meta">' + buildingEffectText(bd) + ' · ' + bd.cost + ' 💰 · содержание ' + bd.upkeep + ' 💰/день</div></div>' +
 (can ? '<button class="sh-buy" data-action="sh-buy" data-idx="' + idx + '" data-bid="' + id + '">🏗 ' + bd.cost + '</button>' : '<span class="sh-stage lock">🔒</span>') +
@@ -1751,7 +1752,7 @@ if (!bd.grow) return;
 var b = s.buildings[id];
 if (!b || !b.built) return;
 var tier = bd.tier, u = UNIT_TIERS[tier];
-hireRows += '<div class="sh-hire-row"><div class="sh-build-icon">' + u.icon + '</div>' +
+hireRows += '<div class="sh-hire-row"><div class="sh-build-icon">' + shSprite('img/units/' + tier.replace('t', 'tier') + '.png', u.icon) + '</div>' +
 '<div class="sh-build-body"><div class="sh-build-name">' + u.name + ' (Т' + tier.slice(1) + ') · сила ' + u.power + '</div>' +
 '<div class="sh-build-meta">Пул недели: <b>' + (hirePool[tier] || 0) + '</b> · цена ' + hireCostOf(tier) + ' 💰</div></div>' +
 '<div class="sh-hire-actions">' +
