@@ -4,13 +4,19 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const UNIT_PATH = '/etc/systemd/system/neurodeck-bot.service';
+const UNIT_REPO = path.join(__dirname, '..', 'bot', 'neurodeck-bot.service');
 const BOT_DIR = path.join(__dirname, '..', 'bot');
 
-test('/etc/systemd/system/neurodeck-bot.service: file exists and parses structurally', () => {
-    const raw = fs.readFileSync(UNIT_PATH, 'utf8');
+test('bot/neurodeck-bot.service (каноничный юнит в репо): file exists and parses structurally', () => {
+    const raw = fs.readFileSync(UNIT_REPO, 'utf8');
     assert.ok(raw.includes('[Unit]'), 'missing [Unit] section');
     assert.ok(raw.includes('[Service]'), 'missing [Service] section');
     assert.ok(raw.includes('[Install]'), 'missing [Install] section');
+});
+
+test('/etc copy must match repo copy byte-for-byte (no drift)', () => {
+    assert.equal(fs.readFileSync(UNIT_PATH, 'utf8'), fs.readFileSync(UNIT_REPO, 'utf8'),
+        '/etc/systemd/system/neurodeck-bot.service diverged from bot/neurodeck-bot.service');
 });
 
 test('neurodeck-bot unit: ExecStart/EnvironmentFile targets exist on disk', () => {

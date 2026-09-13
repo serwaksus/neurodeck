@@ -1,0 +1,15 @@
+[Unit]
+Description=NeuroDeck Telegram polling bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/neurodeck/bot
+EnvironmentFile=/root/neurodeck/bot/token.conf
+ExecStart=/usr/bin/env node /root/neurodeck/bot/polling.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
