@@ -689,7 +689,7 @@ checkHeroLevelUp();
 updateHeroUI();
 }
 const ARTIFACTS = {
-swordDiscipline: { id: 'swordDiscipline', name: 'Меч Дисциплины', icon: '⚔', rank: 'A', slot: 'weapon', type: 'Оружие', category: 'weapon', reqLevel: 6, lore: 'Выкован из стали тех обещаний, что ты сдержал.', bonuses: [{ stat: 'str', value: 5, label: '⚔ Сила' }, { stat: 'wil', value: 2, label: '🧘 Воля' }], special: '+10% к урону по боссам' },
+swordDiscipline: { id: 'swordDiscipline', name: 'Меч Дисциплины', icon: '⚔', rank: 'A', slot: 'weapon', type: 'Оружие', category: 'weapon', reqLevel: 6, lore: 'Выкован из стали тех обещаний, что ты сдержал.', bonuses: [{ stat: 'str', value: 5, label: '⚔ Сила' }, { stat: 'wil', value: 2, label: '🧘 Воля' }], special: '+10% XP за привычки' },
 shieldWill: { id: 'shieldWill', name: 'Щит Воли', icon: '🛡', rank: 'A', slot: 'shield', type: 'Щит', category: 'armor', reqLevel: 6, lore: 'Тяжесть этого щита — вес твоих решений.', bonuses: [{ stat: 'end', value: 6, label: '🛡 Стойкость' }, { stat: 'wil', value: 3, label: '🧘 Воля' }], special: 'Защита стрика +15%' },
 amuletFocus: { id: 'amuletFocus', name: 'Амулет Фокуса', icon: '💠', rank: 'S', slot: 'amulet', type: 'Амулет', category: 'accessory', reqLevel: 10, lore: 'Кристалл, в котором застыло мгновение полной концентрации.', bonuses: [{ stat: 'int', value: 8, label: '🧠 Интеллект' }, { stat: 'wil', value: 3, label: '🧘 Воля' }], special: '+15% XP за привычки' },
 ringCharisma: { id: 'ringCharisma', name: 'Кольцо Обаяния', icon: '💍', rank: 'B', slot: 'ring1', type: 'Кольцо', category: 'accessory', reqLevel: 3, lore: 'Тёплое на ощупь. Люди оборачиваются, когда ты проходишь.', bonuses: [{ stat: 'cha', value: 5, label: '🎭 Харизма' }], special: 'Шанс крита +5%' },
@@ -1576,7 +1576,7 @@ showToast('👻 Призрак ушёл', '«' + t.name + '» растворил
 }
 }
 });
-TASKS = TASKS.filter(function(t) { return t.status !== 'gone'; });
+TASKS = TASKS.filter(function(t) { return t.status !== 'gone' && t.status !== 'chest_open'; });
 if (penaltyCount > 0) {
 var p = Math.min(5, penaltyCount);
 HERO.gold = Math.max(0, (HERO.gold || 0) - p);
@@ -2362,8 +2362,10 @@ function checkDailyReset() {
 const todayKey = getMSKDayKey();
 const yesterdayKey = getMSKDayKey(Date.now() - 86400000);
 if (lastDayReset !== todayKey) {
-if (lastDayReset !== null) {
-var gapDays = Math.max(1, daysBetween(lastDayReset, todayKey));
+var _prevDay = lastDayReset;
+lastDayReset = todayKey;
+if (_prevDay !== null) {
+var gapDays = Math.max(1, daysBetween(_prevDay, todayKey));
 if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7
 var revenue = 0;
 for (var gd = gapDays; gd >= 1; gd--) {
@@ -2431,7 +2433,7 @@ saveGameState();
 }
 var lastNotifDay = getMSKDayKey();
 setInterval(function() {
-checkDailyReset(); updatePunishCountdown(); checkBloodOath();
+checkDailyReset(); checkBloodOath();
 var dayKey = getMSKDayKey();
 if (dayKey !== lastNotifDay) { lastNotifDay = dayKey; scheduleNotifs(); }
 }, 60 * 1000);
@@ -2481,7 +2483,7 @@ if (!c.lastCompletedAt) return true;
 return getMSKDayKey(c.lastCompletedAt) !== getMSKDayKey();
 });
 if (uncompleted.length > 0) {
-new Notification('NeuroDeck ⚔', { body: 'Осталось ' + uncompleted.length + ' карточек! Босс атакует через 1 час.', icon: '🗡', tag: 'nd-warn' });
+new Notification('NeuroDeck ⚔', { body: 'Осталось ' + uncompleted.length + ' карточек! Доход тракта капает каждый день.', icon: '🗡', tag: 'nd-warn' });
 }
 }, diff * 1000);
 }
