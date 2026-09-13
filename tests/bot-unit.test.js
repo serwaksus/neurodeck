@@ -14,7 +14,7 @@ test('bot/neurodeck-bot.service (каноничный юнит в репо): fil
     assert.ok(raw.includes('[Install]'), 'missing [Install] section');
 });
 
-test('/etc copy must be a symlink to the repo copy (single source of truth, no drift possible)', () => {
+test('/etc/systemd/system/neurodeck-bot.service must be a symlink to the repo copy (single source of truth, no drift possible)', () => {
     const st = fs.lstatSync(UNIT_PATH);
     assert.ok(st.isSymbolicLink(), '/etc/systemd/system/neurodeck-bot.service must be a symlink to bot/neurodeck-bot.service');
     assert.equal(fs.realpathSync(UNIT_PATH), fs.realpathSync(UNIT_REPO));
