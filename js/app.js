@@ -1388,17 +1388,17 @@ let escapeProgress = 0;
 let lastDayReset = null;
 // ===================== ТРАКТ ЗАВОЕВАНИЙ (HoMM-стиль: строй за дни, собирай каждый день) =====================
 const REGIONS = [
-{ icon: '🛖', name: 'Сендер-Хутор',   cost: 0,    buildDays: 0, rev: 1 },
-{ icon: '🏕', name: 'Лаголь Земли',   cost: 30,   buildDays: 1, rev: 2 },
-{ icon: '🪵', name: 'Лесопилка',      cost: 80,   buildDays: 2, rev: 4 },
-{ icon: '⛏', name: 'Медные Копи',     cost: 180,  buildDays: 3, rev: 7 },
-{ icon: '🌾', name: 'Житницы',        cost: 350,  buildDays: 4, rev: 11 },
-{ icon: '🕯', name: 'Чертож Воли',    cost: 650,  buildDays: 5, rev: 16 },
-{ icon: '🪙', name: 'Златоград',      cost: 1100, buildDays: 6, rev: 22 },
-{ icon: '🏰', name: 'Дозорный Замок', cost: 1800, buildDays: 7, rev: 30 },
-{ icon: '🗼', name: 'Башня Тягости',  cost: 2800, buildDays: 8, rev: 39 },
-{ icon: '⛩', name: 'Врата Свободы',   cost: 4200, buildDays: 9, rev: 50 },
-{ icon: '👑', name: 'Терновый Трон',  cost: 6500, buildDays: 10, rev: 65 },
+{ icon: '🛖', name: 'Сендер-Хутор',   cost: 0,    buildDays: 0, rev: 1 , img: 'img/tract/region01.png' },
+{ icon: '🏕', name: 'Лаголь Земли',   cost: 30,   buildDays: 1, rev: 2 , img: 'img/tract/region02.png' },
+{ icon: '🪵', name: 'Лесопилка',      cost: 80,   buildDays: 2, rev: 4 , img: 'img/tract/region03.png' },
+{ icon: '⛏', name: 'Медные Копи',     cost: 180,  buildDays: 3, rev: 7 , img: 'img/tract/region04.png' },
+{ icon: '🌾', name: 'Житницы',        cost: 350,  buildDays: 4, rev: 11 , img: 'img/tract/region05.png' },
+{ icon: '🕯', name: 'Чертож Воли',    cost: 650,  buildDays: 5, rev: 16 , img: 'img/tract/region06.png' },
+{ icon: '🪙', name: 'Златоград',      cost: 1100, buildDays: 6, rev: 22 , img: 'img/tract/region07.png' },
+{ icon: '🏰', name: 'Дозорный Замок', cost: 1800, buildDays: 7, rev: 30 , img: 'img/tract/region08.png' },
+{ icon: '🗼', name: 'Башня Тягости',  cost: 2800, buildDays: 8, rev: 39 , img: 'img/tract/region09.png' },
+{ icon: '⛩', name: 'Врата Свободы',   cost: 4200, buildDays: 9, rev: 50 , img: 'img/tract/region10.png' },
+{ icon: '👑', name: 'Терновый Трон',  cost: 6500, buildDays: 10, rev: 65 , img: 'img/tract/region11.png' },
 ];
 let tractState = { regions: 0, building: null };
 function tractRevenuePerDay() {
@@ -1469,7 +1469,7 @@ var status = owned ? '✓ Платит +' + r.rev + ' 💰/день'
 : isNext ? '💰 ' + r.cost + ' · +' + r.rev + ' 💰/день · 🏗 ' + r.buildDays + ' ' + pluralDays(r.buildDays)
 : '🔒 Откроется после «' + REGIONS[i - 1].name + '»';
 html += '<div class="tract-region ' + cls + '">' +
-'<div class="tract-region-icon">' + r.icon + '</div>' +
+'<div class="tract-region-icon">' + (r.img ? '<img src="' + r.img + '" alt="">' : r.icon) + '</div>' +
 '<div class="tract-region-body">' +
 '<div class="tract-region-name">' + r.name + '</div>' +
 '<div class="tract-region-status">' + status + '</div>' +
