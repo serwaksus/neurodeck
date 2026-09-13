@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 // Behavioral e2e tests driving REAL game logic via page.evaluate().
 // app.js is a classic script: functions/var are on window; top-level let/const
-// (FORGED, GOALS, chimeraShield, bossRagePoints, escapeProgress, bossDefeated)
+// (FORGED, GOALS, chimeraShield, bossRagePoints, bossDefeated)
 // live in the shared global lexical scope — readable/writable by bare name here.
 // Each test gets a fresh browser context (clean localStorage) => state restored by isolation.
 

@@ -135,7 +135,15 @@ case 'apply-evolution-stability': applyEvolution('stability'); break;
 case 'evolution-skip': closeEvolutionModal(); var ecid = parseInt(document.getElementById('evolutionModal').dataset.cardId); if (ecid) openEditCardAfterRankup(ecid); break;
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
-case 'close-room-detail': closeRoomDetail(); break;
+case 'sh-open': currentShIdx = parseInt(el.dataset.idx); renderStrongholdPanel(currentShIdx); break;
+case 'sh-back': currentShIdx = null; renderStrongholds(); break;
+case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
+case 'sh-buy': buyBuilding(parseInt(el.dataset.idx), el.dataset.bid); break;
+case 'sh-hire-army': hireUnit(el.dataset.tier, false, parseInt(el.dataset.idx)); break;
+case 'sh-hire-garrison': hireUnit(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
+case 'sh-to-army': moveStack(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
+case 'sh-to-garrison': moveStack(el.dataset.tier, false, parseInt(el.dataset.idx)); break;
+case 'close-siege-report': closeSiegeReport(); break;
 case 'accept-starter-deck': acceptStarterDeck(); break;
 case 'close-starter-deck': closeStarterDeck(); break;
 case 'toggle-help': toggleHelp(); break;
@@ -366,9 +374,7 @@ checkAttributePoolGrowth(card.stat);
 }
 rankUpHappened = true;
 sfxRankUp(); haptic('medium');
-escapeProgress = Math.min(ESCAPE_MAX, escapeProgress + 1);
-updateEscapeDisplay();
-renderMap(escapeProgress);
+updateStrongholdProgress();
 setTimeout(() => triggerRankUpEffect(card, oldRank, nextRank, x, y), 300);
 var rankUpCard = document.querySelector('[data-id="' + card.id + '"]');
 if (rankUpCard) { rankUpCard.closest('.card').classList.add('rankup-glow'); setTimeout(function() { rankUpCard.closest('.card').classList.remove('rankup-glow'); }, 1800); }
@@ -404,6 +410,7 @@ return;
  screenShake(6, 300);
  sfxFail(); haptic('error');
  HERO.dailySkips++;
+ wkSkips++;
  if (card) { card.streak = 0; renderCards(); }
  HERO.gold = Math.max(0, (HERO.gold || 0) - 1);
  showToast('💢 Пропуск', '«' + card.name + '» — стрик сброшен, −1 💰', 'blood');
@@ -525,8 +532,7 @@ const gear = getTotalGearBonuses();
 const totalInt = STATS.int.value + gear.int;
 const mult = (1 + (totalInt - 3) * 0.01).toFixed(2);
 document.getElementById('statXpMult').textContent = '×' + mult;
-document.getElementById('statRankups').textContent = escapeProgress;
-document.getElementById('statEscape').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
+document.getElementById('statStrongholds').textContent = capturedCount() + ' / ' + STRONGHOLDS.length;
 }
 function checkHeroLevelUp() {
 while (HERO.xp >= HERO.xpToNext) {
@@ -1319,7 +1325,7 @@ if (tabEl) tabEl.classList.add('active');
 if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
-if (view === 'map') renderMap(escapeProgress);
+if (view === 'strongholds') renderStrongholds();
 if (view === 'tract') renderTract();
 if (view === 'deck') renderDashboard();
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
@@ -1327,7 +1333,7 @@ if (view === 'deck') renderCards();
 if (view === 'stats') renderStatsView();
 if (typeof window.__ndSetCombatActive === 'function') window.__ndSetCombatActive(view === 'boss');
 }
-var VIEW_ORDER = ['deck', 'tract', 'hero', 'inv', 'map', 'stats'];
+var VIEW_ORDER = ['deck', 'tract', 'hero', 'inv', 'strongholds', 'stats'];
 var currentViewIndex = 0;
 var swipeStartX = 0, swipeStartY = 0, swiping = false;
 document.querySelector('.content').addEventListener('touchstart', function(e) {
@@ -1350,41 +1356,417 @@ switchView(VIEW_ORDER[currentViewIndex + 1]);
 switchView(VIEW_ORDER[currentViewIndex - 1]);
 }
 });
-const ROOMS = [
-{ name: 'Камера заключенного', icon: '⛓', lore: 'Сырые стены, запах ржавчины и отчаяния. Здесь начинается твой путь.' },
-{ name: 'Коридор Забытых', icon: '🚪', lore: 'Шаги эхом в пустоте. Здесь бродят те, кто забыл кто они.' },
-{ name: 'Склеп Обетов', icon: '💀', lore: 'Здесь погребены обещания, которые ты так и не сдержал.' },
-{ name: 'Зал Разбитых Зеркал', icon: '🪞', lore: 'Отражения лжи. Каждое зеркало показывает то, чем ты не стал.' },
-{ name: 'Катакомбы Сомнений', icon: '🕳', lore: 'Там, где живут страхи. Узкие ходы сжимаются вокруг тебя.' },
-{ name: 'Пещера Теней', icon: '🌑', lore: 'Тени шепчут твоё имя. Они знают все твои слабости.' },
-{ name: 'Библиотека Рун', icon: '📜', lore: 'Знание — оружие. Книги здесь пишутся кровью прошлых узников.' },
-{ name: 'Тронный Зал', icon: '👑', lore: 'Здесь правил страх. Трон пуст, но он ждёт нового хозяина.' },
-{ name: 'Сад Забытых', icon: '🌺', lore: 'Мечты, что не сбылись. Цветы здесь пахнут тоской и упущенными шансами.' },
-{ name: 'Мост Раскаяния', icon: '🌉', lore: 'Переправа через сомнения. Под мостом — бездна твоих ошибок.' },
-{ name: 'Башня Снов', icon: '🗼', lore: 'Верх мира. Отсюда видно то, чего ты боишься больше всего.' },
-{ name: 'Кузница Воли', icon: '⚒', lore: 'Здесь закаляется характер. Огонь не щадит слабых.' },
-{ name: 'Алтарь Истины', icon: '🕯', lore: 'Правда о себе. Она горькая, но необходимая.' },
-{ name: 'Врата Свободы', icon: '🌅', lore: 'Выход из подземелья. Свет за дверью ждёт только достойных.' }
-];
-const ROOM_THEMES = [
-{ hue: 25, light: 3, sat: 12, mist: 0.7, torch: 0.3, rays: 0, particleColor: '#d4a574' },
-{ hue: 220, light: 5, sat: 18, mist: 0.8, torch: 0.15, rays: 0, particleColor: '#8090b0' },
-{ hue: 355, light: 5, sat: 22, mist: 0.65, torch: 0.25, rays: 0, particleColor: '#c04040' },
-{ hue: 280, light: 7, sat: 28, mist: 0.5, torch: 0.35, rays: 0.1, particleColor: '#b060e0' },
-{ hue: 120, light: 4, sat: 18, mist: 0.75, torch: 0.2, rays: 0, particleColor: '#60a060' },
-{ hue: 260, light: 3, sat: 22, mist: 0.85, torch: 0.1, rays: 0, particleColor: '#7050a0' },
-{ hue: 195, light: 10, sat: 35, mist: 0.4, torch: 0.4, rays: 0.2, particleColor: '#40c0e0' },
-{ hue: 45, light: 14, sat: 42, mist: 0.3, torch: 0.5, rays: 0.3, particleColor: '#f0c060' },
-{ hue: 160, light: 12, sat: 32, mist: 0.35, torch: 0.4, rays: 0.25, particleColor: '#50c0a0' },
-{ hue: 210, light: 14, sat: 12, mist: 0.7, torch: 0.3, rays: 0.15, particleColor: '#a0b0c0' },
-{ hue: 240, light: 12, sat: 38, mist: 0.3, torch: 0.45, rays: 0.4, particleColor: '#7070e0' },
-{ hue: 15, light: 10, sat: 42, mist: 0.25, torch: 0.6, rays: 0.2, particleColor: '#f08030' },
-{ hue: 50, light: 20, sat: 32, mist: 0.2, torch: 0.5, rays: 0.5, particleColor: '#f0e0a0' },
-{ hue: 38, light: 35, sat: 45, mist: 0.1, torch: 0.7, rays: 0.7, particleColor: '#f0d080' },
-];
-const ESCAPE_MAX = 140;
-const ROOMS_STEP = 10;
-let escapeProgress = 0;
+// ===================== ТВЕРДЫНИ v2 (SPEC §1–§7; формулы — только js/stronghold-model.js) =====================
+var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
+const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
+var currentShIdx = null;
+var assaultUsedDay = null; // ponytail: «1 штурм/день» не персистится — схема v8 фиксирована; апгрейд: поле в v9
+var hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }; // ponytail: пул недели в памяти (санитайзер v8 роняет лишние поля); reload отдаёт полный пул недели
+var shFresh = {}; // ponytail: иммунитет построек 7 дней — в рамках сессии; ключ 'idx:bid' → builtAt
+var wkSkips = 0;
+var wkTaskFails = 0;
+function capturedCount() { ensureStrongholdState(); return strongholds.filter(function(s) { return s.captured; }).length; }
+function frontIdx() { ensureStrongholdState(); for (var i = 0; i < strongholds.length; i++) if (!strongholds[i].captured) return i; return -1; }
+function stageMult(stage) { return stage === 'ok' ? 1 : stage === 'worn' ? 0.5 : 0; }
+function builtList(idx) {
+var out = [], b = strongholds[idx].buildings;
+Object.keys(b).forEach(function(id) { if (b[id] && b[id].built) out.push(id); });
+return out;
+}
+function hasSpecialOk(bid) {
+return strongholds.some(function(s) { var b = s.buildings[bid]; return s.captured && b && b.built && b.corruptionStage === 'ok'; });
+}
+function defBonusOf(idx) {
+var sum = 0;
+builtList(idx).forEach(function(id) {
+var d = BUILDINGS[id];
+if (d && d.def) sum += Math.round(d.def * stageMult(strongholds[idx].buildings[id].corruptionStage));
+});
+return sum;
+}
+var STAGE_ORDER_WORST = { ok: 0, worn: 1, ruin: 2 };
+function shWorstStage(idx) {
+var worst = 'ok';
+builtList(idx).forEach(function(id) {
+var st = strongholds[idx].buildings[id].corruptionStage;
+if (STAGE_ORDER_WORST[st] > STAGE_ORDER_WORST[worst]) worst = st;
+});
+return worst;
+}
+function hireCostOf(tier) { return Math.ceil(UNIT_TIERS[tier].cost * (1 - Math.min(0.30, 0.005 * STATS.cha.value))); }
+function recalcHirePool() {
+ensureStrongholdState();
+var wind = hasSpecialOk('sp4') ? 1.4 : 1;
+var pool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
+strongholds.forEach(function(s) {
+if (!s.captured && strongholds.indexOf(s) !== 0) return; // Сендер-Хутор — стартовый лагерь (SPEC §9: Ж1 с нуля)
+Object.keys(s.buildings).forEach(function(id) {
+var b = s.buildings[id], d = BUILDINGS[id];
+if (!b || !b.built || !d || !d.grow) return;
+pool[d.tier] += Math.round(d.grow * stageMult(b.corruptionStage) * wind);
+});
+});
+hirePool = pool;
+}
+// День твердынь: налоги+эконом → содержание + коррапшн (upkeep первым, SPEC §6). Золото уже в HERO.gold.
+function strongholdsDailyTick() {
+ensureStrongholdState();
+if (!SM) return { income: 0, upkeep: 0, paid: true };
+var taxes = 0, econ = 0, market = 0, upkeep = 0, paid = true;
+var gold = HERO.gold || 0;
+strongholds.forEach(function(s, i) {
+if (!s.captured) return;
+taxes += STRONGHOLDS[i].tax;
+builtList(i).forEach(function(id) {
+var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
+if (d.gold) econ += d.gold * m;
+if (d.market) market += d.market * m;
+});
+});
+gold += taxes + Math.round(econ);
+var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
+var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
+strongholds.forEach(function(s, i) {
+if (!s.captured && i !== 0) return;
+if (builtList(i).length === 0) return;
+var imm = {};
+Object.keys(shFresh).forEach(function(k) {
+var parts = k.split(':');
+if (Number(parts[0]) === i && Date.now() - shFresh[k] < 7 * 86400000) imm[parts[1]] = true;
+});
+var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: stepOpt, immune: imm });
+gold = res.gold;
+upkeep += res.upkeep;
+if (!res.paid) paid = false;
+s.buildings = res.buildings;
+});
+HERO.gold = gold;
+return { income: income, upkeep: upkeep, paid: paid };
+}
+function applyStackLoss(stacks, pct) {
+return (stacks || []).map(function(st) {
+var loss = Math.min(Math.floor(st.count * pct), st.count - 1); // floor: стопа не исчезает полностью (SPEC §4)
+return { tier: st.tier, count: st.count - loss };
+});
+}
+function ruinAllBuildings(idx) {
+Object.keys(strongholds[idx].buildings).forEach(function(id) {
+var b = strongholds[idx].buildings[id];
+if (b && b.built) b.corruptionStage = 'ruin';
+});
+}
+function lastCapturedIdx() {
+for (var i = strongholds.length - 1; i >= 0; i--) if (strongholds[i].captured) return i;
+return -1;
+}
+function runWeeklySiege() {
+ensureStrongholdState();
+if (capturedCount() === 0) { siege.week = 1; return; }
+var wrath = Math.min(10, 2 * countGhostTasks() + wkSkips + wkTaskFails);
+var rows = [];
+var fell = false;
+var hitMult = 1;
+for (var hit = 0; hit < 3; hit++) {
+var t = lastCapturedIdx();
+if (t < 0) break;
+var def = STRONGHOLDS[t];
+var garDef = SM.defensePower(def, strongholds[t].garrison, STATS.end.value, defBonusOf(t));
+var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult);
+if (garDef >= power) {
+strongholds[t].garrison = applyStackLoss(strongholds[t].garrison, 0.15);
+addXpReward(100 * def.prov);
+rows.push({ name: def.name, held: true, power: power, garDef: garDef });
+break;
+}
+strongholds[t].captured = false;
+strongholds[t].garrison = [];
+ruinAllBuildings(t);
+fell = true;
+rows.push({ name: def.name, held: false, power: power, garDef: garDef });
+if (power <= 1.5 * garDef) break; // прорыва нет — каскад останавливается
+hitMult *= 0.85;
+}
+if (capturedCount() === 0) { // анти-тупик (ADR П1-13)
+strongholds[0].captured = true;
+strongholds[0].garrison = [];
+ruinAllBuildings(0);
+rows.push({ name: STRONGHOLDS[0].name, refuge: true });
+}
+siege.week = fell ? 1 : siege.week + 1; // потеря = frontSince сброшен, след. воскресенье не каскадирует
+recalcHirePool();
+showSiegeReport(rows, wrath);
+}
+function showSiegeReport(rows, wrath) {
+var modal = document.getElementById('siegeReportModal');
+if (!modal) return;
+var html = '<div class="sh-siege-wrath">😤 Гнев: ' + wrath + '/10 · призраки задач и пропуски усилили удар</div>';
+if (!rows.length) html += '<div class="empty-state">Враг не пришёл.</div>';
+rows.forEach(function(r) {
+if (r.refuge) html += '<div class="sh-siege-row refuge">🏰 <b>' + esc(r.name) + '</b> — прибежище восстановлено (анти-тупик): гарнизон 0, постройки в руине. Путь возврата открыт.</div>';
+else if (r.held) html += '<div class="sh-siege-row held">🛡 <b>' + esc(r.name) + '</b> — осада отбита: оборона ' + r.garDef + ' против ' + r.power + '. Гарнизон −15%.</div>';
+else html += '<div class="sh-siege-row lost">💀 <b>' + esc(r.name) + '</b> — пала: оборона ' + r.garDef + ' против ' + r.power + '. Нейтралы вернулись, постройки в руине.</div>';
+});
+document.getElementById('siegeReportBody').innerHTML = html;
+modal.classList.add('show');
+}
+function closeSiegeReport() { document.getElementById('siegeReportModal').classList.remove('show'); }
+function assaultForecast(idx) {
+var atk = Math.round(SM.armyPower(army.units) * (1 + 0.02 * STATS.str.value));
+var defN = STRONGHOLDS[idx].total;
+if (hasSpecialOk('sp1')) return { atk: atk, defN: defN, line: '⚔ ' + atk + ' против 🛡 ' + defN + (atk > defN ? ' · превосходство' : ' · сил мало') };
+return { atk: atk, defN: defN, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + Math.round(atk * 1.25) + ' против 🛡 ' + defN + ' (Гильдия Разведчиков даст точные числа)' };
+}
+function requestAssault(idx) {
+ensureStrongholdState();
+if (assaultUsedDay === getMSKDayKey()) { showToast('⚔ Штурм уже был', 'Один штурм в сутки — приходи завтра', 'blood'); return; }
+if (!SM || SM.armyPower(army.units) <= 0) { showToast('⚔ Армии нет', 'Найми существ в твердыне', 'blood'); sfxError(); return; }
+var f = assaultForecast(idx);
+dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + '<br><span style="color:var(--blood-bright)">Поражение = отступление с потерями 10–30%.</span>').then(function(ok) {
+if (ok) doAssault(idx, f);
+});
+}
+function doAssault(idx, f) {
+assaultUsedDay = getMSKDayKey();
+var out = SM.assaultOutcome(f.atk, f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random });
+var lostTotal = 0;
+SM.TIER_KEYS.forEach(function(t) {
+var n = army.units[t] || 0;
+if (n > 0) {
+var loss = Math.min(Math.floor(n * out.attritionPct), n - 1);
+army.units[t] = n - loss;
+lostTotal += loss;
+}
+});
+if (out.win) {
+strongholds[idx].captured = true;
+siege.week = 1;
+addXpReward(Math.round(150 * (1 + (STATS.int.value - 3) * 0.01)));
+showToast('🏰 ' + STRONGHOLDS[idx].name + ' захвачена!', 'Потери: ' + lostTotal + ' · налог +' + STRONGHOLDS[idx].tax + ' 💰/день', 'crit');
+spiritSay('«' + STRONGHOLDS[idx].name + ' поднимает твоё знамя.»');
+sfxBossDefeated(); haptic('success');
+burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color: '#fbbf24', speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
+screenShake(10, 600);
+} else {
+showToast('↩ Отступление', 'Потери: ' + lostTotal + ' (' + Math.round(out.attritionPct * 100) + '%). Повтор — завтра.', 'blood');
+spiritSay('«Стены устояли. Вернись сильнее.»');
+sfxFail(); haptic('error');
+spawnBloodRain(20);
+screenShake(8, 500);
+}
+updateStrongholdProgress(); updateHeroUI(); renderStrongholds(); saveGameState();
+}
+function buyBuilding(idx, bid) {
+ensureStrongholdState();
+var d = BUILDINGS[bid], s = strongholds[idx];
+if (!d || !s || (!s.captured && idx !== 0) || (s.buildings[bid] && s.buildings[bid].built)) return;
+if (builtList(idx).length >= STRONGHOLDS[idx].slots) { showToast('🏰 Слоты заняты', 'Лимит твердыни: ' + STRONGHOLDS[idx].slots, 'blood'); return; }
+if (d.req && !(s.buildings[d.req] && s.buildings[d.req].built)) { showToast('🔒 Нужна постройка', 'Сначала: ' + BUILDINGS[d.req].name, 'blood'); return; }
+if ((HERO.gold || 0) < d.cost) { showToast('💰 Мало золота', 'Нужно ' + d.cost + ' 💰, в казне ' + (HERO.gold || 0), 'blood'); sfxError(); return; }
+HERO.gold -= d.cost;
+s.buildings[bid] = { built: true, corruptionStage: 'ok', debtDays: 0 };
+shFresh[idx + ':' + bid] = Date.now();
+recalcHirePool();
+showToast('🏗 Построено: ' + d.name, '−' + d.cost + ' 💰 · содержание ' + d.upkeep + ' 💰/день', 'save');
+sfxForge(); haptic('medium');
+renderStrongholds(); updateHeroUI(); saveGameState();
+}
+function hireUnit(tier, toGarrison, idx) {
+ensureStrongholdState();
+if ((hirePool[tier] || 0) <= 0) { showToast('⛺ Пул пуст', 'Недельный прирост придёт в понедельник', 'blood'); return; }
+var cost = hireCostOf(tier);
+if ((HERO.gold || 0) < cost) { showToast('💰 Мало золота', 'Найм: ' + cost + ' 💰', 'blood'); sfxError(); return; }
+HERO.gold -= cost;
+hirePool[tier]--;
+if (toGarrison) {
+var st = strongholds[idx].garrison.find(function(x) { return x.tier === tier; });
+if (st) st.count++; else strongholds[idx].garrison.push({ tier: tier, count: 1 });
+} else {
+army.units[tier] = (army.units[tier] || 0) + 1;
+}
+showToast('⚔ Найм: ' + UNIT_TIERS[tier].name, toGarrison ? 'В гарнизон «' + STRONGHOLDS[idx].name + '»' : 'В полевую армию', 'save');
+sfxEquip(); haptic('light');
+renderStrongholds(); updateHeroUI(); saveGameState();
+}
+function moveStack(tier, toGarrison, idx) {
+ensureStrongholdState();
+if (toGarrison) {
+var n = army.units[tier] || 0;
+if (n <= 0) return;
+army.units[tier] = 0;
+var st = strongholds[idx].garrison.find(function(x) { return x.tier === tier; });
+if (st) st.count += n; else strongholds[idx].garrison.push({ tier: tier, count: n });
+} else {
+var g = strongholds[idx].garrison;
+var st2 = g.find(function(x) { return x.tier === tier; });
+if (!st2) return;
+army.units[tier] = (army.units[tier] || 0) + st2.count;
+strongholds[idx].garrison = g.filter(function(x) { return x !== st2; });
+}
+sfxEquip();
+renderStrongholds(); updateHeroUI(); saveGameState();
+}
+function shSprite(idx) {
+return idx < 11 ? '<img src="img/tract/region' + String(idx + 1).padStart(2, '0') + '.png" alt="">' : STRONGHOLDS[idx].icon;
+}
+function stageBadgeHtml(st) {
+var map = { ok: ['✓ Целое', 'ok'], worn: ['⚠ Обветшало', 'worn'], ruin: ['✖ Руина', 'ruin'] };
+var m = map[st] || map.ok;
+return '<span class="sh-stage ' + m[1] + '">' + m[0] + '</span>';
+}
+function shIncomePerDay() {
+ensureStrongholdState();
+var taxes = 0, econ = 0, market = 0;
+strongholds.forEach(function(s, i) {
+if (!s.captured) return;
+taxes += STRONGHOLDS[i].tax;
+builtList(i).forEach(function(id) {
+var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
+if (d.gold) econ += d.gold * m;
+if (d.market) market += d.market * m;
+});
+});
+return Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
+}
+function shUpkeepPerDay() {
+ensureStrongholdState();
+var u = 0;
+strongholds.forEach(function(s) {
+if (!s.captured) return;
+Object.keys(s.buildings).forEach(function(id) {
+var b = s.buildings[id];
+if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDINGS[id].upkeep;
+});
+});
+return u;
+}
+function buildingEffectText(d) {
+if (d.grow) return '+' + d.grow + ' ' + UNIT_TIERS[d.tier].name + '/нед';
+if (d.gold) return '+' + d.gold + ' 💰/день';
+if (d.market) return '+' + Math.round(d.market * 100) + '% к доходу казны';
+if (d.def) return '+' + d.def + ' к обороне';
+if (d.scout) return 'Точные числа осад и штурмов';
+if (d.attrition) return 'Потери при штурмах ×' + d.attrition;
+if (d.step) return 'Деградация: ' + d.step + ' дня на ступень';
+if (d.growthMult) return '×' + d.growthMult + ' к приросту жилищ';
+return '';
+}
+function updateStrongholdProgress() {
+var n = capturedCount();
+var el = document.getElementById('progressVal');
+if (el) el.textContent = n + '/' + STRONGHOLDS.length;
+updateProgressFill((n / STRONGHOLDS.length) * 100);
+}
+function garrisonRows(stacks, idx, action, label) {
+if (!stacks || stacks.length === 0) return '<div class="empty-state">Пусто.</div>';
+return stacks.map(function(st) {
+var u = UNIT_TIERS[st.tier];
+return '<div class="sh-hire-row"><div class="sh-build-icon">' + u.icon + '</div>' +
+'<div class="sh-build-body"><div class="sh-build-name">' + u.name + ' × ' + st.count + '</div>' +
+'<div class="sh-build-meta">Сила: ' + (st.count * u.power) + '</div></div>' +
+'<button class="sh-mini" data-action="' + action + '" data-idx="' + idx + '" data-tier="' + st.tier + '">' + label + '</button></div>';
+}).join('');
+}
+function renderStrongholds() {
+ensureStrongholdState();
+if (!SM) return;
+if (currentShIdx !== null) { renderStrongholdPanel(currentShIdx); return; }
+var root = document.getElementById('strongholdsRoot');
+if (!root) return;
+var front = frontIdx();
+var html = '<div class="sh-treasury">' +
+'<div>💰 <b>' + (HERO.gold || 0) + '</b></div>' +
+'<div>Налоги: <b style="color:var(--green)">+' + shIncomePerDay() + ' 💰/день</b></div>' +
+'<div>Содержание: <b style="color:var(--blood-bright)">−' + shUpkeepPerDay() + ' 💰/день</b></div>' +
+'<div>⚔ Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
+html += '<div class="sh-grid">';
+for (var p = 1; p <= 4; p++) {
+html += '<div class="sh-prov"><div class="sh-prov-title">' + PROVINCES[p] + '</div>';
+STRONGHOLDS.forEach(function(d, i) {
+if (d.prov !== p) return;
+var s = strongholds[i];
+if (s.captured) {
+html += '<div class="sh-card owned" data-action="sh-open" data-idx="' + i + '">' +
+'<div class="sh-icon">' + shSprite(i) + '</div>' +
+'<div class="sh-body"><div class="sh-name">' + d.icon + ' ' + d.name + '</div>' +
+'<div class="sh-meta">+' + d.tax + ' 💰/день · слоты ' + builtList(i).length + '/' + d.slots + '</div>' +
+stageBadgeHtml(shWorstStage(i)) + '</div></div>';
+} else if (i === front) {
+html += '<div class="sh-card front"' + (i === 0 ? ' data-action="sh-open" data-idx="' + i + '"' : '') + '>' +
+'<div class="sh-icon">' + d.icon + '</div>' +
+'<div class="sh-body"><div class="sh-name">' + d.name + (i === 0 ? ' <span class="sh-req">стартовый лагерь</span>' : '') + '</div>' +
+'<div class="sh-meta">Сила нейтралов: ' + d.total + '</div></div>' +
+'<button class="sh-assault" data-action="sh-assault" data-idx="' + i + '">⚔ Штурм</button></div>';
+} else {
+html += '<div class="sh-card locked"><div class="sh-icon">🔒</div>' +
+'<div class="sh-body"><div class="sh-name">' + d.name + '</div>' +
+'<div class="sh-meta">Захвати предыдущую</div></div></div>';
+}
+});
+html += '</div>';
+}
+root.innerHTML = html;
+}
+function renderStrongholdPanel(idx) {
+ensureStrongholdState();
+if (!SM) return;
+var root = document.getElementById('strongholdsRoot');
+if (!root) { currentShIdx = null; return; }
+var d = STRONGHOLDS[idx], s = strongholds[idx];
+if (!s || (!s.captured && idx !== 0)) { currentShIdx = null; renderStrongholds(); return; } // Сендер-Хутор — стартовый лагерь и без захвата (SPEC §9)
+var html = '<button class="sh-back" data-action="sh-back">← Все твердыни</button>';
+html += '<div class="sh-panel-head"><div class="sh-panel-title">' + d.icon + ' ' + d.name + '</div>' +
+'<div class="sh-panel-sub">Налог +' + d.tax + ' 💰/день · слоты ' + builtList(idx).length + '/' + d.slots + ' · ' + PROVINCES[d.prov] + '</div></div>';
+html += '<div class="sh-sec-title">🏗 Постройки</div>';
+var built = builtList(idx);
+if (built.length === 0) html += '<div class="empty-state">Пока ничего не построено.</div>';
+built.forEach(function(id) {
+var bd = BUILDINGS[id], b = s.buildings[id];
+html += '<div class="sh-build-row"><div class="sh-build-icon">' + bd.icon + '</div>' +
+'<div class="sh-build-body"><div class="sh-build-name">' + bd.name + '</div>' +
+'<div class="sh-build-meta">' + buildingEffectText(bd) + ' · содержание ' + bd.upkeep + ' 💰/день</div></div>' +
+stageBadgeHtml(b.corruptionStage) + '</div>';
+});
+var slotLeft = d.slots - built.length;
+html += '<div class="sh-sec-title">📓 Каталог (свободно слотов: ' + slotLeft + ')</div>';
+var anyShown = false;
+Object.keys(BUILDINGS).forEach(function(id) {
+var bd = BUILDINGS[id];
+if (bd.min > idx + 1) return;
+if (s.buildings[id] && s.buildings[id].built) return;
+anyShown = true;
+var reqOk = !bd.req || (s.buildings[bd.req] && s.buildings[bd.req].built);
+var can = reqOk && slotLeft > 0 && (HERO.gold || 0) >= bd.cost;
+html += '<div class="sh-build-row buy"><div class="sh-build-icon">' + bd.icon + '</div>' +
+'<div class="sh-build-body"><div class="sh-build-name">' + bd.name + (reqOk ? '' : ' <span class="sh-req">нужна: ' + BUILDINGS[bd.req].name + '</span>') + '</div>' +
+'<div class="sh-build-meta">' + buildingEffectText(bd) + ' · ' + bd.cost + ' 💰 · содержание ' + bd.upkeep + ' 💰/день</div></div>' +
+(can ? '<button class="sh-buy" data-action="sh-buy" data-idx="' + idx + '" data-bid="' + id + '">🏗 ' + bd.cost + '</button>' : '<span class="sh-stage lock">🔒</span>') +
+'</div>';
+});
+if (!anyShown) html += '<div class="empty-state">Каталог пуст — захватывай новые земли.</div>';
+html += '<div class="sh-sec-title">⚔ Найм (пул недели · скидка 🎭 ' + Math.round(Math.min(0.30, 0.005 * STATS.cha.value) * 100) + '%)</div>';
+var hireRows = '';
+Object.keys(BUILDINGS).forEach(function(id) {
+var bd = BUILDINGS[id];
+if (!bd.grow) return;
+var b = s.buildings[id];
+if (!b || !b.built) return;
+var tier = bd.tier, u = UNIT_TIERS[tier];
+hireRows += '<div class="sh-hire-row"><div class="sh-build-icon">' + u.icon + '</div>' +
+'<div class="sh-build-body"><div class="sh-build-name">' + u.name + ' (Т' + tier.slice(1) + ') · сила ' + u.power + '</div>' +
+'<div class="sh-build-meta">Пул недели: <b>' + (hirePool[tier] || 0) + '</b> · цена ' + hireCostOf(tier) + ' 💰</div></div>' +
+'<div class="sh-hire-actions">' +
+'<button class="sh-mini" data-action="sh-hire-army" data-idx="' + idx + '" data-tier="' + tier + '">В армию</button>' +
+'<button class="sh-mini" data-action="sh-hire-garrison" data-idx="' + idx + '" data-tier="' + tier + '">В гарнизон</button>' +
+'</div></div>';
+});
+html += hireRows || '<div class="empty-state">Построй жилище, чтобы нанимать существ.</div>';
+var garDef = SM.defensePower(d, s.garrison, STATS.end.value, defBonusOf(idx));
+html += '<div class="sh-sec-title">🛡 Гарнизон — сила ' + SM.stackPower(s.garrison) + ' · оборона ' + garDef + ' (база ' + d.total + ' + постройки +' + defBonusOf(idx) + ')</div>';
+html += garrisonRows(s.garrison, idx, 'sh-to-army', '→ Армия');
+html += '<div class="sh-sec-title">⚔ Полевая армия — сила ' + SM.armyPower(army.units) + '</div>';
+html += garrisonRows(SM.TIER_KEYS.map(function(t) { return { tier: t, count: army.units[t] || 0 }; }).filter(function(x) { return x.count > 0; }), idx, 'sh-to-garrison', '→ Гарнизон');
+root.innerHTML = html;
+}
 let lastDayReset = null;
 var lastWeekReset = getThisMondayKey(); // объявление было утеряно при удалении боевого блока — без него молча падали все saveGameState
 // ===================== ТРАКТ ЗАВОЕВАНИЙ (HoMM-стиль: строй за дни, собирай каждый день) =====================
@@ -1401,6 +1783,61 @@ const REGIONS = [
 { icon: '⛩', name: 'Врата Свободы',   cost: 4200, buildDays: 9, rev: 50 , img: 'img/tract/region10.png' },
 { icon: '👑', name: 'Терновый Трон',  cost: 6500, buildDays: 10, rev: 65 , img: 'img/tract/region11.png' },
 ];
+// ===================== ТВЕРДЫНИ v2: КАТАЛОГИ (SPEC §1-§3, BALANCE круг 3; UI — следующий этап) =====================
+const STRONGHOLDS = [
+{ id: 'sh01', prov: 1, icon: '🛖', name: 'Сендер-Хутор',        gar: 10,   def: 5,    total: 15,   slots: 6, tax: 1 },
+{ id: 'sh02', prov: 1, icon: '🏕', name: 'Лаголь Земли',        gar: 18,   def: 10,   total: 28,   slots: 6, tax: 2 },
+{ id: 'sh03', prov: 1, icon: '🪵', name: 'Лесопилка',           gar: 26,   def: 14,   total: 40,   slots: 6, tax: 4 },
+{ id: 'sh04', prov: 1, icon: '⛏', name: 'Медные Копи',         gar: 42,   def: 23,   total: 65,   slots: 6, tax: 7 },
+{ id: 'sh05', prov: 1, icon: '🌾', name: 'Житницы',             gar: 71,   def: 39,   total: 110,  slots: 6, tax: 11 },
+{ id: 'sh06', prov: 2, icon: '🕯', name: 'Чертож Воли',         gar: 123,  def: 67,   total: 190,  slots: 7, tax: 16 },
+{ id: 'sh07', prov: 2, icon: '🪙', name: 'Златоград',           gar: 181,  def: 99,   total: 280,  slots: 7, tax: 22 },
+{ id: 'sh08', prov: 2, icon: '🏰', name: 'Дозорный Замок',      gar: 291,  def: 159,  total: 450,  slots: 7, tax: 30 },
+{ id: 'sh09', prov: 2, icon: '🗼', name: 'Башня Тягости',       gar: 330,  def: 180,  total: 510,  slots: 7, tax: 39 },
+{ id: 'sh10', prov: 2, icon: '⛩', name: 'Врата Свободы',       gar: 520,  def: 280,  total: 800,  slots: 7, tax: 50 },
+{ id: 'sh11', prov: 3, icon: '👑', name: 'Терновый Трон',       gar: 720,  def: 380,  total: 1100, slots: 7, tax: 65 },
+{ id: 'sh12', prov: 3, icon: '🧂', name: 'Соляной Разлом',      gar: 910,  def: 490,  total: 1400, slots: 7, tax: 85 },
+{ id: 'sh13', prov: 3, icon: '🌊', name: 'Гнилые Шлюзы',        gar: 1110, def: 590,  total: 1700, slots: 7, tax: 440 },
+{ id: 'sh14', prov: 3, icon: '🐦', name: 'Вороний Придел',      gar: 1330, def: 720,  total: 2050, slots: 7, tax: 560 },
+{ id: 'sh15', prov: 3, icon: '🦴', name: 'Костяная Перевязь',   gar: 1560, def: 840,  total: 2400, slots: 7, tax: 700 },
+{ id: 'sh16', prov: 4, icon: '🌄', name: 'Заревый Форпост',     gar: 1810, def: 990,  total: 2800, slots: 8, tax: 860 },
+{ id: 'sh17', prov: 4, icon: '⛪', name: 'Шёпотящий Монастырь', gar: 2090, def: 1110, total: 3200, slots: 8, tax: 1040 },
+{ id: 'sh18', prov: 4, icon: '🌳', name: 'Ясень Забвения',      gar: 2370, def: 1280, total: 3650, slots: 8, tax: 1240 },
+{ id: 'sh19', prov: 4, icon: '💨', name: 'Угарный Чертог',      gar: 2690, def: 1460, total: 4150, slots: 8, tax: 1460 },
+{ id: 'sh20', prov: 4, icon: '👁', name: 'Венец Угасания',      gar: 3010, def: 1590, total: 4600, slots: 8, tax: 1720 }
+];
+const BUILDINGS = {
+zh1: { id: 'zh1', cat: 'house',  icon: '🏚', name: 'Ополченческий Двор', cost: 60,    upkeep: 3,   grow: 14, tier: 't1', req: null, min: 1 },
+zh2: { id: 'zh2', cat: 'house',  icon: '🎖', name: 'Казармы',            cost: 150,   upkeep: 8,   grow: 12, tier: 't2', req: 'zh1', min: 2 },
+zh3: { id: 'zh3', cat: 'house',  icon: '🏹', name: 'Стрельбище',         cost: 360,   upkeep: 18,  grow: 10, tier: 't3', req: 'zh2', min: 3 },
+zh4: { id: 'zh4', cat: 'house',  icon: '⚔', name: 'Оружейня',           cost: 900,   upkeep: 40,  grow: 8,  tier: 't4', req: 'zh3', min: 5 },
+zh5: { id: 'zh5', cat: 'house',  icon: '🐎', name: 'Конюшни Пепла',      cost: 2100,  upkeep: 90,  grow: 6,  tier: 't5', req: 'zh4', min: 8 },
+zh6: { id: 'zh6', cat: 'house',  icon: '🌿', name: 'Капелла Терна',      cost: 4800,  upkeep: 200, grow: 6,  tier: 't6', req: 'zh5', min: 11 },
+zh7: { id: 'zh7', cat: 'house',  icon: '🏯', name: 'Цитадель Духа',      cost: 10800, upkeep: 450, grow: 4,  tier: 't7', req: 'zh6', min: 15 },
+ec1: { id: 'ec1', cat: 'econ',   icon: '⚖', name: 'Рынок',              cost: 120,   upkeep: 10,  market: 0.10, req: null, min: 1 },
+ec2: { id: 'ec2', cat: 'econ',   icon: '🌾', name: 'Амбары',             cost: 180,   upkeep: 15,  gold: 20,  req: null, min: 2 },
+ec3: { id: 'ec3', cat: 'econ',   icon: '⛏', name: 'Медный Рудник',      cost: 360,   upkeep: 35,  gold: 150, req: null, min: 4 },
+ec4: { id: 'ec4', cat: 'econ',   icon: '💼', name: 'Гильдия Торговцев',  cost: 1500,  upkeep: 80,  gold: 400, req: 'ec1', min: 7 },
+ec5: { id: 'ec5', cat: 'econ',   icon: '🪙', name: 'Монетный Двор',      cost: 4200,  upkeep: 200, gold: 900, req: 'ec4', min: 12 },
+df1: { id: 'df1', cat: 'defense', icon: '🪵', name: 'Частокол',          cost: 180,   upkeep: 8,   def: 20,   req: null, min: 1 },
+df2: { id: 'df2', cat: 'defense', icon: '🗼', name: 'Башня Стражи',      cost: 480,   upkeep: 22,  def: 60,   req: 'df1', min: 3 },
+df3: { id: 'df3', cat: 'defense', icon: '🧱', name: 'Каменные Стены',    cost: 1200,  upkeep: 55,  def: 160,  req: 'df2', min: 6 },
+df4: { id: 'df4', cat: 'defense', icon: '🏰', name: 'Великая Цитадель',  cost: 3300,  upkeep: 140, def: 420,  req: 'df3', min: 10 },
+sp1: { id: 'sp1', cat: 'special', icon: '🔭', name: 'Гильдия Разведчиков', cost: 300,  upkeep: 20,  scout: true, req: null, min: 3 },
+sp2: { id: 'sp2', cat: 'special', icon: '🚩', name: 'Кузня Знамён',      cost: 2100,  upkeep: 100, attrition: 0.8, req: 'sp1', min: 7 },
+sp3: { id: 'sp3', cat: 'special', icon: '⛪', name: 'Собор Порядка',     cost: 3300,  upkeep: 160, step: 4,   req: 'sp1', min: 9 },
+sp4: { id: 'sp4', cat: 'special', icon: '🌬', name: 'Врата Ветров',      cost: 6600,  upkeep: 300, growthMult: 1.4, req: 'sp2', min: 13 }
+};
+const UNIT_TIERS = {
+t1: { icon: '🗡', name: 'Ополченец',      cost: 1,    power: 2,    growth: 14 },
+t2: { icon: '🛡', name: 'Копейщик',       cost: 5,    power: 6,    growth: 12 },
+t3: { icon: '🏹', name: 'Тень-Лучник',    cost: 15,   power: 16,   growth: 10 },
+t4: { icon: '⚔', name: 'Заревый Мечник', cost: 50,   power: 45,   growth: 8 },
+t5: { icon: '🐎', name: 'Всадник Пепла',  cost: 160,  power: 140,  growth: 6 },
+t6: { icon: '🌿', name: 'Хранитель Терна', cost: 800,  power: 450,  growth: 6 },
+t7: { icon: '👁', name: 'Архонт Угасания', cost: 1800, power: 1400, growth: 4 }
+};
+window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS };
 let tractState = { regions: 0, building: null };
 function tractRevenuePerDay() {
 var rev = 0;
@@ -1423,8 +1860,6 @@ spiritSay('«' + region.name + ' поднимает стены. Тракт ра�
 sfxLevelUp(); haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color: '#fbbf24', speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
 screenShake(10, 600);
-escapeProgress = Math.min(ESCAPE_MAX, escapeProgress + 3);
-updateEscapeDisplay(); renderMap(escapeProgress);
 } else {
 showToast('🏗 ' + REGIONS[b.regionIdx].name, 'Осталось: ' + b.remaining + ' ' + pluralDays(b.remaining), 'save');
 }
@@ -1436,8 +1871,6 @@ if (tractState.building) { showToast('🏗 Стройка идёт', 'Снача
 if ((HERO.gold || 0) < next.cost) { showToast('💰 Мало золота', 'Нужно ' + next.cost + ' 💰, в казне ' + (HERO.gold || 0), 'blood'); sfxError(); return; }
 HERO.gold -= next.cost;
 tractState.building = { regionIdx: tractState.regions + 1, remaining: next.buildDays, total: next.buildDays };
-escapeProgress = Math.min(ESCAPE_MAX, escapeProgress + 2);
-updateEscapeDisplay(); renderMap(escapeProgress);
 sfxForge(); haptic('heavy');
 screenShake(8, 500);
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#f4c896', speed: 9, decay: 0.012, size: 3, shape: 'spark', gravity: 0.08 });
@@ -1580,6 +2013,7 @@ showToast('👻 Призрак ушёл', '«' + t.name + '» растворил
 TASKS = TASKS.filter(function(t) { return t.status !== 'gone' && t.status !== 'chest_open'; });
 if (penaltyCount > 0) {
 var p = Math.min(5, penaltyCount);
+wkTaskFails += penaltyCount;
 HERO.gold = Math.max(0, (HERO.gold || 0) - p);
 showToast('👻 Призраки ночи', penaltyCount + ' просроченных задач: −' + p + ' 💰', 'blood');
 sfxFail(); haptic('error');
@@ -1621,115 +2055,6 @@ var active = TASKS.filter(function(t) { return t.status === 'active' || t.status
 var ghosts = TASKS.filter(function(t) { return t.status === 'ghost'; });
 activeEl.innerHTML = active.length === 0 ? '<div class="empty-state">Задач нет. Жми «📋 Задача».</div>' : active.map(taskCard).join('');
 goneEl.innerHTML = ghosts.length === 0 ? '' : '<div class="ghosts-title">👻 Призраки просроченных (−1 💰 за ночь, пока не изгонишь делом или ✕)</div>' + ghosts.map(taskCard).join('');
-}
-function renderMap(progress) {
-var container = document.getElementById('mapRooms');
-if (!container) return;
-container.innerHTML = '';
-document.getElementById('mapProgressNum').textContent = progress;
-document.getElementById('mapProgressFill').style.width = ((progress / ESCAPE_MAX) * 100) + '%';
-var idx = Math.min(Math.floor(progress / ROOMS_STEP), ROOMS.length - 1);
-document.getElementById('mapRoomText').textContent = ROOMS[idx].icon + ' Ты в ' + ROOMS[idx].name;
-var fog = document.getElementById('mapFog');
-if (fog) {
-var fogPct = 20 + (progress / ESCAPE_MAX) * 60;
-fog.style.background = 'radial-gradient(circle at 50% 50%, transparent ' + fogPct + '%, rgba(10,10,15,0.92) 95%)';
-}
-ROOMS.forEach(function(room, i) {
-var unlocked = progress >= (i + 1) * ROOMS_STEP;
-var current = progress >= i * ROOMS_STEP && progress < (i + 1) * ROOMS_STEP;
-var el = document.createElement('div');
-el.className = 'map-room ' + (unlocked ? 'unlocked' : current ? 'current' : 'locked');
-el.id = 'map-room-' + i;
-var remaining = current ? ((i + 1) * ROOMS_STEP - progress) : 0;
-var progressInRoom = current ? (progress - i * ROOMS_STEP) : (unlocked ? ROOMS_STEP : 0);
-var progressPct = Math.round((progressInRoom / ROOMS_STEP) * 100);
-var badgeHtml;
-if (current) badgeHtml = '<div class="map-room-badge current-badge">▶ Сейчас</div>';
-else if (unlocked) badgeHtml = '<div class="map-room-badge unlocked-badge">✓</div>';
-else badgeHtml = '<div class="map-room-badge locked-badge">🔒 ' + ((i + 1) * ROOMS_STEP - progress) + '</div>';
-var statusHtml;
-if (unlocked) statusHtml = '<div class="map-room-status">' + room.lore.split('.')[0] + '</div>';
-else if (current) statusHtml = '<div class="map-room-status">Осталось ' + remaining + ' ранг-апов</div><div class="map-room-progress"><div class="map-room-progress-fill" style="width:' + progressPct + '%"></div></div>';
-else statusHtml = '<div class="map-room-status">' + ((i + 1) * ROOMS_STEP - progress) + ' ранг-апов</div>';
-el.innerHTML = badgeHtml +
-'<div class="map-room-icon-wrap"><div class="map-room-icon">' + room.icon + '</div></div>' +
-'<div class="map-room-name">' + room.name + '</div>' +
-statusHtml;
-el.addEventListener('click', function() {
-if (unlocked || current) openRoomDetail(i);
-});
-container.appendChild(el);
-});
-setTimeout(function() { updatePlayerMarker(idx); }, 50);
-}
-function updatePlayerMarker(idx) {
-var marker = document.getElementById('playerMarker');
-if (!marker) {
-marker = document.createElement('div');
-marker.id = 'playerMarker';
-marker.className = 'player-marker';
-marker.textContent = '🗡';
-document.getElementById('mapContainer').appendChild(marker);
-}
-var room = document.getElementById('map-room-' + idx);
-var mapContainer = document.getElementById('mapContainer');
-if (room && mapContainer) {
-var rect = room.getBoundingClientRect();
-var containerRect = mapContainer.getBoundingClientRect();
-marker.style.left = (rect.left - containerRect.left + rect.width / 2 - 18) + 'px';
-marker.style.top = (rect.top - containerRect.top - 28) + 'px';
-}
-}
-function openRoomDetail(idx) {
-var room = ROOMS[idx];
-var currentIdx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
-var isCurrent = idx === currentIdx;
-var unlocked = escapeProgress >= (idx + 1) * ROOMS_STEP;
-var progressInRoom = isCurrent ? (escapeProgress - idx * ROOMS_STEP) : (unlocked ? ROOMS_STEP : 0);
-var progressPct = Math.round((progressInRoom / ROOMS_STEP) * 100);
-var statusLabel = isCurrent ? 'Текущая локация' : unlocked ? 'Пройдена' : 'Закрыта';
-var statusColor = (isCurrent || unlocked) ? 'var(--green)' : 'var(--text-dim)';
-document.getElementById('roomDetailTitle').textContent = room.icon + ' ' + room.name;
-document.getElementById('roomDetailBody').innerHTML =
-'<div class="room-detail-icon">' + room.icon + '</div>' +
-'<div class="room-detail-name">' + room.name + '</div>' +
-'<div class="room-detail-lore">' + room.lore + '</div>' +
-'<div class="room-detail-stats">' +
-'<div class="room-detail-stat"><div class="room-detail-stat-label">Позиция</div><div class="room-detail-stat-value">' + (idx + 1) + ' / ' + ROOMS.length + '</div></div>' +
-'<div class="room-detail-stat"><div class="room-detail-stat-label">Статус</div><div class="room-detail-stat-value" style="color:' + statusColor + '">' + statusLabel + '</div></div>' +
-'</div>' +
-(isCurrent ? '<div style="padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid var(--gold); border-radius: 4px; text-align: center;"><div style="font-size: 10px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin-bottom: 4px;">Прогресс локации</div><div style="font-size: 22px; color: var(--gold-bright); font-weight: bold;">' + progressPct + '%</div></div>' : '');
-document.getElementById('roomDetailModal').classList.add('show');
-}
-function closeRoomDetail() { document.getElementById('roomDetailModal').classList.remove('show'); }
-renderMap(0);
-function updateEscapeDisplay() {
-document.getElementById('progressVal').textContent = escapeProgress + ' / ' + ESCAPE_MAX;
-document.getElementById('mapProgressNum').textContent = escapeProgress;
-document.getElementById('mapProgressFill').style.width = ((escapeProgress / ESCAPE_MAX) * 100) + '%';
-updateProgressFill((escapeProgress / ESCAPE_MAX) * 100);
-const idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1);
-document.getElementById('mapRoomText').textContent = 'Ты в: ' + ROOMS[idx].name;
-updateAtmosphereByEscape();
-}
-var currentRoomIndex = 0;
-function updateAtmosphereByEscape() {
-var idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOM_THEMES.length - 1);
-if (idx === currentRoomIndex) return;
-currentRoomIndex = idx;
-var theme = ROOM_THEMES[idx];
-var root = document.documentElement.style;
-root.setProperty('--atmosphere-hue', theme.hue);
-root.setProperty('--atmosphere-light', theme.light);
-root.setProperty('--atmosphere-sat', theme.sat);
-root.setProperty('--mist-opacity', theme.mist);
-root.setProperty('--torch-intensity', theme.torch);
-root.setProperty('--light-rays-opacity', theme.rays);
-dustParticles.forEach(function(d) { d.color = theme.particleColor; });
-document.querySelectorAll('.boss-sprite').forEach(function(s) {
-s.style.filter = 'hue-rotate(' + (theme.hue - 25) + 'deg)';
-});
 }
 const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
 function getMSKDate(ts) { return new Date((ts || Date.now()) + MSK_OFFSET_MS); }
@@ -1850,8 +2175,8 @@ var all = [
 { id: 'goal_1', icon: '🎯', name: 'Первая цель', desc: 'Выполнить первую цель', check: GOALS.filter(function(g) { return g.completed; }).length >= 1 },
 { id: 'goal_10', icon: '🏆', name: 'Десятка', desc: 'Выполнить 10 целей', check: GOALS.filter(function(g) { return g.completed; }).length >= 10 },
 { id: 'equip_all', icon: '🎒', name: 'Полный комплект', desc: 'Заполнить все слоты экипировки', check: Object.values(INVENTORY.equipped).filter(function(e) { return e; }).length >= 9 },
-{ id: 'escape_half', icon: '🗝', name: 'Полпути', desc: 'Прогресс побега 50%+', check: escapeProgress >= 70 },
-{ id: 'escape_full', icon: '🌅', name: 'Свобода', desc: 'Достичь Врат Свободы', check: escapeProgress >= ESCAPE_MAX },
+{ id: 'sh_10', icon: '🏰', name: 'Полкоролевства', desc: 'Захватить 10 твердынь', check: capturedCount() >= 10 },
+{ id: 'sh_all', icon: '👑', name: 'Владыка Твердынь', desc: 'Захватить все 20 твердынь', check: capturedCount() >= STRONGHOLDS.length },
 { id: 'streak_7', icon: '🔥', name: 'Неделя дисциплины', desc: '7-дневный стрик на карточке', check: FORGED.some(function(c) { return (c.streak || 0) >= 7; }) },
 { id: 'streak_30', icon: '🔥', name: 'Месяц железа', desc: '30-дневный стрик на карточке', check: FORGED.some(function(c) { return (c.streak || 0) >= 30; }) },
 { id: 'completions_100', icon: '💯', name: 'Сотня', desc: '100 выполнений карточек', check: totalCompletions >= 100 },
@@ -1885,7 +2210,7 @@ try {
 var data = {
 exportedAt: new Date().toISOString(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress: escapeProgress, xpHistory: xpHistory
+xpHistory: xpHistory
 };
 var json = JSON.stringify(data, null, 2);
 var blob = new Blob([json], { type: 'application/json' });
@@ -2367,18 +2692,23 @@ var _prevDay = lastDayReset;
 lastDayReset = todayKey;
 if (_prevDay !== null) {
 var gapDays = Math.max(1, daysBetween(_prevDay, todayKey));
-if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7
-var revenue = 0;
+if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7 (ADR §5: кап 7 суток)
+var revenue = 0, upkeepTotal = 0, unpaid = 0;
 for (var gd = gapDays; gd >= 1; gd--) {
 expireGhostTasks(getMSKDayKey(Date.now() - gd * 86400000));
 advanceTract();
-revenue += tractRevenuePerDay();
+var tr = strongholdsDailyTick();
+revenue += tr.income;
+upkeepTotal += tr.upkeep;
+if (!tr.paid) unpaid++;
 }
 if (revenue > 0) {
-HERO.gold = (HERO.gold || 0) + revenue;
-showToast('💰 Доход тракта', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия (' + (tractState.regions + 1) + ' лок. на тракте)', 'save');
-spiritSay('«Дороги работают. Твоё королевство растёт, даже когда ты спишь.»');
+showToast('💰 Доход королевства', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия (налоги и эконом твердынь)', 'save');
 sfxEquip(); haptic('success');
+}
+if (unpaid > 0) {
+showToast('🏚 Не хватило на содержание', unpaid + ' дн. дефицита — постройки ветшают (grace ' + (2 + Math.floor(STATS.wil.value / 20)) + ' дн.)', 'blood');
+sfxFail(); haptic('error');
 }
         if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
 HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
@@ -2392,6 +2722,9 @@ var currentMonday = getThisMondayKey();
 if (lastWeekReset !== currentMonday) {
 lastWeekReset = currentMonday;
 showToast('🗓 Новая неделя', 'Путь продолжается', 'save');
+recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
+runWeeklySiege();
+wkSkips = 0; wkTaskFails = 0;
 setTimeout(showWeeklyReport, 2000);
 }
 FORGED.forEach(c => {
@@ -2565,7 +2898,7 @@ function initPerfMode() {
 }
 initPerfMode();
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
-document.getElementById('roomDetailModal').addEventListener('click', (e) => { if (e.target.id === 'roomDetailModal') closeRoomDetail(); });
+document.getElementById('siegeReportModal').addEventListener('click', (e) => { if (e.target.id === 'siegeReportModal') closeSiegeReport(); });
 document.getElementById('syncFileInput').addEventListener('change', importSyncFile);
 document.addEventListener('keydown', (e) => {
 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -2575,9 +2908,10 @@ openSyncModal();
 });
 var MODAL_CLOSE_FNS = {
 goalModal: closeGoalModal, forgeModal: closeForge, editCardModal: closeEditCard,
-syncModal: closeSyncModal, roomDetailModal: closeRoomDetail, returnModal: closeReturnModal,
+syncModal: closeSyncModal, returnModal: closeReturnModal,
 evolutionModal: closeEvolutionModal, weeklyReportModal: closeWeeklyReportModal,
-starterDeckModal: closeStarterDeck, taskModal: closeTaskModal
+starterDeckModal: closeStarterDeck, taskModal: closeTaskModal,
+siegeReportModal: closeSiegeReport
 };
 function closeOverlayEl(overlay) {
 var fn = MODAL_CLOSE_FNS[overlay.id];
@@ -2600,9 +2934,9 @@ const dustCanvas = document.getElementById('dustCanvas');
 const dustCtx = dustCanvas.getContext('2d');
 let dustParticles = [];
 function resizeDust() { dustCanvas.width = window.innerWidth; dustCanvas.height = window.innerHeight; }
-resizeDust(); window.addEventListener('resize', function() { resizeDust(); var idx = Math.min(Math.floor(escapeProgress / ROOMS_STEP), ROOMS.length - 1); setTimeout(function() { updatePlayerMarker(idx); }, 100); });
+resizeDust(); window.addEventListener('resize', resizeDust);
 class Dust {
-constructor() { this.x = Math.random() * dustCanvas.width; this.y = Math.random() * dustCanvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = -0.1 - Math.random() * 0.2; this.size = 0.5 + Math.random() * 1.5; this.alpha = 0.2 + Math.random() * 0.4; this.color = ROOM_THEMES[currentRoomIndex].particleColor; }
+constructor() { this.x = Math.random() * dustCanvas.width; this.y = Math.random() * dustCanvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = -0.1 - Math.random() * 0.2; this.size = 0.5 + Math.random() * 1.5; this.alpha = 0.2 + Math.random() * 0.4; this.color = '#d4a574'; }
 update() { this.x += this.vx; this.y += this.vy; this.vx += (Math.random() - 0.5) * 0.02; if (this.y < -10 || this.x < -10 || this.x > dustCanvas.width + 10) { this.x = Math.random() * dustCanvas.width; this.y = dustCanvas.height + 10; } }
 draw(ctx) { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color; ctx.shadowBlur = 6; ctx.shadowColor = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
@@ -2724,8 +3058,8 @@ var pendingOnboarding = false;
 var ONBOARDING_STEPS = [
 { icon: '⚔', title: 'Добро пожаловать в NeuroDeck', text: 'Геймифицированный трекер привычек.<br>Ты — Владыка, зарабатывающий свою свободу дисциплиной.' },
 { icon: '📖', title: 'Колода карточек', text: 'Каждая карточка — привычка, которую нужно выполнять ежедневно.<br>Нажми <b>✓</b> чтобы выполнить, <b>✕</b> чтобы пропустить.<br>Выполнение = <b style="color:var(--gold-bright)">+1 💰</b>. Пропуск = <b style="color:var(--blood-bright)">−1 💰</b> и сброс стрика.' },
-{ icon: '💰', title: 'Казна', text: 'Золото капает за каждую выполненную карточку.<br>Постройка локаций на Тракте идёт <b>несколько дней</b> — стройка живёт своей жизнью и платит тебе ежедневно.' },
-{ icon: '🏰', title: 'Тракт завоеваний', text: 'Деревня → Лагерь → Лесопилка → ... → Тронный Зал.<br>Каждая локация строится за дни и даёт <b>доход каждый день</b>.<br>Заходи ежедневно: собирай золото, запускай стройки, открывай новые земли.' },
+{ icon: '💰', title: 'Казна', text: 'Золото капает за каждую выполненную карточку.<br>Твердыни платят налоги каждый день, а постройки требуют <b>содержания</b> — забросишь казну, начнут ветшать.' },
+{ icon: '🏰', title: 'Твердыни', text: '20 твердыен ждут завоевателя: найми армию и штурмуй <b>по одной в бою</b>.<br>Каждое воскресенье тьма осаждает твой фронт — держи гарнизоны.<br>От Сендер-Хутора до Тернового Трона — путь длиной в месяцы дисциплины.' },
 { icon: '📋', title: 'Задачи дня', text: 'Дела с дедлайном — отдельная система: «сдать отчёт до 13:00».<br>Успел — открой <b>сундук</b> (золото или XP).<br>Просрочил — призрак задачи навещает тебя каждый день, −1 💰 за ночь.' },
 { icon: '🎯', title: 'Цели', text: 'Крупные дела с дедлайном и шагами.<br>Выполнение = опыт + очки атрибута + золото.<br>Провал по дедлайну = потеря золота.' },
 { icon: '🔥', title: 'Ранги и мастерство', text: 'Выполняй карточку — растёт Мастерство.<br>Ранг растёт: C → CC → ... → SSS.<br>Ранг-ап = +1 к пулу атрибута.' },
@@ -2776,8 +3110,8 @@ renderStats();
 updateHeroUI();
 renderGoals();
 renderTasks();
-updateEscapeDisplay();
-renderMap(escapeProgress);
+renderStrongholds();
+updateStrongholdProgress();
 renderCards();
 renderDashboard();
 renderTract();

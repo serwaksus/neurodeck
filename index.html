@@ -8,7 +8,7 @@
     />
     <meta name="theme-color" content="#0a0a0f" />
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-    <link rel="stylesheet" href="css/style.css?v=51" />
+    <link rel="stylesheet" href="css/style.css?v=52" />
   </head>
   <body>
     <div class="app-wrap">
@@ -656,19 +656,19 @@
         class="modal-overlay"
         role="dialog"
         aria-modal="true"
-        id="roomDetailModal"
+        id="siegeReportModal"
       >
         <div class="modal">
           <div class="modal-header">
-            <h3 id="roomDetailTitle">📍 Локация</h3>
-            <button class="modal-close" data-action="close-room-detail">
+            <h3>⚔ Итоги воскресной осады</h3>
+            <button class="modal-close" data-action="close-siege-report">
               ✕
             </button>
           </div>
-          <div class="modal-body" id="roomDetailBody"></div>
+          <div class="modal-body" id="siegeReportBody"></div>
           <div class="modal-footer">
-            <button class="demo-btn primary" data-action="close-room-detail">
-              Закрыть
+            <button class="demo-btn primary" data-action="close-siege-report">
+              К новой неделе
             </button>
           </div>
         </div>
@@ -787,19 +787,19 @@
             </div>
           </div>
           <div class="progress-control">
-            <span>Побег</span>
+            <span>Твердыни</span>
             <div
               id="progressSlider"
               class="progress-track"
               role="progressbar"
-              aria-label="Прогресс"
+              aria-label="Захвачено твердынь"
               aria-valuemin="0"
               aria-valuemax="100"
               aria-valuenow="0"
             >
               <div id="progressFill" class="progress-fill"></div>
             </div>
-            <span class="val" id="progressVal">0/140</span>
+            <span class="val" id="progressVal">0/20</span>
           </div>
         </div>
         <div class="main">
@@ -840,9 +840,9 @@
               class="tab"
               role="tab"
               data-action="switch-view"
-              data-view="map"
+              data-view="strongholds"
             >
-              <span class="icon">🗺</span>Карта
+              <span class="icon">🏰</span>Твердыни
             </div>
             <div
               class="tab"
@@ -984,9 +984,8 @@
                     <div>
                       <span>Множитель XP</span><b id="statXpMult">×1.00</b>
                     </div>
-                    <div><span>Ранг-апов</span><b id="statRankups">0</b></div>
                     <div>
-                      <span>Прогресс побега</span><b id="statEscape">0 / 140</b>
+                      <span>Твердынь</span><b id="statStrongholds">0 / 20</b>
                     </div>
                   </div>
                 </div>
@@ -1188,32 +1187,13 @@
                 <div id="tasksGone"></div>
               </div>
             </section>
-            <section class="view" id="view-map">
-              <div class="view-title">🗺 Карта подземелья</div>
+            <section class="view" id="view-strongholds">
+              <div class="view-title">🏰 Твердыни</div>
               <div class="view-subtitle">
-                Каждые 10 ранг-апов карточек открывают новую локацию · Пройди
-                все 14 комнат
+                4 провинции × 5 твердынь · штурмуй фронт, строй, нанимай ·
+                воскресная осада у стен
               </div>
-              <div class="map-header">
-                <div class="map-progress-label">Прогресс побега</div>
-                <div class="map-progress-big">
-                  <span id="mapProgressNum">0</span> <span>/ 140</span>
-                </div>
-                <div class="map-room-text" id="mapRoomText">
-                  ⛓ Ты в Камере заключенного
-                </div>
-                <div class="map-progress-bar">
-                  <div
-                    class="map-progress-fill"
-                    id="mapProgressFill"
-                    style="width: 0%"
-                  ></div>
-                </div>
-              </div>
-              <div class="map-container" id="mapContainer">
-                <div class="map-fog" id="mapFog"></div>
-                <div class="map-rooms" id="mapRooms"></div>
-              </div>
+              <div id="strongholdsRoot"></div>
             </section>
             <section class="view" id="view-stats">
               <div class="view-title">📊 Статистика</div>
@@ -1241,8 +1221,12 @@
           <button class="bnav-btn" data-action="switch-view" data-view="tract">
             <span class="bnav-icon">🏰</span>Тракт
           </button>
-          <button class="bnav-btn" data-action="switch-view" data-view="map">
-            <span class="bnav-icon">🗺</span>Карта
+          <button
+            class="bnav-btn"
+            data-action="switch-view"
+            data-view="strongholds"
+          >
+            <span class="bnav-icon">🏰</span>Твердыни
           </button>
           <button class="bnav-btn" data-action="switch-view" data-view="stats">
             <span class="bnav-icon">📊</span>Стат
@@ -1406,10 +1390,11 @@
       </div>
     </div>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="js/perf.js?v=51"></script>
-    <script src="js/perf-compat.js?v=51"></script>
-    <script src="js/state-guards.js?v=51"></script>
-    <script src="js/storage.js?v=51"></script>
-    <script src="js/app.js?v=51"></script>
+    <script src="js/perf.js?v=52"></script>
+    <script src="js/perf-compat.js?v=52"></script>
+    <script src="js/state-guards.js?v=52"></script>
+    <script src="js/storage.js?v=52"></script>
+    <script src="js/stronghold-model.js?v=52"></script>
+    <script src="js/app.js?v=52"></script>
   </body>
 </html>

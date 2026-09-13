@@ -31,7 +31,16 @@ const EVER_SAVED_KEY = 'neurodeck_ever_saved';
 function hasEverSaved() {
     try { return localStorage.getItem(EVER_SAVED_KEY) === '1'; } catch(e) { return false; }
 }
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
+var strongholds = null, army = null, siege = null;
+function strongholdCatalog() {
+    return (typeof globalThis !== 'undefined' && globalThis.StrongholdData) || null;
+}
+function ensureStrongholdState() {
+    if (!Array.isArray(strongholds)) strongholds = STATE_GUARDS.sanitizeStrongholds(null, strongholdCatalog());
+    if (!army || typeof army !== 'object') army = STATE_GUARDS.sanitizeArmy(null);
+    if (!siege || typeof siege !== 'object') siege = STATE_GUARDS.sanitizeSiege(null);
+}
 const MIGRATIONS = {};
 MIGRATIONS[7] = function(data) {
     try {
@@ -50,6 +59,33 @@ MIGRATIONS[7] = function(data) {
         if (!Array.isArray(data.tasks)) data.tasks = [];
         if (!data.tractState || typeof data.tractState !== 'object') data.tractState = { regions: 0, building: null };
         if (typeof data.taskIdCounter !== 'number' || !Number.isFinite(data.taskIdCounter)) data.taskIdCounter = 1;
+    } catch(e) {}
+};
+// v7→v8 (SPEC §9, ADR §10): tractState.regions N → strongholds: первые N (0..N-1) captured; золото/карточки/задачи не трогаем.
+MIGRATIONS[8] = function(data) {
+    try {
+        if (!data || typeof data !== 'object') return;
+        var cat = strongholdCatalog();
+        var regions = 0;
+        if (data.tractState && typeof data.tractState === 'object' && Number.isFinite(Number(data.tractState.regions))) {
+            regions = Math.max(0, Math.min(10, Math.round(Number(data.tractState.regions)))); // guard: вне 0..10 → clamp
+        }
+        var ids = (cat && Array.isArray(cat.STRONGHOLDS)) ? cat.STRONGHOLDS.map(function(s) { return s && s.id; }) : [];
+        var strongholdsArr = [];
+        for (var i = 0; i < 20; i++) {
+            strongholdsArr.push({
+                id: ids[i] || ('sh' + (i + 1)),
+                captured: i < regions,
+                garrison: [],
+                buildings: {},
+                corruption: { stage: 'ok', debtDays: 0 }
+            });
+        }
+        data.strongholds = strongholdsArr;
+        var units = {};
+        ['t1', 't2', 't3', 't4', 't5', 't6', 't7'].forEach(function(t) { units[t] = 0; });
+        data.army = { units: units, week: 0 };
+        data.siege = { week: 1, lastResult: null };
     } catch(e) {}
 };
 function migrateSyncData(data) {
@@ -109,10 +145,11 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 }
 const snapshot = {
 v: SCHEMA_VERSION, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, lastDayReset,
+lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, tractState, savedAt: Date.now()
 };
+try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; } catch(e) {}
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
@@ -454,13 +491,20 @@ function clearSurplusChunks(n) {
     }
 }
 function buildSyncData() {
-return {
+var data = {
 v: SCHEMA_VERSION, t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-escapeProgress, lastDayReset,
+lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, tractState
 };
+try {
+    ensureStrongholdState();
+    data.strongholds = strongholds;
+    data.army = army;
+    data.siege = siege;
+} catch(e) {}
+return data;
 }
 function updateCloudStatus() {
 var cs = getCloudStorage();
@@ -706,7 +750,6 @@ INVENTORY.backpack = cleanInventory.backpack;
 INVENTORY.equipped = cleanInventory.equipped;
 INVENTORY.maxSlots = cleanInventory.maxSlots;
 }
-if (typeof data.escapeProgress === 'number') escapeProgress = Math.max(0, Math.min(ESCAPE_MAX, data.escapeProgress));
 if (data.forgedIdCounter) forgedIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.forgedIdCounter, 100), maxExistingId(FORGED) + 1);
 if (data.uidCounter) {
 var maxUid = 0;
@@ -745,10 +788,16 @@ tractState.building = (bi > tractState.regions && bi <= REGIONS.length - 1) ? { 
 tractState.building = null;
 }
 }
+try {
+    ensureStrongholdState();
+    strongholds = STATE_GUARDS.sanitizeStrongholds(data.strongholds, strongholdCatalog());
+    army = STATE_GUARDS.sanitizeArmy(data.army);
+    siege = STATE_GUARDS.sanitizeSiege(data.siege);
+} catch(e) { ensureStrongholdState(); }
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses();
-updateEscapeDisplay(); renderMap(escapeProgress);
+renderStrongholds(); updateStrongholdProgress();
 renderTasks(); renderDashboard();
 }
 }
@@ -771,4 +820,17 @@ try {
     tx.onerror = function() { location.reload(); };
 } catch(e) { location.reload(); }
 });
+}
+if (typeof module === 'object' && module.exports) {
+    module.exports.__storageInternals = {
+        migrateSyncData: migrateSyncData,
+        applySyncData: applySyncData,
+        getStrongholds: function() { return strongholds; },
+        getArmy: function() { return army; },
+        getSiege: function() { return siege; },
+        setStrongholds: function(v) { strongholds = v; },
+        setArmy: function(v) { army = v; },
+        setSiege: function(v) { siege = v; },
+        SCHEMA_VERSION: SCHEMA_VERSION
+    };
 }

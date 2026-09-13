@@ -220,6 +220,88 @@
         };
     }
 
+    function sanitizeStrongholds(input, catalog) {
+        var STAGES = { ok: true, worn: true, ruin: true };
+        var TIER_RE = /^t[1-7]$/;
+        function sanitizeGarrisonStacks(arr) {
+            var out = [];
+            if (!Array.isArray(arr)) return out;
+            arr.forEach(function(u) {
+                if (!u || typeof u !== 'object' || typeof u.tier !== 'string' || !TIER_RE.test(u.tier)) return;
+                var count = Math.round(clampNumber(u.count, 0, 1e6, 0));
+                for (var i = 0; i < out.length; i++) {
+                    if (out[i].tier === u.tier) { out[i].count = Math.min(1e6, out[i].count + count); return; }
+                }
+                if (out.length < 7) out.push({ tier: u.tier, count: count });
+            });
+            return out;
+        }
+        function sanitizeBuildingMap(map) {
+            var defs = (catalog && catalog.BUILDINGS && typeof catalog.BUILDINGS === 'object') ? catalog.BUILDINGS : {};
+            var src = (map && typeof map === 'object' && !Array.isArray(map)) ? map : {};
+            var out = {};
+            Object.keys(src).forEach(function(id) {
+                if (!Object.prototype.hasOwnProperty.call(defs, id)) return;
+                var b = src[id];
+                if (!b || typeof b !== 'object') return;
+                if (b.built !== true) { out[id] = { built: false, corruptionStage: 'ok', debtDays: 0 }; return; }
+                out[id] = {
+                    built: true,
+                    corruptionStage: STAGES[b.corruptionStage] ? b.corruptionStage : 'ok',
+                    debtDays: Math.round(clampNumber(b.debtDays, 0, 365, 0))
+                };
+            });
+            return out;
+        }
+        var defs = (catalog && Array.isArray(catalog.STRONGHOLDS)) ? catalog.STRONGHOLDS : [];
+        var byId = Object.create(null);
+        (Array.isArray(input) ? input : []).forEach(function(s) {
+            if (s && typeof s === 'object' && typeof s.id === 'string') byId[s.id] = s;
+        });
+        return defs.map(function(def) {
+            if (!def || typeof def.id !== 'string') return null;
+            var s = Object.prototype.hasOwnProperty.call(byId, def.id) ? byId[def.id] : {};
+            var corr = (s.corruption && typeof s.corruption === 'object') ? s.corruption : {};
+            return {
+                id: def.id,
+                captured: s.captured === true,
+                garrison: sanitizeGarrisonStacks(s.garrison),
+                buildings: sanitizeBuildingMap(s.buildings),
+                corruption: {
+                    stage: STAGES[corr.stage] ? corr.stage : 'ok',
+                    debtDays: Math.round(clampNumber(corr.debtDays, 0, 365, 0))
+                }
+            };
+        }).filter(Boolean);
+    }
+
+    function sanitizeArmy(input) {
+        var TIER_KEYS = ['t1', 't2', 't3', 't4', 't5', 't6', 't7'];
+        var src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+        var unitsSrc = (src.units && typeof src.units === 'object' && !Array.isArray(src.units)) ? src.units : {};
+        var units = {};
+        TIER_KEYS.forEach(function(t) {
+            units[t] = Math.round(clampNumber(unitsSrc[t], 0, 1e6, 0));
+        });
+        return { units: units, week: Math.round(clampNumber(src.week, 0, 520, 0)) };
+    }
+
+    function sanitizeSiege(input) {
+        var src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+        var last = src.lastResult;
+        if (!last || typeof last !== 'object' || Array.isArray(last)) {
+            last = null;
+        } else {
+            var clean = {};
+            Object.keys(last).slice(0, 16).forEach(function(k) {
+                var v = last[k];
+                if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') clean[k] = v;
+            });
+            last = Object.keys(clean).length > 0 ? clean : null;
+        }
+        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last };
+    }
+
     return {
         RANK_PROGRESSION: RANK_PROGRESSION,
         EQUIP_SLOTS: EQUIP_SLOTS,
@@ -231,6 +313,9 @@
         sanitizeGoals: sanitizeGoals,
         sanitizeXpHistory: sanitizeXpHistory,
         sanitizeBossKills: sanitizeBossKills,
-        sanitizeGoal: sanitizeGoal
+        sanitizeGoal: sanitizeGoal,
+        sanitizeStrongholds: sanitizeStrongholds,
+        sanitizeArmy: sanitizeArmy,
+        sanitizeSiege: sanitizeSiege
     };
 });
