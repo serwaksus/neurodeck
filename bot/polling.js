@@ -88,7 +88,7 @@ function mskParts() {
   return { key: `${g('year')}-${g('month')}-${g('day')}`, hour: g('hour'), minute: g('minute') };
 }
 
-const REMINDER_TEXT = '🏰 NeuroDeck\nДень закрывается. Загляни: доход тракта капает каждый день, а невыполненные карточки и просроченные задачи ночью забирают золото.\nУспей закрыть день достойно.';
+const REMINDER_TEXT = '🏰 NeuroDeck\nДень закрывается. Загляни: налоги твердыен капают каждый день, а невыполненные карточки и просроченные задачи ночью забирают золото.\nУспей закрыть день достойно.';
 
 async function sendReminder(chatId) {
   await api('sendMessage', {

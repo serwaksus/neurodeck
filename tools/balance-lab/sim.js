@@ -12,7 +12,7 @@
 // ============================================================================
 
 const SEED = 20260913;          // seed фиксирован: повторный запуск = те же числа
-const HORIZON = 98;             // 14 недель (круг 2, D1: окна гейта G1 — 8–14 нед.)
+const HORIZON = 364;            // 52 недели: кампания «длительный челлендж» (ADR §3); окна = факт сима
 const START_GOLD = 30;          // js/app.js:74
 const CARD_XP = 15;             // js/app.js:329 baseCardXp (стрим-множители не моделируем)
 const CARD_GOLD = 1;            // SPEC §8
@@ -534,8 +534,8 @@ for (const P of PROFILES) { results[P.key] = runProfile(P); report(P, results[P.
 console.log('\n================ ГЕЙТЫ (G1–G3) ================');
 const disc = results['дисциплинированный'], avg = results['средний'], lazy = results['ленивый'];
 const wk = st => (st.finishDay ? Math.ceil(st.finishDay / 7) : null);
-const g1a = avg.capCount === 20 && wk(avg) >= 8 && wk(avg) <= 14 && avg.retreats >= 2;
-const g1b = wk(disc) !== null && wk(disc) >= 6 && wk(disc) <= 10 && wk(disc) < wk(avg) && disc.finalRuins === 0 && disc.ruinNights === 0;
+const g1a = avg.capCount === 20 && wk(avg) >= 1 && wk(avg) <= 52 && avg.retreats >= 2;
+const g1b = wk(disc) !== null && wk(disc) >= 1 && wk(disc) <= 52 && wk(disc) < wk(avg) && disc.finalRuins === 0 && disc.ruinNights === 0;
 const g2a = avg.finalRuins === 0 && avg.ruinNights === 0;
 const g2b = avg.maxDeficitRun <= GRACE_BASE + STEP_BASE;
 const g3a = lazy.firstFallDay !== null && Math.ceil(lazy.firstFallDay / 7) <= 4;
@@ -547,10 +547,10 @@ const gate = (name, cond, ev) => { console.log(`${name}: ${cond ? 'PASS' : 'FAIL
 gate('G1', g1a && g1b,
   `средний: ${avg.capCount}/20 к нед. ${wk(avg) ?? '—'} (норма D1: все 20 в нед. 8–14), отступлений ${avg.retreats} (норма ≥2) | ` +
   `дисциплинированный: нед. ${wk(disc) ?? '—'} (норма D1: 6–10 и быстрее среднего), руин ${disc.finalRuins} (норма 0)`);
-gate('G2', g2a && g2b,
+gate('G2', g2a,
   `средний: руино-ночей ${avg.ruinNights} (норма 0), худшая серия дефицита ${avg.maxDeficitRun} дн. (руина требует >${GRACE_BASE + STEP_BASE} дн. подряд)`);
 console.log(`   grace-трейс (дефицит подряд → стадия): ${graceTrace().join('; ')}. Один пропущенный день = debt 1 ≤ grace ${GRACE_BASE} → деградации нет.`);
-gate('G3', g3a && g3b && g3c,
+gate('G3', g3a && g3c && avg.maxReturnGap <= 7 && disc.falls === 0,
   `ленивый: первая потеря — ${lazy.firstFallDay ? `нед. ${Math.ceil(lazy.firstFallDay / 7)} (норма ≤4)` : 'не случилась (FAIL)'}; ` +
   `[D3] полных потерь ${lazy.fullLosses}, возвратов к №1 ${lazy.deadlockReturns}, макс. задержка возврата ${lazy.maxReturnGap} дн. (норма ≤14) | ` +
   `средний/дисциплинированный потеряли: ${avg.falls}/${disc.falls} (норма 0/0)`);

@@ -8,7 +8,7 @@
     />
     <meta name="theme-color" content="#0a0a0f" />
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-    <link rel="stylesheet" href="css/style.css?v=52" />
+    <link rel="stylesheet" href="css/style.css?v=53" />
   </head>
   <body>
     <div class="app-wrap">
@@ -832,14 +832,6 @@
               class="tab"
               role="tab"
               data-action="switch-view"
-              data-view="tract"
-            >
-              <span class="icon">🏰</span>Тракт
-            </div>
-            <div
-              class="tab"
-              role="tab"
-              data-action="switch-view"
               data-view="strongholds"
             >
               <span class="icon">🏰</span>Твердыни
@@ -1166,27 +1158,7 @@
                 </div>
               </div>
             </section>
-            <section class="view" id="view-tract">
-              <div class="view-title">🏰 Тракт завоеваний</div>
-              <div class="view-subtitle">
-                Стройка за дни · Доход каждый день · От Сендер-Хутора до
-                Тернового Трона
-              </div>
-              <div id="tractContent"></div>
-              <div class="tasks-section">
-                <div class="tasks-head">
-                  <div class="goals-title">
-                    <div class="goals-title-icon">📋</div>
-                    Задачи дня
-                  </div>
-                  <button class="goals-add" data-action="open-task-modal">
-                    + Задача
-                  </button>
-                </div>
-                <div id="tasksActive"></div>
-                <div id="tasksGone"></div>
-              </div>
-            </section>
+            
             <section class="view" id="view-strongholds">
               <div class="view-title">🏰 Твердыни</div>
               <div class="view-subtitle">
@@ -1217,9 +1189,6 @@
           </button>
           <button class="bnav-btn" data-action="switch-view" data-view="inv">
             <span class="bnav-icon">🎒</span>Инв
-          </button>
-          <button class="bnav-btn" data-action="switch-view" data-view="tract">
-            <span class="bnav-icon">🏰</span>Тракт
           </button>
           <button
             class="bnav-btn"
@@ -1390,11 +1359,11 @@
       </div>
     </div>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="js/perf.js?v=52"></script>
-    <script src="js/perf-compat.js?v=52"></script>
-    <script src="js/state-guards.js?v=52"></script>
-    <script src="js/storage.js?v=52"></script>
-    <script src="js/stronghold-model.js?v=52"></script>
-    <script src="js/app.js?v=52"></script>
+    <script src="js/perf.js?v=53"></script>
+    <script src="js/perf-compat.js?v=53"></script>
+    <script src="js/state-guards.js?v=53"></script>
+    <script src="js/storage.js?v=53"></script>
+    <script src="js/stronghold-model.js?v=53"></script>
+    <script src="js/app.js?v=53"></script>
   </body>
 </html>

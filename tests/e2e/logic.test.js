@@ -140,20 +140,32 @@ test('perf UI: perfLowBtn click drives full chain (setMode, bridge, legacy liste
   expect(r.fired).toEqual([[true, 'low']]);
 });
 
-test('tract: buyNextRegion spends gold, starts build; advance completes and adds regions', async ({ page }) => {
+test('strongholds: assault model — win captures with bounded attrition, overpower retreats 10-30%', async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('neurodeck_onboarding_done', '1'); });
   await page.goto('/');
   await page.waitForTimeout(1500);
   const res = await page.evaluate(() => {
-    HERO.gold = 1000;
-    buyNextRegion();
-    const afterBuy = { gold: HERO.gold, building: !!tractState.building, regions: tractState.regions };
-    advanceTract();
-    const after1 = { regions: tractState.regions, building: !!tractState.building };
-    return { afterBuy, after1 };
+    ensureStrongholdState();
+    const rnd = function() { return 0.5; };
+    const win = SM.assaultOutcome(500, 15, { agi: 0, banner: false, rand: rnd });
+    const winAgi = SM.assaultOutcome(500, 15, { agi: 30, banner: false, rand: rnd });
+    const lose = SM.assaultOutcome(10, 500, { agi: 0, banner: false, rand: rnd });
+    const tax = strongholdTaxPerDay();
+    return { winWin: win.win, winAttr: win.attritionPct, agiAttr: winAgi.attritionPct, loseWin: lose.win, tax };
   });
-  if (res.afterBuy.building !== true) throw new Error('buyNextRegion must start a build');
-  if (res.after1.regions !== 1 || res.after1.building !== false) throw new Error('1-day build must complete after 1 advance, got ' + JSON.stringify(res.after1));
+  if (res.winWin !== true) throw new Error('500 vs 15 must win');
+  if (res.winAttr < 0.08 || res.winAttr > 0.30) throw new Error('attrition out of bounds: ' + res.winAttr);
+  if (res.loseWin !== false) throw new Error('10 vs 500 must not win');
+  if (res.tax !== 0) throw new Error('fresh kingdom must pay 0 taxes, got ' + res.tax);
+  const after = await page.evaluate(() => {
+    ensureStrongholdState();
+    strongholds[0].captured = true;
+    const t0 = strongholdTaxPerDay();
+    strongholds[0].captured = false;
+    return t0;
+  });
+  if (after !== 1) throw new Error('sh01 tax must be 1, got ' + after);
+  if (res.agiAttr > res.winAttr) throw new Error('agi must not increase attrition: ' + res.agiAttr + ' > ' + res.winAttr);
 });
 
 test('tasks: complete -> chest choice adds gold or xp; ghosts expire after ghostDays', async ({ page }) => {

@@ -45,8 +45,8 @@ test('App.js no longer has dead Canvas 2D combat code', () => {
     });
 });
 
-test('App.js has tract and task systems (combat removed)', () => {
-    ['tractRevenuePerDay', 'buyNextRegion', 'renderTract', 'advanceTract',
+test('App.js: tract economy removed, stronghold systems present', () => {
+    ['strongholdsDailyTick', 'renderStrongholdPanel', 'renderStrongholds',
      'createTask', 'completeTask', 'claimTaskChest', 'expireGhostTasks', 'renderTasks'
     ].forEach(fn => {
         const re = new RegExp('function\\s+' + fn + '\\b');
@@ -255,7 +255,7 @@ test('Storage snapshot includes all critical game fields', () => {
     const fields = ['hero', 'stats', 'forged', 'goals', 'inventory',
         'lastDayReset', 'forgedIdCounter', 'uidCounter',
         'goalIdCounter', 'xpHistory', 'bloodOath', 'lastWeekReset',
-        'tasks', 'taskIdCounter', 'tractState', 'savedAt'];
+        'tasks', 'taskIdCounter', 'savedAt'];
     fields.forEach(f => {
         assert.ok(m[1].indexOf(f) > -1, 'snapshot missing field: ' + f);
     });
@@ -295,4 +295,11 @@ test('Regression: lastWeekReset is declared (was silently killing all saves afte
 test('Regression: checkDailyReset guards fresh install (no save before onboarding)', () => {
     assert.ok(app.includes('FORGED.length > 0) saveGameState()'),
         'day tick must not persist empty state on first run (ever_saved would block starter deck)');
+});
+
+test('Regression: tract economy fully removed', () => {
+    ['tractRevenuePerDay', 'buyNextRegion', 'renderTract', 'advanceTract', 'tractState'].forEach(fn => {
+        assert.ok(!new RegExp('\\b' + fn + '\\b').test(app), fn + ' must be gone from app.js');
+    });
+    assert.ok(!html.includes('view-tract'), 'index.html must not contain view-tract');
 });

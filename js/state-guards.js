@@ -247,6 +247,7 @@
                 if (b.built !== true) { out[id] = { built: false, corruptionStage: 'ok', debtDays: 0 }; return; }
                 out[id] = {
                     built: true,
+                    builtAt: (typeof b.builtAt === 'number' && b.builtAt > 0) ? b.builtAt : null,
                     corruptionStage: STAGES[b.corruptionStage] ? b.corruptionStage : 'ok',
                     debtDays: Math.round(clampNumber(b.debtDays, 0, 365, 0))
                 };
@@ -299,7 +300,8 @@
             });
             last = Object.keys(clean).length > 0 ? clean : null;
         }
-        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last };
+        var assaultDay = (typeof src.assaultDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(src.assaultDay)) ? src.assaultDay : null;
+        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay };
     }
 
     return {

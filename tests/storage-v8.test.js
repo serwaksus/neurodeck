@@ -202,7 +202,7 @@ test('sanitizeStrongholds: постройки — только из катало
         zh3: 'junk', toString: { built: true }
     } }], DATA);
     assert.deepEqual(Object.keys(out[0].buildings).sort(), ['zh1', 'zh2'], 'чужие id и наследники Object отброшены');
-    assert.deepEqual(out[0].buildings.zh1, { built: true, corruptionStage: 'worn', debtDays: 40 });
+    assert.deepEqual(out[0].buildings.zh1, { built: true, builtAt: null, corruptionStage: 'worn', debtDays: 40 });
     assert.deepEqual(out[0].buildings.zh2, { built: false, corruptionStage: 'ok', debtDays: 0 });
 });
 
@@ -226,7 +226,7 @@ test('sanitizeArmy: дефолты, clamp 0..1e6, неделя 0..520, мусо�
 });
 
 test('sanitizeSiege: week 1..520, lastResult — только плоские примитивы', () => {
-    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null });
+    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null });
     assert.equal(SG.sanitizeSiege({ week: 0 }).week, 1, 'минимум 1');
     assert.equal(SG.sanitizeSiege({ week: 1e9 }).week, 520);
     const kept = SG.sanitizeSiege({ lastResult: { week: 3, lost: 2, held: 1, evil: { nested: true } } });

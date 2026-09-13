@@ -43,7 +43,7 @@ test('tab navigation switches views', async ({ page }) => {
   const closeBtn = page.locator('#starterDeckModal .modal-close');
   if (await closeBtn.isVisible()) await closeBtn.click();
   await page.waitForTimeout(500);
-  for (const v of ['deck', 'tract', 'hero', 'inv', 'strongholds', 'stats']) {
+  for (const v of ['deck', 'hero', 'inv', 'strongholds', 'stats']) {
     await page.locator(`.bnav-btn[data-view="${v}"]`).click({ force: true });
     await page.waitForTimeout(300);
     await expect(page.locator(`#view-${v}`)).toBeVisible();

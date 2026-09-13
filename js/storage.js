@@ -147,7 +147,7 @@ const snapshot = {
 v: SCHEMA_VERSION, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
-tasks: TASKS, taskIdCounter, tractState, savedAt: Date.now()
+tasks: TASKS, taskIdCounter, savedAt: Date.now()
 };
 try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; } catch(e) {}
 pruneAgedHistory(HERO, 120);
@@ -496,7 +496,7 @@ v: SCHEMA_VERSION, t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
-tasks: TASKS, taskIdCounter, tractState
+tasks: TASKS, taskIdCounter
 };
 try {
     ensureStrongholdState();
@@ -777,23 +777,6 @@ return { id: STATE_GUARDS.sanitizeCounter(t.id, 1), name: t.name.slice(0, 200), 
 }
 TASKS = TASKS.filter(function(t, i) { return TASKS.findIndex(function(x) { return x.id === t.id; }) === i; });
 if (typeof data.taskIdCounter === 'number') taskIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.taskIdCounter, 1), TASKS.reduce(function(m, t) { return Math.max(m, t.id); }, 0) + 1);
-if (data.tractState && typeof data.tractState === 'object') {
-var regions = STATE_GUARDS.sanitizeCounter(data.tractState.regions, 0);
-if (regions > REGIONS.length - 1) regions = REGIONS.length - 1;
-tractState.regions = regions;
-if (data.tractState.building && typeof data.tractState.building === 'object' && typeof data.tractState.building.regionIdx === 'number') {
-var bi = data.tractState.building.regionIdx;
-tractState.building = (bi > tractState.regions && bi <= REGIONS.length - 1) ? { regionIdx: bi, remaining: STATE_GUARDS.sanitizeCounter(data.tractState.building.remaining, 1), total: STATE_GUARDS.sanitizeCounter(data.tractState.building.total, 1) } : null;
-} else {
-tractState.building = null;
-}
-}
-try {
-    ensureStrongholdState();
-    strongholds = STATE_GUARDS.sanitizeStrongholds(data.strongholds, strongholdCatalog());
-    army = STATE_GUARDS.sanitizeArmy(data.army);
-    siege = STATE_GUARDS.sanitizeSiege(data.siege);
-} catch(e) { ensureStrongholdState(); }
 if (!skipRender) {
 renderCards(); renderStats(); updateHeroUI(); renderGoals();
 renderBackpack(); renderSlots(); updateTotalBonuses();

@@ -184,7 +184,6 @@ case 'complete-task': completeTask(parseInt(el.dataset.id)); break;
 case 'claim-task-gold': claimTaskChest(parseInt(el.dataset.id), 'gold'); break;
 case 'claim-task-xp': claimTaskChest(parseInt(el.dataset.id), 'xp'); break;
 case 'delete-task': deleteTask(parseInt(el.dataset.id)); break;
-case 'tract-buy-next': buyNextRegion(); break;
 case 'complete-card': completeCard(e, parseInt(el.dataset.id)); break;
 case 'fail-card': failCard(e, parseInt(el.dataset.id)); break;
 case 'edit-card': openEditCardDirect(parseInt(el.dataset.id)); break;
@@ -520,7 +519,7 @@ document.getElementById('ringFill').setAttribute('stroke-dasharray', ringCirc);
 document.getElementById('ringFill').setAttribute('stroke-dashoffset', ringCirc * (1 - HERO.xp / HERO.xpToNext));
 var goldEl = document.getElementById('heroGoldVal');
 if (goldEl) goldEl.textContent = (HERO.gold || 0).toLocaleString('ru');
-updateHeroSummary(); renderTract();
+updateHeroSummary();
 }
 function updateHeroSummary() {
 document.getElementById('statTotalXp').textContent = HERO.totalXp;
@@ -1326,14 +1325,13 @@ if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'strongholds') renderStrongholds();
-if (view === 'tract') renderTract();
 if (view === 'deck') renderDashboard();
 if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
 if (view === 'stats') renderStatsView();
 if (typeof window.__ndSetCombatActive === 'function') window.__ndSetCombatActive(view === 'boss');
 }
-var VIEW_ORDER = ['deck', 'tract', 'hero', 'inv', 'strongholds', 'stats'];
+var VIEW_ORDER = ['deck', 'hero', 'inv', 'strongholds', 'stats'];
 var currentViewIndex = 0;
 var swipeStartX = 0, swipeStartY = 0, swiping = false;
 document.querySelector('.content').addEventListener('touchstart', function(e) {
@@ -1360,12 +1358,11 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
 const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
 var currentShIdx = null;
-var assaultUsedDay = null; // ponytail: «1 штурм/день» не персистится — схема v8 фиксирована; апгрейд: поле в v9
 var hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }; // ponytail: пул недели в памяти (санитайзер v8 роняет лишние поля); reload отдаёт полный пул недели
-var shFresh = {}; // ponytail: иммунитет построек 7 дней — в рамках сессии; ключ 'idx:bid' → builtAt
 var wkSkips = 0;
 var wkTaskFails = 0;
 function capturedCount() { ensureStrongholdState(); return strongholds.filter(function(s) { return s.captured; }).length; }
+function strongholdTaxPerDay() { ensureStrongholdState(); var t = 0; strongholds.forEach(function(s, i) { if (s.captured) t += STRONGHOLDS[i].tax; }); return t; }
 function frontIdx() { ensureStrongholdState(); for (var i = 0; i < strongholds.length; i++) if (!strongholds[i].captured) return i; return -1; }
 function stageMult(stage) { return stage === 'ok' ? 1 : stage === 'worn' ? 0.5 : 0; }
 function builtList(idx) {
@@ -1430,9 +1427,9 @@ strongholds.forEach(function(s, i) {
 if (!s.captured && i !== 0) return;
 if (builtList(i).length === 0) return;
 var imm = {};
-Object.keys(shFresh).forEach(function(k) {
-var parts = k.split(':');
-if (Number(parts[0]) === i && Date.now() - shFresh[k] < 7 * 86400000) imm[parts[1]] = true;
+Object.keys(s.buildings).forEach(function(bid) {
+var bb = s.buildings[bid];
+if (bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000) imm[bid] = true;
 });
 var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: stepOpt, immune: imm });
 gold = res.gold;
@@ -1518,7 +1515,7 @@ return { atk: atk, defN: defN, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + 
 }
 function requestAssault(idx) {
 ensureStrongholdState();
-if (assaultUsedDay === getMSKDayKey()) { showToast('⚔ Штурм уже был', 'Один штурм в сутки — приходи завтра', 'blood'); return; }
+if (siege.assaultDay === getMSKDayKey()) { showToast('⚔ Штурм уже был', 'Один штурм в сутки — приходи завтра', 'blood'); return; }
 if (!SM || SM.armyPower(army.units) <= 0) { showToast('⚔ Армии нет', 'Найми существ в твердыне', 'blood'); sfxError(); return; }
 var f = assaultForecast(idx);
 dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + '<br><span style="color:var(--blood-bright)">Поражение = отступление с потерями 10–30%.</span>').then(function(ok) {
@@ -1526,7 +1523,7 @@ if (ok) doAssault(idx, f);
 });
 }
 function doAssault(idx, f) {
-assaultUsedDay = getMSKDayKey();
+siege.assaultDay = getMSKDayKey();
 var out = SM.assaultOutcome(f.atk, f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random });
 var lostTotal = 0;
 SM.TIER_KEYS.forEach(function(t) {
@@ -1564,7 +1561,7 @@ if (d.req && !(s.buildings[d.req] && s.buildings[d.req].built)) { showToast('�
 if ((HERO.gold || 0) < d.cost) { showToast('💰 Мало золота', 'Нужно ' + d.cost + ' 💰, в казне ' + (HERO.gold || 0), 'blood'); sfxError(); return; }
 HERO.gold -= d.cost;
 s.buildings[bid] = { built: true, corruptionStage: 'ok', debtDays: 0 };
-shFresh[idx + ':' + bid] = Date.now();
+strongholds[idx].buildings[bid].builtAt = Date.now();
 recalcHirePool();
 showToast('🏗 Построено: ' + d.name, '−' + d.cost + ' 💰 · содержание ' + d.upkeep + ' 💰/день', 'save');
 sfxForge(); haptic('medium');
@@ -1770,20 +1767,7 @@ root.innerHTML = html;
 }
 let lastDayReset = null;
 var lastWeekReset = getThisMondayKey(); // объявление было утеряно при удалении боевого блока — без него молча падали все saveGameState
-// ===================== ТРАКТ ЗАВОЕВАНИЙ (HoMM-стиль: строй за дни, собирай каждый день) =====================
-const REGIONS = [
-{ icon: '🛖', name: 'Сендер-Хутор',   cost: 0,    buildDays: 0, rev: 1 , img: 'img/tract/region01.png' },
-{ icon: '🏕', name: 'Лаголь Земли',   cost: 30,   buildDays: 1, rev: 2 , img: 'img/tract/region02.png' },
-{ icon: '🪵', name: 'Лесопилка',      cost: 80,   buildDays: 2, rev: 4 , img: 'img/tract/region03.png' },
-{ icon: '⛏', name: 'Медные Копи',     cost: 180,  buildDays: 3, rev: 7 , img: 'img/tract/region04.png' },
-{ icon: '🌾', name: 'Житницы',        cost: 350,  buildDays: 4, rev: 11 , img: 'img/tract/region05.png' },
-{ icon: '🕯', name: 'Чертож Воли',    cost: 650,  buildDays: 5, rev: 16 , img: 'img/tract/region06.png' },
-{ icon: '🪙', name: 'Златоград',      cost: 1100, buildDays: 6, rev: 22 , img: 'img/tract/region07.png' },
-{ icon: '🏰', name: 'Дозорный Замок', cost: 1800, buildDays: 7, rev: 30 , img: 'img/tract/region08.png' },
-{ icon: '🗼', name: 'Башня Тягости',  cost: 2800, buildDays: 8, rev: 39 , img: 'img/tract/region09.png' },
-{ icon: '⛩', name: 'Врата Свободы',   cost: 4200, buildDays: 9, rev: 50 , img: 'img/tract/region10.png' },
-{ icon: '👑', name: 'Терновый Трон',  cost: 6500, buildDays: 10, rev: 65 , img: 'img/tract/region11.png' },
-];
+
 // ===================== ТВЕРДЫНИ v2: КАТАЛОГИ (SPEC §1-§3, BALANCE круг 3; UI — следующий этап) =====================
 const STRONGHOLDS = [
 { id: 'sh01', prov: 1, icon: '🛖', name: 'Сендер-Хутор',        gar: 10,   def: 5,    total: 15,   slots: 6, tax: 1 },
@@ -1839,82 +1823,12 @@ t6: { icon: '🌿', name: 'Хранитель Терна', cost: 800,  power: 45
 t7: { icon: '👁', name: 'Архонт Угасания', cost: 1800, power: 1400, growth: 4 }
 };
 window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS };
-let tractState = { regions: 0, building: null };
-function tractRevenuePerDay() {
-var rev = 0;
-for (var i = 0; i <= tractState.regions; i++) rev += REGIONS[i].rev;
-if (tractState.building) rev = Math.ceil(rev / 2);
-return rev;
-}
+
 function pluralDays(n) { return n === 1 ? 'день' : (n < 5 ? 'дня' : 'дней'); }
 function daysBetween(keyA, keyB) { return Math.round((new Date(keyB) - new Date(keyA)) / 86400000); }
-function advanceTract() {
-if (!tractState.building) return;
-var b = tractState.building;
-b.remaining -= 1;
-if (b.remaining <= 0) {
-var region = REGIONS[b.regionIdx];
-tractState.regions = b.regionIdx;
-tractState.building = null;
-showToast('🏰 Построено: ' + region.name + '!', '+' + region.rev + ' 💰/день', 'crit');
-spiritSay('«' + region.name + ' поднимает стены. Тракт растёт.»');
-sfxLevelUp(); haptic('success');
-burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color: '#fbbf24', speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
-screenShake(10, 600);
-} else {
-showToast('🏗 ' + REGIONS[b.regionIdx].name, 'Осталось: ' + b.remaining + ' ' + pluralDays(b.remaining), 'save');
-}
-}
-function buyNextRegion() {
-var next = REGIONS[tractState.regions + 1];
-if (!next) { showToast('👑 Тракт покорён', 'Терновый Трон твой', 'crit'); return; }
-if (tractState.building) { showToast('🏗 Стройка идёт', 'Сначала дострой: ' + REGIONS[tractState.building.regionIdx].name, 'blood'); sfxError(); return; }
-if ((HERO.gold || 0) < next.cost) { showToast('💰 Мало золота', 'Нужно ' + next.cost + ' 💰, в казне ' + (HERO.gold || 0), 'blood'); sfxError(); return; }
-HERO.gold -= next.cost;
-tractState.building = { regionIdx: tractState.regions + 1, remaining: next.buildDays, total: next.buildDays };
-sfxForge(); haptic('heavy');
-screenShake(8, 500);
-burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#f4c896', speed: 9, decay: 0.012, size: 3, shape: 'spark', gravity: 0.08 });
-spiritSay('«Заложен фундамент: ' + next.name + '. Время и дисциплина достроят.»');
-showToast('🏗 Стройка начата', next.name + ' — ' + next.buildDays + ' ' + pluralDays(next.buildDays), 'save');
-renderTract(); renderDashboard(); updateHeroUI(); saveGameState();
-}
-function renderTract() {
-var el = document.getElementById('tractContent');
-if (!el) return;
-var revenue = tractRevenuePerDay();
-var html = '<div class="tract-treasury">' +
-'<div class="tract-gold">💰 <b>' + (HERO.gold || 0) + '</b></div>' +
-'<div class="tract-rev">Доход: <b style="color:#34d399">+' + revenue + ' 💰/день</b>' + (tractState.building ? ' <span style="color:var(--text-dim)">(стройка: −50%)</span>' : '') + '</div>' +
-'</div>';
-if (tractState.building) {
-var b = tractState.building;
-var pct = Math.round(((b.total - b.remaining) / b.total) * 100);
-html += '<div class="tract-building">🏗 <b>' + REGIONS[b.regionIdx].name + '</b> — строится. Осталось: <b>' + b.remaining + '</b> ' + pluralDays(b.remaining) +
-'<div class="tract-build-bar"><div class="tract-build-fill" style="width:' + pct + '%"></div></div></div>';
-}
-html += '<div class="tract-road">';
-REGIONS.forEach(function(r, i) {
-var owned = i <= tractState.regions;
-var isBuilding = tractState.building && tractState.building.regionIdx === i;
-var isNext = i === tractState.regions + 1;
-var cls = owned ? 'owned' : isBuilding ? 'building' : isNext ? 'next' : 'locked';
-var status = owned ? '✓ Платит +' + r.rev + ' 💰/день'
-: isBuilding ? '🏗 Строится: ' + tractState.building.remaining + ' ' + pluralDays(tractState.building.remaining)
-: isNext ? '💰 ' + r.cost + ' · +' + r.rev + ' 💰/день · 🏗 ' + r.buildDays + ' ' + pluralDays(r.buildDays)
-: '🔒 Откроется после «' + REGIONS[i - 1].name + '»';
-html += '<div class="tract-region ' + cls + '">' +
-'<div class="tract-region-icon">' + (r.img ? '<img src="' + r.img + '" alt="">' : r.icon) + '</div>' +
-'<div class="tract-region-body">' +
-'<div class="tract-region-name">' + r.name + '</div>' +
-'<div class="tract-region-status">' + status + '</div>' +
-'</div>' +
-(isNext && !tractState.building ? '<button class="tract-buy' + ((HERO.gold || 0) < r.cost ? ' cant' : '') + '" data-action="tract-buy-next">🏗</button>' : '') +
-'</div>';
-});
-html += '</div>';
-el.innerHTML = html;
-}
+
+
+
 // ===================== ЗАДАЧИ ДНЯ (дедлайн → сундук → призрак) =====================
 const TASK_TIERS = {
 light:  { icon: '🌿', name: 'Лёгкая',  color: '#34d399', gold: 5,  xp: 20, ghostDays: 2, doneGraceDays: 1 },
@@ -1978,7 +1892,7 @@ sfxCrit();
 haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: choice === 'gold' ? '#fbbf24' : '#c084fc', speed: 11, decay: 0.009, size: 4, shape: 'star', gravity: 0.1 });
 t.status = 'chest_open';
-renderTract(); renderDashboard(); updateHeroUI(); saveGameState();
+renderDashboard(); updateHeroUI(); saveGameState();
 }
 function deleteTask(id) {
 var t = findTask(id);
@@ -2350,7 +2264,7 @@ function showReturnScreen() {
     var gapDays = Math.floor(gapMs / 86400000);
     if (gapDays < 1) return;
     HERO.lastSessionAt = now;
-    var phaseLabel = '💰 Казна: ' + (HERO.gold || 0) + ' · 🏰 Локаций на тракте: ' + ((tractState && tractState.regions || 0) + 1);
+    var phaseLabel = '💰 Казна: ' + (HERO.gold || 0) + ' · 🏰 Твердыни: ' + capturedCount() + '/20';
     var todayKey = getMSKDayKey();
     var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
     var oathInfo = bloodOath && bloodOath.status === 'active' ? '🩸 Клятва: ' + bloodOath.streak + '/' + bloodOath.requiredDays + ' дней' : '🩸 Клятва: не активна';
@@ -2405,7 +2319,7 @@ function toggleHelp(e) {
                 '✅ За ранг-ап: карточка растёт, +1 очко атрибута, +1 к побегу',
                 '⚠️ За пропуск: −1 💰 и стрик сбрасывается',
                 '🔥 Стрик: каждый день делает карточку сильнее (макс ×2)',
-                '💰 Золото трать на Тракте: локации строятся за дни',
+                '💰 Золото трать на Твердыни: постройки и наём армии',
                 '🏰 Каждая локация на тракте платит золото каждый день'
             ],
             { color: '#fbbf24', rect: r }
@@ -2430,7 +2344,7 @@ function toggleHelp(e) {
                 '✅ За ранг-ап: +1 очко атрибута, +1 к побегу',
                 '⚠️ За пропуск: −1 💰 и стрик сбрасывается',
                 '🔥 Стрик: каждый день делает карточку сильнее (макс ×2)',
-                '💰 Золото — строй Тракт. 🏰 Локации платят ежедневно.'
+                '💰 Золото — крепи Твердыни. 🏰 Налог платят ежедневно.'
             ],
             null
         );
@@ -2465,15 +2379,15 @@ function renderDashboardVeteran() {
     var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
     var remaining = FORGED.length - doneToday;
     var openTasks = TASKS.filter(function(t) { return t.status === 'active'; }).length;
-    var revenue = tractRevenuePerDay();
-    var nextRegion = REGIONS[tractState.regions + 1];
-    var toNext = nextRegion ? ' · до «' + nextRegion.name + '»: ' + Math.max(0, nextRegion.cost - (HERO.gold || 0)) + ' 💰' : ' · Тракт полон!';
+    var revenue = strongholdTaxPerDay();
+    var nextSh = STRONGHOLDS[strongholds.filter(function(x) { return x.captured; }).length];
+    var toNext = nextSh ? ' · до «' + nextSh.name + '»: ' + Math.max(0, nextSh.cost !== undefined ? 0 : 0) + '' : ' · Твердыни покорены!';
     var oathProgress = bloodOath && bloodOath.status === 'active' ? ' · 🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays : '';
     var comboMult = getComboMultiplier();
     var comboInfo = comboMult > 1.0 ? ' · 🎯 Комбо ×' + comboMult.toFixed(2) : '';
     var maxStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
     return '<div style="padding-right:22px;">' +
-        '<div class="dashboard-row"><span>💰 Казна: <b style="color:var(--gold-bright)">' + (HERO.gold || 0) + '</b></span><span>🏰 Локаций: <b>' + (tractState.regions + 1) + '</b> · доход <b style="color:#34d399">+' + revenue + ' 💰/день</b>' + toNext + '</span></div>' +
+        '<div class="dashboard-row"><span>💰 Казна: <b style="color:var(--gold-bright)">' + (HERO.gold || 0) + '</b></span><span>🏰 Твердыней: <b>' + capturedCount() + '/20</b> · доход <b style="color:#34d399">+' + revenue + ' 💰/день</b>' + toNext + '</span></div>' +
         '<div class="dashboard-row"><span>📖 ' + doneToday + '/' + FORGED.length + ' сегодня' + (remaining > 0 ? ' (осталось ' + remaining + ')' : '') + '</span>' + (openTasks > 0 ? '<span>📋 Задач в работе: <b style="color:#60a5fa">' + openTasks + '</b></span>' : '') + '<span>👻 Призраков: <b style="color:var(--blood-bright)">' + countGhostTasks() + '</b></span></div>' +
         '<div class="dashboard-row"><span>🔥 Макс. стрик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>' +
         '</div>';
@@ -2673,7 +2587,7 @@ function showWeeklyReport() {
         '<div>✓ <b>Выполнено:</b> ' + doneCount + '/' + totalCount + ' карточек (' + rate + '%)</div>' +
         '<div>🔥 <b>Лучший стрик:</b> ' + bestStreak + ' дней</div>' +
         '<div>🎯 <b>Цели:</b> ' + goalsDone + ' выполнено' + (goalsFailed > 0 ? ', ' + goalsFailed + ' провалено' : '') + '</div>' +
-        '<div>💰 <b>Казна:</b> ' + (HERO.gold || 0) + ' · 🏰 <b>Тракт:</b> ' + (tractState.regions + 1) + ' лок. (+' + tractRevenuePerDay() + ' 💰/день)</div>' +
+        '<div>💰 <b>Казна:</b> ' + (HERO.gold || 0) + ' · 🏰 <b>Твердыни:</b> ' + capturedCount() + '/20 (+' + strongholdTaxPerDay() + ' 💰/день)</div>' +
         '</div>' +
         '<div style="text-align:center; margin-top:12px; color:var(--text-dim); font-size:11px;">Новая неделя начинается. Используй опыт прошлой.</div>';
     var modal = document.getElementById('weeklyReportModal');
@@ -2697,7 +2611,6 @@ if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 д
 var revenue = 0, upkeepTotal = 0, unpaid = 0;
 for (var gd = gapDays; gd >= 1; gd--) {
 expireGhostTasks(getMSKDayKey(Date.now() - gd * 86400000));
-advanceTract();
 var tr = strongholdsDailyTick();
 revenue += tr.income;
 upkeepTotal += tr.upkeep;
@@ -2741,7 +2654,6 @@ if (_prevDay !== null || FORGED.length > 0) saveGameState(); // fresh install: �
 renderCards();
 renderDashboard();
 renderTasks();
-renderTract();
 }
 }
 function checkGoalDeadlines() {
@@ -3115,7 +3027,6 @@ renderStrongholds();
 updateStrongholdProgress();
 renderCards();
 renderDashboard();
-renderTract();
 importFromHash();
 try{ var tg=window.Telegram&&Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); } }catch(e){}
 if (!hasEverSaved() && FORGED.length === 0) {
