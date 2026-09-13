@@ -287,3 +287,12 @@ test('Storage: saveMeta guards against finished=true (defensive)', function () {
     assert.ok(storage.indexOf('if (finished) return;') !== -1,
         'saveMeta should have finished guard');
 });
+
+test('Regression: lastWeekReset is declared (was silently killing all saves after combat removal)', () => {
+    assert.ok(/var lastWeekReset =/.test(app), 'app.js must declare lastWeekReset');
+});
+
+test('Regression: checkDailyReset guards fresh install (no save before onboarding)', () => {
+    assert.ok(app.includes('FORGED.length > 0) saveGameState()'),
+        'day tick must not persist empty state on first run (ever_saved would block starter deck)');
+});

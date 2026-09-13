@@ -1386,6 +1386,7 @@ const ESCAPE_MAX = 140;
 const ROOMS_STEP = 10;
 let escapeProgress = 0;
 let lastDayReset = null;
+var lastWeekReset = getThisMondayKey(); // объявление было утеряно при удалении боевого блока — без него молча падали все saveGameState
 // ===================== ТРАКТ ЗАВОЕВАНИЙ (HoMM-стиль: строй за дни, собирай каждый день) =====================
 const REGIONS = [
 { icon: '🛖', name: 'Сендер-Хутор',   cost: 0,    buildDays: 0, rev: 1 , img: 'img/tract/region01.png' },
@@ -2402,8 +2403,7 @@ if (c.streak && lastPlayKey !== yesterdayKey && lastPlayKey !== todayKey) c.stre
 });
 checkBloodOathDaily();
 }
-lastDayReset = todayKey;
-saveGameState();
+if (_prevDay !== null || FORGED.length > 0) saveGameState(); // fresh install: не фиксируем пустое состояние — иначе ever_saved блокирует онбординг и старт-колоду
 renderCards();
 renderDashboard();
 renderTasks();
