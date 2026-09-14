@@ -298,14 +298,14 @@ test('siegePower: пины SPEC §5 [C: 76/115/167/267/777], W_eff-кап по �
 test('corruptionTick: upkeep первым, оплата → gold-upkeep, вход не мутируется', () => {
     const b = { zh1: { built: true, corruptionStage: 'ok', debtDays: 0 } };
     const c = M.corruptionTick(b, 100, 0);
-    assert.deepEqual(c, { gold: 97, upkeep: 3, paid: true, buildings: { zh1: { built: true, corruptionStage: 'ok', debtDays: 0 } } });
+    assert.deepEqual(c, { gold: 97, upkeep: 3, paid: true, buildings: { zh1: { built: true, builtAt: null, corruptionStage: 'ok', debtDays: 0 } } });
     assert.deepEqual(b, { zh1: { built: true, corruptionStage: 'ok', debtDays: 0 } }, 'вход чистый');
 });
 
 test('corruptionTick: grace (wil 0 → 2) не ест 1-й и 2-й день, деградация Целое→Обветшало→Руина', () => {
     let st = { zh1: { built: true, corruptionStage: 'ok', debtDays: 0 } };
     st = M.corruptionTick(st, 0, 0).buildings;
-    assert.deepEqual(st.zh1, { built: true, corruptionStage: 'ok', debtDays: 1 }, 'день 1 — grace');
+    assert.deepEqual(st.zh1, { built: true, builtAt: null, corruptionStage: 'ok', debtDays: 1 }, 'день 1 — grace');
     st = M.corruptionTick(st, 0, 0).buildings;
     assert.equal(st.zh1.corruptionStage, 'ok', 'день 2 — ещё grace');
     st = M.corruptionTick(st, 0, 0).buildings;

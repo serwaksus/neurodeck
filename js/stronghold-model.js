@@ -128,7 +128,7 @@
                 if (debt > grace + step) stage = 'ruin';
                 else if (debt > grace) stage = 'worn';
             }
-            out[id] = { built: true, corruptionStage: stage, debtDays: debt };
+            out[id] = { built: true, corruptionStage: stage, debtDays: debt , builtAt: b.builtAt || null };
         });
         return { gold: paid ? gold - upkeep : 0, upkeep: upkeep, paid: paid, buildings: out };
     }

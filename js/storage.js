@@ -767,6 +767,7 @@ bloodOath = (data.bloodOath && typeof data.bloodOath === 'object' && typeof data
 ? data.bloodOath : null;
 }
 if (typeof data.lastWeekReset === 'string') lastWeekReset = data.lastWeekReset;
+if (typeof data.lastDayReset === 'string') lastDayReset = data.lastDayReset;
 if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongholds(data.strongholds, strongholdCatalog());
 if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);

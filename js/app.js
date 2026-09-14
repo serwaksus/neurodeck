@@ -1830,7 +1830,7 @@ if (!bd.grow) return;
 var b = s.buildings[id];
 if (!b || !b.built) return;
 var tier = bd.tier, u = UNIT_TIERS[tier];
-hireRows += '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img/units/' + tier.replace('t', 'tier') + '.png', u.icon) + '</div>' +
+hireRows += '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img/units/' + tier + '.png', u.icon) + '</div>' +
 '<div class="sh-build-body"><div class="sh-build-name">' + u.name + ' (Т' + tier.slice(1) + ') · сила ' + u.power + '</div>' +
 '<div class="sh-build-meta">Пул недели: <b>' + (hirePool[tier] || 0) + '</b> · цена ' + hireCostOf(tier) + ' 💰</div></div>' +
 '<div class="sh-hire-actions">' +
@@ -2653,6 +2653,7 @@ showToast('🏚 Не хватило на содержание', unpaid + ' дн.
 sfxFail(); haptic('error');
 }
         // Ежедневное событие: 1 из 5 (Vаrban, Кузнец, Рынок, Тайна, Тихий день)
+var _isBackfill = gapDays > 1;
 var dailyEvents = [
 { id: 'caravan', icon: '🐎', name: 'Караван', text: 'Торговцы из-за гор: +' + Math.max(20, capturedCount() * 15) + ' 💰 мгновенно!' },
 { id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
@@ -2662,8 +2663,8 @@ var dailyEvents = [
 ];
 var ev = dailyEvents[Math.floor(Math.random() * dailyEvents.length)];
 dailyEvent = ev;
-if (ev.id === 'caravan') { var bonus = Math.max(20, capturedCount() * 15); HERO.gold = (HERO.gold || 0) + bonus; }
-showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
+if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); HERO.gold = (HERO.gold || 0) + bonus; }
+if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
 if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
 HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
 } else {
