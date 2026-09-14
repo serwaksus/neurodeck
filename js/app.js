@@ -2600,6 +2600,7 @@ HERO.consecutivePerfectDays = 0;
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
 HERO.dailyUniqueStats = {};
+siege.assaultDay = null; // новый день = новый штурм
 var currentMonday = getThisMondayKey();
 if (lastWeekReset !== currentMonday) {
 lastWeekReset = currentMonday;

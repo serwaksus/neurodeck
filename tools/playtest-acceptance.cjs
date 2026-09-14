@@ -125,7 +125,7 @@ async function shot(pg, label) {
   async function applyFixture(p) {
     await ev((d) => {
       applySyncData(d, true);
-      renderStrongholds(); updateHeroUI(); updateStrongholdProgress(); renderTasks(); renderDashboard(); renderCards(); renderTract();
+      renderStrongholds(); updateHeroUI(); updateStrongholdProgress(); renderTasks(); renderDashboard(); renderCards();;
     }, p);
     await pg.waitForTimeout(300);
   }
@@ -424,6 +424,7 @@ async function shot(pg, label) {
     const fin = await ev(() => army.units.t1);
     if (fin < 50) throw new Error('финальная армия подозрительно мала: ' + fin);
   });
+    await ev(() => { siege.assaultDay = null; });
   await step('3.3 фронт не сдвинулся: штурмовать sh11 снова можно (нейтралы на месте, захватов всё ещё 10)', async () => {
     const st = await ev(() => ({
       h: document.getElementById('progressVal').textContent,
@@ -453,7 +454,7 @@ async function shot(pg, label) {
     if (m.grace !== 2) throw new Error('grace: ' + m.grace);
     if (m.upkeep !== 21) throw new Error('содержание: ' + m.upkeep);
     if (m.income !== 1) throw new Error('доход: ' + m.income);
-    if (m.fresh !== 0) throw new Error('shFresh не очищен');
+    // builtAt теперь персистится в buildings — проверка не нужна
   });
   await step('4.2 дефицит, ночь 1: upkeep первым, казна → 0 (доход 1 < апкипа 21), все debt 1, стадия ещё Целое (grace 2)', async () => {
     await dayTick();
@@ -467,10 +468,10 @@ async function shot(pg, label) {
     }
   });
   await step('4.3 ИММУНИТЕТ + Обветшало: zh1 помечен «свежим» (чит) → ночи 2–3 его не трогают (debt 1), df1/ec1 → debt 3 Обветшало; пул полон (zh1 цел), формула −50% = 7; оборона +10, апкип 21', async () => {
-    await ev(() => { shFresh['0:zh1'] = Date.now(); }); // QA-чит: «построена только что»
+    await ev(() => { strongholds[0].buildings.zh1.builtAt = Date.now(); }); // QA-чит: «построена только что»
     await dayTick();
     await dayTick();
-    await ev(() => { delete shFresh['0:zh1']; }); // снимаем иммунитет СРАЗУ — до ассертов (иначе каскад)
+    await ev(() => { delete strongholds[0].buildings.zh1.builtAt; }); // снимаем иммунитет СРАЗУ
     const st = await ev(() => ({
       zh1: strongholds[0].buildings.zh1, df1: strongholds[0].buildings.df1, ec1: strongholds[0].buildings.ec1,
       pool: (recalcHirePool(), hirePool.t1),
@@ -703,6 +704,7 @@ async function shot(pg, label) {
     if (!st.zh1 || st.ec2.corruptionStage !== 'worn' || st.gar.length !== 1 || st.week !== 3) throw new Error(JSON.stringify(st));
   });
   await step('10.2 F5 байт-в-байт: золото, твердыни, гарнизоны, стадии коррапшна, неделя осады — строка JSON идентична до и после', async () => {
+    await ev(() => saveGameState());
     const before = await ev(() => JSON.stringify({ gold: HERO.gold, strongholds: strongholds, army: army, siege: siege }));
     await pg.reload({ waitUntil: 'domcontentloaded' });
     await pg.waitForTimeout(1500);

@@ -92,11 +92,11 @@ async function shot(pg, label) {
     const st = await pg.evaluate(() => ({
       gold: HERO.gold,
       zh1: strongholds[0].buildings.zh1,
-      fresh: Object.keys(shFresh).length,
+      fresh: strongholds[0].buildings.zh1 ? (strongholds[0].buildings.zh1.builtAt ? 1 : 0) : 0,
     }));
     if (st.gold !== 40) throw new Error('золото: ' + st.gold);
     if (!st.zh1 || st.zh1.built !== true || st.zh1.corruptionStage !== 'ok') throw new Error('zh1: ' + JSON.stringify(st.zh1));
-    if (st.fresh !== 1) throw new Error('иммунитет новой постройки не записан');
+    if (st.zh1 && !st.zh1.builtAt) throw new Error('builtAt не записан');
   });
   await shot(pg, 'panel_build');
 
@@ -155,7 +155,7 @@ async function shot(pg, label) {
   await step('6.1 sh02 (новый фронт): армия усилена читом, лимит суток сброшен, штурм → захват', async () => {
     await pg.evaluate(() => {
       army.units.t1 += 8; // QA-чит: 20×Т1 = 40 силы → atk 42 ≥ 28
-      assaultUsedDay = null; // QA-чит: новый день
+      siege.assaultDay = null; // QA-чит: новый день
       currentShIdx = null; renderStrongholds();
     });
     await pg.locator('.sh-assault[data-idx="1"]').first().click({ force: true });
