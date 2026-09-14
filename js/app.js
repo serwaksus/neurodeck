@@ -135,6 +135,7 @@ case 'apply-evolution-stability': applyEvolution('stability'); break;
 case 'evolution-skip': closeEvolutionModal(); var ecid = parseInt(document.getElementById('evolutionModal').dataset.cardId); if (ecid) openEditCardAfterRankup(ecid); break;
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
+case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
 case 'sh-open': currentShIdx = parseInt(el.dataset.idx); renderStrongholdPanel(currentShIdx); break;
 case 'sh-back': currentShIdx = null; renderStrongholds(); break;
 case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
@@ -1363,6 +1364,16 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
 const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
 var currentShIdx = null;
+var dailyQuests = null;
+function completeDailyQuest(qid, reward) {
+if (dailyQuests.done[qid]) return;
+dailyQuests.done[qid] = true;
+HERO.gold = (HERO.gold || 0) + reward;
+showToast('📋 Квест выполнен!', '+' + reward + ' 💰', 'save');
+sfxGoalComplete(); haptic('success');
+burstParticles(window.innerWidth/2, 120, 40, { color: '#fbbf24', speed: 8, decay: 0.012, size: 3, shape: 'star', gravity: 0.08 });
+saveGameState(); renderStrongholds();
+}
 var hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }; // ponytail: пул недели в памяти (санитайзер v8 роняет лишние поля); reload отдаёт полный пул недели
 function capturedCount() { ensureStrongholdState(); return strongholds.filter(function(s) { return s.captured; }).length; }
 function strongholdTaxPerDay() { ensureStrongholdState(); var t = 0; strongholds.forEach(function(s, i) { if (s.captured) t += STRONGHOLDS[i].tax; }); return t; }
@@ -1684,6 +1695,34 @@ var html = '<div class="sh-treasury">' +
 '<div>Налоги: <b style="color:var(--green)">+' + shIncomePerDay() + ' 💰/день</b></div>' +
 '<div>Содержание: <b style="color:var(--blood-bright)">−' + shUpkeepPerDay() + ' 💰/день</b></div>' +
 '<div>⚔ Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
+// Kingdom path: визуальная полоса прогресса
+html += '<div class="sh-kingdom-path">';
+for (var pi = 0; pi < 20; pi++) {
+    var pd = strongholds[pi];
+    var cls = pd.captured ? 'sh-kp owned' : (pi === frontIdx() ? 'sh-kp front' : 'sh-kp locked');
+    html += '<div class="' + cls + '" title="' + STRONGHOLDS[pi].name + '"></div>';
+    if (pi < 19) html += '<div class="sh-kp-link"></div>';
+}
+html += '</div>';
+// Квест-доска (3 ротационных дневных задания)
+if (!dailyQuests || dailyQuests.day !== getMSKDayKey()) {
+    var _qpool = [
+        { id: 'dq_cards', icon: '📖', text: 'Выполни 2 карточки', reward: 20 },
+        { id: 'dq_gold', icon: '💰', text: 'Заработай 30 💰', reward: 15 },
+        { id: 'dq_hire', icon: '⚔', text: 'Найми 3 существа', reward: 15 },
+        { id: 'dq_build', icon: '🏗', text: 'Построй что-нибудь', reward: 20 },
+        { id: 'dq_quest', icon: '📜', text: 'Выполни квест', reward: 10 },
+        { id: 'dq_assault', icon: '⚔', text: 'Штурмуй твердыню', reward: 25 }
+    ];
+    var seed = parseInt(getMSKDayKey().replace(/-/g, ''));
+    dailyQuests = { day: getMSKDayKey(), quests: [_qpool[seed % 6], _qpool[(seed + 2) % 6], _qpool[(seed + 4) % 6]], done: {} };
+}
+html += '<div class="sh-quest-board"><div class="sh-quest-title">📋 Задания дня</div>';
+dailyQuests.quests.forEach(function(q) {
+    if (dailyQuests.done[q.id]) { html += '<div class="sh-quest done">✓ ' + q.text + ' (+' + q.reward + ' 💰)</div>'; return; }
+    html += '<div class="sh-quest" data-action="sh-daily-quest" data-qid="' + q.id + '" data-reward="' + q.reward + '">☐ ' + q.icon + ' ' + q.text + ' → +' + q.reward + ' 💰</div>';
+});
+html += '</div>';
 html += '<div class="sh-grid">';
 for (var p = 1; p <= 4; p++) {
 html += '<div class="sh-prov"><div class="sh-prov-title">' + PROVINCES[p] + '</div>';
