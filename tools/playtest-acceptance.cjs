@@ -186,10 +186,10 @@ async function shot(pg, label) {
     await pg.waitForTimeout(300);
     await pg.locator('.sh-buy[data-bid="zh1"]').first().click({ force: true });
     await pg.waitForTimeout(300);
-    const st = await ev(() => ({ gold: HERO.gold, zh1: strongholds[0].buildings.zh1, fresh: Object.keys(shFresh).length }));
+    const st = await ev(() => ({ gold: HERO.gold, zh1: strongholds[0].buildings.zh1, fresh: Object.keys(strongholds[0].buildings).filter(function(bid) { var bb = strongholds[0].buildings[bid]; return bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000; }).length }));
     if (st.gold !== 440) throw new Error('золото: ' + st.gold);
     if (!st.zh1 || !st.zh1.built || st.zh1.corruptionStage !== 'ok') throw new Error('zh1: ' + JSON.stringify(st.zh1));
-    if (st.fresh < 1) throw new Error('shFresh пуст — иммунитет новой постройки не записан');
+    if (st.zh1.builtAt === undefined || st.zh1.builtAt === null) throw new Error('builtAt не записан');
   });
   await step('1.2 неделя 1, понедельник: пул Т1 = 14 из Ж1; осада при 0 захваченных не приходит (week=1)', async () => {
     const r = await sundayTick();
@@ -219,7 +219,7 @@ async function shot(pg, label) {
   await step('1.5 воскресенье 1: осада отбита гарнизоном (garDef ≥ power по SM), гарнизон −15% c floor, week→2', async () => {
     const model = await ev(() => ({
       garDef: SM.defensePower(STRONGHOLDS[0], strongholds[0].garrison, STATS.end.value, defBonusOf(0)),
-      power: SM.siegePower(STRONGHOLDS[0].total, siege.week - 1, capturedCount(), Math.min(10, 2 * countGhostTasks() + wkSkips + wkTaskFails)),
+      power: SM.siegePower(STRONGHOLDS[0].total, siege.week - 1, capturedCount(), Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0))),
       gar: strongholds[0].garrison.length ? strongholds[0].garrison[0].count : 0,
     }));
     const r = await sundayTick();
@@ -276,7 +276,7 @@ async function shot(pg, label) {
     const model = await ev(() => ({
       garDef: SM.defensePower(STRONGHOLDS[4], strongholds[4].garrison, STATS.end.value, defBonusOf(4)),
       expPower: SM.siegePower(STRONGHOLDS[4].total, 0, capturedCount(), 3),
-      wrath: Math.min(10, 2 * countGhostTasks() + wkSkips + wkTaskFails),
+      wrath: Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)),
     }));
     if (model.wrath !== 3) throw new Error('гнев: ' + model.wrath + ' (1 призрак ×2 + 1 провал задачи)');
     if (model.garDef < model.expPower) throw new Error('гарнизон слабее осады: ' + JSON.stringify(model));
@@ -288,7 +288,7 @@ async function shot(pg, label) {
   });
   await step('1.11 неделя 6 без захватов: счётчик копится (w=1), осада отбита (power = SM при живом гневе), week 3', async () => {
     const model = await ev(() => ({
-      exp: SM.siegePower(STRONGHOLDS[4].total, 1, capturedCount(), Math.min(10, 2 * countGhostTasks() + wkSkips + wkTaskFails)),
+      exp: SM.siegePower(STRONGHOLDS[4].total, 1, capturedCount(), Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0))),
       garDef: SM.defensePower(STRONGHOLDS[4], strongholds[4].garrison, STATS.end.value, defBonusOf(4)),
     }));
     if (model.garDef < model.exp) throw new Error('гарнизон не удержит: ' + JSON.stringify(model));
@@ -299,7 +299,7 @@ async function shot(pg, label) {
   });
   await step('1.12 неделя 7 без захватов: w=2, отбита (power = SM), week 4 — счётчик готов к каскаду', async () => {
     const model = await ev(() => ({
-      exp: SM.siegePower(STRONGHOLDS[4].total, 2, capturedCount(), Math.min(10, 2 * countGhostTasks() + wkSkips + wkTaskFails)),
+      exp: SM.siegePower(STRONGHOLDS[4].total, 2, capturedCount(), Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0))),
       garDef: SM.defensePower(STRONGHOLDS[4], strongholds[4].garrison, STATS.end.value, defBonusOf(4)),
     }));
     if (model.garDef < model.exp) throw new Error('гарнизон не удержит: ' + JSON.stringify(model));
@@ -311,7 +311,7 @@ async function shot(pg, label) {
   await step('1.13 неделя 8 — КАСКАД: гарнизоны слиты в армию, +4 призрака (гнев 10), w=3: прорыв 1.5× сносит sh05→sh04→sh03, на sh03 гаснет (58 ≤ 1.5×47), week→1', async () => {
     await ev(() => { for (let i = 0; i <= 4; i++) moveStack('t1', false, i); });
     await makeGhosts(4);
-    const model = await ev(() => ({ wrath: Math.min(10, 2 * countGhostTasks() + wkSkips + wkTaskFails), week: siege.week }));
+    const model = await ev(() => ({ wrath: Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)), week: siege.week }));
     if (model.wrath !== 10 || model.week !== 4) throw new Error('до каскада: ' + JSON.stringify(model));
     const r = await sundayTick();
     if (r.week !== 1) throw new Error('после падений week должен сброситься в 1: ' + r.week);
@@ -435,8 +435,8 @@ async function shot(pg, label) {
 
   // ===================== БЛОК 4. Коррапшн полный цикл + иммунитет (сценарии 2 и 9а) =====================
   // Изоляция: только sh01 (налог 1💰), постройки zh1+df1+ec1 (апкип 21, доход 0) → каждый тик гарантированный
-  // дефицит (1 < 21); shFresh очищен (без наследства от блока 1); lastWeekReset = текущий понедельник (осада/XP/уровни не мешают).
-  await step('4.1 фиксстура: sh01; Ж1+Частокол+Рынок; shFresh очищен; wil 3 → grace 2; апкип 21, доход 1', async () => {
+  // дефицит (1 < 21); иммунитеты сброшены (без наследства от блока 1); lastWeekReset = текущий понедельник (осада/XP/уровни не мешают).
+  await step('4.1 фиксстура: sh01; Ж1+Частокол+Рынок; иммунитеты сброшены; wil 3 → grace 2; апкип 21, доход 1', async () => {
     await applyFixture(v8payload((p) => {
       p.strongholds[0].captured = true;
       p.strongholds[0].buildings.zh1 = { built: true, corruptionStage: 'ok', debtDays: 0 };
@@ -445,15 +445,15 @@ async function shot(pg, label) {
       p.hero.gold = 0;
     }));
     await ev(() => {
-      for (const k of Object.keys(shFresh)) delete shFresh[k]; // QA-чит: иммунитетов нет
+      
       lastWeekReset = getThisMondayKey();                      // QA-чит: неделя «текущая» — воскресный блок не сработает
       STATS.wil.value = 3;                                     // grace = 2 + floor(3/20) = 2
     });
-    const m = await ev(() => ({ grace: Math.min(7, 2 + Math.floor(STATS.wil.value / 20)), upkeep: shUpkeepPerDay(), income: shIncomePerDay(), fresh: Object.keys(shFresh).length }));
+    const m = await ev(() => ({ grace: Math.min(7, 2 + Math.floor(STATS.wil.value / 20)), upkeep: shUpkeepPerDay(), income: shIncomePerDay(), fresh: Object.keys(strongholds[0].buildings).filter(function(bid) { var bb = strongholds[0].buildings[bid]; return bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000; }).length }));
     if (m.grace !== 2) throw new Error('grace: ' + m.grace);
     if (m.upkeep !== 21) throw new Error('содержание: ' + m.upkeep);
     if (m.income !== 1) throw new Error('доход: ' + m.income);
-    if (m.fresh !== 0) throw new Error('shFresh не очищен: ' + m.fresh);
+    if (m.fresh !== 0) throw new Error('shFresh не очищен');
   });
   await step('4.2 дефицит, ночь 1: upkeep первым, казна → 0 (доход 1 < апкипа 21), все debt 1, стадия ещё Целое (grace 2)', async () => {
     await dayTick();
@@ -584,7 +584,7 @@ async function shot(pg, label) {
       p.hero.gold = 500;
     }));
     const m = await ev(() => ({
-      wr: Math.min(10, 2 * countGhostTasks() + wkSkips + wkTaskFails),
+      wr: Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)),
       garDef: SM.defensePower(STRONGHOLDS[5], strongholds[5].garrison, STATS.end.value, defBonusOf(5)),
       pAt12: SM.siegePower(STRONGHOLDS[5].total, 12, 6, 0),
       pAt9: SM.siegePower(STRONGHOLDS[5].total, 9, 6, 0),

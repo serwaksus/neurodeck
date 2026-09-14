@@ -147,7 +147,7 @@ const snapshot = {
 v: SCHEMA_VERSION, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
-tasks: TASKS, taskIdCounter, savedAt: Date.now()
+tasks: TASKS, taskIdCounter, hirePool, savedAt: Date.now()
 };
 try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; } catch(e) {}
 pruneAgedHistory(HERO, 120);
@@ -496,7 +496,7 @@ v: SCHEMA_VERSION, t: Date.now(),
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
-tasks: TASKS, taskIdCounter
+tasks: TASKS, taskIdCounter, hirePool
 };
 try {
     ensureStrongholdState();
@@ -767,6 +767,10 @@ bloodOath = (data.bloodOath && typeof data.bloodOath === 'object' && typeof data
 ? data.bloodOath : null;
 }
 if (typeof data.lastWeekReset === 'string') lastWeekReset = data.lastWeekReset;
+if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongholds(data.strongholds, strongholdCatalog());
+if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
+if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
+if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
 if (Array.isArray(data.tasks)) {
 TASKS = data.tasks.filter(function(t) {
 return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&

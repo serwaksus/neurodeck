@@ -69,12 +69,7 @@ test('штурм идёт через SM.assaultOutcome, подтверждает
 // Живой прогон модели: коррапшн-стадии (сценарий e2e «обнулить золото → тик → worn»)
 // ----------------------------------------------------------------
 
-const appSrc = app;
-const blockStart = appSrc.indexOf('const STRONGHOLDS');
-const exportMark = appSrc.indexOf('window.StrongholdData');
-const DATA = new Function(
-    'var window = {};\n' + appSrc.slice(blockStart, appSrc.indexOf(';', exportMark) + 1) + '\nreturn window.StrongholdData;'
-)();
+const DATA = require('../js/stronghold-data.js');
 globalThis.StrongholdData = DATA;
 const SM = require('../js/stronghold-model.js');
 
@@ -131,12 +126,12 @@ test('hero: statRankups/statEscape заменены на «Твердынь N/20
     assert.ok(app.includes("document.getElementById('statStrongholds').textContent = capturedCount() + ' / ' + STRONGHOLDS.length"));
 });
 
-test('header: «Побег» → «Твердыни», счётчик 0/20, кэш v53 единообразно', () => {
+test('header: «Побег» → «Твердыни», счётчик 0/20, кэш v54 единообразно', () => {
     assert.ok(html.includes('<span>Твердыни</span>'), 'заголовок progress-control');
     assert.ok(/id="progressVal">0\/20/.test(html), 'счётчик 0/20');
     const vs = [...html.matchAll(/v=(\d{2,})/g)].map(m => m[1]);
-    assert.deepEqual([...new Set(vs)], ['53'], 'все ?v= = 52');
-    assert.ok(html.includes('js/stronghold-model.js?v=53'), 'модель подключена до app.js');
+    assert.deepEqual([...new Set(vs)], ['54'], 'все ?v= = 52');
+    assert.ok(html.includes('js/stronghold-model.js?v=54'), 'модель подключена до app.js');
     const modelPos = html.indexOf('stronghold-model.js');
     const appPos = html.indexOf('js/app.js?v=');
     assert.ok(modelPos > -1 && modelPos < appPos, 'stronghold-model.js загружается раньше app.js');

@@ -287,6 +287,15 @@
         return { units: units, week: Math.round(clampNumber(src.week, 0, 520, 0)) };
     }
 
+    function sanitizeHirePool(input) {
+        var src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+        var out = {};
+        for (var i = 1; i <= 7; i++) {
+            var k = 't' + i;
+            out[k] = Math.round(clampNumber(src[k], 0, 1e6, 0));
+        }
+        return out;
+    }
     function sanitizeSiege(input) {
         var src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
         var last = src.lastResult;
@@ -301,7 +310,9 @@
             last = Object.keys(clean).length > 0 ? clean : null;
         }
         var assaultDay = (typeof src.assaultDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(src.assaultDay)) ? src.assaultDay : null;
-        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay };
+        var wkSkips = Math.round(clampNumber(src.wkSkips, 0, 1000, 0));
+        var wkTaskFails = Math.round(clampNumber(src.wkTaskFails, 0, 1000, 0));
+        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails };
     }
 
     return {
@@ -318,6 +329,7 @@
         sanitizeGoal: sanitizeGoal,
         sanitizeStrongholds: sanitizeStrongholds,
         sanitizeArmy: sanitizeArmy,
-        sanitizeSiege: sanitizeSiege
+        sanitizeSiege: sanitizeSiege,
+        sanitizeHirePool: sanitizeHirePool
     };
 });

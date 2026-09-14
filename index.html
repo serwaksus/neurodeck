@@ -8,7 +8,7 @@
     />
     <meta name="theme-color" content="#0a0a0f" />
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
-    <link rel="stylesheet" href="css/style.css?v=53" />
+    <link rel="stylesheet" href="css/style.css?v=54" />
   </head>
   <body>
     <div class="app-wrap">
@@ -812,6 +812,7 @@
             >
               <span class="icon">📖</span>Колода
             </div>
+            <div class="tab" role="tab" data-action="switch-view" data-view="quests"><span class="icon">📜</span>Квесты</div>
             <div
               class="tab"
               role="tab"
@@ -893,7 +894,19 @@
               </div>
               <div class="cards" id="cardGrid"></div>
             </section>
-            <section class="view" id="view-hero">
+            <section class="view" id="view-quests">
+  <div class="view-title">📜 Квесты</div>
+  <div class="view-subtitle">Дела дня: сундук за выполнение, призрак за просрочку</div>
+  <div class="tasks-section">
+    <div class="tasks-head">
+      <div class="goals-title"><div class="goals-title-icon">📋</div>Задачи дня</div>
+      <button class="goals-add" data-action="open-task-modal">+ Задача</button>
+    </div>
+    <div id="tasksActive"></div>
+    <div id="tasksGone"></div>
+  </div>
+</section>
+<section class="view" id="view-hero">
               <div class="view-title">👤 Герой</div>
               <div class="view-subtitle">
                 Атрибуты растут только через мастерство карточек (5 очков пула =
@@ -1184,6 +1197,7 @@
           >
             <span class="bnav-icon">📖</span>Колода
           </button>
+          <button class="bnav-btn" data-action="switch-view" data-view="quests"><span class="bnav-icon">📜</span>Квесты</button>
           <button class="bnav-btn" data-action="switch-view" data-view="hero">
             <span class="bnav-icon">👤</span>Герой
           </button>
@@ -1359,11 +1373,12 @@
       </div>
     </div>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="js/perf.js?v=53"></script>
-    <script src="js/perf-compat.js?v=53"></script>
-    <script src="js/state-guards.js?v=53"></script>
-    <script src="js/storage.js?v=53"></script>
-    <script src="js/stronghold-model.js?v=53"></script>
-    <script src="js/app.js?v=53"></script>
+    <script src="js/perf.js?v=54"></script>
+    <script src="js/perf-compat.js?v=54"></script>
+    <script src="js/stronghold-data.js?v=54"></script>
+<script src="js/state-guards.js?v=54"></script>
+    <script src="js/storage.js?v=54"></script>
+    <script src="js/stronghold-model.js?v=54"></script>
+    <script src="js/app.js?v=54"></script>
   </body>
 </html>

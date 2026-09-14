@@ -14,17 +14,9 @@ const path = require('node:path');
 const SG = require('../js/state-guards.js');
 const M = require('../js/stronghold-model.js');
 
-// Каталоги берём из app.js (единственный источник) — блок const STRONGHOLDS … window.StrongholdData
-const appSrc = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
-const blockStart = appSrc.indexOf('const STRONGHOLDS');
-const exportMark = appSrc.indexOf('window.StrongholdData');
-assert.ok(blockStart > -1, 'app.js: блок STRONGHOLDS не найден');
-assert.ok(exportMark > blockStart, 'app.js: экспорт window.StrongholdData не найден');
-const blockEnd = appSrc.indexOf(';', exportMark);
-const DATA = new Function(
-    'var window = {};\n' + appSrc.slice(blockStart, blockEnd + 1) + '\nreturn window.StrongholdData;'
-)();
-assert.equal(DATA.STRONGHOLDS.length, 20, 'каталог твердынь должен загрузиться из app.js');
+// Каталоги — единый источник js/stronghold-data.js (app и sim читают тот же файл)
+const DATA = require('../js/stronghold-data.js');
+assert.equal(DATA.STRONGHOLDS.length, 20, 'каталог твердынь должен загрузиться из stronghold-data.js');
 
 globalThis.StrongholdData = DATA;
 globalThis.STATE_GUARDS = SG;
@@ -226,7 +218,7 @@ test('sanitizeArmy: дефолты, clamp 0..1e6, неделя 0..520, мусо�
 });
 
 test('sanitizeSiege: week 1..520, lastResult — только плоские примитивы', () => {
-    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null });
+    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 });
     assert.equal(SG.sanitizeSiege({ week: 0 }).week, 1, 'минимум 1');
     assert.equal(SG.sanitizeSiege({ week: 1e9 }).week, 520);
     const kept = SG.sanitizeSiege({ lastResult: { week: 3, lost: 2, held: 1, evil: { nested: true } } });
