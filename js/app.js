@@ -326,7 +326,9 @@ return;
 const btn = e.target.closest('[data-action]') || e.target;
 const rect = btn.getBoundingClientRect();
 const x = rect.left + rect.width/2, y = rect.top + rect.height/2;
-burstParticles(x, y, 28, { color: '#f4c896', speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
+var stDef = STATS[card.stat] || STATS.str;
+burstParticles(x, y, 28, { color: stDef.color, speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
+spawnFloatNumber(x, y - 40, '+' + stDef.icon + ' 1', stDef.color);
 card.daysActive = getCardDaysActive(card);
 const streakMult = getStreakBonus(card);
 if (!card.firstCompletedAt) {
@@ -444,6 +446,8 @@ leveledUp = true;
 }
 if (leveledUp) {
 showToast('⚔ АТРИБУТ ПОВЫШЕН!', stat.name + ': ' + stat.value, 'crit');
+burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: stat.color, speed: 10, decay: 0.01, size: 4, shape: 'star', gravity: 0.1 });
+sfxEquip(); haptic('medium');
 spiritSay('«' + stat.name + ' крепнет... Ты стал сильнее.»');
 const statEl = document.getElementById('stat-' + statKey);
 if (statEl) {
@@ -1504,6 +1508,11 @@ else html += '<div class="sh-siege-row lost">💀 <b>' + esc(r.name) + '</b> —
 });
 document.getElementById('siegeReportBody').innerHTML = html;
 modal.classList.add('show');
+// Осадная драма: shake + частицы + звук по исходу
+var anyHeld = rows.some(function(r) { return r.held; });
+var anyFell = rows.some(function(r) { return !r.held && !r.refuge; });
+if (anyFell) { screenShake(15, 800); burstParticles(window.innerWidth/2, window.innerHeight/3, 120, { color: '#c73e4d', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12 }); sfxBossDefeated(); haptic('heavy'); }
+else if (anyHeld) { burstParticles(window.innerWidth/2, window.innerHeight/3, 60, { color: '#34d399', speed: 8, decay: 0.012, size: 3, shape: 'star', gravity: 0.08 }); sfxLevelUp(); haptic('medium'); }
 }
 function closeSiegeReport() { document.getElementById('siegeReportModal').classList.remove('show'); }
 function assaultForecast(idx) {
@@ -1766,7 +1775,8 @@ html += garrisonRows(SM.TIER_KEYS.map(function(t) { return { tier: t, count: arm
 root.innerHTML = html;
 }
 let lastDayReset = null;
-var lastWeekReset = getThisMondayKey(); // объявление было утеряно при удалении боевого блока — без него молча падали все saveGameState
+var lastWeekReset = getThisMondayKey();
+var dailyEvent = null; // объявление было утеряно при удалении боевого блока — без него молча падали все saveGameState
 
 
 
@@ -2563,14 +2573,26 @@ upkeepTotal += tr.upkeep;
 if (!tr.paid) unpaid++;
 }
 if (revenue > 0) {
-showToast('💰 Доход королевства', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия (налоги и эконом твердынь)', 'save');
+showToast('💰 Тьма копила для тебя', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия. Твои твердыни ждали.', 'save');
 sfxEquip(); haptic('success');
 }
 if (unpaid > 0) {
 showToast('🏚 Не хватило на содержание', unpaid + ' дн. дефицита — постройки ветшают (grace ' + (2 + Math.floor(STATS.wil.value / 20)) + ' дн.)', 'blood');
 sfxFail(); haptic('error');
 }
-        if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
+        // Ежедневное событие: 1 из 5 (Vаrban, Кузнец, Рынок, Тайна, Тихий день)
+var dailyEvents = [
+{ id: 'caravan', icon: '🐎', name: 'Караван', text: 'Торговцы из-за гор: +' + Math.max(20, capturedCount() * 15) + ' 💰 мгновенно!' },
+{ id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
+{ id: 'market', icon: '🏪', name: 'Ярмарка', text: 'Налоги твердынь ×1.5 сегодня!' },
+{ id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: 'Призраки задач сегодня безобидны.' },
+{ id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' }
+];
+var ev = dailyEvents[Math.floor(Math.random() * dailyEvents.length)];
+dailyEvent = ev;
+if (ev.id === 'caravan') { var bonus = Math.max(20, capturedCount() * 15); HERO.gold = (HERO.gold || 0) + bonus; }
+showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
+if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
 HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
 } else {
 HERO.consecutivePerfectDays = 0;
