@@ -330,6 +330,9 @@ const x = rect.left + rect.width/2, y = rect.top + rect.height/2;
 var stDef = STATS[card.stat] || STATS.str;
 burstParticles(x, y, 28, { color: stDef.color, speed: 5, decay: 0.02, size: 3, shape: 'spark', gravity: 0.08 });
 spawnFloatNumber(x, y - 40, '+' + stDef.icon + ' 1', stDef.color);
+var kpIdx = capturedCount();
+var kpAll = document.querySelectorAll('.sh-kp');
+if (kpAll[kpIdx]) { kpAll[kpIdx].classList.add('sh-kp-flash'); setTimeout(function() { kpAll[kpIdx] && kpAll[kpIdx].classList.remove('sh-kp-flash'); }, 800); }
 card.daysActive = getCardDaysActive(card);
 const streakMult = getStreakBonus(card);
 if (!card.firstCompletedAt) {
@@ -561,6 +564,7 @@ const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 burstParticles(cx, cy, 100, { color: '#fbbf24', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12, life: 1.3 });
 screenShake(8, 400);
 HERO.gold = (HERO.gold || 0) + 30;
+var avatarEl = document.getElementById('heroAvatar'); if (avatarEl) { avatarEl.classList.add('level-flash'); setTimeout(function() { avatarEl.classList.remove('level-flash'); }, 1500); } updateHeroAvatarSprites();
 document.getElementById('lvlSub2').textContent = '+30 💰 в казну';
 var avatarWrap = document.querySelector('.hero-avatar-wrap');
 if (avatarWrap) { avatarWrap.classList.add('levelup-glow'); setTimeout(function() { avatarWrap.classList.remove('levelup-glow'); }, 2000); }
@@ -1375,6 +1379,27 @@ burstParticles(window.innerWidth/2, 120, 40, { color: '#fbbf24', speed: 8, decay
 saveGameState(); renderStrongholds();
 }
 var hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }; // ponytail: пул недели в памяти (санитайзер v8 роняет лишние поля); reload отдаёт полный пул недели
+function heroTierKey() {
+    var lvl = HERO.level || 1;
+    if (lvl <= 3) return 't1';
+    if (lvl <= 7) return 't2';
+    if (lvl <= 12) return 't3';
+    if (lvl <= 17) return 't4';
+    if (lvl <= 25) return 't5';
+    return 't6';
+}
+function updateHeroAvatarSprites() {
+    var tier = heroTierKey();
+    var path = 'img/units/' + tier + '.png';
+    var av = document.getElementById('heroAvatar');
+    if (av) {
+        var img = av.querySelector('.hero-avatar-img');
+        if (!img) { img = document.createElement('img'); img.className = 'hero-avatar-img'; av.insertBefore(img, av.firstChild); }
+        if (!img.src.includes(path)) img.src = path;
+    }
+    var mini = document.getElementById('heroAvatarMini');
+    if (mini) { mini.textContent = '⚔'; }
+}
 function capturedCount() { ensureStrongholdState(); return strongholds.filter(function(s) { return s.captured; }).length; }
 function strongholdTaxPerDay() { ensureStrongholdState(); var t = 0; strongholds.forEach(function(s, i) { if (s.captured) t += STRONGHOLDS[i].tax; }); return t; }
 function frontIdx() { ensureStrongholdState(); for (var i = 0; i < strongholds.length; i++) if (!strongholds[i].captured) return i; return -1; }
@@ -1518,6 +1543,14 @@ else if (r.held) html += '<div class="sh-siege-row held">🛡 <b>' + esc(r.name)
 else html += '<div class="sh-siege-row lost">💀 <b>' + esc(r.name) + '</b> — пала: оборона ' + r.garDef + ' против ' + r.power + '. Нейтралы вернулись, постройки в руине.</div>';
 });
 document.getElementById('siegeReportBody').innerHTML = html;
+// Осадный спектакль: полноэкранная вспышка
+var spect = document.createElement('div');
+spect.className = 'siege-spectacle';
+var mainIcon = anyFell ? '💀' : '🛡';
+var mainText = anyFell ? 'Твердыня пала...' : 'Оборона держит!';
+spect.innerHTML = '<div class="ss-icon">' + mainIcon + '</div><div class="ss-text">' + mainText + '</div>';
+document.body.appendChild(spect);
+setTimeout(function() { spect.remove(); }, 3600);
 modal.classList.add('show');
 // Осадная драма: shake + частицы + звук по исходу
 var anyHeld = rows.some(function(r) { return r.held; });

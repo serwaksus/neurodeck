@@ -830,3 +830,25 @@ textarea:focus-visible {
 .sh-quest { padding: 6px 8px; margin-bottom: 4px; border-radius: 3px; font-size: 12px; color: var(--text-bright); cursor: pointer; transition: background 0.2s; }
 .sh-quest:hover:not(.done) { background: rgba(251,191,36,0.08); }
 .sh-quest.done { color: var(--green); text-decoration: line-through; cursor: default; }
+
+/* ===================== HERO AVATAR SPRITE ===================== */
+.hero-avatar-img { width: 80px; height: 80px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6)); }
+.hero-avatar.level-flash { animation: heroLevelFlash 1.5s ease-out; }
+@keyframes heroLevelFlash { 0% { box-shadow: 0 0 0 rgba(251,191,36,0); } 30% { box-shadow: 0 0 30px rgba(251,191,36,0.8); border-color: var(--gold-bright); } 100% { box-shadow: 0 0 0 rgba(251,191,36,0); } }
+:root.perf-eco .hero-avatar.level-flash { animation: none; }
+:root.perf-eco .hero-avatar-img { filter: none; }
+
+/* Kingdom path node flash on card completion */
+.sh-kp-flash { animation: kpFlash 0.8s ease-out !important; }
+@keyframes kpFlash { 0% { transform: scale(1.5); box-shadow: 0 0 16px rgba(251,191,36,0.9); } 100% { transform: scale(1); box-shadow: none; } }
+:root.perf-eco .sh-kp-flash { animation: none; }
+
+/* Siege spectacle overlay */
+.siege-spectacle { position: fixed; inset: 0; z-index: 2000; pointer-events: none; display: flex; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,0.85); animation: siegeFade 3.5s ease-out forwards; }
+.siege-spectacle .ss-text { font-size: 22px; color: var(--gold-bright); text-align: center; animation: ssText 3.5s ease-out; text-shadow: 0 0 20px rgba(0,0,0,0.8); }
+.siege-spectacle .ss-icon { font-size: 48px; margin-bottom: 12px; animation: ssIcon 3.5s ease-out; }
+@keyframes siegeFade { 0% { background: rgba(0,0,0,0); opacity: 0; } 15% { background: rgba(0,0,0,0.85); opacity: 1; } 75% { background: rgba(0,0,0,0.85); opacity: 1; } 100% { background: rgba(0,0,0,0.85); opacity: 0; } }
+@keyframes ssText { 0% { transform: translateY(20px); opacity: 0; } 20% { transform: translateY(0); opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ssIcon { 0% { transform: scale(0.5); } 30% { transform: scale(1.3); } 60% { transform: scale(1); } 100% { transform: scale(1); opacity: 0.8; } }
+:root.perf-eco .siege-spectacle { animation: none; background: rgba(0,0,0,0.6); }
+:root.perf-eco .siege-spectacle .ss-text, :root.perf-eco .siege-spectacle .ss-icon { animation: none; }
