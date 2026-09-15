@@ -680,11 +680,11 @@
                 style="font-size: 11px; color: var(--text-dim); margin-top: 6px"
               ></div>
             </div>
-            <div style="display: flex; gap: 8px; margin-top: 8px">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px">
               <button
                 class="demo-btn"
                 data-action="export-json"
-                style="flex: 1"
+                style="padding: 10px 4px"
               >
                 📋 JSON
               </button>
@@ -692,25 +692,21 @@
                 class="demo-btn"
                 id="notifToggleBtn"
                 data-action="toggle-notif"
-                style="flex: 1"
+                style="padding: 10px 4px"
               >
                 🔔 Уведомления
               </button>
               <button
                 class="demo-btn"
                 data-action="deep-recovery"
-                style="flex: 1; color: var(--green); border-color: var(--green)"
+                style="padding: 10px 4px; color: var(--green); border-color: var(--green)"
               >
                 ♻ Восстановить
               </button>
               <button
                 class="demo-btn"
                 data-action="full-wipe-all"
-                style="
-                  flex: 1;
-                  color: var(--blood-bright);
-                  border-color: var(--blood);
-                "
+                style="padding: 10px 4px; color: var(--blood-bright); border-color: var(--blood)"
               >
                 🗑 Сброс
               </button>
