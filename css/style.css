@@ -1055,3 +1055,10 @@ body::before {
   .hero-avatar-img { width: 72px !important; height: 72px !important; }
   .view-title { font-size: 18px !important; }
 }
+
+/* ===================== КАРТОЧКА: кнопки рядом ===================== */
+.card-btn-row { display: flex; gap: 6px; margin-top: 8px; align-items: stretch; }
+.card-btn-row .card-complete-btn { flex: 1; min-height: 44px; margin-top: 0; }
+.card-skip-btn { width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(139,38,53,0.3); border-radius: 6px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.card-skip-btn:hover { color: var(--blood-bright); border-color: var(--blood-bright); background: rgba(139,38,53,0.1); }
+.card-skip-btn:active { transform: scale(0.95); }

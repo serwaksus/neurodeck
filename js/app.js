@@ -136,6 +136,7 @@ case 'set-reminder-freq':
 if (typeof showReminderFreqToast === 'function') showReminderFreqToast(el.dataset.mode);
 break;
 case 'new-game-keep-cards': newGameKeepCards(); break;
+case 'full-wipe-all': fullWipeAll(); break;
 case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
 case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf) { var prevPerfMode = window.NeuroDeckPerf.getMode(); if (window.NeuroDeckPerf.setMode(el.dataset.mode) && prevPerfMode !== el.dataset.mode) { renderPerfStatus(); showToast('⚡ Режим изменён', { 'auto': 'Авто — эффекты зависят от системных настроек', 'eco': 'Эко — минимальная графика', 'performance': 'Все эффекты включены', 'low': 'Экономный режим — меньше анимаций', 'effects-off': 'Анимации отключены' }[el.dataset.mode] || el.dataset.mode); } } break;
@@ -276,13 +277,16 @@ oathBadge +
   '<span class="card-adaptation-tag ' + streakInfo.cls + '">' + streakInfo.label + '</span>' +
 '</div>' +
 '<div class="card-stats-line">Выполнено: <b>' + (card.totalCompletions || 0) + '</b> · 🔥 <b>' + (card.streak || 0) + '</b></div>' +
-'<div class="card-skip-row"><span class="card-btn fail" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)">✕ пропустить</span></div>' +
+
 '<div class="card-mastery">Мастерство: <b>' + card.mastery + '/' + card.masteryThreshold + '</b> до ранга ' + nextRankText + '</div>' +
 '<div class="card-progress"><div class="card-progress-bar" style="width:' + progressPct + '%"></div></div>' +
+'<div class="card-btn-row">' +
 (doneToday
-    ? '<div class="card-complete-btn done">✓ Выполнено сегодня</div>'
-    : '<div class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">⚔ Выполнить</div>'
+    ? '<div class="card-complete-btn done">✓ Выполнено</div>'
+    : '<button class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">⚔ Выполнить</button>' +
+      '<button class="card-skip-btn" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)">✕</button>'
 ) +
+'</div>' +
 el.addEventListener('mousemove', (e) => {
 if (ecoOn()) return;
 const r = el.getBoundingClientRect();
@@ -3094,6 +3098,30 @@ function showReminderFreqToast(mode) {
 var msgs = { daily: '📅 Ежедневные напоминания включены', sunday: '🛡 Только воскресные осады', off: '🔕 Напоминания выключены' };
 showToast('🔔 Напоминания', msgs[mode] || mode, 'save');
 // TODO: отправить на бэкенд когда будет API
+}
+function fullWipeAll() {
+dungeonConfirm('💀 ПОЛНЫЙ СБРОС', 'Удалить ВСЁ: карточки, уровень, золото, твердыни, армию, квесты?<br><b style="color:var(--blood-bright)">Это полный вайп. Необратимо.</b>').then(function(ok) {
+if (!ok) return;
+HERO.level = 1; HERO.xp = 0; HERO.xpToNext = 50; HERO.totalXp = 0; HERO.gold = 30;
+HERO.name = 'Странник'; HERO.title = '«Тот, кто только начал путь»';
+HERO.consecutivePerfectDays = 0; HERO.dailyCompletions = 0; HERO.dailySkips = 0;
+HERO.lastSessionAt = Date.now(); HERO.dailyUniqueStats = {}; HERO.cardHistory = {}; HERO.lastWeeklyReport = null;
+HERO.streakShields = 0;
+Object.keys(STATS).forEach(function(k) { STATS[k].value = 3; STATS[k].attributePoints = 0; });
+FORGED = []; forgedIdCounter = 100;
+TASKS = []; taskIdCounter = 1;
+GOALS = []; goalIdCounter = 1;
+strongholds = null; ensureStrongholdState();
+army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
+hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
+dailyQuests = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
+xpHistory = []; bloodOath = null;
+try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); localStorage.removeItem('neurodeck_onboarding_done'); } catch(e) {}
+try { var csR = getCloudStorage(); if (csR) csR.removeItem(CLOUD_META_KEY, function(){}); } catch(e) {}
+saveGameState();
+location.reload();
+});
 }
 function newGameKeepCards() {
 dungeonConfirm('🔄 Новая игра', 'Сбросить весь прогресс?<br><b>Карточки сохранятся.</b><br><span style="color:var(--blood-bright)">Необратимо.</span>').then(function(ok) {
