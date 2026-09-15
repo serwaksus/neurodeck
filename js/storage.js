@@ -34,7 +34,7 @@ var localEpoch = 0; // страж гонок: инкремент при кажд
 function hasEverSaved() {
     try { return localStorage.getItem(EVER_SAVED_KEY) === '1'; } catch(e) { return false; }
 }
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 var strongholds = null, army = null, siege = null;
 function strongholdCatalog() {
     return (typeof globalThis !== 'undefined' && globalThis.StrongholdData) || null;
@@ -114,6 +114,18 @@ MIGRATIONS[9] = function(data) {
         };
     } catch(e) {}
 };
+// v9→v10 (эндгейм): трон Вечного трона (throne 0..5) + копилки венцов сезонов в season.crownBonus
+MIGRATIONS[10] = function(data) {
+    try {
+        if (!data || typeof data !== 'object') return;
+        if (typeof data.throne !== 'number' || !Number.isFinite(data.throne)) data.throne = 0;
+        data.throne = Math.max(0, Math.min(5, Math.round(data.throne)));
+        if (data.season && typeof data.season === 'object') {
+            if (typeof data.season.crownBonus !== 'number' || !Number.isFinite(data.season.crownBonus)) data.season.crownBonus = 0;
+            data.season.crownBonus = Math.max(0, Math.min(5, Math.round(data.season.crownBonus)));
+        }
+    } catch(e) {}
+};
 function migrateSyncData(data) {
     var v = typeof data.v === 'number' ? data.v : 4;
     while (v < SCHEMA_VERSION) {
@@ -190,7 +202,7 @@ lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, hirePool, savedAt: Date.now()
 };
-try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; } catch(e) {}
+try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; } catch(e) {}
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
@@ -830,6 +842,7 @@ if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
     if (typeof dailyQuests !== 'undefined' && dailyQuests && data.dailyQuests && typeof data.dailyQuests === 'object' && data.dailyQuests.day) { dailyQuests.day = data.dailyQuests.day; dailyQuests.done = data.dailyQuests.done || {}; dailyQuests.progress = data.dailyQuests.progress || {}; dailyQuests.quests = Array.isArray(data.dailyQuests.quests) ? data.dailyQuests.quests : []; }
 if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEvent === 'object' && data.dailyEvent.id) dailyEvent = data.dailyEvent;
 if (typeof season !== 'undefined' && data.season && typeof data.season === 'object') { season = STATE_GUARDS.sanitizeSeason(data.season, (typeof getMSKDayKey === 'function') ? getMSKDayKey() : null); }
+if (typeof throne !== 'undefined' && typeof data.throne === 'number' && Number.isFinite(data.throne)) throne = Math.max(0, Math.min(5, Math.round(data.throne)));
 if (Array.isArray(data.tasks)) {
 TASKS = data.tasks.filter(function(t) {
 return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&

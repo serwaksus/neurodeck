@@ -18,9 +18,10 @@ test('sanitizeSeason: bad fields fall back, good fields kept', () => {
 });
 
 test('sanitizeSeason: valid season passes through with clamped snapshot', () => {
-    const s = SG.sanitizeSeason({ num: 2, start: '2026-09-01', snapshot: { totalXp: 5000, gold: 300, captured: 25, completions: 40, level: 6 } }, '2026-09-15');
+    const s = SG.sanitizeSeason({ num: 2, start: '2026-09-01', crownBonus: 3, snapshot: { totalXp: 5000, gold: 300, captured: 25, completions: 40, level: 6 } }, '2026-09-15');
     assert.equal(s.num, 2);
     assert.equal(s.start, '2026-09-01');
+    assert.equal(s.crownBonus, 3, 'crownBonus должен сохраниться');
     assert.equal(s.snapshot.captured, 20);
     assert.equal(s.snapshot.completions, 40);
 });

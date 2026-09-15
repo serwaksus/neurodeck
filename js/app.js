@@ -145,6 +145,7 @@ case 'select-evolution': (function(sel) { document.querySelectorAll('#editEvolut
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
 case 'close-season-report': document.getElementById('seasonModal').classList.remove('show'); break;
+case 'throne-invest': investThrone(); break;
 case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
 case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); hintOnce('shpanel', 'Жильё даёт недельный пул найма. Стройка занимает дни — планируй заранее.'); break;
 case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(currentShIdx); break;
@@ -1427,12 +1428,22 @@ var currentShIdx = null;
 var shCatalogOpen = false;
 var dailyQuests = null;
 var season = null;
+var throne = 0; // Вечный трон: 0..5 возведений, +1% налогов навсегда за каждое
 var SEASON_DAYS = 30;
 var SEASON_NAMES = ['Пробуждение', 'Закалка', 'Разлив', 'Венец'];
+var THRONE_COST = 100000;
 function ensureSeason() {
     if (season && season.num && season.start) return season;
     season = STATE_GUARDS.sanitizeSeason(season, getMSKDayKey());
     return season;
+}
+function taxMultiplier() {
+    var m = 1;
+    if (dailyEvent && dailyEvent.id === 'market') m *= 1.5;
+    ensureSeason();
+    m *= 1 + Math.min(0.10, (season.crownBonus || 0) * 0.02); // венцы сезонов
+    m *= 1 + Math.min(0.05, throne * 0.01); // Вечный трон
+    return m;
 }
 function seasonName(num) { return SEASON_NAMES[(Math.max(1, num) - 1) % SEASON_NAMES.length]; }
 function dayKeyFromUTC(d) { return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); }
@@ -1453,14 +1464,29 @@ function finishSeason() {
         completions: Math.max(0, completions - (season.snapshot.completions || 0)),
         levels: Math.max(0, (HERO.level || 1) - (season.snapshot.level || 1))
     };
-    showSeasonReport(season.num, d);
-    season = STATE_GUARDS.sanitizeSeason({ num: season.num + 1, start: getMSKDayKey(), snapshot: { totalXp: HERO.totalXp || 0, gold: HERO.gold || 0, captured: capturedCount(), completions: completions, level: HERO.level || 1 } }, getMSKDayKey());
+    var earnedCrown = (d.captured > 0 || d.completions >= 10); // венец за живой сезон
+    var newCrownBonus = Math.min(5, (season.crownBonus || 0) + (earnedCrown ? 1 : 0));
+    showSeasonReport(season.num, d, earnedCrown, newCrownBonus);
+    season = STATE_GUARDS.sanitizeSeason({ num: season.num + 1, start: getMSKDayKey(), crownBonus: newCrownBonus, snapshot: { totalXp: HERO.totalXp || 0, gold: HERO.gold || 0, captured: capturedCount(), completions: completions, level: HERO.level || 1 } }, getMSKDayKey());
     saveGameState();
 }
-function showSeasonReport(num, d) {
+function investThrone() {
+if (throne >= 5) { showToast('👑 Предел', 'Трон возведён полностью: +5% налогов навсегда', 'save'); return; }
+if ((HERO.gold || 0) < THRONE_COST) { showToast('💰 Мало золота', 'Нужно ' + THRONE_COST.toLocaleString('ru-RU') + ' 💰', 'blood'); sfxError(); return; }
+HERO.gold -= THRONE_COST;
+throne++;
+showToast('👑 Вечный трон', 'Ярус ' + throne + '/5: +' + throne + '% налогов навсегда', 'crit');
+spiritSay('«Камень к камню — трон, что переживёт века.»');
+sfxLevelUp(); haptic('heavy');
+renderStrongholds(); updateHeroUI(); saveGameState();
+}
+function showSeasonReport(num, d, earnedCrown, newCrownBonus) {
     var modal = document.getElementById('seasonModal');
     if (!modal) return;
     var tile = function(icon, val, label) { return '<div class="digest-tile"><div class="dt-num">' + icon + ' ' + val + '</div><div class="dt-label">' + label + '</div></div>'; };
+    var crownLine = earnedCrown
+        ? '<div style="text-align:center; font-size:13px; color:var(--gold-bright); margin-top:6px;">👑 Получен <b>Венец сезона</b> (всего: ' + newCrownBonus + '/5): +' + (newCrownBonus * 2) + '% налогов в новом сезоне</div>'
+        : '<div style="text-align:center; font-size:12px; color:var(--text-dim); margin-top:6px;">Венец не заработан — взяй твердыню или закрой 10 задач в следующем сезоне</div>';
     modal.querySelector('.modal-body').innerHTML =
     '<div class="digest-head">🍂 Сезон ' + num + ': ' + seasonName(num) + ' — завершён</div>' +
     '<div class="digest-tiles">' +
@@ -1468,7 +1494,7 @@ function showSeasonReport(num, d) {
     tile('💯', '+' + d.completions.toLocaleString('ru-RU'), 'выполнений') +
     tile('🏰', '+' + d.captured, 'твердынь взято') +
     tile('💰', (d.gold >= 0 ? '+' : '') + d.gold.toLocaleString('ru-RU'), 'казна (дельта)') +
-    '</div>' +
+    '</div>' + crownLine +
     '<div style="text-align:center; font-size:13px; color:var(--text-bright); margin-top:6px;">Сезон ' + (num + 1) + ': <b style="color:var(--gold-bright)">' + seasonName(num + 1) + '</b> — ' + SEASON_DAYS + ' дней. Начни с чистого отсчёта.</div>';
     modal.classList.add('show');
 }
@@ -1587,7 +1613,7 @@ if (d.market) market += d.market * m;
 var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
 taxes = Math.round(taxes * (1 + tBonus));
-if (dailyEvent && dailyEvent.id === 'market') taxes = Math.round(taxes * 1.5); // 🏪 Ярмарка
+taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
 var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 gold += income;
 dqProgress('gold', income);
@@ -1810,7 +1836,7 @@ if (d.market) market += d.market * m;
 });
 var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 taxes = Math.round(taxes * (1 + (SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0)));
-if (dailyEvent && dailyEvent.id === 'market') taxes = Math.round(taxes * 1.5); // 🏪 Ярмарка — parity с тиком
+taxes = Math.round(taxes * taxMultiplier()); // parity с тиком
 return Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 }
 function shUpkeepPerDay() {
@@ -1949,6 +1975,11 @@ if (!s || (!s.captured && idx !== 0)) { currentShIdx = null; renderStrongholds()
 var html = '<button class="sh-back" data-action="sh-back">← Все твердыни</button>';
 html += '<div class="sh-panel-head"><div class="sh-panel-title">' + d.icon + ' ' + d.name + '</div>' +
 '<div class="sh-panel-sub">Налог +' + d.tax + ' 💰/день · слоты ' + builtList(idx).length + '/' + d.slots + ' · ' + PROVINCES[d.prov] + '</div></div>';
+if (idx === 19 && typeof throne !== 'undefined') {
+html += '<div class="sh-sec-title">👑 Вечный трон — ' + throne + '/5 · налоги +' + throne + '%</div>';
+if (throne >= 5) html += '<div class="empty-state">Трон возведён полностью: +5% налогов навсегда.</div>';
+else html += '<div class="sh-build-row buy"><div class="sh-build-body"><div class="sh-build-name">Возвести ярус трона</div><div class="sh-build-meta">+' + (throne + 1) + '% налогов навсегда · цена ' + THRONE_COST + ' 💰</div></div>' + ((HERO.gold || 0) >= THRONE_COST ? '<button class="sh-buy" data-action="throne-invest">👑 ' + THRONE_COST + '</button>' : '<span class="sh-stage lock">🔒 ' + THRONE_COST + '</span>') + '</div>';
+}
 html += '<div class="sh-sec-title">🏗 Постройки</div>';
 var built = builtList(idx);
 if (built.length === 0) html += '<div class="empty-state">Пока ничего не построено.</div>';
@@ -2305,7 +2336,8 @@ var all = [
 ];
 var unlocked = all.filter(function(a) { return a.cur >= a.max; }).length;
 var html = '<div class="ach-wrap">';
-html += '<div class="ach-head"><div class="ach-title">🏆 Галерея трофеев</div><div class="ach-count">' + unlocked + '/' + all.length + '</div></div>';
+var crowns = (season && season.crownBonus) || 0;
+html += '<div class="ach-head"><div class="ach-title">🏆 Галерея трофеев</div><div class="ach-count">' + unlocked + '/' + all.length + (crowns > 0 ? ' · 👑 ' + crowns + ' (+2% налогов)' : '') + '</div></div>';
 html += '<div class="ach-overall"><div class="ach-overall-fill" style="width:' + Math.round(unlocked / all.length * 100) + '%;"></div></div>';
 html += '<div class="ach-grid">';
 all.forEach(function(a) {
@@ -3230,7 +3262,7 @@ strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
 siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
-dailyQuests = null; dailyEvent = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
+dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();
 xpHistory = []; bloodOath = null;
 season = STATE_GUARDS.sanitizeSeason({ num: 1, start: getMSKDayKey() }, getMSKDayKey());
 try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); localStorage.removeItem('neurodeck_ever_saved'); localStorage.removeItem('neurodeck_onboarding_done'); localStorage.removeItem('neurodeck_starter_done'); } catch(e) {}
@@ -3253,7 +3285,7 @@ army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
 siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 TASKS = []; taskIdCounter = 1;
-dailyQuests = null; dailyEvent = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
+dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();
 season = STATE_GUARDS.sanitizeSeason({ num: 1, start: getMSKDayKey() }, getMSKDayKey());
 xpHistory = []; bloodOath = null;
 try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {}

@@ -1,4 +1,4 @@
-// NeuroDeck QA: QA-Data — целостность данных (сейвы v9, миграции v7→v9, 5 слоёв защиты, экспорт/импорт, мульти-вкладка, квота, вайп).
+// NeuroDeck QA: QA-Data — целостность данных (сейвы v9, миграции v7→v10, 5 слоёв защиты, экспорт/импорт, мульти-вкладка, квота, вайп).
 // Роль: .opencode/agent/qa-data.md. Каркас — tools/playtest-acceptance.cjs (http-сервер, step/shot, ловушка ошибок консоли).
 // Продукт НЕ меняется: только чтение состояния через прод-функции (saveGameState/applySyncData/exportJson/...).
 const { chromium } = require('/root/neurodeck/node_modules/@playwright/test');
@@ -130,7 +130,7 @@ async function nodePhase() {
     fs.writeFileSync(OUT + '/fuzz-sanitizers-100.json', JSON.stringify({ seed: 20260915, iterations: 100, throws, badShape }, null, 2));
   });
 
-  await step('A2 [node] миграция v7 → v9: regions→captured (порядок каталога), золото/карточки/задачи целы, army/siege созданы, season посеян (MIGRATIONS[7] для входа v7 не вызывается — он для v≤6)', async () => {
+  await step('A2 [node] миграция v7 → v10: regions→captured (порядок каталога), золото/карточки/задачи целы, army/siege созданы, season посеян (MIGRATIONS[7] для входа v7 не вызывается — он для v≤6)', async () => {
     const d = {
       v: 7, savedAt: 1726000000000,
       hero: { name: 'Мигрант', level: 12, gold: 4321, xp: 100, xpToNext: 200, totalXp: 3000, lastSessionAt: 1726000000000, dailyUniqueStats: {}, cardHistory: {} },
@@ -144,7 +144,7 @@ async function nodePhase() {
       taskIdCounter: 2, tractState: { regions: 7, building: null },
     };
     IV.migrateSyncData(d);
-    if (d.v !== 9) throw new Error('v: ' + d.v);
+    if (d.v !== 10) throw new Error('v: ' + d.v);
     if (!Array.isArray(d.strongholds) || d.strongholds.length !== 20) throw new Error('strongholds: ' + (d.strongholds || []).length);
     const cap = d.strongholds.filter((s) => s.captured).length;
     if (cap !== 7) throw new Error('captured: ' + cap);
@@ -158,7 +158,7 @@ async function nodePhase() {
     fs.writeFileSync(OUT + '/fixture-v7-migrated.json', JSON.stringify(d, null, 2));
   });
 
-  await step('A2b [node] миграция v5 (+мусорные поля v≤6: shards/flasks/hp/isHollow/boss*) → v9: MIGRATIONS[7] вычищает легаси, tractState отсутствует → regions 0', async () => {
+  await step('A2b [node] миграция v5 (+мусорные поля v≤6: shards/flasks/hp/isHollow/boss*) → v10: MIGRATIONS[7] вычищает легаси, tractState отсутствует → regions 0', async () => {
     const d = {
       v: 5, savedAt: 1726000000000,
       hero: { name: 'Легаси', level: 9, gold: 250, xp: 10, xpToNext: 100, totalXp: 900, shards: 12, flasks: 3, hp: 100, maxHp: 100, isHollow: true, actionPoints: 3, estus: 5, dailyUniqueStats: {}, cardHistory: {} },
@@ -171,7 +171,7 @@ async function nodePhase() {
       tasks: [], taskIdCounter: 1,
     };
     IV.migrateSyncData(d);
-    if (d.v !== 9) throw new Error('v: ' + d.v);
+    if (d.v !== 10) throw new Error('v: ' + d.v);
     const h = d.hero;
     if (h.shards !== undefined || h.flasks !== undefined || h.hp !== undefined || h.isHollow !== undefined || h.estus !== undefined) throw new Error('легаси-мусор в hero остался: ' + JSON.stringify(h));
     if (d.bossHp !== undefined || d.bossKills !== undefined || d.bossRagePoints !== undefined) throw new Error('легаси-мусор верхнего уровня остался');
@@ -183,7 +183,7 @@ async function nodePhase() {
     fs.writeFileSync(OUT + '/fixture-v5-migrated.json', JSON.stringify(d, null, 2));
   });
 
-  await step('A3 [node] миграция v8 (без season) → v9: Сезон 1 со снапшотом текущего прогресса', async () => {
+  await step('A3 [node] миграция v8 (без season) → v10: Сезон 1 со снапшотом текущего прогресса', async () => {
     const strongholds = [];
     for (let i = 0; i < 20; i++) strongholds.push({ id: 'sh' + String(i + 1).padStart(2, '0'), captured: i < 3, garrison: i === 1 ? [{ tier: 't2', count: 4 }] : [], buildings: i === 0 ? { zh1: { built: true, builtAt: 1726000000000, corruptionStage: 'ok', debtDays: 0 } } : {}, corruption: { stage: 'ok', debtDays: 0 } });
     const d = {
@@ -196,7 +196,7 @@ async function nodePhase() {
       siege: { week: 2, lastResult: null },
     };
     IV.migrateSyncData(d);
-    if (d.v !== 9) throw new Error('v: ' + d.v);
+    if (d.v !== 10) throw new Error('v: ' + d.v);
     if (!d.season || d.season.num !== 1) throw new Error('season: ' + JSON.stringify(d.season));
     const sn = d.season.snapshot;
     const today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
@@ -253,7 +253,7 @@ async function nodePhase() {
   }
   const stable = (o) => Array.isArray(o) ? o.map(stable) : (o && typeof o === 'object' ? Object.keys(o).sort().reduce((a, k) => { a[k] = stable(o[k]); return a; }, {}) : o);
   // нормализация как acceptance 10.2: builtAt:null → отсутствует (санитайзер пишет null, прод-код — undefined)
-  const norm = (s) => { const o = JSON.parse(JSON.stringify(s)); (o.strongholds || []).forEach((sh) => { Object.values(sh.buildings || {}).forEach((bb) => { if (bb && bb.builtAt === null) delete bb.builtAt; }); }); return o; };
+  const norm = (s) => { const o = JSON.parse(JSON.stringify(s)); (o.strongholds || []).forEach((sh) => { Object.values(sh.buildings || {}).forEach((bb) => { if (bb && bb.builtAt === null) delete bb.builtAt; }); }); if (o.season && o.season.crownBonus === 0) delete o.season.crownBonus; if (o.throne === 0) delete o.throne; return o; };
   const grabKeys = () => ev(() => ({
     gold: HERO.gold,
     strongholds: JSON.parse(JSON.stringify(strongholds)),
@@ -318,7 +318,7 @@ async function nodePhase() {
     if (await pg.locator('.onboarding-overlay.show').isVisible().catch(() => false)) throw new Error('онбординг не закрылся');
   });
 
-  await step('B2 обогащение состояния v9: золото 777, 3 карточки, 2 твердыни (zh1 worn, builtAt), гарнизон, осада w3, задачи+призрак, квесты с progress, Сезон 2 — saveGameState OK', async () => {
+  await step('B2 обогащение состояния v10: золото 777, 3 карточки, 2 твердыни (zh1 worn, builtAt), гарнизон, осада w3, задачи+призрак, квесты с progress, Сезон 2 — saveGameState OK', async () => {
     await richState(777);
     const st = await ev(() => ({
       saved: !!localStorage.getItem('neurodeck_full_save'),
@@ -326,11 +326,11 @@ async function nodePhase() {
       gold: HERO.gold, cards: FORGED.length, cap: strongholds.filter((s) => s.captured).length,
       season: season.num, quests: dailyQuests && dailyQuests.progress.q1,
     }));
-    if (!st.saved || st.v !== 9) throw new Error('сейв v9 не записан: ' + JSON.stringify(st));
+    if (!st.saved || st.v !== 10) throw new Error('сейв v10 не записан: ' + JSON.stringify(st));
     if (st.gold !== 777 || st.cards !== 3 || st.cap !== 2 || st.season !== 2 || st.quests !== 2) throw new Error('состояние: ' + JSON.stringify(st));
   });
 
-  // ---------- Шаг 1. Round-trip v9 байт-в-контент ----------
+  // ---------- Шаг 1. Round-trip v10 байт-в-контент ----------
   await step('B3 [шаг1] F5 round-trip v9 байт-в-контент: gold/strongholds/army/siege/tasks/quests(progress)/season/hirePool — stable stringify идентичен (норма builtAt null→undefined)', async () => {
     await ev(() => saveGameState());
     const before = await grabStr();
@@ -369,7 +369,7 @@ async function nodePhase() {
         savedNoShards: !JSON.stringify(saved).includes('"shards"'),
       };
     });
-    if (st.v !== 9) throw new Error('schemaVersion: ' + st.v);
+    if (st.v !== 10) throw new Error('schemaVersion: ' + st.v);
     if (st.cap !== 7) throw new Error('захвачено: ' + st.cap);
     if (st.gold !== 555) throw new Error('золото: ' + st.gold);
     if (st.shards !== undefined || st.hollow !== undefined || st.boss !== undefined) throw new Error('мусор остался: ' + JSON.stringify(st));
@@ -379,7 +379,7 @@ async function nodePhase() {
   });
 
   // ---------- Шаг 2б. Миграция v8 без season → Сезон 1 ----------
-  await step('B5 [шаг2б] v8-фикстура без season → v9: сеется Сезон 1 (start=сегодня MSK) со снапшотом {totalXp 7000, gold 1234, captured 3, completions 9, level 7}', async () => {
+  await step('B5 [шаг2б] v8-фикстура без season → v10: сеется Сезон 1 (start=сегодня MSK) со снапшотом {totalXp 7000, gold 1234, captured 3, completions 9, level 7}', async () => {
     await ev(() => {
       const strongholdsArr = [];
       for (let i = 0; i < 20; i++) strongholdsArr.push({ id: 'sh' + String(i + 1).padStart(2, '0'), captured: i < 3, garrison: [], buildings: {}, corruption: { stage: 'ok', debtDays: 0 } });
@@ -508,7 +508,7 @@ async function nodePhase() {
     }));
     if (st.cards !== 3) throw new Error('карточки не восстановлены: ' + st.cards);
     if (st.gold !== 777 || st.cap !== 2 || st.season !== 2) throw new Error('восстановлено неполно: ' + JSON.stringify(st));
-    if (st.savedV !== null && st.savedV !== 9) throw new Error('сейв после восстановления не v9: ' + st.savedV);
+    if (st.savedV !== null && st.savedV !== 10) throw new Error('сейв после восстановления не v10: ' + st.savedV);
     await shot(pg, 'b8_cards_backup_restore');
   });
 

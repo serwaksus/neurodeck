@@ -99,7 +99,7 @@ function v7Fixture(regions) {
 test('миграция v7→v8: regions=5 → 5 captured, золото/карточки/задачи целы', () => {
     const d = v7Fixture(5);
     IV.migrateSyncData(d);
-    assert.equal(d.v, 9);
+    assert.equal(d.v, 10);
     assert.equal(d.strongholds.length, 20);
     d.strongholds.forEach((s, i) => {
         assert.equal(s.id, DATA.STRONGHOLDS[i].id, 'порядок/ID соответствуют каталогу');

@@ -320,6 +320,7 @@
         var num = Math.round(clampNumber(src.num, 1, 999, 1));
         var start = (typeof src.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(src.start)) ? src.start : (todayKey || '2000-01-01');
         var snap = (src.snapshot && typeof src.snapshot === 'object' && !Array.isArray(src.snapshot)) ? src.snapshot : {};
+        var crownBonus = Math.max(0, Math.min(5, Math.round(Number(src.crownBonus) || 0)));
         var snapshot = {
             totalXp: Math.round(clampNumber(snap.totalXp, 0, 1e12, 0)),
             gold: Math.round(clampNumber(snap.gold, 0, 1e12, 0)),
@@ -327,7 +328,7 @@
             completions: Math.round(clampNumber(snap.completions, 0, 1e9, 0)),
             level: Math.round(clampNumber(snap.level, 1, 1000, 1))
         };
-        return { num: num, start: start, snapshot: snapshot };
+        return { num: num, start: start, crownBonus: crownBonus, snapshot: snapshot };
     }
 
     return {

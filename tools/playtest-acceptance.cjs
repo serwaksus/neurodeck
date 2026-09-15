@@ -685,7 +685,7 @@ async function shot(pg, label) {
       header: document.getElementById('progressVal').textContent,
       tasks: TASKS.length,
     }));
-    if (st.v !== 9) throw new Error('schemaVersion: ' + st.v);
+    if (st.v !== 10) throw new Error('schemaVersion: ' + st.v);
     if (st.captured !== 7 || !st.first7 || !st.rest) throw new Error('захвачено: ' + JSON.stringify(st));
     if (st.gold !== 555) throw new Error('золото мигранта изменилось: ' + st.gold);
     if (st.army !== 0) throw new Error('армия не пуста: ' + st.army);
@@ -698,7 +698,7 @@ async function shot(pg, label) {
     await pg.reload({ waitUntil: 'domcontentloaded' });
     await pg.waitForTimeout(1500);
     const st = await ev(() => ({ captured: strongholds.filter((s) => s.captured).length, gold: HERO.gold, v: JSON.parse(localStorage.getItem('neurodeck_full_save')).v }));
-    if (st.captured !== 7 || st.gold !== 555 || st.v !== 9) throw new Error(JSON.stringify(st));
+    if (st.captured !== 7 || st.gold !== 555 || st.v !== 10) throw new Error(JSON.stringify(st));
   });
   await shot(pg, 'b9_migrated');
 
