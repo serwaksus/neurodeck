@@ -73,6 +73,7 @@ const HERO = {
 name: 'Странник', title: '«Тот, кто только начал путь»',
 level: 1, xp: 0, xpToNext: 50, totalXp: 0, gold: 30,
 consecutivePerfectDays: 0,
+streakShields: 0,
 dailyCompletions: 0, dailySkips: 0,
 lastSessionAt: Date.now(), dailyUniqueStats: {}, cardHistory: {}, lastWeeklyReport: null
 };
@@ -84,7 +85,14 @@ cha: { name: 'Харизма',   icon: '🎭', desc: 'Шанс крита', colo
 wil: { name: 'Воля',      icon: '🧘', desc: 'Стрик',      color: '#34d399', dark: '#047857', value: 3, max: 100, attributePoints: 0 },
 agi: { name: 'Ловкость',  icon: '⚡', desc: 'Скорость',   color: '#fb923c', dark: '#c2410c', value: 3, max: 100, attributePoints: 0 },
 };
+var pityCounter = 0; // в сессии; персист через cardHistory не нужен — счёт глобальный
 function getLootChance(card) { return 0.05 + Math.min(0.05, (card.streak || 0) * 0.0025); }
+function lootPityCheck(card) {
+pityCounter++;
+var chance = getLootChance(card);
+if (pityCounter >= 25) { pityCounter = 0; return true; }
+return Math.random() < chance;
+}
 const STARTER_DECK = [
     { name: 'Зарядка 10 мин',     stat: 'str', time: 'утро',  duration: 10 },
     { name: 'Читать 20 мин',      stat: 'int', time: 'вечер', duration: 20 },
@@ -124,6 +132,9 @@ case 'download-sync-file': downloadSyncFile(); break;
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
+case 'set-reminder-freq':
+if (typeof showReminderFreqToast === 'function') showReminderFreqToast(el.dataset.mode);
+break;
 case 'new-game-keep-cards': newGameKeepCards(); break;
 case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
@@ -394,7 +405,7 @@ spiritSay('«Легенда... Твоя дисциплина несокруши�
 }
 }
 HERO.gold = (HERO.gold || 0) + 1;
-if (Math.random() < getLootChance(card)) dropRandomLoot(x, y);
+if (lootPityCheck(card)) dropRandomLoot(x, y);
 checkHeroLevelUp();
 renderCards();
 renderDashboard();
@@ -420,8 +431,17 @@ return;
  sfxFail(); haptic('error');
  HERO.dailySkips++;
  siege.wkSkips = (siege.wkSkips || 0) + 1;
- if (card) { card.streak = 0; renderCards(); }
- HERO.gold = Math.max(0, (HERO.gold || 0) - 1);
+ if ((HERO.streakShields || 0) > 0) {
+showToast('🛡 Стрик сохранён щитом!', 'Осталось щитов: ' + HERO.streakShields, 'save');
+} else {
+card.streak = 0; renderCards();
+}
+ if ((HERO.streakShields || 0) > 0) {
+HERO.streakShields--;
+showToast('🛡 Щит стрика!', 'Щит поглотил пропуск. Осталось щитов: ' + HERO.streakShields, 'save');
+} else {
+HERO.gold = Math.max(0, (HERO.gold || 0) - 1);
+}
  showToast('💢 Пропуск', '«' + card.name + '» — стрик сброшен, −1 💰', 'blood');
  updateHeroUI();
  renderDashboard();
@@ -1732,6 +1752,9 @@ var html = '<div class="sh-treasury">' +
 '<div>Налоги: <b style="color:var(--green)">+' + shIncomePerDay() + ' 💰/день</b></div>' +
 '<div>Содержание: <b style="color:var(--blood-bright)">−' + shUpkeepPerDay() + ' 💰/день</b></div>' +
 '<div>⚔ Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
+var fi = frontIdx();
+var daysToSiege = (7 - ((new Date(Date.now() + 3 * 3600000).getUTCDay() + 1) % 7));
+html += '<div class="sh-context-anchor">📍 Фронт: <b>' + STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—' + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)) + '/10</b></div>';
 // Kingdom path: визуальная полоса прогресса
 html += '<div class="sh-kingdom-path">';
 for (var pi = 0; pi < 20; pi++) {
@@ -2671,6 +2694,12 @@ if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCoun
 if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
 if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
 HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
+if (HERO.consecutivePerfectDays > 0 && HERO.consecutivePerfectDays % 7 === 0) {
+HERO.streakShields = (HERO.streakShields || 0) + 1;
+showToast('🛡 Щит стрика!', 'Идеальная неделя: +1 щит. Следующий пропуск не сломает стрик.', 'save');
+spiritSay('«Твоя неделя безупречна. Тьма отступает — щит готов.»');
+burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#34d399', speed: 10, decay: 0.01, size: 4, shape: 'star', gravity: 0.08 });
+}
 } else {
 HERO.consecutivePerfectDays = 0;
 }
@@ -3060,6 +3089,11 @@ render();
 document.body.appendChild(overlay);
 render();
 setTimeout(function() { overlay.classList.add('show'); }, 50);
+}
+function showReminderFreqToast(mode) {
+var msgs = { daily: '📅 Ежедневные напоминания включены', sunday: '🛡 Только воскресные осады', off: '🔕 Напоминания выключены' };
+showToast('🔔 Напоминания', msgs[mode] || mode, 'save');
+// TODO: отправить на бэкенд когда будет API
 }
 function newGameKeepCards() {
 dungeonConfirm('🔄 Новая игра', 'Сбросить весь прогресс?<br><b>Карточки сохранятся.</b><br><span style="color:var(--blood-bright)">Необратимо.</span>').then(function(ok) {
