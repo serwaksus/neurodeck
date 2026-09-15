@@ -85,157 +85,6 @@
         <div class="t-body"></div>
       </div>
       <div class="tooltip" id="tooltip"></div>
-      <div class="modal-overlay" role="dialog" aria-modal="true" id="goalModal">
-        <div class="modal">
-          <div class="modal-header">
-            <h3>🎯 Новая цель</h3>
-            <button class="modal-close" data-action="close-goal-modal">
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="form-row">
-              <label class="form-label">Тип цели</label>
-              <div class="goal-type-selector" id="goalTypeSelector">
-                <div
-                  class="goal-type-option short selected"
-                  data-action="select-goal-type"
-                  data-type="short"
-                >
-                  <div class="type-icon">🟢</div>
-                  <div class="type-name">Краткая</div>
-                  <div class="type-desc">1-7 дней</div>
-                  <div class="type-reward">+30 XP · -5 HP</div>
-                </div>
-                <div
-                  class="goal-type-option medium"
-                  data-action="select-goal-type"
-                  data-type="medium"
-                >
-                  <div class="type-icon">🔵</div>
-                  <div class="type-name">Средняя</div>
-                  <div class="type-desc">1-4 недели</div>
-                  <div class="type-reward">+80 XP · -12 HP</div>
-                </div>
-                <div
-                  class="goal-type-option long"
-                  data-action="select-goal-type"
-                  data-type="long"
-                >
-                  <div class="type-icon">🟡</div>
-                  <div class="type-name">Долгая</div>
-                  <div class="type-desc">1+ месяц</div>
-                  <div class="type-reward">+200 XP · -25 HP</div>
-                </div>
-              </div>
-            </div>
-            <div class="form-row">
-              <label class="form-label">Название</label
-              ><input
-                class="form-input"
-                id="goalName"
-                placeholder="Пробежать 10 км"
-              />
-            </div>
-            <div class="form-grid-2">
-              <div class="form-row">
-                <label class="form-label">📅 Дедлайн</label
-                ><input class="form-input" type="date" id="goalDeadline" />
-              </div>
-              <div class="form-row">
-                <label class="form-label">🕐 Время</label
-                ><input
-                  class="form-input"
-                  type="time"
-                  id="goalDeadlineTime"
-                  value="23:00"
-                />
-              </div>
-            </div>
-            <div class="form-row">
-              <label class="form-label">📊 Шагов к цели</label
-              ><input
-                class="form-input"
-                type="number"
-                id="goalSteps"
-                value="3"
-                min="1"
-                max="20"
-                onchange="renderStepInputs()"
-              />
-            </div>
-            <div class="form-row" id="goalStepInputsWrap" style="display: none">
-              <label class="form-label">📝 Описание шагов</label>
-              <div
-                id="goalStepInputs"
-                style="display: flex; flex-direction: column; gap: 8px"
-              ></div>
-            </div>
-            <div class="form-row">
-              <label class="form-label">⚡ Привязанный стат</label>
-              <div id="goalStatChips">
-                <div
-                  class="stat-chip selected"
-                  data-action="select-goal-stat"
-                  data-stat="str"
-                >
-                  ⚔ Сила
-                </div>
-                <div
-                  class="stat-chip"
-                  data-action="select-goal-stat"
-                  data-stat="end"
-                >
-                  🛡 Стойкость
-                </div>
-                <div
-                  class="stat-chip"
-                  data-action="select-goal-stat"
-                  data-stat="int"
-                >
-                  🧠 Интеллект
-                </div>
-                <div
-                  class="stat-chip"
-                  data-action="select-goal-stat"
-                  data-stat="cha"
-                >
-                  🎭 Харизма
-                </div>
-                <div
-                  class="stat-chip"
-                  data-action="select-goal-stat"
-                  data-stat="wil"
-                >
-                  🧘 Воля
-                </div>
-                <div
-                  class="stat-chip"
-                  data-action="select-goal-stat"
-                  data-stat="agi"
-                >
-                  ⚡ Ловкость
-                </div>
-              </div>
-            </div>
-            <div class="form-row">
-              <label class="form-label">📜 Описание</label
-              ><input
-                class="form-input"
-                id="goalDesc"
-                placeholder="Зачем эта цель..."
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="demo-btn" data-action="close-goal-modal">
-              Отмена</button
-            ><button class="demo-btn primary" data-action="create-goal">
-              🎯 Создать
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
       <div
         class="modal-overlay"
@@ -735,6 +584,157 @@
           <div class="modal-footer">
             <button class="demo-btn" data-action="close-sync-modal">
               Закрыть
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-overlay" role="dialog" aria-modal="true" id="goalModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>🎯 Новая цель</h3>
+            <button class="modal-close" data-action="close-goal-modal">
+              ✕
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <label class="form-label">Тип цели</label>
+              <div class="goal-type-selector" id="goalTypeSelector">
+                <div
+                  class="goal-type-option short selected"
+                  data-action="select-goal-type"
+                  data-type="short"
+                >
+                  <div class="type-icon">🟢</div>
+                  <div class="type-name">Краткая</div>
+                  <div class="type-desc">1-7 дней</div>
+                  <div class="type-reward">+30 XP · -5 HP</div>
+                </div>
+                <div
+                  class="goal-type-option medium"
+                  data-action="select-goal-type"
+                  data-type="medium"
+                >
+                  <div class="type-icon">🔵</div>
+                  <div class="type-name">Средняя</div>
+                  <div class="type-desc">1-4 недели</div>
+                  <div class="type-reward">+80 XP · -12 HP</div>
+                </div>
+                <div
+                  class="goal-type-option long"
+                  data-action="select-goal-type"
+                  data-type="long"
+                >
+                  <div class="type-icon">🟡</div>
+                  <div class="type-name">Долгая</div>
+                  <div class="type-desc">1+ месяц</div>
+                  <div class="type-reward">+200 XP · -25 HP</div>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Название</label
+              ><input
+                class="form-input"
+                id="goalName"
+                placeholder="Пробежать 10 км"
+              />
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label class="form-label">📅 Дедлайн</label
+                ><input class="form-input" type="date" id="goalDeadline" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">🕐 Время</label
+                ><input
+                  class="form-input"
+                  type="time"
+                  id="goalDeadlineTime"
+                  value="23:00"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">📊 Шагов к цели</label
+              ><input
+                class="form-input"
+                type="number"
+                id="goalSteps"
+                value="3"
+                min="1"
+                max="20"
+                onchange="renderStepInputs()"
+              />
+            </div>
+            <div class="form-row" id="goalStepInputsWrap" style="display: none">
+              <label class="form-label">📝 Описание шагов</label>
+              <div
+                id="goalStepInputs"
+                style="display: flex; flex-direction: column; gap: 8px"
+              ></div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">⚡ Привязанный стат</label>
+              <div id="goalStatChips">
+                <div
+                  class="stat-chip selected"
+                  data-action="select-goal-stat"
+                  data-stat="str"
+                >
+                  ⚔ Сила
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="end"
+                >
+                  🛡 Стойкость
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="int"
+                >
+                  🧠 Интеллект
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="cha"
+                >
+                  🎭 Харизма
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="wil"
+                >
+                  🧘 Воля
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-goal-stat"
+                  data-stat="agi"
+                >
+                  ⚡ Ловкость
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">📜 Описание</label
+              ><input
+                class="form-input"
+                id="goalDesc"
+                placeholder="Зачем эта цель..."
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="demo-btn" data-action="close-goal-modal">
+              Отмена</button
+            ><button class="demo-btn primary" data-action="create-goal">
+              🎯 Создать
             </button>
           </div>
         </div>

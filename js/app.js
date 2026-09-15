@@ -1586,9 +1586,9 @@ if (d.market) market += d.market * m;
 var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
 taxes = Math.round(taxes * (1 + tBonus));
-gold += taxes + Math.round(econ);
-dqProgress('gold', taxes + Math.round(econ));
 var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
+gold += income;
+dqProgress('gold', income);
 var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
 strongholds.forEach(function(s, i) {
 if (!s.captured && i !== 0) return;
@@ -1672,6 +1672,8 @@ else html += '<div class="sh-siege-row lost">💀 <b>' + esc(r.name) + '</b> —
 });
 document.getElementById('siegeReportBody').innerHTML = html;
 // Осадный спектакль: полноэкранная вспышка
+var anyHeld = rows.some(function(r) { return r.held; });
+var anyFell = rows.some(function(r) { return !r.held && !r.refuge; });
 var spect = document.createElement('div');
 spect.className = 'siege-spectacle';
 var mainIcon = anyFell ? '💀' : '🛡';
@@ -1681,8 +1683,6 @@ document.body.appendChild(spect);
 setTimeout(function() { spect.remove(); }, 3600);
 modal.classList.add('show');
 // Осадная драма: shake + частицы + звук по исходу
-var anyHeld = rows.some(function(r) { return r.held; });
-var anyFell = rows.some(function(r) { return !r.held && !r.refuge; });
 if (anyFell) { screenShake(15, 800); burstParticles(window.innerWidth/2, window.innerHeight/3, 120, { color: '#c73e4d', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12 }); sfxBossDefeated(); haptic('heavy'); }
 else if (anyHeld) { burstParticles(window.innerWidth/2, window.innerHeight/3, 60, { color: '#34d399', speed: 8, decay: 0.012, size: 3, shape: 'star', gravity: 0.08 }); sfxLevelUp(); haptic('medium'); }
 }
@@ -2319,11 +2319,8 @@ return html;
 }
 function exportJson() {
 try {
-var data = {
-exportedAt: new Date().toISOString(),
-hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
-xpHistory: xpHistory
-};
+var data = buildSyncData();
+data.exportedAt = new Date().toISOString();
 var json = JSON.stringify(data, null, 2);
 var blob = new Blob([json], { type: 'application/json' });
 var url = URL.createObjectURL(blob);
@@ -3226,9 +3223,11 @@ siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 dailyQuests = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
 xpHistory = []; bloodOath = null;
-try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); localStorage.removeItem('neurodeck_onboarding_done'); } catch(e) {}
+season = STATE_GUARDS.sanitizeSeason({ num: 1, start: getMSKDayKey() }, getMSKDayKey());
+try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); localStorage.removeItem('neurodeck_ever_saved'); localStorage.removeItem('neurodeck_onboarding_done'); localStorage.removeItem('neurodeck_starter_done'); } catch(e) {}
+// location.reload() → свежая загрузка: saveGameState здесь НЕ вызывать,
+// иначе ever_saved=1 воскресает и старт-колода не вернётся (QA-lead O-10)
 try { var csR = getCloudStorage(); if (csR) csR.removeItem(CLOUD_META_KEY, function(){}); } catch(e) {}
-saveGameState();
 location.reload();
 });
 }
@@ -3246,13 +3245,14 @@ siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 TASKS = []; taskIdCounter = 1;
 dailyQuests = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
+season = STATE_GUARDS.sanitizeSeason({ num: 1, start: getMSKDayKey() }, getMSKDayKey());
 xpHistory = []; bloodOath = null;
 try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {}
 localStorage.removeItem('neurodeck_onboarding_done');
 try { var csR = getCloudStorage(); if (csR) { csR.removeItem(CLOUD_META_KEY, function(){}); } } catch(e) {}
 saveGameState();
 HERO.xpToNext = getXpToNext(HERO.level);
-renderCards(); renderDashboard(); renderStrongholds(); renderTasks(); updateHeroUI(); renderGoals(); renderStats();
+renderCards(); renderDashboard(); renderStrongholds(); renderTasks(); updateHeroUI(); renderGoals(); renderStats(); updateStrongholdProgress();
 spiritSay('«С чистого листа, Владыка. Дорога ждёт.»');
 localStorage.removeItem('neurodeck_onboarding_done');
 showToast('🔄 Новая игра', 'Карточки сохранены. Прогресс сброшен.', 'save');
