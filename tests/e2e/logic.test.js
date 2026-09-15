@@ -188,6 +188,27 @@ test('tasks: complete -> chest choice adds gold or xp; ghosts expire after ghost
   if (!res.goneAfter3) throw new Error('ghost must leave after ghostDays nights');
 });
 
+test('ghosts: nightly penalty each night, capped at 5/night; ghostfree night is free', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('neurodeck_onboarding_done', '1'); });
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+  const res = await page.evaluate(() => {
+    TASKS.length = 0;
+    for (let i = 0; i < 7; i++) TASKS.push({ id: 9100 + i, name: 'gh' + i, tier: 'normal', deadline: Date.now() - 86400000, status: 'ghost', createdAt: Date.now() - 86400000, doneAt: null, ghostSince: Date.now() - 86400000 });
+    const g0 = HERO.gold;
+    dailyEvent = { id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: '' };
+    expireGhostTasks(getMSKDayKey(Date.now() - 86400000));
+    const freeNight = HERO.gold - g0;
+    dailyEvent = null;
+    expireGhostTasks(getMSKDayKey(Date.now() - 86400000));
+    const cappedNight = HERO.gold - g0 - freeNight;
+    dailyEvent = null;
+    return { freeNight: freeNight, cappedNight: cappedNight };
+  });
+  if (res.freeNight !== 0) throw new Error('ghostfree night must be free, delta ' + res.freeNight);
+  if (res.cappedNight !== -5) throw new Error('7 ghosts must cost capped 5/night, got ' + res.cappedNight);
+});
+
 test('quest board: counters track progress; claim gated until goal met', async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('neurodeck_onboarding_done', '1'); });
   await page.goto('/');

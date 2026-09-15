@@ -1553,7 +1553,7 @@ if (STAGE_ORDER_WORST[st] > STAGE_ORDER_WORST[worst]) worst = st;
 });
 return worst;
 }
-function hireCostOf(tier) { return Math.ceil(UNIT_TIERS[tier].cost * (1 - Math.min(0.30, 0.005 * STATS.cha.value))); }
+function hireCostOf(tier) { var base = UNIT_TIERS[tier].cost * (1 - Math.min(0.30, 0.005 * STATS.cha.value)); if (dailyEvent && dailyEvent.id === 'smith') base *= 0.75; return Math.ceil(base); }
 function recalcHirePool() {
 ensureStrongholdState();
 var wind = hasSpecialOk('sp4') ? 1.4 : 1;
@@ -1586,6 +1586,7 @@ if (d.market) market += d.market * m;
 var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
 taxes = Math.round(taxes * (1 + tBonus));
+if (dailyEvent && dailyEvent.id === 'market') taxes = Math.round(taxes * 1.5); // 🏪 Ярмарка
 var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 gold += income;
 dqProgress('gold', income);
@@ -1808,6 +1809,7 @@ if (d.market) market += d.market * m;
 });
 var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 taxes = Math.round(taxes * (1 + (SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0)));
+if (dailyEvent && dailyEvent.id === 'market') taxes = Math.round(taxes * 1.5); // 🏪 Ярмарка — parity с тиком
 return Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 }
 function shUpkeepPerDay() {
@@ -2095,12 +2097,13 @@ renderTasks(); renderDashboard(); saveGameState();
 }
 function expireGhostTasks(yesterdayKey) {
 var changed = false;
-var penaltyCount = 0;
+var newGhosts = 0;
+var ghostFree = !!(typeof dailyEvent !== 'undefined' && dailyEvent && dailyEvent.id === 'ghostfree');
 TASKS.forEach(function(t) {
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
 var dlDay = t.deadline ? getMSKDayKey(t.deadline) : yesterdayKey;
 if (t.status === 'active' && dlDay <= yesterdayKey) {
-t.status = 'ghost'; t.ghostSince = Date.now(); penaltyCount++; changed = true;
+t.status = 'ghost'; t.ghostSince = Date.now(); newGhosts++; changed = true;
 } else if (t.status === 'done' && t.doneAt) {
 if (daysBetween(getMSKDayKey(t.doneAt), yesterdayKey) >= tier.doneGraceDays) {
 var half = Math.floor(tier.gold / 2);
@@ -2116,15 +2119,17 @@ showToast('👻 Призрак ушёл', '«' + t.name + '» растворил
 }
 });
 TASKS = TASKS.filter(function(t) { return t.status !== 'gone' && t.status !== 'chest_open'; });
-if (penaltyCount > 0) {
-var p = Math.min(5, penaltyCount);
-siege.wkTaskFails = (siege.wkTaskFails || 0) + penaltyCount;
+if (newGhosts > 0) siege.wkTaskFails = (siege.wkTaskFails || 0) + newGhosts;
+if (ghostFree) return { ghostNights: 0, free: true }; // «Духи дремлют»: переходы и уходы работают, списаний нет
+var ghostNights = 0;
+TASKS.forEach(function(t) { if (t.status === 'ghost') ghostNights++; });
+if (ghostNights > 0) {
+var p = Math.min(5, ghostNights); // кап 5💰/ночь — анти-спираль (BALANCE круг 7)
 HERO.gold = Math.max(0, (HERO.gold || 0) - p);
-showToast('👻 Призраки ночи', penaltyCount + ' просроченных задач: −' + p + ' 💰', 'blood');
-sfxFail(); haptic('error');
-spawnBloodRain(15);
+showToast('👻 Призраки ночью', '−' + p + ' 💰 (' + ghostNights + ' призраков · кап 5)', 'blood');
 }
-if (changed || penaltyCount > 0) { renderTasks(); renderDashboard(); updateHeroUI(); saveGameState(); }
+if (changed || newGhosts > 0 || ghostNights > 0) { renderTasks(); renderDashboard(); updateHeroUI(); saveGameState(); }
+return { ghostNights: ghostNights, free: false };
 }
 function taskCard(t) {
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
@@ -2780,6 +2785,19 @@ lastDayReset = todayKey;
 if (_prevDay !== null) {
 var gapDays = Math.max(1, daysBetween(_prevDay, todayKey));
 if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7 (ADR §5: кап 7 суток)
+var _isBackfill = gapDays > 1;
+// Ежедневное событие: ролл ДО тиков дня — Кузнец/Ярмарка/Духи действуют в свой день
+var dailyEvents = [
+{ id: 'caravan', icon: '🐎', name: 'Караван', text: 'Торговцы из-за гор: +' + Math.max(20, capturedCount() * 15) + ' 💰 мгновенно!' },
+{ id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
+{ id: 'market', icon: '🏪', name: 'Ярмарка', text: 'Налоги твердынь ×1.5 сегодня!' },
+{ id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: 'Призраки задач сегодня безобидны.' },
+{ id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' }
+];
+var ev = dailyEvents[Math.floor(Math.random() * dailyEvents.length)];
+dailyEvent = ev;
+if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); HERO.gold = (HERO.gold || 0) + bonus; }
+if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
 var revenue = 0, upkeepTotal = 0, unpaid = 0;
 for (var gd = gapDays; gd >= 1; gd--) {
 expireGhostTasks(getMSKDayKey(Date.now() - gd * 86400000));
@@ -2798,19 +2816,6 @@ if (unpaid > 0) {
 showToast('🏚 Не хватило на содержание', unpaid + ' дн. дефицита — постройки ветшают (grace ' + (2 + Math.floor(STATS.wil.value / 20)) + ' дн.)', 'blood');
 sfxFail(); haptic('error');
 }
-        // Ежедневное событие: 1 из 5 (Vаrban, Кузнец, Рынок, Тайна, Тихий день)
-var _isBackfill = gapDays > 1;
-var dailyEvents = [
-{ id: 'caravan', icon: '🐎', name: 'Караван', text: 'Торговцы из-за гор: +' + Math.max(20, capturedCount() * 15) + ' 💰 мгновенно!' },
-{ id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
-{ id: 'market', icon: '🏪', name: 'Ярмарка', text: 'Налоги твердынь ×1.5 сегодня!' },
-{ id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: 'Призраки задач сегодня безобидны.' },
-{ id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' }
-];
-var ev = dailyEvents[Math.floor(Math.random() * dailyEvents.length)];
-dailyEvent = ev;
-if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); HERO.gold = (HERO.gold || 0) + bonus; }
-if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
 if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {
 HERO.consecutivePerfectDays = (HERO.consecutivePerfectDays || 0) + 1;
 if (HERO.consecutivePerfectDays > 0 && HERO.consecutivePerfectDays % 7 === 0) {
@@ -3221,7 +3226,7 @@ strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
 siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
-dailyQuests = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
+dailyQuests = null; dailyEvent = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
 xpHistory = []; bloodOath = null;
 season = STATE_GUARDS.sanitizeSeason({ num: 1, start: getMSKDayKey() }, getMSKDayKey());
 try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); localStorage.removeItem('neurodeck_ever_saved'); localStorage.removeItem('neurodeck_onboarding_done'); localStorage.removeItem('neurodeck_starter_done'); } catch(e) {}
@@ -3244,7 +3249,7 @@ army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
 siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 TASKS = []; taskIdCounter = 1;
-dailyQuests = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
+dailyQuests = null; dailyEvent = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
 season = STATE_GUARDS.sanitizeSeason({ num: 1, start: getMSKDayKey() }, getMSKDayKey());
 xpHistory = []; bloodOath = null;
 try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {}

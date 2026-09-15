@@ -172,7 +172,7 @@ lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, hirePool, savedAt: Date.now()
 };
-try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.season = (typeof season !== 'undefined') ? season : null; } catch(e) {}
+try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; } catch(e) {}
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
@@ -797,6 +797,7 @@ if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
 if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
     if (typeof dailyQuests !== 'undefined' && dailyQuests && data.dailyQuests && typeof data.dailyQuests === 'object' && data.dailyQuests.day) { dailyQuests.day = data.dailyQuests.day; dailyQuests.done = data.dailyQuests.done || {}; dailyQuests.progress = data.dailyQuests.progress || {}; dailyQuests.quests = Array.isArray(data.dailyQuests.quests) ? data.dailyQuests.quests : []; }
+if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEvent === 'object' && data.dailyEvent.id) dailyEvent = data.dailyEvent;
 if (typeof season !== 'undefined' && data.season && typeof data.season === 'object') { season = STATE_GUARDS.sanitizeSeason(data.season, (typeof getMSKDayKey === 'function') ? getMSKDayKey() : null); }
 if (Array.isArray(data.tasks)) {
 TASKS = data.tasks.filter(function(t) {
