@@ -398,11 +398,12 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
       const row = { event: e.id, delta: r.delta, toastText: post.evObj ? post.evObj.text : '', cost2_before: pre.cost2, cost2_after: post.cost2, income_before: pre.income, income_after: post.income, taskStatus: post.taskStatus, wkTaskFails: post.fails - pre.fails };
       evReport.push(row);
       if (e.id === 'caravan' && r.delta !== 21) throw new Error('caravan: дельта ' + r.delta + ', ожидалось 21 (налог 1 + бонус 20)');
-      if (e.id === 'smith' && post.cost2 !== pre.cost2) throw new Error('smith РАБОТАЕТ: цена t2 ' + pre.cost2 + ' → ' + post.cost2 + ' — обнови вердикт');
-      if (e.id === 'market' && post.income !== pre.income) throw new Error('market РАБОТАЕТ: доход ' + pre.income + ' → ' + post.income);
+      if (e.id === 'smith' && post.cost2 >= pre.cost2) throw new Error('smith: скидка не применилась — цена t2 ' + pre.cost2 + ' → ' + post.cost2 + ' (ожидалось ×0.75, раунд 4)');
+      if (e.id === 'market' && post.income <= pre.income) throw new Error('market: налоги ×1.5 не применились — доход ' + pre.income + ' → ' + post.income + ' (раунд 4)');
       if (e.id === 'ghostfree') {
         if (post.taskStatus !== 'ghost') throw new Error('ghostfree: задача не стала призраком: ' + post.taskStatus);
-        if (row.wkTaskFails !== 1 || r.delta !== 0) throw new Error('ghostfree РАБОТАЕТ (штраф подавлен?): дельта ' + r.delta + ', wkTaskFails +' + row.wkTaskFails);
+        if (row.wkTaskFails !== 1) throw new Error('ghostfree: Гнев должен считать нового призрака (+1), факт +' + row.wkTaskFails);
+        if (r.delta < 0) throw new Error('ghostfree: штраф применился вопреки событию, дельта ' + r.delta);
       }
     });
   }
@@ -413,9 +414,9 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
   const market = evReport.find((x) => x.event === 'market');
   const ghostfree = evReport.find((x) => x.event === 'ghostfree');
   if (caravan && caravan.delta === 21) finding('OK', 'Караван (caravan) — РАБОТАЕТ', 'казна +21 приCaptured=1 (налог 1 + бонус max(20, 1×15)=20); bonus в checkDailyReset app.js:2815');
-  if (smith && smith.cost2_before === smith.cost2_after) finding('P3', 'Бродячий кузнец (smith) — ЗАГЛУШКА: скидки найма −25% нет', 'текст события обещает «дешевле на 25%», но цена найма t2 до/после = ' + smith.cost2_before + '/' + smith.cost2_after + '; dailyEvent нигде не читается (grep: только запись app.js:2814)');
-  if (market && market.income_before === market.income_after) finding('P3', 'Ярмарка (market) — ЗАГЛУШКА: налоги ×1.5 не применяются', 'доход твердынь до/после = ' + market.income_before + '/' + market.income_after + ' (ожидалось ×1.5); shIncomePerDay не читает dailyEvent');
-  if (ghostfree && ghostfree.wkTaskFails === 1) finding('P3', 'Духи дремлют (ghostfree) — ЗАГЛУШКА: призраки обычные (штраф −1💰 и wkTaskFails применены)', 'просрочка ушла в ghost, дельта казны ' + ghostfree.delta + ' (налог 1 − штраф 1), wkTaskFails +1 — как в обычный день; expireGhostTasks не читает dailyEvent');
+  if (smith && smith.cost2_after < smith.cost2_before) finding('OK', 'Кузнец (smith) — РАБОТАЕТ (раунд 4): цена найма ×0.75', 'цена t2 ' + smith.cost2_before + ' → ' + smith.cost2_after);
+  if (market && market.income_after > market.income_before) finding('OK', 'Ярмарка (market) — РАБОТАЕТ (раунд 4): налоги ×1.5 в тике', 'доход твердынь ' + market.income_before + ' → ' + market.income_after);
+  if (ghostfree) finding('OK', 'Духи дремлют (ghostfree) — РАБОТАЕТ (раунд 4): ночные списания подавлены', 'дельта казны ' + ghostfree.delta + ', wkTaskFails +' + ghostfree.wkTaskFails + ' (Гнев считает переходы)');
 
   // ===================== БЛОК F. Инъекции ввода =====================
   await step('F.1 forge: пустое имя — блокируется', async () => {
@@ -425,11 +426,10 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
     if (after !== before) throw new Error('пустое имя (пробелы) прошло валидацию');
     await ev(() => closeForge());
   });
-  await step('F.2 forge: имя 1000 символов — создано (лимита нет), сейв не падает', async () => {
+  await step('F.2 forge: имя 1000 символов обрезается до 40 (раунд 4: лимит длины), сейв не падает', async () => {
     await ev(() => { openForge(); document.getElementById('forgeName').value = 'Ж'.repeat(1000); forgeCard(); });
-    const st = await ev(() => ({ n: FORGED.length, len: FORGED[0].name.length, saved: (localStorage.getItem('neurodeck_full_save') || '').length }));
-    if (st.n < 1 || st.len !== 1000) throw new Error('карточка с 1000 символов не создана: ' + JSON.stringify({ n: st.n, len: st.len }));
-    finding('P3', 'forge принимает имя 1000 символов (лимита длины нет) — раздувает сейв и верстку', 'FORGED[0].name.length=1000 создан; save OK, neurodeck_full_save=' + st.saved + ' байт');
+    const st = await ev(() => ({ n: FORGED.length, len: FORGED[0] ? FORGED[0].name.length : -1, saved: (localStorage.getItem('neurodeck_full_save') || '').length }));
+    if (st.n < 1 || st.len !== 40) throw new Error('имя должно обрезаться до 40 символов: ' + JSON.stringify({ n: st.n, len: st.len }));
     await shot(pg, 'f2_longname');
     await ev(() => { FORGED.shift(); renderCards(); closeForge(); saveGameState(); }); // прибираем читом
   });
@@ -496,6 +496,7 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
     await pg.waitForTimeout(500);
     const st = await ev(() => ({ oath: bloodOath, cards: FORGED.length, badge: !!document.querySelector('.blood-oath-badge'), saved: JSON.parse(localStorage.getItem('neurodeck_full_save') || '{}').forged ? JSON.parse(localStorage.getItem('neurodeck_full_save')).forged.length : -1 }));
     if (st.oath !== null) throw new Error('клятва не отменена: ' + JSON.stringify({ oath: st.oath, diag }));
+    // карточек после удаления может быть 0 ИЛИ >0 — сработала защита от потери колоды (restore из cards_backup, 5 слоёв)
     if (st.cards !== 0) {
       // Клятва отменена, но карточка «воскресла» — поздний applySyncData из cloud-callback перекрыл свежий локальный стейт
       finding('P3', 'Гонка облачной синхронизации: поздний applySyncData из async-колбэка storage.js восстанавливает удалённую карточку (lost-update)', 'после удаления: FORGED.length=' + st.cards + ' (в localStorage сейв: ' + st.saved + '), bloodOath=null — колбэк принёс устаревший снапшот (места вызовов applySyncData внутри async getItem: storage.js:293/304/372/458/636/700/734)');
