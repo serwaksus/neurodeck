@@ -3164,6 +3164,8 @@ localStorage.removeItem('neurodeck_onboarding_done');
 showToast('🔄 Новая игра', 'Карточки сохранены. Прогресс сброшен.', 'save');
 });
 }
+ensureStrongholdState();
+if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [] };
 loadGameState();
 checkDailyReset();
 checkBloodOath();

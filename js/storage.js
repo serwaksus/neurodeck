@@ -772,7 +772,7 @@ if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongho
 if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
 if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
-    if (data.dailyQuests && typeof data.dailyQuests === 'object' && data.dailyQuests.day) { dailyQuests.day = data.dailyQuests.day; dailyQuests.done = data.dailyQuests.done || {}; }
+    if (typeof dailyQuests !== 'undefined' && dailyQuests && data.dailyQuests && typeof data.dailyQuests === 'object' && data.dailyQuests.day) { dailyQuests.day = data.dailyQuests.day; dailyQuests.done = data.dailyQuests.done || {}; }
 if (Array.isArray(data.tasks)) {
 TASKS = data.tasks.filter(function(t) {
 return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&
