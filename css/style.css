@@ -865,3 +865,193 @@ textarea:focus-visible {
 .card-skip-row .card-btn.fail { min-width: 44px; min-height: 28px; font-size: 11px; color: var(--text-dim); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 2px 8px; }
 .card-skip-row .card-btn.fail:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
 :root.perf-eco .card-complete-btn { transition: none; }
+
+/* ================================================================== */
+/* ================= VISUAL OVERHAUL v55 (У1+У2) ==================== */
+/* ================================================================== */
+
+/* ---- У1.1: Типографика ---- */
+:root {
+  --font-display: 'Cinzel', 'Georgia', serif;
+  --font-body: 'Crimson Text', 'Georgia', serif;
+  --radius-card: 8px;
+  --radius-btn: 6px;
+  --radius-modal: 12px;
+  --shadow-card: 0 4px 16px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.3);
+  --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.55), 0 2px 8px rgba(212,165,116,0.15);
+  --shadow-modal: 0 12px 48px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4);
+  --gold-grad: linear-gradient(135deg, #d4a574 0%, #f4c896 50%, #c49a4a 100%);
+  --blood-grad: linear-gradient(135deg, #8b2635 0%, #c73e4d 100%);
+  --green-grad: linear-gradient(135deg, #047857 0%, #34d399 100%);
+}
+
+html, body {
+  font-family: var(--font-body) !important;
+  font-size: 15px;
+}
+
+h1, h2, h3, .view-title, .modal-header h3,
+.sh-panel-title, .sh-prov-title, .sh-quest-title, .logo,
+.header, .tab, .demo-btn, .forge-btn, .goals-add {
+  font-family: var(--font-display) !important;
+}
+
+/* Минимальный читаемый размер */
+.card-meta, .card-stats-line, .sh-meta, .sh-req,
+.goal-filter, .card-adaptation-tag, .stat-bar-label,
+.stat-attr-label, .sh-quest, .sh-build-meta {
+  font-size: 13px !important;
+}
+
+.view-title { font-size: 20px !important; letter-spacing: 2px; }
+.view-subtitle { font-size: 13px !important; }
+.card-name { font-size: 15px !important; font-weight: 600; }
+.sh-name, .sh-build-name { font-size: 14px !important; }
+
+/* ---- У1.2: Скругления ---- */
+.card, .sh-card, .sh-prov, .stat-card, .goal-card, .task-card,
+.sh-quest-board, .sh-building, .tract-region {
+  border-radius: var(--radius-card) !important;
+}
+.demo-btn, .forge-btn, .goals-add, .goal-filter, .card-btn,
+.sh-assault, .sh-buy, .sh-mini, .task-btn, .tract-buy,
+.backpack-tab, .goal-btn, .tab {
+  border-radius: var(--radius-btn) !important;
+}
+.modal, .confirm-modal, .onboarding-card {
+  border-radius: var(--radius-modal) !important;
+}
+
+/* ---- У1.3: Глубина и слои ---- */
+.card, .sh-card, .stat-card, .goal-card, .task-card,
+.sh-quest-board, .sh-treasury, .sh-prov {
+  box-shadow: var(--shadow-card) !important;
+}
+.modal, .confirm-modal {
+  box-shadow: var(--shadow-modal) !important;
+}
+.card-progress-bar, .stat-bar-fill, .hero-xp-fill,
+.hero-mini-xp-fill, .stat-attr-progress, .map-progress-fill,
+.tract-build-fill {
+  box-shadow: 0 0 8px rgba(212,165,116,0.3);
+}
+
+/* ---- У1.4: Hover — карточки приподнимаются ---- */
+.card:hover, .sh-card:hover, .goal-card:hover, .task-card:hover,
+.stat-card:hover, .sh-prov:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover) !important;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card, .sh-card, .goal-card, .task-card, .stat-card, .sh-prov {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* ---- У1.5: Золотые градиенты на кнопках ---- */
+.demo-btn.primary, .forge-btn, .goals-add {
+  background: linear-gradient(135deg, rgba(212,165,116,0.25), rgba(139,90,43,0.2)) !important;
+  border: 1px solid var(--gold-bright) !important;
+  color: var(--gold-bright) !important;
+  text-shadow: 0 0 8px rgba(212,165,116,0.3);
+}
+.demo-btn.primary:hover, .forge-btn:hover, .goals-add:hover {
+  background: linear-gradient(135deg, rgba(212,165,116,0.35), rgba(139,90,43,0.3)) !important;
+  box-shadow: 0 0 16px rgba(212,165,116,0.3);
+}
+.card-complete-btn {
+  background: linear-gradient(135deg, rgba(212,165,116,0.18), rgba(139,90,43,0.1)) !important;
+  border: 1px solid var(--gold-bright) !important;
+  text-shadow: 0 0 6px rgba(212,165,116,0.3);
+}
+.card-complete-btn:hover {
+  background: linear-gradient(135deg, rgba(212,165,116,0.28), rgba(139,90,43,0.18)) !important;
+  box-shadow: 0 0 20px rgba(212,165,116,0.25);
+}
+
+/* ---- У1.6: Shimmer на прогресс-барах ---- */
+.card-progress-bar, .stat-bar-fill, .hero-xp-fill,
+.hero-mini-xp-fill, .stat-attr-progress {
+  position: relative;
+  overflow: hidden;
+}
+.card-progress-bar::after, .stat-bar-fill::after, .hero-xp-fill::after,
+.hero-mini-xp-fill::after, .stat-attr-progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+  animation: shimmer 2.5s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+:root.perf-eco .card-progress-bar::after, :root.perf-eco .stat-bar-fill::after,
+:root.perf-eco .hero-xp-fill::after, :root.perf-eco .stat-attr-progress::after {
+  animation: none; display: none;
+}
+
+/* ---- У1.7: Спрайты крупнее ---- */
+.sh-icon img { width: 52px !important; height: auto !important; }
+.sh-build-icon img { width: 48px !important; height: auto !important; }
+.hero-avatar-img { width: 88px !important; height: 88px !important; }
+.hero-avatar { font-size: 64px !important; }
+.sh-icon { font-size: 32px; width: 52px; }
+
+/* ---- У2.1: Параллакс тумана (2 слоя, разные скорости) ---- */
+.mist-layer { will-change: transform; }
+.mist-layer svg { transition: transform 0.1s linear; }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(212,165,116,0.03), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 70%, rgba(199,62,77,0.02), transparent);
+}
+
+/* ---- У2.2: Свечения по редкости ---- */
+.card.rank-S, .card.rank-SS, .card.rank-SSS {
+  box-shadow: var(--shadow-card), 0 0 16px rgba(251,191,36,0.15) !important;
+}
+.card.rank-A, .card.rank-AA, .card.rank-AAA {
+  box-shadow: var(--shadow-card), 0 0 12px rgba(192,132,252,0.1) !important;
+}
+.card.rank-B, .card.rank-BB, .card.rank-BBB {
+  box-shadow: var(--shadow-card), 0 0 8px rgba(96,165,250,0.08) !important;
+}
+.card.rank-S:hover, .card.rank-SS:hover, .card.rank-SSS:hover {
+  box-shadow: var(--shadow-card-hover), 0 0 24px rgba(251,191,36,0.25) !important;
+}
+
+/* ---- У2.3: Золотые искры на фоне ---- */
+.dust-canvas-gold { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.15; }
+
+/* ---- У2.4: Переходы вкладок ---- */
+.view { animation: viewFadeSlide 0.3s ease-out; }
+@keyframes viewFadeSlide {
+  0% { opacity: 0; transform: translateX(12px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+:root.perf-eco .view { animation: none; }
+
+/* ---- У2.5: SVG-иконки на ключевых кнопках ---- */
+.card-complete-btn svg, .card-btn svg { display: inline; vertical-align: middle; margin-right: 4px; }
+
+/* ---- Eco mode: отключить все новые анимации ---- */
+:root.perf-eco .sh-kingdom-path { animation: none; }
+:root.perf-eco .card:hover, :root.perf-eco .sh-card:hover,
+:root.perf-eco .goal-card:hover, :root.perf-eco .stat-card:hover {
+  transform: none;
+}
+
+/* ---- Мобильная адаптация ---- */
+@media (max-width: 400px) {
+  .card-name { font-size: 14px !important; }
+  .sh-icon img { width: 44px !important; }
+  .sh-build-icon img { width: 40px !important; }
+  .hero-avatar-img { width: 72px !important; height: 72px !important; }
+  .view-title { font-size: 18px !important; }
+}
