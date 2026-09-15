@@ -250,9 +250,7 @@ var oathBadge = (bloodOath && bloodOath.status === 'active' && bloodOath.cardId 
 ? '<div class="blood-oath-badge">🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
 el.innerHTML =
 oathBadge +
-'<div class="card-actions">' +
-    (doneToday ? '<div class="card-btn done-today-btn" title="Уже выполнено сегодня">✓</div>' : '<div class="card-btn" data-action="complete-card" data-id="' + card.id + '" title="Выполнить">✓</div>') +
-   '<div class="card-btn fail" data-action="fail-card" data-id="' + card.id + '" title="Пропустить">✕</div>' +
+'<div class="card-corner-actions">' +
    '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать">✎</div>' +
    '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить">🗑</div>' +
    (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" style="color:var(--gold-bright)">⭐</div>' : '') +
@@ -267,8 +265,13 @@ oathBadge +
   '<span class="card-adaptation-tag ' + streakInfo.cls + '">' + streakInfo.label + '</span>' +
 '</div>' +
 '<div class="card-stats-line">Выполнено: <b>' + (card.totalCompletions || 0) + '</b> · 🔥 <b>' + (card.streak || 0) + '</b></div>' +
+'<div class="card-skip-row"><span class="card-btn fail" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)">✕ пропустить</span></div>' +
 '<div class="card-mastery">Мастерство: <b>' + card.mastery + '/' + card.masteryThreshold + '</b> до ранга ' + nextRankText + '</div>' +
-'<div class="card-progress"><div class="card-progress-bar" style="width:' + progressPct + '%"></div></div>';
+'<div class="card-progress"><div class="card-progress-bar" style="width:' + progressPct + '%"></div></div>' +
+(doneToday
+    ? '<div class="card-complete-btn done">✓ Выполнено сегодня</div>'
+    : '<div class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">⚔ Выполнить</div>'
+) +
 el.addEventListener('mousemove', (e) => {
 if (ecoOn()) return;
 const r = el.getBoundingClientRect();

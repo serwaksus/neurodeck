@@ -852,3 +852,16 @@ textarea:focus-visible {
 @keyframes ssIcon { 0% { transform: scale(0.5); } 30% { transform: scale(1.3); } 60% { transform: scale(1); } 100% { transform: scale(1); opacity: 0.8; } }
 :root.perf-eco .siege-spectacle { animation: none; background: rgba(0,0,0,0.6); }
 :root.perf-eco .siege-spectacle .ss-text, :root.perf-eco .siege-spectacle .ss-icon { animation: none; }
+
+/* ===================== КАРТОЧКА: разделённые кнопки ===================== */
+.card-corner-actions { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; opacity: 0.5; transition: opacity 0.2s; }
+.card-corner-actions .card-btn { width: 26px; height: 26px; font-size: 12px; }
+.card-corner-actions:hover { opacity: 1; }
+.card-complete-btn { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(212,165,116,0.15), rgba(212,165,116,0.05)); border: 1px solid var(--gold); border-radius: 4px; color: var(--gold-bright); font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 8px; transition: all 0.2s; letter-spacing: 1px; }
+.card-complete-btn:hover { background: rgba(212,165,116,0.2); box-shadow: 0 0 16px rgba(212,165,116,0.25); }
+.card-complete-btn:active { transform: scale(0.97); }
+.card-complete-btn.done { background: rgba(52,211,153,0.1); border-color: var(--green); color: var(--green); cursor: default; }
+.card-skip-row { display: flex; justify-content: flex-end; padding: 0 4px 4px; }
+.card-skip-row .card-btn.fail { min-width: 44px; min-height: 28px; font-size: 11px; color: var(--text-dim); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 2px 8px; }
+.card-skip-row .card-btn.fail:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+:root.perf-eco .card-complete-btn { transition: none; }
