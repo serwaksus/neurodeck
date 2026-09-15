@@ -241,6 +241,8 @@ async function shot(pg, label) {
     await pg.evaluate(() => {
       HERO.gold = 0;
       STATS.wil.value = 3; // пин: XP штурмов поднял уровни (wil 27 → grace 3) — фиксируем grace 2
+      strongholds[1].buildings.zh1.builtAt = Date.now() - 8 * 86400000; // снимаем 7-дневную иммунность свежих построек (B3): без этого распад не наступает вовсе
+      window.__origRandom = Math.random; Math.random = function() { return 0.99; }; // пин события дня «Тихий день»: Караван (+20💰) рандомно оплачивал содержание и ломал детерминизм
     });
     for (let d = 1; d <= 3; d++) {
       await pg.evaluate((dd) => { lastDayReset = getMSKDayKey(Date.now() - dd * 86400000); checkDailyReset(); }, d);
@@ -257,7 +259,7 @@ async function shot(pg, label) {
   });
   await shot(pg, 'corruption_worn');
   await step('9.2 оплата лечит: worn → ok, долг 0 (обе постройки)', async () => {
-    await pg.evaluate(() => { HERO.gold = 500; lastDayReset = getMSKDayKey(Date.now() - 86400000); checkDailyReset(); });
+    await pg.evaluate(() => { HERO.gold = 500; lastDayReset = getMSKDayKey(Date.now() - 86400000); checkDailyReset(); if (window.__origRandom) { Math.random = window.__origRandom; delete window.__origRandom; } });
     const st = await pg.evaluate(() => ({
       a: strongholds[0].buildings.zh1.corruptionStage + ':' + strongholds[0].buildings.zh1.debtDays,
       b: strongholds[1].buildings.zh1.corruptionStage + ':' + strongholds[1].buildings.zh1.debtDays,

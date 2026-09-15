@@ -74,11 +74,11 @@ async function shot(pg, label) {
   // Дневной тик без недели.
   async function dayTick() { await ev(() => { lastDayReset = getMSKDayKey(Date.now() - 86400000); checkDailyReset(); }); await pg.waitForTimeout(200); }
 
-  // Штурм через UI (реальные клики). QA-чит: assaultUsedDay = null — «новые сутки» (лимит 1/день персистится только в сессии).
+  // Штурм через UI (реальные клики). QA-чит: siege.assaultDay = null — «новые сутки» (гейт лимита 1/день — app.js requestAssault).
   async function assaultUI(idx) {
     await pg.locator('.bnav-btn[data-view="strongholds"]').click({ force: true });
     await pg.waitForTimeout(200);
-    await ev((i) => { currentShIdx = null; assaultUsedDay = null; renderStrongholds(); }, idx);
+    await ev((i) => { currentShIdx = null; siege.assaultDay = null; renderStrongholds(); }, idx);
     await pg.locator(`.sh-assault[data-idx="${idx}"]`).first().click({ force: true });
     await pg.waitForSelector('#confirmOverlay.show', { timeout: 3000 });
     await pg.locator('#confirmYes').click();
@@ -175,7 +175,7 @@ async function shot(pg, label) {
     if (st.provs !== 4 || st.cards !== 20 || st.fronts !== 1 || st.owned !== 0) throw new Error('сетка: ' + JSON.stringify(st));
     if (st.header !== '0/20') throw new Error('header: ' + st.header);
     if (!st.frontName.includes('Сендер-Хутор')) throw new Error('фронт: ' + st.frontName);
-    if (!st.frontPower.includes('15')) throw new Error('сила нейтралов фронта: ' + st.frontPower);
+    if (!st.frontPower.endsWith(': 5')) throw new Error('сила нейтралов фронта: ' + st.frontPower);
   });
   await shot(pg, 'b0_grid_new_player');
 
@@ -202,13 +202,19 @@ async function shot(pg, label) {
     const g0 = await ev(() => HERO.gold);
     await hireN('t1', 6, true, 0);
     await hireN('t1', 8, false, 0);
-    const pre = await ev(() => ({ atk: Math.round(SM.armyPower(army.units) * (1 + 0.02 * STATS.str.value)), defN: STRONGHOLDS[0].total, gold: HERO.gold }));
+    const pre = await ev(() => {
+      const atk = Math.round(SM.armyPower(army.units) * (1 + 0.02 * STATS.str.value));
+      const defN = STRONGHOLDS[0].total;
+      const out = SM.assaultOutcome(atk, defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random });
+      const units = army.units.t1 || 0;
+      return { atk: atk, defN: defN, gold: HERO.gold, expLoss: Math.min(Math.floor(units * out.attritionPct), Math.max(0, units - 1)) };
+    });
     if (pre.atk <= pre.defN) throw new Error('атаке не хватит: ' + JSON.stringify(pre));
     if (pre.gold !== g0 - 14) throw new Error(`найм списал ${g0 - pre.gold}, ожидалось 14`);
     const r = await assaultUI(0);
     if (!r.captured) throw new Error('sh01 не захвачена');
     const armyAfter = await ev(() => army.units.t1);
-    if (armyAfter <= 0 || armyAfter >= 8) throw new Error('attrition не списан/армия обнулена: ' + armyAfter);
+    if (armyAfter !== 8 - pre.expLoss) throw new Error('attrition: ' + armyAfter + ', ожидалось ' + (8 - pre.expLoss));
   });
   await step('1.4 БАГ-ПРОБА: иконки захваченных твердынь не содержат «undefined» (дубль shSprite app.js:1608/1709)', async () => {
     await ev(() => { currentShIdx = null; renderStrongholds(); });
@@ -449,6 +455,7 @@ async function shot(pg, label) {
       
       lastWeekReset = getThisMondayKey();                      // QA-чит: неделя «текущая» — воскресный блок не сработает
       STATS.wil.value = 3;                                     // grace = 2 + floor(3/20) = 2
+      window.__origRandom = Math.random; Math.random = function() { return 0.99; }; // пин события дня «Тихий день»: Караван (+20💰) рандомно оплачивал содержание 21 и ломал сценарий руины
     });
     const m = await ev(() => ({ grace: Math.min(7, 2 + Math.floor(STATS.wil.value / 20)), upkeep: shUpkeepPerDay(), income: shIncomePerDay(), fresh: Object.keys(strongholds[0].buildings).filter(function(bid) { var bb = strongholds[0].buildings[bid]; return bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000; }).length }));
     if (m.grace !== 2) throw new Error('grace: ' + m.grace);
@@ -529,6 +536,7 @@ async function shot(pg, label) {
     await dayTick();
     const b = await ev(() => ({ stage: strongholds[0].buildings.zh1.corruptionStage, gold: HERO.gold, ec1: strongholds[0].buildings.ec1.corruptionStage }));
     if (b.stage !== 'ok' || b.ec1 !== 'ok') throw new Error('шаг 2 восстановления: ' + JSON.stringify(b));
+    await ev(() => { if (window.__origRandom) { Math.random = window.__origRandom; delete window.__origRandom; } });
   });
   await shot(pg, 'b4_recovered');
 
@@ -704,13 +712,18 @@ async function shot(pg, label) {
     if (!st.zh1 || st.ec2.corruptionStage !== 'worn' || st.gar.length !== 1 || st.week !== 3) throw new Error(JSON.stringify(st));
   });
   await step('10.2 F5 байт-в-байт: золото, твердыни, гарнизоны, стадии коррапшна, неделя осады — строка JSON идентична до и после', async () => {
+    const stable = (o) => Array.isArray(o) ? o.map(stable) : (o && typeof o === 'object' ? Object.keys(o).sort().reduce((a, k) => { a[k] = stable(o[k]); return a; }, {}) : o);
+    const norm = (s) => { const o = JSON.parse(JSON.stringify(s)); o.strongholds.forEach((sh) => { Object.values(sh.buildings || {}).forEach((b) => { if (b && b.builtAt === null) delete b.builtAt; }); }); return o; };
+    const grab = () => ev(() => ({ gold: HERO.gold, strongholds: strongholds, army: army, siege: siege }));
     await ev(() => saveGameState());
-    const before = await ev(() => JSON.stringify({ gold: HERO.gold, strongholds: strongholds, army: army, siege: siege }));
+    const before = JSON.stringify(stable(norm(await grab())));
     await pg.reload({ waitUntil: 'domcontentloaded' });
     await pg.waitForTimeout(1500);
     await ev(() => { if (document.querySelector('.onboarding-overlay')) { const btn = document.querySelector('.onboarding-overlay button'); while (btn && document.querySelector('.onboarding-overlay')) btn.click(); } });
-    const after = await ev(() => JSON.stringify({ gold: HERO.gold, strongholds: strongholds, army: army, siege: siege }));
+    const after = JSON.stringify(stable(norm(await grab())));
     if (before !== after) {
+      console.error('DIFF_BEFORE=' + before);
+      console.error('DIFF_AFTER=' + after);
       let d = 0; while (d < before.length && before[d] === after[d]) d++;
       throw new Error('состояние разошлось на позиции ' + d + ': …' + before.slice(Math.max(0, d - 60), d + 60) + ' || …' + after.slice(Math.max(0, d - 60), d + 60));
     }

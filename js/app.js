@@ -79,7 +79,7 @@ lastSessionAt: Date.now(), dailyUniqueStats: {}, cardHistory: {}, lastWeeklyRepo
 };
 const STATS = {
 str: { name: 'Сила',      icon: '⚔', desc: 'Урон',       color: '#c73e4d', dark: '#8b2635', value: 3, max: 100, attributePoints: 0 },
-end: { name: 'Стойкость', icon: '🛡', desc: 'HP',         color: '#60a5fa', dark: '#2563eb', value: 3, max: 100, attributePoints: 0 },
+end: { name: 'Стойкость', icon: '🛡', desc: 'Оборона',    color: '#60a5fa', dark: '#2563eb', value: 3, max: 100, attributePoints: 0 },
 int: { name: 'Интеллект', icon: '🧠', desc: 'XP бонус',   color: '#c084fc', dark: '#7c3aed', value: 3, max: 100, attributePoints: 0 },
 cha: { name: 'Харизма',   icon: '🎭', desc: 'Шанс крита', color: '#fbbf24', dark: '#b45309', value: 3, max: 100, attributePoints: 0 },
 wil: { name: 'Воля',      icon: '🧘', desc: 'Стрик',      color: '#34d399', dark: '#047857', value: 3, max: 100, attributePoints: 0 },
@@ -409,6 +409,7 @@ spiritSay('«Легенда... Твоя дисциплина несокруши�
 }
 }
 HERO.gold = (HERO.gold || 0) + 1;
+dqProgress('cards'); dqProgress('gold');
 if (lootPityCheck(card)) dropRandomLoot(x, y);
 checkHeroLevelUp();
 renderCards();
@@ -598,7 +599,7 @@ var avatarWrap = document.querySelector('.hero-avatar-wrap');
 if (avatarWrap) { avatarWrap.classList.add('levelup-glow'); setTimeout(function() { avatarWrap.classList.remove('levelup-glow'); }, 2000); }
 renderStats();
 spiritSay('«Уровень ' + HERO.level + '... Бремя стало легче.»');
-showToast('🏆 Уровень ' + HERO.level, '+6 к максимальному HP и лечение · Следующий: ' + HERO.xpToNext + ' XP');
+showToast('🏆 Уровень ' + HERO.level, '+30 💰 в казну · Следующий: ' + HERO.xpToNext + ' XP');
 if (HERO.level === 5) setTimeout(() => addArtifactToBackpack(ARTIFACTS.crownArchon), 1500);
 if (HERO.level === 10) setTimeout(() => addArtifactToBackpack(ARTIFACTS.capeShadows), 1500);
 setTimeout(() => { ov.classList.remove('show'); bn.classList.remove('show'); }, 2500);
@@ -1397,8 +1398,30 @@ var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
 const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
 var currentShIdx = null;
 var dailyQuests = null;
+var DQ_POOL = [
+    { id: 'dq_cards', icon: '📖', text: 'Выполни 2 карточки', goal: 2, reward: 20, counter: 'cards' },
+    { id: 'dq_gold', icon: '💰', text: 'Заработай 30 💰', goal: 30, reward: 15, counter: 'gold' },
+    { id: 'dq_hire', icon: '⚔', text: 'Найми 3 существа', goal: 3, reward: 15, counter: 'hire' },
+    { id: 'dq_build', icon: '🏗', text: 'Построй что-нибудь', goal: 1, reward: 20, counter: 'build' },
+    { id: 'dq_quest', icon: '📜', text: 'Выполни задачу', goal: 1, reward: 10, counter: 'quest' },
+    { id: 'dq_assault', icon: '⚔', text: 'Штурмуй твердыню', goal: 1, reward: 25, counter: 'assault' }
+];
+function dqProgress(counter, n) {
+    if (!dailyQuests) return;
+    var p = dailyQuests.progress || (dailyQuests.progress = {});
+    p[counter] = (p[counter] || 0) + (n || 1);
+}
+function dqQuestById(qid) {
+    var q = null;
+    ((dailyQuests && dailyQuests.quests) || []).forEach(function(x) { if (x.id === qid) q = x; });
+    return q;
+}
 function completeDailyQuest(qid, reward) {
 if (dailyQuests.done[qid]) return;
+var _q = dqQuestById(qid);
+if (!_q) return;
+var _p = (dailyQuests.progress || {})[_q.counter] || 0;
+if (_p < _q.goal) { showToast('📋 Ещё не выполнено', 'Прогресс: ' + Math.min(_p, _q.goal) + '/' + _q.goal, 'blood'); return; }
 dailyQuests.done[qid] = true;
 HERO.gold = (HERO.gold || 0) + reward;
 showToast('📋 Квест выполнен!', '+' + reward + ' 💰', 'save');
@@ -1418,7 +1441,7 @@ function heroTierKey() {
 }
 function updateHeroAvatarSprites() {
     var tier = heroTierKey();
-    var path = 'img/units/' + tier + '.png';
+    var path = 'img/units/tier' + tier.slice(1) + '.png';
     var av = document.getElementById('heroAvatar');
     if (av) {
         var img = av.querySelector('.hero-avatar-img');
@@ -1488,6 +1511,7 @@ if (d.market) market += d.market * m;
 });
 });
 gold += taxes + Math.round(econ);
+dqProgress('gold', taxes + Math.round(econ));
 var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
 strongholds.forEach(function(s, i) {
@@ -1604,6 +1628,7 @@ if (ok) doAssault(idx, f);
 }
 function doAssault(idx, f) {
 siege.assaultDay = getMSKDayKey();
+dqProgress('assault');
 var out = SM.assaultOutcome(f.atk, f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random });
 var lostTotal = 0;
 SM.TIER_KEYS.forEach(function(t) {
@@ -1642,6 +1667,7 @@ if ((HERO.gold || 0) < d.cost) { showToast('💰 Мало золота', 'Нуж
 HERO.gold -= d.cost;
 s.buildings[bid] = { built: true, corruptionStage: 'ok', debtDays: 0 };
 strongholds[idx].buildings[bid].builtAt = Date.now();
+dqProgress('build');
 var bdDef = BUILDINGS[bid]; if (bdDef.grow) { hirePool[bdDef.tier] += Math.round(bdDef.grow * (hasSpecialOk('sp4') ? 1.4 : 1)); showToast('⛺ Первый прирост', '+' + Math.round(bdDef.grow * (hasSpecialOk('sp4') ? 1.4 : 1)) + ' ' + UNIT_TIERS[bdDef.tier].name + ' — сразу в пул найма', 'save'); }
 recalcHirePool();
 showToast('🏗 Построено: ' + d.name, '−' + d.cost + ' 💰 · содержание ' + d.upkeep + ' 💰/день', 'save');
@@ -1655,6 +1681,7 @@ var cost = hireCostOf(tier);
 if ((HERO.gold || 0) < cost) { showToast('💰 Мало золота', 'Найм: ' + cost + ' 💰', 'blood'); sfxError(); return; }
 HERO.gold -= cost;
 hirePool[tier]--;
+dqProgress('hire');
 if (toGarrison) {
 var st = strongholds[idx].garrison.find(function(x) { return x.tier === tier; });
 if (st) st.count++; else strongholds[idx].garrison.push({ tier: tier, count: 1 });
@@ -1772,22 +1799,15 @@ for (var pi = 0; pi < 20; pi++) {
 }
 html += '</div>';
 // Квест-доска (3 ротационных дневных задания)
-if (!dailyQuests || dailyQuests.day !== getMSKDayKey()) {
-    var _qpool = [
-        { id: 'dq_cards', icon: '📖', text: 'Выполни 2 карточки', reward: 20 },
-        { id: 'dq_gold', icon: '💰', text: 'Заработай 30 💰', reward: 15 },
-        { id: 'dq_hire', icon: '⚔', text: 'Найми 3 существа', reward: 15 },
-        { id: 'dq_build', icon: '🏗', text: 'Построй что-нибудь', reward: 20 },
-        { id: 'dq_quest', icon: '📜', text: 'Выполни квест', reward: 10 },
-        { id: 'dq_assault', icon: '⚔', text: 'Штурмуй твердыню', reward: 25 }
-    ];
+if (!dailyQuests || dailyQuests.day !== getMSKDayKey() || !dailyQuests.quests || !dailyQuests.quests.length) {
     var seed = parseInt(getMSKDayKey().replace(/-/g, ''));
-    dailyQuests = { day: getMSKDayKey(), quests: [_qpool[seed % 6], _qpool[(seed + 2) % 6], _qpool[(seed + 4) % 6]], done: {} };
+    dailyQuests = { day: getMSKDayKey(), quests: [DQ_POOL[seed % 6], DQ_POOL[(seed + 2) % 6], DQ_POOL[(seed + 4) % 6]], done: {}, progress: {} };
 }
 html += '<div class="sh-quest-board"><div class="sh-quest-title">📋 Задания дня</div>';
 dailyQuests.quests.forEach(function(q) {
     if (dailyQuests.done[q.id]) { html += '<div class="sh-quest done">✓ ' + q.text + ' (+' + q.reward + ' 💰)</div>'; return; }
-    html += '<div class="sh-quest" data-action="sh-daily-quest" data-qid="' + q.id + '" data-reward="' + q.reward + '">☐ ' + q.icon + ' ' + q.text + ' → +' + q.reward + ' 💰</div>';
+    var _qp = (dailyQuests.progress || {})[q.counter] || 0;
+    html += '<div class="sh-quest" data-action="sh-daily-quest" data-qid="' + q.id + '" data-reward="' + q.reward + '">☐ ' + q.icon + ' ' + q.text + ' (' + Math.min(_qp, q.goal) + '/' + q.goal + ') → +' + q.reward + ' 💰</div>';
 });
 html += '</div>';
 html += '<div class="sh-grid">';
@@ -1876,7 +1896,7 @@ if (!bd.grow) return;
 var b = s.buildings[id];
 if (!b || !b.built) return;
 var tier = bd.tier, u = UNIT_TIERS[tier];
-hireRows += '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img/units/' + tier + '.png', u.icon) + '</div>' +
+hireRows += '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img/units/tier' + tier.slice(1) + '.png', u.icon) + '</div>' +
 '<div class="sh-build-body"><div class="sh-build-name">' + u.name + ' (Т' + tier.slice(1) + ') · сила ' + u.power + '</div>' +
 '<div class="sh-build-meta">Пул недели: <b>' + (hirePool[tier] || 0) + '</b> · цена ' + hireCostOf(tier) + ' 💰</div></div>' +
 '<div class="sh-hire-actions">' +
@@ -1963,6 +1983,8 @@ addXpReward(tier.xp);
 showToast('🎁 Сундук открыт', '+' + tier.xp + ' XP', 'save');
 sfxCrit();
 }
+dqProgress('quest');
+if (choice === 'gold') dqProgress('gold', tier.gold);
 haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: choice === 'gold' ? '#fbbf24' : '#c084fc', speed: 11, decay: 0.009, size: 4, shape: 'star', gravity: 0.1 });
 t.status = 'chest_open';
@@ -3066,11 +3088,11 @@ var ONBOARDING_STEPS = [
 { icon: '⚔', title: 'Добро пожаловать в NeuroDeck', text: 'Геймифицированный трекер привычек.<br>Ты — Владыка, зарабатывающий свою свободу дисциплиной.' },
 { icon: '📖', title: 'Колода карточек', text: 'Каждая карточка — привычка, которую нужно выполнять ежедневно.<br>Нажми <b>✓</b> чтобы выполнить, <b>✕</b> чтобы пропустить.<br>Выполнение = <b style="color:var(--gold-bright)">+1 💰</b>. Пропуск = <b style="color:var(--blood-bright)">−1 💰</b> и сброс стрика.' },
 { icon: '💰', title: 'Казна', text: 'Золото капает за каждую выполненную карточку.<br>Твердыни платят налоги каждый день, а постройки требуют <b>содержания</b> — забросишь казну, начнут ветшать.' },
-{ icon: '🏰', title: 'Твердыни', text: '20 твердыен ждут завоевателя: найми армию и штурмуй <b>по одной в бою</b>.<br>Каждое воскресенье тьма осаждает твой фронт — держи гарнизоны.<br>От Сендер-Хутора до Тернового Трона — путь длиной в месяцы дисциплины.' },
+{ icon: '🏰', title: 'Твердыни', text: '20 твердынь ждут завоевателя: найми армию и штурмуй <b>по одной в бою</b>.<br>Каждое воскресенье тьма осаждает твой фронт — держи гарнизоны.<br>От Сендер-Хутора до Тернового Трона — путь длиной в месяцы дисциплины.' },
 { icon: '📋', title: 'Задачи дня', text: 'Дела с дедлайном — отдельная система: «сдать отчёт до 13:00».<br>Успел — открой <b>сундук</b> (золото или XP).<br>Просрочил — призрак задачи навещает тебя каждый день, −1 💰 за ночь.' },
 { icon: '🎯', title: 'Цели', text: 'Крупные дела с дедлайном и шагами.<br>Выполнение = опыт + очки атрибута + золото.<br>Провал по дедлайну = потеря золота.' },
 { icon: '🔥', title: 'Ранги и мастерство', text: 'Выполняй карточку — растёт Мастерство.<br>Ранг растёт: C → CC → ... → SSS.<br>Ранг-ап = +1 к пулу атрибута.' },
-{ icon: '👑', title: 'Начни свой путь', text: 'От Sender-Хутора до Тронного Зала — 11 локаций.<br>Каждая привычка — кирпич в твою дорогу к свободе.<br><br><span style="color:var(--gold-bright)">Дисциплина — твоя армия.</span>' }
+{ icon: '👑', title: 'Начни свой путь', text: 'От Сендер-Хутора до Тернового Трона — 20 твердынь.<br>Каждая привычка — кирпич в твою дорогу к свободе.<br><br><span style="color:var(--gold-bright)">Дисциплина — твоя армия.</span>' }
 ];
 function startOnboarding() {
 var step = 0;
@@ -3165,7 +3187,7 @@ showToast('🔄 Новая игра', 'Карточки сохранены. Пр
 });
 }
 ensureStrongholdState();
-if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [] };
+if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [], progress: {} };
 loadGameState();
 checkDailyReset();
 checkBloodOath();

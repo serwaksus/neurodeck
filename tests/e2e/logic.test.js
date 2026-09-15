@@ -187,3 +187,29 @@ test('tasks: complete -> chest choice adds gold or xp; ghosts expire after ghost
   if (res.goldPenalty !== 1) throw new Error('ghost night penalty must be exactly 1 gold, got ' + res.goldPenalty);
   if (!res.goneAfter3) throw new Error('ghost must leave after ghostDays nights');
 });
+
+test('quest board: counters track progress; claim gated until goal met', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('neurodeck_onboarding_done', '1'); });
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+  const res = await page.evaluate(() => {
+    ensureStrongholdState();
+    if (!dailyQuests || dailyQuests.day !== getMSKDayKey() || !dailyQuests.quests || !dailyQuests.quests.length) {
+      var seed = parseInt(getMSKDayKey().replace(/-/g, ''));
+      dailyQuests = { day: getMSKDayKey(), quests: [DQ_POOL[seed % 6], DQ_POOL[(seed + 2) % 6], DQ_POOL[(seed + 4) % 6]], done: {}, progress: {} };
+    }
+    dailyQuests.quests = [{ id: 'dq_build', icon: '🏗', text: 'Построй что-нибудь', goal: 1, reward: 20, counter: 'build' }];
+    dailyQuests.done = {}; dailyQuests.progress = {};
+    const g0 = HERO.gold;
+    completeDailyQuest('dq_build', 20);
+    const denied = HERO.gold === g0 && !dailyQuests.done.dq_build;
+    dqProgress('build');
+    const p = (dailyQuests.progress || {}).build;
+    completeDailyQuest('dq_build', 20);
+    return { denied: denied, p: p, claimed: !!dailyQuests.done.dq_build, gold: HERO.gold - g0 };
+  });
+  if (!res.denied) throw new Error('claim must be denied before goal is met');
+  if (res.p !== 1) throw new Error('progress counter: ' + JSON.stringify(res));
+  if (!res.claimed) throw new Error('claim must succeed after goal is met');
+  if (res.gold !== 20) throw new Error('reward gold: ' + res.gold);
+});
