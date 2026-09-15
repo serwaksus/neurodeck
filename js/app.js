@@ -124,6 +124,7 @@ case 'download-sync-file': downloadSyncFile(); break;
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
 case 'reset-all-data': resetAllData(); break;
+case 'new-game-keep-cards': newGameKeepCards(); break;
 case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
 case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf) { var prevPerfMode = window.NeuroDeckPerf.getMode(); if (window.NeuroDeckPerf.setMode(el.dataset.mode) && prevPerfMode !== el.dataset.mode) { renderPerfStatus(); showToast('⚡ Режим изменён', { 'auto': 'Авто — эффекты зависят от системных настроек', 'eco': 'Эко — минимальная графика', 'performance': 'Все эффекты включены', 'low': 'Экономный режим — меньше анимаций', 'effects-off': 'Анимации отключены' }[el.dataset.mode] || el.dataset.mode); } } break;
@@ -3056,6 +3057,32 @@ render();
 document.body.appendChild(overlay);
 render();
 setTimeout(function() { overlay.classList.add('show'); }, 50);
+}
+function newGameKeepCards() {
+dungeonConfirm('🔄 Новая игра', 'Сбросить весь прогресс?<br><b>Карточки сохранятся.</b><br><span style="color:var(--blood-bright)">Необратимо.</span>').then(function(ok) {
+if (!ok) return;
+HERO.level = 1; HERO.xp = 0; HERO.xpToNext = 50; HERO.totalXp = 0; HERO.gold = 30;
+HERO.name = 'Странник'; HERO.title = '«Тот, кто только начал путь»';
+HERO.consecutivePerfectDays = 0; HERO.dailyCompletions = 0; HERO.dailySkips = 0;
+HERO.lastSessionAt = Date.now(); HERO.dailyUniqueStats = {}; HERO.cardHistory = {}; HERO.lastWeeklyReport = null;
+Object.keys(STATS).forEach(function(k) { STATS[k].value = 3; STATS[k].attributePoints = 0; });
+strongholds = null; ensureStrongholdState();
+army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
+hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
+TASKS = []; taskIdCounter = 1;
+dailyQuests = null; lastDayReset = null; lastWeekReset = getThisMondayKey();
+xpHistory = []; bloodOath = null;
+try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('neurodeck_backup'); localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {}
+localStorage.removeItem('neurodeck_onboarding_done');
+try { var csR = getCloudStorage(); if (csR) { csR.removeItem(CLOUD_META_KEY, function(){}); } } catch(e) {}
+saveGameState();
+HERO.xpToNext = getXpToNext(HERO.level);
+renderCards(); renderDashboard(); renderStrongholds(); renderTasks(); updateHeroUI(); renderGoals(); renderStats();
+spiritSay('«С чистого листа, Владыка. Дорога ждёт.»');
+localStorage.removeItem('neurodeck_onboarding_done');
+showToast('🔄 Новая игра', 'Карточки сохранены. Прогресс сброшен.', 'save');
+});
 }
 loadGameState();
 checkDailyReset();

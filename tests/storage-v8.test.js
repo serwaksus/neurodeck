@@ -241,13 +241,13 @@ test('armyPower: Σ count×сила, обе формы входа, отрица�
     assert.equal(M.armyPower({}), 0);
 });
 
-test('defensePower: SPEC §4 — Т1 defN 15 + гарнизон 10×Т1, end 25 → 45', () => {
-    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], [{ tier: 't1', count: 10 }], 25, 0), 45);
-    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], { t1: 10 }, undefined, 0), 35);
-    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], [], 0, 60), 75, '+ оборонные постройки');
+test('defensePower: SPEC §4 — тренировочные нейтралы sh01 (gar 3, def 2, total 5)', () => {
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], [{ tier: 't1', count: 10 }], 25, 0), 35);
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], { t1: 10 }, undefined, 0), 25);
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], [], 0, 60), 65, '+ оборонные постройки');
     assert.equal(M.defensePower({ gar: 10, def: 5 }, [], 0, 0), 15, 'fallback gar+def');
     assert.equal(M.defensePower(null, [], 0, 0), 0);
-    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], 'junk', 'junk', 'junk'), 15, 'мусор → безопасные 0');
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], 'junk', 'junk', 'junk'), 5, 'мусор → безопасные 0');
 });
 
 test('assaultOutcome: победа/attrition по SPEC §4 (пример 22 против 15 ≈ 20.4%)', () => {

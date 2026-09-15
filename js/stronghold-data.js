@@ -1,6 +1,6 @@
 // ===================== КАТАЛОГИ ТВЕРДЫЕН (единый источник: app + sim; SPEC §1-§3, BALANCE круг 3) =====================
 var STRONGHOLDS = [
-{ id: 'sh01', prov: 1, icon: '🛖', name: 'Сендер-Хутор',        gar: 10,   def: 5,    total: 15,   slots: 6, tax: 1 },
+{ id: 'sh01', prov: 1, icon: '🛖', name: 'Сендер-Хутор',        gar: 3,    def: 2,    total: 5,    slots: 6, tax: 1 },
 { id: 'sh02', prov: 1, icon: '🏕', name: 'Лаголь Земли',        gar: 18,   def: 10,   total: 28,   slots: 6, tax: 2 },
 { id: 'sh03', prov: 1, icon: '🪵', name: 'Лесопилка',           gar: 26,   def: 14,   total: 40,   slots: 6, tax: 4 },
 { id: 'sh04', prov: 1, icon: '⛏', name: 'Медные Копи',         gar: 42,   def: 23,   total: 65,   slots: 6, tax: 7 },

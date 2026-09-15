@@ -144,8 +144,8 @@ test('css: сетка провинций, панель, коррапшн-ста�
     }
 });
 
-test('штурм из e2e-сценария: 14×Т1 (power 28) берёт твердыню №1 (defN 15)', () => {
+test('штурм из e2e-сценария: 14×Т1 (power 28) берёт твердыню №1 (defN 5)', () => {
     const out = SM.assaultOutcome(SM.armyPower({ t1: 14 }), DATA.STRONGHOLDS[0].total, { rand: () => 0 });
-    assert.equal(out.win, true, '28 > 15 → победа');
-    assert.ok(out.attritionPct > 0.08 && out.attritionPct < 0.3, 'attrition в клампах');
+    assert.equal(out.win, true, '28 > 5 → победа');
+    assert.ok(out.attritionPct > 0.05 && out.attritionPct < 0.3, 'attrition в клампах');
 });
