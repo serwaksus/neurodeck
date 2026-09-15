@@ -1062,3 +1062,42 @@ body::before {
 .card-skip-btn { width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(139,38,53,0.3); border-radius: 6px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
 .card-skip-btn:hover { color: var(--blood-bright); border-color: var(--blood-bright); background: rgba(139,38,53,0.1); }
 .card-skip-btn:active { transform: scale(0.95); }
+
+/* ===================== КАРТА КОРОЛЕВСТВА (баннер + провинции) ===================== */
+.kingdom-banner {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, rgba(20,14,8,0.95), rgba(30,20,12,0.9));
+  border: 2px solid var(--gold); border-radius: 10px;
+  padding: 14px 18px; margin-bottom: 16px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,165,116,0.15);
+}
+.kb-crown { font-size: 36px; filter: drop-shadow(0 0 8px rgba(251,191,36,0.4)); }
+.kb-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--gold-bright); letter-spacing: 1.5px; }
+.kb-sub { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.kb-bar { flex: 1; height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden; min-width: 80px; }
+.kb-bar-fill { height: 100%; background: var(--gold-grad); border-radius: 4px; transition: width 1s ease; }
+
+/* Провинции — цветовое кодирование */
+.sh-prov:nth-child(1) { border-top: 2px solid #6b8e23; }
+.sh-prov:nth-child(2) { border-top: 2px solid #4682b4; }
+.sh-prov:nth-child(3) { border-top: 2px solid #8b4513; }
+.sh-prov:nth-child(4) { border-top: 2px solid #800000; }
+
+/* Твердыня — карточка в карте */
+.sh-card { position: relative; overflow: hidden; }
+.sh-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.3)); pointer-events: none; }
+.sh-card.owned { border: 1px solid rgba(212,165,116,0.4); }
+.sh-card.owned .sh-icon { filter: drop-shadow(0 0 8px rgba(212,165,116,0.3)); }
+.sh-card.front { border: 1px solid var(--blood-bright); animation: shFrontPulse 2s ease-in-out infinite; }
+.sh-card.front .sh-icon { font-size: 36px; }
+@keyframes shFrontPulse { 0%,100% { box-shadow: 0 0 8px rgba(199,62,77,0.2); } 50% { box-shadow: 0 0 20px rgba(199,62,77,0.5); } }
+.sh-card.locked { opacity: 0.35; filter: grayscale(0.8) blur(0.5px); }
+.sh-card.locked::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
+:root.perf-eco .sh-card.front { animation: none; }
+
+/* Квесты — крупнее и заметнее */
+.sh-quest-board { border: 1px solid rgba(212,165,116,0.3); background: linear-gradient(180deg, rgba(30,20,10,0.6), rgba(10,10,15,0.8)); }
+.sh-quest { font-size: 13px !important; padding: 8px 10px !important; }
+
+/* Панель твердыни — глубина */
+.sh-panel-head { background: linear-gradient(180deg, rgba(30,20,10,0.5), transparent); padding: 12px; margin: -12px -12px 12px; border-bottom: 1px solid rgba(212,165,116,0.15); }

@@ -1751,6 +1751,9 @@ if (currentShIdx !== null) { renderStrongholdPanel(currentShIdx); return; }
 var root = document.getElementById('strongholdsRoot');
 if (!root) return;
 var front = frontIdx();
+var cap = capturedCount();
+// Королевский баннер
+html_strongholds_banner(root, cap);
 var html = '<div class="sh-treasury">' +
 '<div>💰 <b>' + (HERO.gold || 0) + '</b></div>' +
 '<div>Налоги: <b style="color:var(--green)">+' + shIncomePerDay() + ' 💰/день</b></div>' +
@@ -1813,6 +1816,18 @@ html += '<div class="sh-card locked"><div class="sh-icon">🔒</div>' +
 });
 html += '</div>';
 }
+root.innerHTML = html;
+}
+function html_strongholds_banner(root, cap) {
+var pct = Math.round(cap / 20 * 100);
+var html = '<div class="kingdom-banner">' +
+'<div class="kb-crown">👑</div>' +
+'<div class="kb-info">' +
+'<div class="kb-title">Королевство Владыки</div>' +
+'<div class="kb-sub">' + cap + '/20 твердыней · ' + pct + '%</div>' +
+'</div>' +
+'<div class="kb-bar"><div class="kb-bar-fill" style="width:' + pct + '%"></div></div>' +
+'</div>';
 root.innerHTML = html;
 }
 function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" onerror="this.outerHTML=\'' + emoji + '\'">'; }
