@@ -565,7 +565,7 @@ async function shot(pg, label) {
   });
 
   // ===================== БЛОК O. Галерея трофеев =====================
-  await step('O вкладка «Стат»: .ach-wrap есть, .ach-card = 20, есть .unlocked (Первая ковка), у locked с max>1 есть .ach-prog', async () => {
+  await step('O вкладка «Стат»: .ach-wrap есть, .ach-card = 18, есть .unlocked (Первая ковка), у locked с max>1 есть .ach-prog', async () => {
     await pg.locator('.bnav-btn[data-view="stats"]').click({ force: true });
     await pg.waitForTimeout(500);
     const st = await ev(() => {
@@ -582,7 +582,7 @@ async function shot(pg, label) {
       };
     });
     if (!st.wrap) throw new Error('.ach-wrap отсутствует');
-    if (st.total !== 20) throw new Error('ach-card: ' + st.total + ', ожидалось 20');
+    if (st.total !== 18) throw new Error('ach-card: ' + st.total + ', ожидалось 18');
     if (st.unlockedN < 1) throw new Error('нет разблокированных трофеев');
     if (!st.firstForgeUnlocked) throw new Error('«Первая ковка» не разблокирована при 2 карточках');
     if (st.lockedWithProg === 0) throw new Error('нет locked-карточек с .ach-prog');

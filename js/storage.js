@@ -96,7 +96,7 @@ MIGRATIONS[9] = function(data) {
     try {
         if (!data || typeof data !== 'object') return;
         if (data.season && typeof data.season === 'object' && data.season.num) return;
-        var today = (typeof getMSKDayKey === 'function') ? getMSKDayKey() : new Date().toISOString().slice(0, 10);
+        var today = (typeof getMSKDayKey === 'function') ? getMSKDayKey() : new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); // МСК-день даже без app.js
         var captured = 0;
         if (Array.isArray(data.strongholds)) data.strongholds.forEach(function(s) { if (s && s.captured) captured++; });
         var completions = 0;

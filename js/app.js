@@ -562,8 +562,6 @@ function updateHeroSummary() {
 document.getElementById('statTotalXp').textContent = HERO.totalXp;
 const sum = Object.values(STATS).reduce((a, s) => a + s.value, 0);
 document.getElementById('statSumStats').textContent = sum;
-document.getElementById('statGoalsActive').textContent = GOALS.filter(g => !g.completed).length;
-document.getElementById('statGoalsDone').textContent = GOALS.filter(g => g.completed).length;
 const gear = getTotalGearBonuses();
 const totalInt = STATS.int.value + gear.int;
 const mult = (1 + (totalInt - 3) * 0.01).toFixed(2);
@@ -1123,6 +1121,7 @@ spiritSay('«Новая цель... Путь через тьму.»');
 switchView('hero');
 }
 function renderGoals() {
+if (!document.getElementById('goalsList')) return; // Цели героя выведены из UI (дублируют Квесты, решение 2026-09-15) — данные в сейве сохраняются
 const list = document.getElementById('goalsList');
 if (!list) return;
 GOALS.forEach(function(g) {
@@ -2325,8 +2324,6 @@ var all = [
 { icon: '✨', name: 'Первая тысяча', desc: 'Набрать XP', cur: HERO.totalXp, max: 1000 },
 { icon: '💎', name: 'Десять тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 10000 },
 { icon: '🌟', name: 'Сто тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 100000 },
-{ icon: '🎯', name: 'Первая цель', desc: 'Выполнить первую цель', cur: Math.min(goalsDoneN, 1), max: 1 },
-{ icon: '🏆', name: 'Десятка', desc: 'Выполнить целей', cur: goalsDoneN, max: 10 },
 { icon: '🎒', name: 'Полный комплект', desc: 'Слотов экипировки', cur: equippedN, max: 9 },
 { icon: '🏰', name: 'Полкоролевства', desc: 'Захватить твердынь', cur: captured, max: 10 },
 { icon: '👑', name: 'Владыка Твердынь', desc: 'Захватить все твердыни', cur: captured, max: STRONGHOLDS.length },
