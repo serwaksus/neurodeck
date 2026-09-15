@@ -510,7 +510,9 @@ letter-spacing: 1px;
 .app { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 .modal { max-height: 100vh; border-radius: 0; }
 .modal-overlay { padding: 0; }
-.backpack-grid { grid-template-columns: repeat(5, 1fr); }
+.backpack-grid { grid-template-columns: repeat(4, 1fr); }
+.backpack-tabs { display: grid; grid-template-columns: 1fr 1fr; }
+.backpack-tab { min-width: 0; }
 .inv-main { grid-template-columns: 1fr; }
 .paperdoll { width: 220px; height: 330px; }
 .slot { width: 44px; height: 44px; }
@@ -609,7 +611,7 @@ letter-spacing: 1px;
 .starter-card .starter-meta { flex: 1; }
 .starter-card .starter-name { font-size: 14px; color: var(--text-bright); margin-bottom: 2px; }
 .starter-card .starter-desc { font-size: 11px; }
-.info-btn { width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: rgba(0,0,0,0.5); color: var(--text-dim); font-size: 13px; line-height: 22px; cursor: pointer; transition: all 0.15s ease; }
+.info-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: rgba(0,0,0,0.5); color: var(--text-dim); font-size: 13px; line-height: 1; cursor: pointer; transition: all 0.15s ease; }
 .info-btn:hover, .info-btn.active { color: var(--gold-bright); border-color: var(--gold-bright); background: rgba(251,191,36,0.1); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

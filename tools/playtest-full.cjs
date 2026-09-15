@@ -297,7 +297,9 @@ async function shot(pg, label) {
       TASKS.unshift({ id: taskIdCounter++, name: 'QA-просрочка ' + Date.now(), tier: 'normal', deadline: Date.now() - 3 * 86400000, status: 'active', createdAt: Date.now() - 4 * 86400000, doneAt: null, ghostSince: null });
     });
     const pre = await ev(() => HERO.gold);
+    await ev(() => { window.__origRandom = Math.random; Math.random = function() { return 0.99; }; }); // пин события дня «Тихий день»: Караван (+20💰) рандомно ломает delta-проверку
     await dayTick();
+    await ev(() => { if (window.__origRandom) { Math.random = window.__origRandom; delete window.__origRandom; } });
     const post = await ev(() => ({ gold: HERO.gold, ghost: TASKS.filter((t) => t.status === 'ghost').length }));
     if (post.ghost < 1) throw new Error('призраков: ' + post.ghost);
     if (post.gold !== pre - 1) throw new Error(`gold ${pre}→${post.gold}, ожидалось −1 (1 призрак × 1💰)`);
@@ -674,6 +676,39 @@ async function shot(pg, label) {
   await step('R 0 pageerror; 404 отсутствуют', async () => {
     if (errors.length > 0) throw new Error('ошибок консоли: ' + errors.length + ' → ' + errors.slice(0, 3).join(' | '));
     if (urls404.length > 0) throw new Error('404: ' + [...new Set(urls404)].join(', '));
+  });
+
+  // ===================== БЛОК S. Аудит переполнений вёрстки =====================
+  await step('S  overflow-аудит: ни на одной вкладке нет горизонтального переполнения элементов', async () => {
+    const views = ['deck', 'quests', 'hero', 'inv', 'strongholds', 'stats'];
+    const bad = [];
+    for (const v of views) {
+      await pg.evaluate((vv) => { document.querySelector('.bnav-btn[data-view="' + vv + '"]').click(); }, v);
+      await pg.waitForTimeout(250);
+      const list = await pg.evaluate(() => {
+        const out = [];
+        const clippedByAncestor = (el) => {
+          let q = el.parentElement;
+          while (q && !q.classList.contains('view')) {
+            if (getComputedStyle(q).overflowX === 'hidden') return true;
+            q = q.parentElement;
+          }
+          return false;
+        };
+        document.querySelectorAll('.view.active, .view.active *').forEach((el) => {
+          if (el.offsetParent === null) return;
+          const pos = getComputedStyle(el).position;
+          if (pos === 'absolute' || pos === 'fixed') return; // вне потока: декор/оверлеи, вёрстку не ломают
+          const ox = getComputedStyle(el).overflowX;
+          if (ox === 'auto' || ox === 'scroll' || ox === 'hidden') return; // намеренные скроллеры/клипы
+          if (clippedByAncestor(el)) return; // переполнение невидимо (клипается предком)
+          if (el.scrollWidth > el.clientWidth + 8) out.push(((el.className && el.className.toString()) || el.tagName).slice(0, 40) + ' sw=' + el.scrollWidth + '/cw=' + el.clientWidth);
+        });
+        return [...new Set(out)].slice(0, 8);
+      });
+      list.forEach((x) => bad.push(v + ': ' + x));
+    }
+    if (bad.length) throw new Error('горизонтальные переполнения: ' + bad.join(' | '));
   });
 
   await shot(pg, 'final');

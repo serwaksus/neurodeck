@@ -48,3 +48,71 @@ test('starter deck modal screenshot matches baseline', async ({ page }) => {
     threshold: 0.2,
   });
 });
+
+const DETERMINISTIC_INIT = () => {
+  localStorage.clear();
+  localStorage.setItem('neurodeck_onboarding_done', '1');
+  localStorage.setItem('neurodeck_starter_done', '1');
+  localStorage.setItem('neurodeck_perf_mode', 'eco');
+};
+
+test('deck card screenshot matches baseline', async ({ page }) => {
+  // Полная карточка в колоде: статистика/мастерство/прогресс/кнопки.
+  // Ловит класс «контент наезжает на кнопки» (регрессия 10->13px, раунд 2 QA).
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(DETERMINISTIC_INIT);
+  await page.clock.setFixedTime(new Date('2026-09-15T10:00:00Z'));
+  await page.goto('/');
+  await page.waitForTimeout(3000);
+  await page.waitForSelector('.app-wrap', { timeout: 5000 });
+  await page.evaluate(() => {
+    FORGED.length = 0;
+    FORGED.push({ id: 501, name: 'Тест-карточка', rank: 'C', stat: 'str', mastery: 2, masteryThreshold: 7, meta: '⚔ 15 мин · утро', streak: 3, totalCompletions: 12, daysActive: 5, firstCompletedAt: Date.now(), lastCompletedAt: Date.now() - 86400000 });
+    renderCards();
+  });
+  const card = page.locator('.card').first();
+  await expect(card).toBeVisible();
+  await expect(card).toHaveScreenshot('deck-card.png', {
+    maxDiffPixels: 300,
+    threshold: 0.2,
+  });
+});
+
+test('hero treasury screenshot matches baseline', async ({ page }) => {
+  // Блок казны на вкладке Героя: ловит легаси-тексты и вёрстку (раунд 2 QA: «Доход тракта»).
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(DETERMINISTIC_INIT);
+  await page.clock.setFixedTime(new Date('2026-09-15T10:00:00Z'));
+  await page.goto('/');
+  await page.waitForTimeout(3000);
+  await page.waitForSelector('.app-wrap', { timeout: 5000 });
+  await page.evaluate(() => { document.querySelector('.bnav-btn[data-view="hero"]').click(); });
+  const block = page.locator('.hero-hp-block');
+  await expect(block).toBeVisible();
+  await expect(block).toHaveScreenshot('hero-treasury.png', {
+    maxDiffPixels: 300,
+    threshold: 0.2,
+  });
+});
+
+test('strongholds top screenshot matches baseline', async ({ page }) => {
+  // Шапка карты: доход/содержание, kingdom path (переполнение!), сезон-чип, квест-доска.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(DETERMINISTIC_INIT);
+  await page.clock.setFixedTime(new Date('2026-09-15T10:00:00Z'));
+  await page.goto('/');
+  await page.waitForTimeout(3000);
+  await page.waitForSelector('.app-wrap', { timeout: 5000 });
+  await page.evaluate(() => { document.querySelector('.bnav-btn[data-view="strongholds"]').click(); });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const grid = document.querySelector('#strongholdsRoot .sh-grid');
+    if (grid) grid.style.display = 'none'; // QA-чит: скрываем список 20 твердынь, снимаем только шапку карты
+  });
+  const root = page.locator('#strongholdsRoot');
+  await expect(root).toBeVisible();
+  await expect(root).toHaveScreenshot('strongholds-top.png', {
+    maxDiffPixels: 500,
+    threshold: 0.2,
+  });
+});
