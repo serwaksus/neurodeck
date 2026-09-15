@@ -320,7 +320,7 @@ async function shot(pg, label) {
     if (!st.title.includes('Сендер-Хутор')) throw new Error('панель: ' + st.title);
     if (st.rows.length !== 3) throw new Error('рядов в рекомендации: ' + st.rows.length + ' — ' + JSON.stringify(st.rows));
     if (!st.rows[0].includes('Ополченческий Двор')) throw new Error('первый ряд: ' + st.rows[0]);
-    if (!st.sec.includes('свободно слотов')) throw new Error('секция: ' + st.sec);
+    if (!st.sec.replace(/\u00A0/g, ' ').includes('свободно слотов')) throw new Error('секция: ' + st.sec);
     await shot(pg, 'I1_panel_top3');
   });
   await step('I2 кнопка «Открыть весь каталог» на sh01 — чек-лист ожидал «доступных >3»', async () => {
@@ -555,10 +555,10 @@ async function shot(pg, label) {
     if (!res.head.includes('Дайджест недели')) throw new Error('заголовок: ' + res.head);
     if (res.tiles !== 4) throw new Error('плиток: ' + res.tiles);
     if (!res.kp) throw new Error('.digest-kp отсутствует');
-    // Чек-лист ожидал 7 колонок: по дизайну (app.js:2734 — break на будущих днях) колонок ровно
-    // сколько прошло с понедельника включительно. Вторник → 2 колонки со значениями 1 и 2.
-    if (res.colVals.length !== res.elapsedDays) throw new Error('колонок ' + res.colVals.length + ' ≠ прошедшим дням ' + res.elapsedDays);
-    if (res.colVals[0] !== '1' || res.colVals[res.colVals.length - 1] !== '2') throw new Error('значения колонок: ' + JSON.stringify(res.colVals));
+    // Раунд 5 (V-8): колонок всегда 7 — будущие дни недели рисуются призрачными колонками
+    if (res.colVals.length !== 7) throw new Error('колонок ' + res.colVals.length + ' ≠ 7');
+    const vals = res.colVals.filter((v) => v !== '');
+    if (vals[0] !== '1' || vals[vals.length - 1] !== '2') throw new Error('значения колонок: ' + JSON.stringify(res.colVals));
     await shot(pg, 'N_weekly_digest');
     await pg.locator('#weeklyReportModal [data-action="close-weekly-report"]').first().click();
     await pg.waitForTimeout(300);

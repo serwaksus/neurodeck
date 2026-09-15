@@ -1385,6 +1385,7 @@ var bnavEl = document.querySelector('.bnav-btn[data-view="' + view + '"]');
 if (tabEl) tabEl.classList.add('active');
 if (bnavEl) bnavEl.classList.add('active');
 document.getElementById('view-' + view).classList.add('active');
+document.querySelector('.content').scrollTop = 0; // V-7: смена вкладки всегда сверху
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'strongholds') renderStrongholds();
 if (view === 'quests') renderTasks();
@@ -1575,7 +1576,7 @@ if (!SM) return { income: 0, upkeep: 0, paid: true };
 var taxes = 0, econ = 0, market = 0, upkeep = 0, paid = true;
 var gold = HERO.gold || 0;
 strongholds.forEach(function(s, i) {
-if (!s.captured) return;
+if (!s.captured) return; // стартовый лагерь sh01 до захвата освобождён от содержания и коррапшна (решение совета)
 taxes += STRONGHOLDS[i].tax;
 builtList(i).forEach(function(id) {
 var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
@@ -1592,7 +1593,7 @@ gold += income;
 dqProgress('gold', income);
 var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
 strongholds.forEach(function(s, i) {
-if (!s.captured && i !== 0) return;
+if (!s.captured) return; // незахваченный стартовый лагерь вне экономики (решение совета)
 if (builtList(i).length === 0) return;
 var imm = {};
 Object.keys(s.buildings).forEach(function(bid) {
@@ -1969,7 +1970,7 @@ avail.push(id);
 avail.sort(function(a, b) { return BUILDINGS[a].cost - BUILDINGS[b].cost; });
 var rec = avail.filter(function(id) { var bd = BUILDINGS[id]; return !bd.req || (s.buildings[bd.req] && s.buildings[bd.req].built); }).slice(0, 3);
 var shown = shCatalogOpen ? avail : rec;
-html += '<div class="sh-sec-title">📓 ' + (shCatalogOpen ? 'Каталог' : 'Что построить сейчас') + ' (свободно слотов: ' + slotLeft + ')</div>';
+html += '<div class="sh-sec-title">📓 ' + (shCatalogOpen ? 'Каталог' : 'Что построить сейчас') + ' (свободно\u00A0слотов:\u00A0' + slotLeft + ')</div>';
 var anyShown = false;
 shown.forEach(function(id) {
 var bd = BUILDINGS[id];
@@ -2567,7 +2568,7 @@ function renderDashboardBeginner() {
     return '<div style="padding-right:22px;">' +
         '<div style="color:var(--gold-bright); font-size:13px; margin-bottom:4px;">⚔ УРОВЕНЬ ' + Math.max(1, HERO.level) + ' · 💰 ' + (HERO.gold || 0) + '</div>' +
         '<div>⛏ Выполняй карточки — золото крепит Твердыни.</div>' +
-        '<div style="margin-top:6px;">📖 Сегодня сделано: <b>' + doneToday + '</b> из <b>' + FORGED.length + '</b> · осталось <b>' + remaining + '</b>' + (openTasks > 0 ? ' · 📋 задач в работе: <b>' + openTasks + '</b>' : '') + '</div>' +
+        '<div style="margin-top:6px;">📖 Сегодня сделано: <b>' + doneToday + '</b> из\u00A0<b>' + FORGED.length + '</b> · осталось\u00A0<b>' + remaining + '</b>' + (openTasks > 0 ? '\u00A0· 📋 задач в\u00A0работе:\u00A0<b>' + openTasks + '</b>' : '') + '</div>' +
         '<div style="margin-top:6px; font-size:10px; color:var(--text-dim);">✅ За выполнение: <b style="color:#34d399">+15 XP · +1 💰 · +1 очко атрибута</b></div>' +
         '<div style="font-size:10px; color:var(--text-dim);">⚠️ За пропуск: <b style="color:var(--blood-bright)">−1 💰</b> и стрик сбросится</div>' +
         '</div>';
@@ -2733,7 +2734,7 @@ function showWeeklyReport() {
         var d = new Date(weekStart);
         d.setUTCDate(d.getUTCDate() + i);
         var k = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
-        if (k > todayKey) break;
+        if (k > todayKey) { weekDays.push(-1); continue; } // будущие дни недели — призрачные колонки (V-8)
         var dayData = HERO.cardHistory && HERO.cardHistory[k];
         var dayDone = dayData ? Object.values(dayData).filter(function(v) { return v; }).length : 0;
         doneCount += dayDone;
@@ -2747,6 +2748,7 @@ function showWeeklyReport() {
     var cap = Math.max(1, Math.max.apply(null, weekDays.concat([1])));
     var dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
     var chart = weekDays.map(function(n, i) {
+        if (n < 0) return '<div class="digest-col future"><div class="digest-val"></div><div class="digest-bar" style="height:8px; opacity:0.12;"></div><div class="digest-day">' + dayNames[i] + '</div></div>';
         var h = Math.round(10 + (n / cap) * 70);
         return '<div class="digest-col' + (i === weekDays.length - 1 ? ' today' : '') + '">' +
             '<div class="digest-val">' + (n > 0 ? n : '') + '</div>' +
