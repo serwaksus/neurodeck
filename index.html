@@ -10,7 +10,8 @@
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="css/style.css?v=59" />
   </head>
   <body>
@@ -1376,7 +1377,7 @@
         </div>
       </div>
     </div>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js" async onload="window.__tgReady && window.__tgReady()"></script>
     <script src="js/perf.js?v=59"></script>
     <script src="js/perf-compat.js?v=59"></script>
     <script src="js/stronghold-data.js?v=59"></script>

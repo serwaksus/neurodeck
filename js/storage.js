@@ -176,7 +176,7 @@ try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 localStorage.setItem('neurodeck_full_save', json);
-try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {}
+if (FORGED.length > 0) { try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {} } // ever_saved = «игрок с карточками»: пустой сейв не должен блокировать старт-колоду (O-10)
 try { localStorage.setItem('neurodeck_backup', json); } catch(e) {}
 if (FORGED.length > 0) {
 try { localStorage.setItem('neurodeck_cards_backup', json); } catch(e) {}

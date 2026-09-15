@@ -151,7 +151,7 @@ text-shadow: 0 0 16px rgba(252, 211, 77, 0.9);
 filter: drop-shadow(0 0 6px rgba(252, 211, 77, 0.8));
 font-size: 20px;
 }
-.card-rank { position: absolute; top: 6px; right: 8px; font-size: 18px; font-weight: bold; color: var(--rank-color); text-shadow: 0 0 8px var(--rank-glow); letter-spacing: 1px; }
+.card-rank { position: absolute; top: 6px; right: 64px; font-size: 18px; font-weight: bold; color: var(--rank-color); text-shadow: 0 0 8px var(--rank-glow); letter-spacing: 1px; }
 .card-name { font-size: 13px; color: var(--text); letter-spacing: 1px; margin-bottom: 4px; padding-right: 100px; }
 .card-actions { position: absolute; top: 28px; right: 8px; display: flex; gap: 3px; }
 .card-meta { font-size: var(--fs-secondary); color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
@@ -691,6 +691,7 @@ textarea:focus-visible {
 
 /* ===================== Performance / Reduced Motion =====================
    :root.perf-eco is added by js/perf.js when:
+   (mode reference: eco/low/effects-off — low-specific rules live on body.low-effect, there is no :root.perf-low class)
      (a) user chooses 'eco' in the sync modal, OR
      (b) the OS reports prefers-reduced-motion: reduce and user mode is 'auto'.
    Heuristic: cut every CSS animation/transition down to ~0ms and disable

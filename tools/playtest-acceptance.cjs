@@ -457,6 +457,7 @@ async function shot(pg, label) {
       
       lastWeekReset = getThisMondayKey();                      // QA-чит: неделя «текущая» — воскресный блок не сработает
       STATS.wil.value = 3;                                     // grace = 2 + floor(3/20) = 2
+      dailyEvent = null;                                       // событие прошлого дня (Ярмарка ×1.5) не должно множить доход фикстуры
       window.__origRandom = Math.random; Math.random = function() { return 0.99; }; // пин события дня «Тихий день»: Караван (+20💰) рандомно оплачивал содержание 21 и ломал сценарий руины
     });
     const m = await ev(() => ({ grace: Math.min(7, 2 + Math.floor(STATS.wil.value / 20)), upkeep: shUpkeepPerDay(), income: shIncomePerDay(), fresh: Object.keys(strongholds[0].buildings).filter(function(bid) { var bb = strongholds[0].buildings[bid]; return bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000; }).length }));

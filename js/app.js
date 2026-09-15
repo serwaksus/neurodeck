@@ -1272,7 +1272,7 @@ function closeForge() { document.getElementById('forgeModal').classList.remove('
 function updateStatChips() { document.querySelectorAll('#statChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedStat)); }
 updateStatChips();
 function forgeCard() {
-const name = document.getElementById('forgeName').value.trim();
+const name = document.getElementById('forgeName').value.trim().slice(0, 40);
 if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
 const time = document.getElementById('forgeTime').value;
 const duration = parseInt(document.getElementById('forgeDuration').value) || 15;
@@ -2800,12 +2800,14 @@ if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCoun
 if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
 var revenue = 0, upkeepTotal = 0, unpaid = 0;
 for (var gd = gapDays; gd >= 1; gd--) {
+if (gd > 1) dailyEvent = null; // события дня не действуют задним числом на пропущенные ночи
 expireGhostTasks(getMSKDayKey(Date.now() - gd * 86400000));
 var tr = strongholdsDailyTick();
 revenue += tr.income;
 upkeepTotal += tr.upkeep;
 if (!tr.paid) unpaid++;
 }
+dailyEvent = ev; // последний (сегодняшний) тик — под событием дня
 if (revenue > 0) {
 showToast('💰 Тьма копила для тебя', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия. Твои твердыни ждали.', 'save');
 sfxEquip(); haptic('success');
@@ -3278,7 +3280,9 @@ updateStrongholdProgress();
 renderCards();
 renderDashboard();
 importFromHash();
-try{ var tg=window.Telegram&&Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); } }catch(e){}
+window.__tgReady = function(){ try{ var tg=window.Telegram&&Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); } }catch(e){} };
+window.__tgReady();
+window.addEventListener('load', function(){ window.__tgReady(); });
 if (!hasEverSaved() && FORGED.length === 0) {
     pendingOnboarding = !localStorage.getItem('neurodeck_onboarding_done');
     setTimeout(showStarterDeck, 900);
