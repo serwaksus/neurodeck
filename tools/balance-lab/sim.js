@@ -185,6 +185,9 @@ function runProfile(P) {
       }
     }
     pct = Math.min(pct, BLD['Э1'].cap);
+    let routes = 0;
+    for (let i = 1; i < 20; i++) if (st.captured[i] && st.captured[i - 1]) routes++;
+    taxes = Math.round(taxes * Math.min(1.38, 1 + routes * 0.02)); // B4: торговые пути
     return { taxes, econ, market: Math.round((taxes + econ) * pct) };
   }
   function garDefOf(sh) {

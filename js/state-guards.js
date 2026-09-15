@@ -315,6 +315,21 @@
         return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails };
     }
 
+    function sanitizeSeason(input, todayKey) {
+        var src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+        var num = Math.round(clampNumber(src.num, 1, 999, 1));
+        var start = (typeof src.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(src.start)) ? src.start : (todayKey || '2000-01-01');
+        var snap = (src.snapshot && typeof src.snapshot === 'object' && !Array.isArray(src.snapshot)) ? src.snapshot : {};
+        var snapshot = {
+            totalXp: Math.round(clampNumber(snap.totalXp, 0, 1e12, 0)),
+            gold: Math.round(clampNumber(snap.gold, 0, 1e12, 0)),
+            captured: Math.round(clampNumber(snap.captured, 0, 20, 0)),
+            completions: Math.round(clampNumber(snap.completions, 0, 1e9, 0)),
+            level: Math.round(clampNumber(snap.level, 1, 1000, 1))
+        };
+        return { num: num, start: start, snapshot: snapshot };
+    }
+
     return {
         RANK_PROGRESSION: RANK_PROGRESSION,
         EQUIP_SLOTS: EQUIP_SLOTS,
@@ -330,6 +345,7 @@
         sanitizeStrongholds: sanitizeStrongholds,
         sanitizeArmy: sanitizeArmy,
         sanitizeSiege: sanitizeSiege,
-        sanitizeHirePool: sanitizeHirePool
+        sanitizeHirePool: sanitizeHirePool,
+        sanitizeSeason: sanitizeSeason
     };
 });

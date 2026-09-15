@@ -1144,3 +1144,10 @@ body::before {
 .ach-prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
 .ach-prog-text { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
 .ach-card.unlocked::after { content: '✓'; position: absolute; top: 6px; right: 8px; color: var(--gold-bright); font-size: 12px; }
+.sh-trade { font-size: var(--fs-secondary); color: var(--text-dim); margin: 6px 0 10px; letter-spacing: 0.5px; }
+.sh-trade b { color: var(--gold-bright); }
+.sh-season { margin: 0 0 10px; }
+.sh-season-line { font-size: var(--fs-secondary); color: var(--text-dim); letter-spacing: 0.5px; }
+.sh-season-line b { color: var(--gold-bright); }
+.sh-season-bar { height: 6px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.sh-season-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #c084fc); }

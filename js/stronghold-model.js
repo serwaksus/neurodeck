@@ -133,6 +133,18 @@
         return { gold: paid ? gold - upkeep : 0, upkeep: upkeep, paid: paid, buildings: out };
     }
 
+    // B4: торговые пути — пары соседних захваченных твердынь; бонус налогам +2%/путь, кап +38%.
+    function tradeRoutes(capturedFlags) {
+        var arr = Array.isArray(capturedFlags) ? capturedFlags : [];
+        var n = 0;
+        for (var i = 1; i < arr.length; i++) if (arr[i] && arr[i - 1]) n++;
+        return n;
+    }
+    function tradeBonus(routes) {
+        var r = Math.max(0, Math.round(Number(routes) || 0));
+        return Math.min(0.38, r * 0.02);
+    }
+
     return {
         armyPower: armyPower,
         defensePower: defensePower,
@@ -141,6 +153,8 @@
         corruptionTick: corruptionTick,
         stackPower: stackPower,
         tierPower: tierPower,
+        tradeRoutes: tradeRoutes,
+        tradeBonus: tradeBonus,
         TIER_KEYS: TIER_KEYS
     };
 });

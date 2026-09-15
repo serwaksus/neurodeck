@@ -144,6 +144,7 @@ case 'close-return-modal': closeReturnModal(); break;
 case 'select-evolution': (function(sel) { document.querySelectorAll('#editEvolutionChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c === sel); }); pendingEvolutionPath = sel.dataset.path || null; })(el); break;
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
+case 'close-season-report': document.getElementById('seasonModal').classList.remove('show'); break;
 case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
 case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); hintOnce('shpanel', 'Жильё даёт недельный пул найма. Стройка занимает дни — планируй заранее.'); break;
 case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(currentShIdx); break;
@@ -1424,6 +1425,52 @@ const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи �
 var currentShIdx = null;
 var shCatalogOpen = false;
 var dailyQuests = null;
+var season = null;
+var SEASON_DAYS = 30;
+var SEASON_NAMES = ['Пробуждение', 'Закалка', 'Разлив', 'Венец'];
+function ensureSeason() {
+    if (season && season.num && season.start) return season;
+    season = STATE_GUARDS.sanitizeSeason(season, getMSKDayKey());
+    return season;
+}
+function seasonName(num) { return SEASON_NAMES[(Math.max(1, num) - 1) % SEASON_NAMES.length]; }
+function dayKeyFromUTC(d) { return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); }
+function seasonEndDate(startKey) {
+    var d = new Date(startKey + 'T00:00:00+03:00');
+    d.setUTCDate(d.getUTCDate() + SEASON_DAYS);
+    return dayKeyFromUTC(d);
+}
+function seasonDaysTotal(startKey) { return Math.max(1, daysBetween(startKey, seasonEndDate(startKey))); }
+function seasonDaysDone(startKey) { return Math.max(0, Math.min(seasonDaysTotal(startKey), daysBetween(startKey, getMSKDayKey()))); }
+function finishSeason() {
+    ensureSeason();
+    var completions = FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0);
+    var d = {
+        xp: Math.max(0, (HERO.totalXp || 0) - (season.snapshot.totalXp || 0)),
+        gold: (HERO.gold || 0) - (season.snapshot.gold || 0),
+        captured: Math.max(0, capturedCount() - (season.snapshot.captured || 0)),
+        completions: Math.max(0, completions - (season.snapshot.completions || 0)),
+        levels: Math.max(0, (HERO.level || 1) - (season.snapshot.level || 1))
+    };
+    showSeasonReport(season.num, d);
+    season = STATE_GUARDS.sanitizeSeason({ num: season.num + 1, start: getMSKDayKey(), snapshot: { totalXp: HERO.totalXp || 0, gold: HERO.gold || 0, captured: capturedCount(), completions: completions, level: HERO.level || 1 } }, getMSKDayKey());
+    saveGameState();
+}
+function showSeasonReport(num, d) {
+    var modal = document.getElementById('seasonModal');
+    if (!modal) return;
+    var tile = function(icon, val, label) { return '<div class="digest-tile"><div class="dt-num">' + icon + ' ' + val + '</div><div class="dt-label">' + label + '</div></div>'; };
+    modal.querySelector('.modal-body').innerHTML =
+    '<div class="digest-head">🍂 Сезон ' + num + ': ' + seasonName(num) + ' — завершён</div>' +
+    '<div class="digest-tiles">' +
+    tile('✨', '+' + d.xp.toLocaleString('ru-RU'), 'XP за сезон') +
+    tile('💯', '+' + d.completions.toLocaleString('ru-RU'), 'выполнений') +
+    tile('🏰', '+' + d.captured, 'твердынь взято') +
+    tile('💰', (d.gold >= 0 ? '+' : '') + d.gold.toLocaleString('ru-RU'), 'казна (дельта)') +
+    '</div>' +
+    '<div style="text-align:center; font-size:13px; color:var(--text-bright); margin-top:6px;">Сезон ' + (num + 1) + ': <b style="color:var(--gold-bright)">' + seasonName(num + 1) + '</b> — ' + SEASON_DAYS + ' дней. Начни с чистого отсчёта.</div>';
+    modal.classList.add('show');
+}
 var DQ_POOL = [
     { id: 'dq_cards', icon: '📖', text: 'Выполни 2 карточки', goal: 2, reward: 20, counter: 'cards' },
     { id: 'dq_gold', icon: '💰', text: 'Заработай 30 💰', goal: 30, reward: 15, counter: 'gold' },
@@ -1536,6 +1583,9 @@ if (d.gold) econ += d.gold * m;
 if (d.market) market += d.market * m;
 });
 });
+var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
+var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
+taxes = Math.round(taxes * (1 + tBonus));
 gold += taxes + Math.round(econ);
 dqProgress('gold', taxes + Math.round(econ));
 var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
@@ -1756,6 +1806,8 @@ if (d.gold) econ += d.gold * m;
 if (d.market) market += d.market * m;
 });
 });
+var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
+taxes = Math.round(taxes * (1 + (SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0)));
 return Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 }
 function shUpkeepPerDay() {
@@ -1824,6 +1876,12 @@ for (var pi = 0; pi < 20; pi++) {
     if (pi < 19) html += '<div class="sh-kp-link"></div>';
 }
 html += '</div>';
+var tRoutesUI = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
+if (tRoutesUI > 0) html += '<div class="sh-trade">🛃 Торговые пути: <b>' + tRoutesUI + '</b> · налоги <b>+' + Math.round((SM.tradeBonus(tRoutesUI)) * 100) + '%</b></div>';
+var _season = ensureSeason();
+var _sTotal = seasonDaysTotal(_season.start);
+var _sDone = seasonDaysDone(_season.start);
+html += '<div class="sh-season"><div class="sh-season-line">🍂 Сезон ' + _season.num + ': <b>' + seasonName(_season.num) + '</b> · осталось <b>' + Math.max(0, _sTotal - _sDone) + '</b> дн.</div><div class="sh-season-bar"><div class="sh-season-fill" style="width:' + Math.min(100, Math.round(_sDone / _sTotal * 100)) + '%;"></div></div></div>';
 // Квест-доска (3 ротационных дневных задания)
 if (!dailyQuests || dailyQuests.day !== getMSKDayKey() || !dailyQuests.quests || !dailyQuests.quests.length) {
     var seed = parseInt(getMSKDayKey().replace(/-/g, ''));
@@ -2736,6 +2794,8 @@ if (revenue > 0) {
 showToast('💰 Тьма копила для тебя', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия. Твои твердыни ждали.', 'save');
 sfxEquip(); haptic('success');
 }
+ensureSeason();
+if (getMSKDayKey() > seasonEndDate(season.start)) finishSeason();
 if (unpaid > 0) {
 showToast('🏚 Не хватило на содержание', unpaid + ' дн. дефицита — постройки ветшают (grace ' + (2 + Math.floor(STATS.wil.value / 20)) + ' дн.)', 'blood');
 sfxFail(); haptic('error');
