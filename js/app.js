@@ -145,7 +145,7 @@ case 'select-evolution': (function(sel) { document.querySelectorAll('#editEvolut
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
 case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
-case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); break;
+case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); hintOnce('shpanel', 'Жильё даёт недельный пул найма. Стройка занимает дни — планируй заранее.'); break;
 case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(currentShIdx); break;
 case 'sh-back': currentShIdx = null; renderStrongholds(); break;
 case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
@@ -407,6 +407,7 @@ spiritSay('«Легенда... Твоя дисциплина несокруши�
 }
 HERO.gold = (HERO.gold || 0) + 1;
 dqProgress('cards'); dqProgress('gold');
+hintOnce('firstcard', 'За выполнение капает 💰, а Мастерство растит ранг карточки — ранг-ап качает атрибут.');
 if (lootPityCheck(card)) dropRandomLoot(x, y);
 checkHeroLevelUp();
 renderCards();
@@ -1391,6 +1392,8 @@ if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
 if (view === 'stats') renderStatsView();
 if (typeof window.__ndSetCombatActive === 'function') window.__ndSetCombatActive(view === 'boss');
+var vh = VIEW_HINTS[view];
+if (vh) hintOnce('view_' + view, vh);
 }
 var VIEW_ORDER = ['deck', 'quests', 'strongholds', 'hero', 'inv', 'stats'];
 var currentViewIndex = 0;
@@ -3088,51 +3091,42 @@ r1.setAttribute('transform', 'translate(' + x + ', ' + y + ')');
 r2.setAttribute('transform', 'translate(' + (-x * 0.5) + ', ' + (-y * 0.5) + ')');
 });
 var pendingOnboarding = false;
-var ONBOARDING_STEPS = [
-{ icon: '⚔', title: 'Добро пожаловать в NeuroDeck', text: 'Геймифицированный трекер привычек.<br>Ты — Владыка, зарабатывающий свою свободу дисциплиной.' },
-{ icon: '📖', title: 'Колода карточек', text: 'Каждая карточка — привычка, которую нужно выполнять ежедневно.<br>Нажми <b>✓</b> чтобы выполнить, <b>✕</b> чтобы пропустить.<br>Выполнение = <b style="color:var(--gold-bright)">+1 💰</b>. Пропуск = <b style="color:var(--blood-bright)">−1 💰</b> и сброс стрика.' },
-{ icon: '💰', title: 'Казна', text: 'Золото капает за каждую выполненную карточку.<br>Твердыни платят налоги каждый день, а постройки требуют <b>содержания</b> — забросишь казну, начнут ветшать.' },
-{ icon: '🏰', title: 'Твердыни', text: '20 твердынь ждут завоевателя: найми армию и штурмуй <b>по одной в бою</b>.<br>Каждое воскресенье тьма осаждает твой фронт — держи гарнизоны.<br>От Сендер-Хутора до Тернового Трона — путь длиной в месяцы дисциплины.' },
-{ icon: '📋', title: 'Задачи дня', text: 'Дела с дедлайном — отдельная система: «сдать отчёт до 13:00».<br>Успел — открой <b>сундук</b> (золото или XP).<br>Просрочил — призрак задачи навещает тебя каждый день, −1 💰 за ночь.' },
-{ icon: '🎯', title: 'Цели', text: 'Крупные дела с дедлайном и шагами.<br>Выполнение = опыт + очки атрибута + золото.<br>Провал по дедлайну = потеря золота.' },
-{ icon: '🔥', title: 'Ранги и мастерство', text: 'Выполняй карточку — растёт Мастерство.<br>Ранг растёт: C → CC → ... → SSS.<br>Ранг-ап = +1 к пулу атрибута.' },
-{ icon: '👑', title: 'Начни свой путь', text: 'От Сендер-Хутора до Тернового Трона — 20 твердынь.<br>Каждая привычка — кирпич в твою дорогу к свободе.<br><br><span style="color:var(--gold-bright)">Дисциплина — твоя армия.</span>' }
-];
+function hintOnce(key, text) {
+var flag = null;
+try { flag = localStorage.getItem('neurodeck_hint_' + key); if (!flag) localStorage.setItem('neurodeck_hint_' + key, '1'); } catch (e) { return; }
+if (flag) return;
+showToast('💡 Подсказка', text);
+}
+var VIEW_HINTS = {
+quests: 'Задача с дедлайном: успел — сундук (💰 или XP), просрочил — призрак забирает 💰 по ночам.',
+strongholds: 'Путь: построй Жилище → найми существ → штурмуй фронт. Один штурм в сутки.',
+hero: 'Ранги карточек качают атрибуты: атака, оборона гарнизона, скидка найма.',
+inv: 'Артефакты падают за подвиги — надевай в слоты, бонусы суммируются.',
+stats: 'Дневник королевства: стрики, XP и история дней.'
+};
 function startOnboarding() {
-var step = 0;
 var overlay = document.createElement('div');
 overlay.className = 'onboarding-overlay';
-function render() {
-var s = ONBOARDING_STEPS[step];
-var dots = ONBOARDING_STEPS.map(function(_, i) {
-return '<div class="onboarding-dot' + (i === step ? ' active' : '') + '"></div>';
-}).join('');
 overlay.innerHTML =
 '<div class="onboarding-card">' +
-'<div class="onboarding-step">Шаг ' + (step + 1) + ' из ' + ONBOARDING_STEPS.length + '</div>' +
-'<div class="onboarding-icon">' + s.icon + '</div>' +
-'<div class="onboarding-title">' + s.title + '</div>' +
-'<div class="onboarding-text">' + s.text + '</div>' +
-'<div class="onboarding-dots">' + dots + '</div>' +
-(step < ONBOARDING_STEPS.length - 1
-? '<button class="demo-btn primary" style="width:100%;">Далее →</button>'
-: '<button class="demo-btn primary" style="width:100%;">⚔ Начать!</button>') +
+'<div class="onboarding-icon">⚔</div>' +
+'<div class="onboarding-title">Добро пожаловать, Владыка</div>' +
+'<div class="onboarding-text">' +
+'Карточки — твои привычки: <b>✓</b> даёт <b style="color:var(--gold-bright)">+1 💰</b>, <b>✕</b> — <b style="color:var(--blood-bright)">−1 💰</b> и сброс стрика.<br><br>' +
+'Золото строит королевство: <b>жильё → армия → штурм твердынь</b>.<br><br>' +
+'Каждое воскресенье тьма осаждает фронт — <b>гарнизон держит удар</b>.<br><br>' +
+'<span style="color:var(--text-dim)">Подсказки будут появляться по мере знакомства с системами.</span>' +
+'</div>' +
+'<button class="demo-btn primary" style="width:100%;">⚔ Начать!</button>' +
 '</div>';
 overlay.querySelector('button').addEventListener('click', function() {
-step++;
-if (step >= ONBOARDING_STEPS.length) {
 overlay.classList.remove('show');
 setTimeout(function() { overlay.remove(); }, 300);
 localStorage.setItem('neurodeck_onboarding_done', '1');
 spiritSay('«Дорога ждёт, Владыка. Отбей своё золото у лени.»');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 30, { color: '#d4a574', speed: 4, decay: 0.015, size: 2, shape: 'spark', gravity: 0.05 });
-} else {
-render();
-}
 });
-}
 document.body.appendChild(overlay);
-render();
 setTimeout(function() { overlay.classList.add('show'); }, 50);
 }
 function showReminderFreqToast(mode) {
