@@ -626,7 +626,7 @@ async function shot(pg, label) {
       p.strongholds[1].buildings.zh2 = { built: true, corruptionStage: 'ok', debtDays: 0 };
       p.hero.gold = 500;
     }));
-    await ev(() => { STATS.cha.value = 40; recalcHirePool(); });
+    await ev(() => { STATS.cha.value = 40; recalcHirePool(); dailyEvent = null; }); // гасим событие дня: Кузнец ×0.75 не должен мешать parity-цене
     const m = await ev(() => ({ cost2: hireCostOf('t2'), cost1: hireCostOf('t1'), pool2: hirePool.t2, g: HERO.gold }));
     if (m.cost2 !== Math.ceil(5 * 0.8) || m.cost2 !== 4) throw new Error('цена Т2: ' + m.cost2);
     if (m.cost1 !== 1) throw new Error('цена Т1: ' + m.cost1);

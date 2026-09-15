@@ -598,7 +598,7 @@ async function nodePhase() {
   });
 
   // ---------- Шаг 5. Две вкладки (last-write-wins) ----------
-  await step('B12 [шаг5] две вкладки, общий localStorage: свежая вкладка всегда читает последнюю запись — A пишет 3210 → новая B видит; B пишет 65 → новая A видит (LWW)', async () => {
+  await step('B12 [шаг5] мульти-вкладка: свежая вкладка видит запись A; живая вкладка B адоптирует её через storage-event; LWW-гвард не даёт устаревшему сейву B затереть запись A', async () => {
     await richState(1000);
     const openTab = async () => {
       const p = await pg._ctx.newPage();
@@ -608,25 +608,24 @@ async function nodePhase() {
       await p.waitForTimeout(1200);
       return p;
     };
-    // ВАЖНО: beforeunload сохраняет in-memory состояние вкладки (app.js:2885), поэтому вкладку
-    // закрывают ДО чужой записи — иначе выгрузка затрёт её (см. находку в B12b).
-    const staleB = await openTab(); await staleB.close();
     await ev(() => { HERO.gold = 3210; saveGameState(); });
     const freshB = await openTab();
     const gB = await freshB.evaluate(() => HERO.gold);
     if (gB !== 3210) throw new Error('свежая вкладка B не увидила запись A: ' + gB);
-    await ev(() => { HERO.gold = 65; saveGameState(); });
-    await pg.close(); pg = await openTab(); // «переоткрыли A» — старая выгрузилась до записи B
-    const gA = await ev(() => HERO.gold);
-    if (gA !== 65) throw new Error('свежая вкладка A не увидила запись B (last-write-wins): ' + gA);
-    // B12b — детектор находки (НЕ гейт): живая вкладка затирает чужую запись своей выгрузкой
-    await ev(() => { HERO.gold = 777; saveGameState(); }); // A пишет при ЖИВОЙ freshB (in-memory 65)
-    await freshB.reload({ waitUntil: 'domcontentloaded' });
+    // живой синк: A пишет 777 при открытой B → storage-event → B адоптирует без перезагрузки
+    await ev(() => { HERO.gold = 777; saveGameState(); });
     await freshB.waitForTimeout(1000);
-    const gBr = await freshB.evaluate(() => HERO.gold);
-    if (gBr !== 777) {
-      findings.push({ sev: 'P2', text: 'Мульти-вкладка: живая вкладка при выгрузке (reload/закрытие) сохраняет своё in-memory состояние через beforeunload → saveGameState() (app.js:2885) и ЗАТИРАЕТ записи, сделанные в другой вкладке за время жизни сессии (записали 777 в A, вкладка B после reload показала ' + gBr + '). Работает только сценарий «переоткрыл вкладку — увидел последнее»; одновременная работа в двух вкладках теряет прогресс.', evidence: 'B12b: A записала 777, B после reload = ' + gBr });
-    }
+    const gBsync = await freshB.evaluate(() => HERO.gold);
+    if (gBsync !== 777) throw new Error('живой синк: вкладка B не адоптировала 777, у неё ' + gBsync);
+    // LWW-гвард: устаревшее сохранение B не затирает 777 — B адоптирует чужое состояние и сохраняет его же
+    await freshB.evaluate(() => saveGameState());
+    const gGuard = await ev(() => (JSON.parse(localStorage.getItem('neurodeck_full_save') || '{}').hero || {}).gold);
+    if (gGuard !== 777) throw new Error('LWW-гвард: устаревшее сохранение B затёрло запись A: ' + gGuard);
+    // честная запись из B (новое действие пользователя) → A видит через живой синк
+    await freshB.evaluate(() => { HERO.gold = 65; saveGameState(); });
+    await pg.waitForTimeout(1000);
+    const gA = await ev(() => HERO.gold);
+    if (gA !== 65) throw new Error('A не увидила запись B (живой синк): ' + gA);
     await freshB.close();
     await shot(pg, 'b12_two_tabs_lww');
   });
@@ -716,6 +715,39 @@ async function nodePhase() {
       findings.push({ sev: 'P3', text: 'После full-wipe-all старт-колода не предлагается: fullWipeAll() вызывает saveGameState() с пустым FORGED → neurodeck_ever_saved=1 → условие app.js:3277 (!hasEverSaved() && FORGED.length===0) ложно. Игрок остаётся без карточек и без онбординга (deepRecovery ничего не находит).', evidence: 'B15: everSaved=1, starter=false, cards=0' });
     }
     await shot(pg, 'b15_full_wipe');
+  });
+
+  // ---------- Шаг 8. Гонка облачной синхронизации (эпоха) ----------
+  await step('B17 [шаг8] гонка облака: локальные изменения при открытом диалоге smartCloudSync → устаревший applySyncData отбрасывается (облачный снапшот не затирает живое состояние)', async () => {
+    await richState(5000);
+    await ev(() => {
+      FORGED.length = 0;
+      FORGED.push({ id: 1, name: 'Живая-1', rank: 'C', stat: 'str', mastery: 0, masteryThreshold: 5, meta: '⚔ 10 мин · утро', streak: 0, totalCompletions: 0, prestige: 0, evolutionPath: null, daysActive: 0, firstCompletedAt: null, lastCompletedAt: null }, { id: 2, name: 'Живая-2', rank: 'C', stat: 'int', mastery: 0, masteryThreshold: 5, meta: '🧠 10 мин · день', streak: 0, totalCompletions: 0, prestige: 0, evolutionPath: null, daysActive: 0, firstCompletedAt: null, lastCompletedAt: null });
+      saveGameState(); // эпоха E1
+      const oldSnap = buildSyncData(); // «облако»: устаревший снапшот с 1 карточкой
+      oldSnap.forged = [FORGED[0]];
+      window.Telegram = { WebApp: { CloudStorage: {
+        getItem: function(k, cb) { setTimeout(function() {
+          if (String(k).indexOf('meta') !== -1) cb(null, JSON.stringify({ n: 1, t: Date.now() + 60000 }));
+          else cb(null, JSON.stringify(oldSnap));
+        }, 250); },
+        setItem: function(k, v, cb) { setTimeout(function() { if (cb) cb(null); }, 50); },
+        removeItem: function(k, cb) { setTimeout(function() { if (cb) cb(null); }, 50); }
+      } } };
+    });
+    await ev(() => smartCloudSync()); // myEpoch = E1; облако «новее» → loadCloudChunks → диалог
+    await pg.waitForTimeout(1300);
+    const dialogUp = await pg.evaluate(() => { const c = document.getElementById('confirmOverlay'); return !!(c && c.classList.contains('show')); });
+    if (!dialogUp) throw new Error('диалог «Найдано обновление» не открылся (стаб облака не сработал)');
+    // локальное изменение, ПОКА диалог открыт: новая карточка + сохранение → эпоха E2
+    await ev(() => { FORGED.push({ id: 3, name: 'Живая-3', rank: 'C', stat: 'wil', mastery: 0, masteryThreshold: 5, meta: '🧘 5 мин · вечер', streak: 0, totalCompletions: 0, prestige: 0, evolutionPath: null, daysActive: 0, firstCompletedAt: null, lastCompletedAt: null }); saveGameState(); });
+    await pg.locator('#confirmYes').click({ force: true }).catch(() => {});
+    await pg.waitForTimeout(800);
+    const after = await ev(() => ({ cards: FORGED.length, has3: FORGED.some((c) => c.id === 3), alive: !!document.getElementById('progressVal') }));
+    if (!after.alive) throw new Error('приложение не пережило гонку облака');
+    if (after.cards !== 3 || !after.has3) throw new Error('гонка облака: устаревший облачный снапшот наложился поверх локальных изменений (карточек ' + after.cards + ', has3=' + after.has3 + ')');
+    await ev(() => { delete window.Telegram; });
+    await shot(pg, 'b17_cloud_race');
   });
 
   // ---------- Итоги ----------

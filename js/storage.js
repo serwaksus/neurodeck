@@ -28,6 +28,9 @@ function loadFromIDB(callback) {
     } catch(e) { callback(null); }
 }
 const EVER_SAVED_KEY = 'neurodeck_ever_saved';
+const GEN_KEY = 'neurodeck_gen';
+var stateGen = 0;   // поколение состояния: растёт при каждом сохранении этой вкладки
+var localEpoch = 0; // страж гонок: инкремент при каждом локальном сохранении; отложенные async-применения с чужим epoch отбрасываются
 function hasEverSaved() {
     try { return localStorage.getItem(EVER_SAVED_KEY) === '1'; } catch(e) { return false; }
 }
@@ -153,6 +156,21 @@ function maxExistingId(arr) {
 }
 function saveGameState() {
 try {
+// Мульти-вкладка (LWW-гвард): если другая вкладка сохранила свежее поколение —
+// принимаем её состояние (adopt) перед сборкой своего снапшота, а не перетираем вслепую.
+var remoteGen = 0;
+try { remoteGen = parseInt(localStorage.getItem(GEN_KEY), 10) || 0; } catch(e) {}
+if (remoteGen > stateGen && typeof applySyncData === 'function') {
+try {
+var theirs = JSON.parse(localStorage.getItem('neurodeck_full_save') || 'null');
+if (theirs && typeof theirs.v === 'number') {
+applySyncData(theirs, true);
+showToast('🔄 Синхронизировано между вкладками', 'Принято состояние из другой вкладки', 'save');
+}
+} catch(e) {}
+stateGen = remoteGen;
+}
+localEpoch++;
 if (FORGED.length === 0) {
 var emergency = localStorage.getItem('neurodeck_cards_backup');
 if (emergency) {
@@ -167,7 +185,7 @@ showToast('♻ Защита данных', 'Карточки восстанов�
 }
 }
 const snapshot = {
-v: SCHEMA_VERSION, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
+v: SCHEMA_VERSION, gen: stateGen, hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, hirePool, savedAt: Date.now()
@@ -181,6 +199,7 @@ try { localStorage.setItem('neurodeck_backup', json); } catch(e) {}
 if (FORGED.length > 0) {
 try { localStorage.setItem('neurodeck_cards_backup', json); } catch(e) {}
 }
+try { localStorage.setItem(GEN_KEY, String(stateGen)); } catch(e) {}
 saveToIDB(snapshot);
 saveGoals();
 autoCloudSave(json);
@@ -267,8 +286,10 @@ function forceCloudSave(bypassConflictCheck) {
 function smartCloudSync() {
     var cs = getCloudStorage();
     if (!cs) return;
+    var myEpoch = localEpoch; // страж гонки: локальные изменения во время полёта делают ответ устаревшим
     cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
         if (err || !metaStr) return;
+        if (typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return;
         var meta;
         try { meta = JSON.parse(metaStr); } catch(e) { return; }
         var cloudTime = (meta && meta.t) || 0;
@@ -280,15 +301,23 @@ function smartCloudSync() {
         if (!(cloudTime > localTime + 10000)) return;
         loadCloudChunks(meta, function(chunkErr, data) {
             if (chunkErr || !data) { updateSyncBadge('offline'); return; }
+            if (typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return; // пока летали — локально изменилось
             var cloudDate = new Date(cloudTime).toLocaleString('ru');
             var localDate = localTime ? new Date(localTime).toLocaleString('ru') : 'нет данных';
             if (typeof dungeonConfirm === 'function') {
+                var dialogEpoch = localEpoch;
                 dungeonConfirm('☁ Найдано обновление',
                     'Облако новее, чем это устройство:<br>' +
                     '<b>Облако:</b> ' + cloudDate + '<br>' +
                     '<b>Локально:</b> ' + localDate + '<br><br>' +
                     '<span style="color:var(--gold-bright)">Загрузить актуальный прогресс?</span>'
                 ).then(function(ok) {
+                    if (typeof localEpoch !== 'undefined' && localEpoch !== dialogEpoch) {
+                        // пока думали — локально изменилось: чужие (облачные) данные не накладываем
+                        forceCloudSave(true);
+                        showToast('☁ Облако устарело', 'Локальные изменения сохранены и отправлены', 'save');
+                        return;
+                    }
                     if (ok) {
                         applySyncData(data);
                         saveGameState();
@@ -301,6 +330,7 @@ function smartCloudSync() {
                     }
                 });
             } else {
+                if (typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return;
                 applySyncData(data);
                 saveGameState();
                 showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
@@ -515,7 +545,7 @@ function clearSurplusChunks(n) {
 }
 function buildSyncData() {
 var data = {
-v: SCHEMA_VERSION, t: Date.now(),
+v: SCHEMA_VERSION, t: Date.now(), gen: stateGen,
 hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
@@ -749,6 +779,7 @@ if (typeof data.v === 'number' && data.v > SCHEMA_VERSION) {
 if (typeof showToast === 'function') showToast('⚠ Слишком новая версия', 'Данные из более новой версии игры — обновите приложение', 'blood');
 return;
 }
+if (typeof data.gen === 'number' && Number.isFinite(data.gen) && data.gen > stateGen) stateGen = Math.floor(data.gen);
 migrateSyncData(data);
 if (data.hero && typeof data.hero === 'object') {
 var sanitizedHero = STATE_GUARDS.sanitizeHero(data.hero);
@@ -848,4 +879,24 @@ if (typeof module === 'object' && module.exports) {
         setSiege: function(v) { siege = v; },
         SCHEMA_VERSION: SCHEMA_VERSION
     };
+}
+
+// Мульти-вкладка: живой синк — чужое сохранение подхватывается этой вкладкой автоматически
+if (typeof window !== 'undefined' && window.addEventListener) {
+    var _tabSyncTimer = null;
+    window.addEventListener('storage', function(e) {
+        if (!e || e.key !== 'neurodeck_full_save' || !e.newValue) return;
+        if (_tabSyncTimer) return; // дебаунс: серия записей другой вкладки = один apply
+        _tabSyncTimer = setTimeout(function() {
+            _tabSyncTimer = null;
+            try {
+                var data = JSON.parse(localStorage.getItem('neurodeck_full_save') || 'null');
+                if (!data || typeof applySyncData !== 'function') return;
+                applySyncData(data, true);
+                if (typeof renderCards === 'function') {
+                    renderCards(); renderDashboard(); renderStrongholds(); renderTasks(); renderStats(); renderGoals(); updateHeroUI(); updateStrongholdProgress();
+                }
+            } catch (err) {}
+        }, 400);
+    });
 }
