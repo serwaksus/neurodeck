@@ -284,7 +284,7 @@ oathBadge +
     : '<button class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">⚔ Выполнить</button>' +
       '<button class="card-skip-btn" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)">✕</button>'
 ) +
-'</div>' +
+'</div>';
 el.addEventListener('mousemove', (e) => {
 if (ecoOn()) return;
 const r = el.getBoundingClientRect();
@@ -1885,7 +1885,8 @@ html += '<div class="sh-season"><div class="sh-season-line">🍂 Сезон ' + 
 // Квест-доска (3 ротационных дневных задания)
 if (!dailyQuests || dailyQuests.day !== getMSKDayKey() || !dailyQuests.quests || !dailyQuests.quests.length) {
     var seed = parseInt(getMSKDayKey().replace(/-/g, ''));
-    dailyQuests = { day: getMSKDayKey(), quests: [DQ_POOL[seed % 6], DQ_POOL[(seed + 2) % 6], DQ_POOL[(seed + 4) % 6]], done: {}, progress: {} };
+    var _sameDay = !!(dailyQuests && dailyQuests.day === getMSKDayKey());
+    dailyQuests = { day: getMSKDayKey(), quests: [DQ_POOL[seed % 6], DQ_POOL[(seed + 2) % 6], DQ_POOL[(seed + 4) % 6]], done: _sameDay ? (dailyQuests.done || {}) : {}, progress: _sameDay ? (dailyQuests.progress || {}) : {} };
 }
 html += '<div class="sh-quest-board"><div class="sh-quest-title">📋 Задания дня</div>';
 dailyQuests.quests.forEach(function(q) {

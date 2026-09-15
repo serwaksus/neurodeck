@@ -236,6 +236,28 @@
           </div>
         </div>
       </div>
+    </div>
+      <div
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        id="siegeReportModal"
+      >
+        <div class="modal">
+          <div class="modal-header">
+            <h3>⚔ Итоги воскресной осады</h3>
+            <button class="modal-close" data-action="close-siege-report">
+              ✕
+            </button>
+          </div>
+          <div class="modal-body" id="siegeReportBody"></div>
+          <div class="modal-footer">
+            <button class="demo-btn primary" data-action="close-siege-report">
+              К новой неделе
+            </button>
+          </div>
+        </div>
+      </div>
       <div
         class="modal-overlay"
         role="dialog"
@@ -683,14 +705,6 @@
               </button>
               <button
                 class="demo-btn"
-                <div class="sync-section">
-<div class="sync-section-title">🔔 Напоминания</div>
-<div style="display: flex; gap: 6px; flex-wrap: wrap;">
-<button class="demo-btn" data-action="set-reminder-freq" data-mode="daily" style="flex: 1;">📅 Ежедневно</button>
-<button class="demo-btn" data-action="set-reminder-freq" data-mode="sunday" style="flex: 1;">🛡 Только осады</button>
-<button class="demo-btn" data-action="set-reminder-freq" data-mode="off" style="flex: 1;">🔕 Выкл</button>
-</div>
-</div>
                 data-action="full-wipe-all"
                 style="
                   flex: 1;
@@ -698,8 +712,28 @@
                   border-color: var(--blood);
                 "
               >
-                🗑 🗑 Сброс
+                🗑 Сброс
               </button>
+            </div>
+            <button
+              class="demo-btn"
+              data-action="new-game-keep-cards"
+              style="
+                width: 100%;
+                margin-top: 8px;
+                color: var(--gold-bright);
+                border-color: var(--gold);
+              "
+            >
+              🎲 Новая игра (карточки останутся)
+            </button>
+            <div class="sync-section">
+              <div class="sync-section-title">🔔 Напоминания</div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                <button class="demo-btn" data-action="set-reminder-freq" data-mode="daily" style="flex: 1">📅 Ежедневно</button>
+                <button class="demo-btn" data-action="set-reminder-freq" data-mode="sunday" style="flex: 1">🛡 Только осады</button>
+                <button class="demo-btn" data-action="set-reminder-freq" data-mode="off" style="flex: 1">🔕 Выкл</button>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -709,28 +743,6 @@
           </div>
         </div>
       </div>
-      <div
-        class="modal-overlay"
-        role="dialog"
-        aria-modal="true"
-        id="siegeReportModal"
-      >
-        <div class="modal">
-          <div class="modal-header">
-            <h3>⚔ Итоги воскресной осады</h3>
-            <button class="modal-close" data-action="close-siege-report">
-              ✕
-            </button>
-          </div>
-          <div class="modal-body" id="siegeReportBody"></div>
-          <div class="modal-footer">
-            <button class="demo-btn primary" data-action="close-siege-report">
-              К новой неделе
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
     <div class="modal-overlay" role="dialog" aria-modal="true" id="taskModal">
       <div class="modal">
         <div class="modal-header">

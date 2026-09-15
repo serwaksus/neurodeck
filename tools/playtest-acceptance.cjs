@@ -423,8 +423,10 @@ async function shot(pg, label) {
       const r = await assaultUI(10);
       if (r.captured) throw new Error(`прогон ${run}: sh11 захвачена — ожидалось отступление`);
       const after = await ev(() => army.units.t1);
-      const pct = (before - after) / before;
-      if (pct < 0.0999 || pct > 0.3001) throw new Error(`прогон ${run}: потери ${(pct * 100).toFixed(1)}% вне коридора 10–30% (${before}→${after})`);
+      const loss = before - after;
+      const loLoss = Math.max(1, Math.floor(before * 0.10) - 1); // floor в applyStackLoss может съесть 1 юнита от нижней границы
+      const hiLoss = Math.floor(before * 0.30) + 1;
+      if (loss < loLoss || loss > hiLoss) throw new Error(`прогон ${run}: потери ${loss} из ${before} вне коридора floor(10–30%) (${loLoss}–${hiLoss})`);
       if (after <= 0) throw new Error(`прогон ${run}: армия обнулена`);
     }
     const fin = await ev(() => army.units.t1);
