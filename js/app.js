@@ -2205,48 +2205,55 @@ html += '<span>Больше</span></div>';
 return html;
 }
 function buildAchievements() {
-var all = [
-{ id: 'first_card', icon: '⚔', name: 'Первая ковка', desc: 'Выковать первую карточку', check: FORGED.length >= 1 },
-{ id: 'cards_10', icon: '📖', name: 'Коллекционер', desc: '10 карточек в колоде', check: FORGED.length >= 10 },
-{ id: 'cards_25', icon: '📚', name: 'Архивариус', desc: '25 карточек в колоде', check: FORGED.length >= 25 },
-{ id: 'rank_b', icon: '🛡', name: 'Воин', desc: 'Карточка ранга B', check: FORGED.some(function(c) { return ['B','BB','BBB','A','AA','AAA','S','SS','SSS'].indexOf(c.rank) >= 0; }) },
-{ id: 'rank_a', icon: '⚡', name: 'Мастер', desc: 'Карточка ранга A', check: FORGED.some(function(c) { return ['A','AA','AAA','S','SS','SSS'].indexOf(c.rank) >= 0; }) },
-{ id: 'rank_s', icon: '👑', name: 'Легенда', desc: 'Карточка ранга S', check: FORGED.some(function(c) { return ['S','SS','SSS'].indexOf(c.rank) >= 0; }) },
-{ id: 'lvl5', icon: '🗡', name: 'Искатель', desc: 'Достичь 5 уровня', check: HERO.level >= 5 },
-{ id: 'lvl10', icon: '🛡', name: 'Страж', desc: 'Достичь 10 уровня', check: HERO.level >= 10 },
-{ id: 'lvl15', icon: '🏰', name: 'Архонт', desc: 'Достичь 15 уровня', check: HERO.level >= 15 },
-{ id: 'xp_1k', icon: '✨', name: 'Первая тысяча', desc: 'Набрать 1000 XP', check: HERO.totalXp >= 1000 },
-{ id: 'xp_10k', icon: '💎', name: 'Десять тысяч', desc: 'Набрать 10 000 XP', check: HERO.totalXp >= 10000 },
-{ id: 'xp_100k', icon: '🌟', name: 'Сто тысяч', desc: 'Набрать 100 000 XP', check: HERO.totalXp >= 100000 },
-{ id: 'goal_1', icon: '🎯', name: 'Первая цель', desc: 'Выполнить первую цель', check: GOALS.filter(function(g) { return g.completed; }).length >= 1 },
-{ id: 'goal_10', icon: '🏆', name: 'Десятка', desc: 'Выполнить 10 целей', check: GOALS.filter(function(g) { return g.completed; }).length >= 10 },
-{ id: 'equip_all', icon: '🎒', name: 'Полный комплект', desc: 'Заполнить все слоты экипировки', check: Object.values(INVENTORY.equipped).filter(function(e) { return e; }).length >= 9 },
-{ id: 'sh_10', icon: '🏰', name: 'Полкоролевства', desc: 'Захватить 10 твердынь', check: capturedCount() >= 10 },
-{ id: 'sh_all', icon: '👑', name: 'Владыка Твердынь', desc: 'Захватить все 20 твердынь', check: capturedCount() >= STRONGHOLDS.length },
-{ id: 'streak_7', icon: '🔥', name: 'Неделя дисциплины', desc: '7-дневный стрик на карточке', check: FORGED.some(function(c) { return (c.streak || 0) >= 7; }) },
-{ id: 'streak_30', icon: '🔥', name: 'Месяц железа', desc: '30-дневный стрик на карточке', check: FORGED.some(function(c) { return (c.streak || 0) >= 30; }) },
-{ id: 'completions_100', icon: '💯', name: 'Сотня', desc: '100 выполнений карточек', check: totalCompletions >= 100 },
-];
 var totalCompletions = FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0);
-all[all.length - 1].check = totalCompletions >= 100;
-var unlocked = all.filter(function(a) { return a.check; }).length;
-var html = '<div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);padding:16px;margin-bottom:20px;">';
-html += '<div style="font-size:11px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:12px;">🏆 Достижения (' + unlocked + '/' + all.length + ')</div>';
-html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">';
+var cardsN = FORGED.length;
+var goalsDoneN = GOALS.filter(function(g) { return g.completed; }).length;
+var rankReached = function(minRank) {
+var mi = RANK_PROGRESSION.indexOf(minRank);
+return FORGED.some(function(c) { return RANK_PROGRESSION.indexOf(c.rank) >= mi; });
+};
+var bestStreakN = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
+var equippedN = Object.values(INVENTORY.equipped).filter(function(e) { return e; }).length;
+var captured = capturedCount();
+var fmt = function(n) { return n.toLocaleString('ru-RU'); };
+var all = [
+{ icon: '⚔', name: 'Первая ковка', desc: 'Выковать первую карточку', cur: Math.min(cardsN, 1), max: 1 },
+{ icon: '📖', name: 'Коллекционер', desc: 'Карточек в колоде', cur: cardsN, max: 10 },
+{ icon: '📚', name: 'Архивариус', desc: 'Карточек в колоде', cur: cardsN, max: 25 },
+{ icon: '🛡', name: 'Воин', desc: 'Карточка ранга B', cur: rankReached('B') ? 1 : 0, max: 1 },
+{ icon: '⚡', name: 'Мастер', desc: 'Карточка ранга A', cur: rankReached('A') ? 1 : 0, max: 1 },
+{ icon: '👑', name: 'Легенда', desc: 'Карточка ранга S', cur: rankReached('S') ? 1 : 0, max: 1 },
+{ icon: '🗡', name: 'Искатель', desc: 'Уровень героя', cur: HERO.level, max: 5 },
+{ icon: '🛡', name: 'Страж', desc: 'Уровень героя', cur: HERO.level, max: 10 },
+{ icon: '🏰', name: 'Архонт', desc: 'Уровень героя', cur: HERO.level, max: 15 },
+{ icon: '✨', name: 'Первая тысяча', desc: 'Набрать XP', cur: HERO.totalXp, max: 1000 },
+{ icon: '💎', name: 'Десять тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 10000 },
+{ icon: '🌟', name: 'Сто тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 100000 },
+{ icon: '🎯', name: 'Первая цель', desc: 'Выполнить первую цель', cur: Math.min(goalsDoneN, 1), max: 1 },
+{ icon: '🏆', name: 'Десятка', desc: 'Выполнить целей', cur: goalsDoneN, max: 10 },
+{ icon: '🎒', name: 'Полный комплект', desc: 'Слотов экипировки', cur: equippedN, max: 9 },
+{ icon: '🏰', name: 'Полкоролевства', desc: 'Захватить твердынь', cur: captured, max: 10 },
+{ icon: '👑', name: 'Владыка Твердынь', desc: 'Захватить все твердыни', cur: captured, max: STRONGHOLDS.length },
+{ icon: '🔥', name: 'Неделя дисциплины', desc: 'Стрик на карточке', cur: bestStreakN, max: 7 },
+{ icon: '🔥', name: 'Месяц железа', desc: 'Стрик на карточке', cur: bestStreakN, max: 30 },
+{ icon: '💯', name: 'Сотня', desc: 'Выполнений карточек', cur: totalCompletions, max: 100 }
+];
+var unlocked = all.filter(function(a) { return a.cur >= a.max; }).length;
+var html = '<div class="ach-wrap">';
+html += '<div class="ach-head"><div class="ach-title">🏆 Галерея трофеев</div><div class="ach-count">' + unlocked + '/' + all.length + '</div></div>';
+html += '<div class="ach-overall"><div class="ach-overall-fill" style="width:' + Math.round(unlocked / all.length * 100) + '%;"></div></div>';
+html += '<div class="ach-grid">';
 all.forEach(function(a) {
-if (a.check) {
-html += '<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);padding:10px;border-radius:6px;text-align:center;">';
-html += '<div style="font-size:24px;">' + a.icon + '</div>';
-html += '<div style="font-size:11px;color:var(--gold-bright);font-weight:bold;margin-top:4px;">' + a.name + '</div>';
-html += '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + a.desc + '</div>';
-html += '</div>';
-} else {
-html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:10px;border-radius:6px;text-align:center;opacity:0.4;">';
-html += '<div style="font-size:24px;filter:grayscale(1);">' + a.icon + '</div>';
-html += '<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">' + a.name + '</div>';
-html += '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + a.desc + '</div>';
-html += '</div>';
-}
+var done = a.cur >= a.max;
+var pct = Math.min(100, Math.round(a.cur / a.max * 100));
+html += '<div class="ach-card' + (done ? ' unlocked' : '') + '">' +
+'<div class="ach-icon">' + a.icon + '</div>' +
+'<div class="ach-name">' + a.name + '</div>' +
+'<div class="ach-desc">' + a.desc + '</div>' +
+(a.max > 1
+? '<div class="ach-prog"><div class="ach-prog-fill" style="width:' + pct + '%;"></div></div><div class="ach-prog-text">' + fmt(Math.min(a.cur, a.max)) + ' / ' + fmt(a.max) + '</div>'
+: '') +
+'</div>';
 });
 html += '</div></div>';
 return html;
@@ -2676,23 +2683,29 @@ function showWeeklyReport() {
     var bestStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
     var goalsDone = GOALS.filter(function(g) { return g.completed && g.lastStepAt && (Date.now() - g.lastStepAt) < 604800000; }).length;
     var goalsFailed = GOALS.filter(function(g) { return g.failed && g.lastStepAt && (Date.now() - g.lastStepAt) < 604800000; }).length;
-    var barChart = weekDays.map(function(n, i) {
-        var h = Math.max(2, n * 8);
-        var dayName = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][i];
-        return '<div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1;">' +
-            '<div style="height:' + h + 'px; width:100%; max-width:24px; background:linear-gradient(to top, var(--gold), var(--gold-bright)); border-radius:2px 2px 0 0; min-height:2px;"></div>' +
-            '<div style="font-size:10px; color:var(--text-dim);">' + dayName + '</div>' +
-            '</div>';
+    var cap = Math.max(1, Math.max.apply(null, weekDays.concat([1])));
+    var dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    var chart = weekDays.map(function(n, i) {
+        var h = Math.round(10 + (n / cap) * 70);
+        return '<div class="digest-col' + (i === weekDays.length - 1 ? ' today' : '') + '">' +
+            '<div class="digest-val">' + (n > 0 ? n : '') + '</div>' +
+            '<div class="digest-bar" style="height:' + h + 'px;"></div>' +
+            '<div class="digest-day">' + dayNames[i] + '</div>' +
+        '</div>';
     }).join('');
-    var html = '<div style="text-align:center; font-size:18px; color:var(--gold-bright); margin-bottom:12px;">📊 Недельный отчёт</div>' +
-        '<div style="display:flex; gap:12px; justify-content:center; align-items:flex-end; height:60px; margin-bottom:16px;">' + barChart + '</div>' +
-        '<div style="font-size:13px; line-height:2; color:var(--text-bright);">' +
-        '<div>✓ <b>Выполнено:</b> ' + doneCount + '/' + totalCount + ' карточек (' + rate + '%)</div>' +
-        '<div>🔥 <b>Лучший стрик:</b> ' + bestStreak + ' дней</div>' +
-        '<div>🎯 <b>Цели:</b> ' + goalsDone + ' выполнено' + (goalsFailed > 0 ? ', ' + goalsFailed + ' провалено' : '') + '</div>' +
-        '<div>💰 <b>Казна:</b> ' + (HERO.gold || 0) + ' · 🏰 <b>Твердыни:</b> ' + capturedCount() + '/20 (+' + strongholdTaxPerDay() + ' 💰/день)</div>' +
-        '</div>' +
-        '<div style="text-align:center; margin-top:12px; color:var(--text-dim); font-size:11px;">Новая неделя начинается. Используй опыт прошлой.</div>';
+    var captured = capturedCount();
+    var html =
+    '<div class="digest-head">📊 Дайджест недели</div>' +
+    '<div class="digest-chart">' + chart + '</div>' +
+    '<div class="digest-tiles">' +
+    '<div class="digest-tile"><div class="dt-num">' + doneCount + '<span class="dt-sub">/' + totalCount + '</span></div><div class="dt-label">карточек · ' + rate + '%</div></div>' +
+    '<div class="digest-tile"><div class="dt-num">🔥 ' + bestStreak + '</div><div class="dt-label">лучший стрик</div></div>' +
+    '<div class="digest-tile"><div class="dt-num">🎯 ' + goalsDone + (goalsFailed > 0 ? ' <span style="color:var(--blood-bright);font-size:12px;">(−' + goalsFailed + ')</span>' : '') + '</div><div class="dt-label">цели</div></div>' +
+    '<div class="digest-tile"><div class="dt-num">💰 ' + (HERO.gold || 0) + '</div><div class="dt-label">казна · +' + strongholdTaxPerDay() + ' 💰/день</div></div>' +
+    '</div>' +
+    '<div class="dt-label" style="text-align:center;">🏰 Кампания: ' + captured + '/' + STRONGHOLDS.length + ' · осада №' + (siege.week || 1) + '</div>' +
+    '<div class="digest-kp"><div class="digest-kp-fill" style="width:' + Math.round(captured / STRONGHOLDS.length * 100) + '%;"></div></div>' +
+    '<div class="digest-foot">Новая неделя начинается. Используй опыт прошлой.</div>';
     var modal = document.getElementById('weeklyReportModal');
     if (modal) {
         modal.querySelector('.modal-body').innerHTML = html;

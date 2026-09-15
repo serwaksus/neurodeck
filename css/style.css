@@ -1107,3 +1107,40 @@ body::before {
 
 /* Панель твердыни — глубина */
 .sh-panel-head { background: linear-gradient(180deg, rgba(30,20,10,0.5), transparent); padding: 12px; margin: -12px -12px 12px; border-bottom: 1px solid rgba(212,165,116,0.15); }
+
+/* ===== B1: воскресный дайджест ===== */
+.digest-head { text-align: center; font-size: 18px; color: var(--gold-bright); margin-bottom: 14px; letter-spacing: 1px; }
+.digest-chart { display: flex; gap: 8px; align-items: flex-end; height: 116px; margin-bottom: 16px; padding: 0 4px; }
+.digest-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 3px; }
+.digest-bar { width: 100%; max-width: 26px; background: linear-gradient(to top, var(--gold), var(--gold-bright)); border-radius: 3px 3px 0 0; box-shadow: 0 0 8px rgba(212, 165, 116, 0.25); }
+.digest-col.today .digest-bar { background: linear-gradient(to top, #fbbf24, #fde68a); box-shadow: 0 0 12px rgba(251, 191, 36, 0.45); }
+.digest-val { font-size: 11px; color: var(--gold-bright); min-height: 14px; }
+.digest-day { font-size: 12px; color: var(--text-dim); }
+.digest-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.digest-tile { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 4px; padding: 10px; text-align: center; }
+.digest-tile .dt-num { font-size: 17px; color: var(--text-bright); font-weight: bold; }
+.digest-tile .dt-sub { color: var(--text-dim); font-size: 12px; font-weight: normal; }
+.dt-label { font-size: 11px; color: var(--text-dim); margin-top: 3px; letter-spacing: 1px; text-transform: uppercase; }
+.digest-kp { height: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; margin: 8px 0 4px; }
+.digest-kp-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+.digest-foot { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 10px; }
+
+/* ===== B2: галерея трофеев ===== */
+.ach-wrap { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); padding: 16px; margin-bottom: 20px; border-radius: 4px; }
+.ach-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.ach-title { font-size: 12px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.ach-count { color: var(--gold-bright); font-size: 14px; font-weight: bold; }
+.ach-overall { height: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+.ach-overall-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ach-card { position: relative; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 14px 10px; border-radius: 6px; text-align: center; opacity: 0.55; }
+.ach-card.unlocked { opacity: 1; background: rgba(251, 191, 36, 0.08); border-color: rgba(251, 191, 36, 0.45); box-shadow: 0 0 14px rgba(251, 191, 36, 0.12); }
+.ach-icon { font-size: 26px; }
+.ach-card:not(.unlocked) .ach-icon { filter: grayscale(1); }
+.ach-name { font-size: 12px; color: var(--gold-bright); font-weight: bold; margin-top: 6px; letter-spacing: 0.5px; }
+.ach-card:not(.unlocked) .ach-name { color: var(--text-dim); }
+.ach-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.ach-prog { height: 5px; background: rgba(0, 0, 0, 0.5); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.ach-prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+.ach-prog-text { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
+.ach-card.unlocked::after { content: '✓'; position: absolute; top: 6px; right: 8px; color: var(--gold-bright); font-size: 12px; }
