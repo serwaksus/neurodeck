@@ -141,15 +141,12 @@ case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
 case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf) { var prevPerfMode = window.NeuroDeckPerf.getMode(); if (window.NeuroDeckPerf.setMode(el.dataset.mode) && prevPerfMode !== el.dataset.mode) { renderPerfStatus(); showToast('⚡ Режим изменён', { 'auto': 'Авто — эффекты зависят от системных настроек', 'eco': 'Эко — минимальная графика', 'performance': 'Все эффекты включены', 'low': 'Экономный режим — меньше анимаций', 'effects-off': 'Анимации отключены' }[el.dataset.mode] || el.dataset.mode); } } break;
 case 'close-return-modal': closeReturnModal(); break;
-case 'close-evolution-modal': closeEvolutionModal(); break;
-case 'apply-evolution-depth': applyEvolution('depth'); break;
-case 'apply-evolution-frequency': applyEvolution('frequency'); break;
-case 'apply-evolution-stability': applyEvolution('stability'); break;
-case 'evolution-skip': closeEvolutionModal(); var ecid = parseInt(document.getElementById('evolutionModal').dataset.cardId); if (ecid) openEditCardAfterRankup(ecid); break;
+case 'select-evolution': (function(sel) { document.querySelectorAll('#editEvolutionChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c === sel); }); pendingEvolutionPath = sel.dataset.path || null; })(el); break;
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
 case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
-case 'sh-open': currentShIdx = parseInt(el.dataset.idx); renderStrongholdPanel(currentShIdx); break;
+case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); break;
+case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(currentShIdx); break;
 case 'sh-back': currentShIdx = null; renderStrongholds(); break;
 case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
 case 'sh-buy': buyBuilding(parseInt(el.dataset.idx), el.dataset.bid); break;
@@ -643,15 +640,24 @@ showToast('⚔ Ранг повышен!', card.name + ': ' + oldRank + ' → ' +
  setTimeout(() => {
 rankupOverlay.classList.remove('show');
 rankupBanner.classList.remove('show');
-if (!card.evolutionPath) { showEvolutionChoices(card); }
-else { openEditCardAfterRankup(card.id); }
-}, 2200);
+openEditCardAfterRankup(card.id);
+}, 1000);
 }
 let editingCardId = null;
+let pendingEvolutionPath = null;
+function setEvolutionSection(card) {
+const sec = document.getElementById('editEvolutionSection');
+if (!sec) return;
+pendingEvolutionPath = null;
+if (card.evolutionPath || card.rank === 'SSS') { sec.style.display = 'none'; return; }
+sec.style.display = 'block';
+sec.querySelectorAll('.stat-chip').forEach(function(c) { c.classList.remove('selected'); });
+}
 function openEditCardAfterRankup(cardId) {
 const card = findCard(cardId);
 if (!card) return;
 editingCardId = cardId;
+document.getElementById('editCardTitle').textContent = '⚔ Ранг повышен — эволюция и усложнение';
 document.getElementById('editCardName').value = card.name;
 const metaParts = (card.meta || '').split(' · ');
 document.getElementById('editCardTime').value = metaParts[1] || 'утро';
@@ -672,6 +678,7 @@ warningEl.innerHTML = '⚠ Ранг повышен! Усложни карточ�
 warningEl.style.display = 'block';
 warningEl.innerHTML = '⚠ Ранг повышен! Усложни карточку для нового вызова.';
 }
+setEvolutionSection(card);
 document.getElementById('editCardModal').classList.add('show');
 }
 function openEditCardDirect(cardId) {
@@ -692,11 +699,15 @@ const streakInfo = getStreakBonusLabel(streakMult);
     hintEl.innerHTML = '🔥 Бонус стрика: <b style="color:var(--gold-bright)">' + streakInfo.label + '</b>. Каждый день выполнения = +5% XP (макс ×2.0). Пропуск обнуляет стрик!';
     const warningEl = document.getElementById('editCardWarning');
     warningEl.style.display = 'none';
+    var _evoSec = document.getElementById('editEvolutionSection');
+    if (_evoSec) _evoSec.style.display = 'none';
+    pendingEvolutionPath = null;
     document.getElementById('editCardModal').classList.add('show');
 }
 function closeEditCard() {
 document.getElementById('editCardModal').classList.remove('show');
 editingCardId = null;
+pendingEvolutionPath = null;
 }
 function skipEditCard() { closeEditCard(); }
 function saveEditCard() {
@@ -719,9 +730,20 @@ card.masteryThreshold = newMastery;
 if (card.meta !== oldMeta || newStat !== oldStat) {
 card.firstCompletedAt = Date.now();
 }
+var evoApplied = false;
+if (pendingEvolutionPath && !card.evolutionPath) {
+card.evolutionPath = pendingEvolutionPath;
+evoApplied = true;
+}
+pendingEvolutionPath = null;
 closeEditCard();
 renderCards();
+if (evoApplied) {
+var evoLabels = { depth: '🧘 Глубже: +50% мастерства', frequency: '⚡ Чаще: +1 к пулу стата', stability: '🌟 Стабильнее: двойная защита стрика' };
+showToast('🌟 Эволюция!', evoLabels[card.evolutionPath] + ' · карточка усложнена', 'crit');
+} else {
 showToast('✏ Сохранено', 'Карточка обновлена: ' + name);
+}
 saveGameState();
 }
 function addXpReward(amount) {
@@ -1397,6 +1419,7 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
 const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
 var currentShIdx = null;
+var shCatalogOpen = false;
 var dailyQuests = null;
 var DQ_POOL = [
     { id: 'dq_cards', icon: '📖', text: 'Выполни 2 карточки', goal: 2, reward: 20, counter: 'cards' },
@@ -1872,12 +1895,20 @@ html += '<div class="sh-build-row"><div class="sh-build-icon">' + shSpriteImg('i
 stageBadgeHtml(b.corruptionStage) + '</div>';
 });
 var slotLeft = d.slots - built.length;
-html += '<div class="sh-sec-title">📓 Каталог (свободно слотов: ' + slotLeft + ')</div>';
-var anyShown = false;
+var avail = [];
 Object.keys(BUILDINGS).forEach(function(id) {
 var bd = BUILDINGS[id];
 if (bd.min > idx + 1) return;
 if (s.buildings[id] && s.buildings[id].built) return;
+avail.push(id);
+});
+avail.sort(function(a, b) { return BUILDINGS[a].cost - BUILDINGS[b].cost; });
+var rec = avail.filter(function(id) { var bd = BUILDINGS[id]; return !bd.req || (s.buildings[bd.req] && s.buildings[bd.req].built); }).slice(0, 3);
+var shown = shCatalogOpen ? avail : rec;
+html += '<div class="sh-sec-title">📓 ' + (shCatalogOpen ? 'Каталог' : 'Что построить сейчас') + ' (свободно слотов: ' + slotLeft + ')</div>';
+var anyShown = false;
+shown.forEach(function(id) {
+var bd = BUILDINGS[id];
 anyShown = true;
 var reqOk = !bd.req || (s.buildings[bd.req] && s.buildings[bd.req].built);
 var can = reqOk && slotLeft > 0 && (HERO.gold || 0) >= bd.cost;
@@ -1888,6 +1919,7 @@ html += '<div class="sh-build-row buy"><div class="sh-build-icon">' + shSpriteIm
 '</div>';
 });
 if (!anyShown) html += '<div class="empty-state">Каталог пуст — захватывай новые земли.</div>';
+if (avail.length > 3) html += '<button class="sh-back" data-action="sh-catalog-toggle">' + (shCatalogOpen ? '∧ Свернуть каталог' : '📓 Открыть весь каталог (ещё ' + (avail.length - rec.length) + ')') + '</button>';
 html += '<div class="sh-sec-title">⚔ Найм (пул недели · скидка 🎭 ' + Math.round(Math.min(0.30, 0.005 * STATS.cha.value) * 100) + '%)</div>';
 var hireRows = '';
 Object.keys(BUILDINGS).forEach(function(id) {
@@ -2496,34 +2528,6 @@ function getComboMultiplier() {
     return count >= COMBO_THRESHOLD ? 1 + COMBO_BONUS : 1.0;
 }
 
-function showEvolutionChoices(card) {
-    var modal = document.getElementById('evolutionModal');
-    if (!modal) return;
-    modal.querySelector('.evolution-card-name').textContent = card.name;
-    modal.dataset.cardId = card.id;
-    modal.classList.add('show');
-    sfxRankUp(); haptic('medium');
-}
-function closeEvolutionModal() { document.getElementById('evolutionModal').classList.remove('show'); }
-function applyEvolution(path) {
-    var modal = document.getElementById('evolutionModal');
-    var cardId = parseInt(modal.dataset.cardId);
-    var card = findCard(cardId);
-    if (!card) { closeEvolutionModal(); return; }
-    card.evolutionPath = path;
-    var labels = { depth: '🧘 Глубже', frequency: '⚡ Чаще', stability: '🌟 Стабильнее' };
-    var effects = {
-        depth: '+50% мастерства',
-        frequency: '+1 к пулу стата за выполнение',
-        stability: 'Двойная защита стрика для этой карточки'
-    };
-    showToast('🌟 Эволюция!', labels[path] + ': ' + effects[path], 'crit');
-    spiritSay('«Карточка эволюционировала. Её суть изменилась навсегда.»');
-    closeEvolutionModal();
-    renderCards();
-    saveGameState();
-}
-
 function prestigeCard(id) {
     var card = findCard(id);
     if (!card || card.rank !== 'SSS') return;
@@ -2938,7 +2942,7 @@ openSyncModal();
 var MODAL_CLOSE_FNS = {
 goalModal: closeGoalModal, forgeModal: closeForge, editCardModal: closeEditCard,
 syncModal: closeSyncModal, returnModal: closeReturnModal,
-evolutionModal: closeEvolutionModal, weeklyReportModal: closeWeeklyReportModal,
+weeklyReportModal: closeWeeklyReportModal,
 starterDeckModal: closeStarterDeck, taskModal: closeTaskModal,
 siegeReportModal: closeSiegeReport
 };

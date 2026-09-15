@@ -63,7 +63,7 @@ test('No combat bridge remnants in app.js', () => {
     });
 });
 
-test('Rank-up flow chains evolution menu', () => {
+test('Rank-up flow chains single unified edit modal (A2: banner -> one modal)', () => {
     const start = app.indexOf('function triggerRankUpEffect');
     assert.ok(start > -1, 'triggerRankUpEffect missing');
     // Find matching brace using depth counter (handles nested braces).
@@ -73,31 +73,41 @@ test('Rank-up flow chains evolution menu', () => {
         else if (app[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
     }
     const body = app.slice(start, end + 1);
-    assert.ok(body.includes('showEvolutionChoices'),
-        'triggerRankUpEffect must call showEvolutionChoices');
     assert.ok(body.includes('openEditCardAfterRankup'),
-        'triggerRankUpEffect must branch on evolutionPath');
+        'triggerRankUpEffect must open the unified edit modal');
+    assert.ok(!body.includes('showEvolutionChoices'),
+        'old separate evolution step must be gone from rank-up flow');
+    assert.ok(body.includes('1000'),
+        'rank-up banner must last ~1s, not 2.2s');
 });
 
-test('Evolution modal exists in HTML with selector', () => {
-    assert.ok(html.indexOf('id="evolutionModal"') > -1,
-        'evolutionModal missing in HTML');
-    assert.ok(html.indexOf('evolution-card-name') > -1,
-        '.evolution-card-name selector missing in HTML');
-    assert.ok(html.indexOf('apply-evolution-depth') > -1,
-        'apply-evolution-depth data-action missing');
-    assert.ok(html.indexOf('apply-evolution-frequency') > -1,
-        'apply-evolution-frequency data-action missing');
-    assert.ok(html.indexOf('apply-evolution-stability') > -1,
-        'apply-evolution-stability data-action missing');
+test('Unified rank-up modal: evolution section lives inside editCardModal', () => {
+    assert.ok(html.indexOf('id="editEvolutionSection"') > -1,
+        'editEvolutionSection missing in HTML');
+    assert.ok(html.indexOf('data-path="depth"') > -1,
+        'evolution path depth missing');
+    assert.ok(html.indexOf('data-path="frequency"') > -1,
+        'evolution path frequency missing');
+    assert.ok(html.indexOf('data-path="stability"') > -1,
+        'evolution path stability missing');
+    assert.ok(html.indexOf('id="evolutionModal"') === -1,
+        'old evolutionModal must be removed (A2: one modal, not three)');
 });
 
-test('Evolution handlers wired in app.js event delegation', () => {
-    ['apply-evolution-depth', 'apply-evolution-frequency',
-     'apply-evolution-stability', 'evolution-skip'
-    ].forEach(action => {
-        assert.ok(app.indexOf("case '" + action + "'") > -1,
-            'event delegation missing case for ' + action);
+test('Evolution handlers wired in app.js event delegation + save applies path', () => {
+    assert.ok(app.indexOf("case 'select-evolution'") > -1,
+        'event delegation missing case for select-evolution');
+    assert.ok(app.indexOf('pendingEvolutionPath') > -1,
+        'pendingEvolutionPath must carry the choice into save');
+    const saveStart = app.indexOf('function saveEditCard');
+    assert.ok(saveStart > -1, 'saveEditCard missing');
+    const saveEnd = app.indexOf('function addXpReward');
+    const saveBody = app.slice(saveStart, saveEnd);
+    assert.ok(saveBody.includes('card.evolutionPath = pendingEvolutionPath'),
+        'saveEditCard must apply pendingEvolutionPath');
+    ['showEvolutionChoices', 'applyEvolution', 'closeEvolutionModal'].forEach(fn => {
+        assert.equal((app.match(new RegExp('\\b' + fn + '\\b', 'g')) || []).length, 0,
+            fn + ' must be removed from app.js');
     });
 });
 

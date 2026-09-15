@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=57" />
+    <link rel="stylesheet" href="css/style.css?v=58" />
   </head>
   <body>
     <div class="app-wrap">
@@ -365,13 +365,59 @@
       >
         <div class="modal">
           <div class="modal-header">
-            <h3>✏ Редактировать карточку</h3>
+            <h3 id="editCardTitle">✏ Редактировать карточку</h3>
             <button class="modal-close" data-action="close-edit-card">✕</button>
           </div>
           <div class="modal-body">
             <div class="form-warning" id="editCardWarning">
               ⚠ Ранг повышен! Теперь карточка должна стать сложнее, иначе
               адаптация снизит получаемое Мастерство и XP.
+            </div>
+            <div id="editEvolutionSection" style="display: none">
+              <div class="form-label" style="margin-bottom: 8px">
+                🌟 Путь эволюции — выбери один (можно позже)
+              </div>
+              <div id="editEvolutionChips">
+                <div
+                  class="stat-chip"
+                  data-action="select-evolution"
+                  data-path="depth"
+                  style="
+                    display: flex;
+                    width: 100%;
+                    margin: 0 0 6px 0;
+                    border-color: rgba(192, 132, 252, 0.4);
+                  "
+                >
+                  🧘 Глубже — +50% мастерства
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-evolution"
+                  data-path="frequency"
+                  style="
+                    display: flex;
+                    width: 100%;
+                    margin: 0 0 6px 0;
+                    border-color: rgba(96, 165, 250, 0.4);
+                  "
+                >
+                  ⚡ Чаще — +1 к пулу стата за выполнение
+                </div>
+                <div
+                  class="stat-chip"
+                  data-action="select-evolution"
+                  data-path="stability"
+                  style="
+                    display: flex;
+                    width: 100%;
+                    margin: 0 0 6px 0;
+                    border-color: rgba(52, 211, 153, 0.4);
+                  "
+                >
+                  🌟 Стабильнее — двойная защита стрика
+                </div>
+              </div>
             </div>
             <div class="form-row">
               <label class="form-label">Название</label
@@ -1246,86 +1292,6 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
-      id="evolutionModal"
-    >
-      <div class="modal">
-        <div class="modal-header">
-          <h3>🌟 Эволюция карточки</h3>
-          <button class="modal-close" data-action="close-evolution-modal">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <div style="text-align: center; margin-bottom: 16px">
-            Карточка <b class="evolution-card-name"></b> повысила ранг!<br />Выбери
-            путь эволюции:
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr; gap: 10px">
-            <div
-              data-action="apply-evolution-depth"
-              style="
-                cursor: pointer;
-                padding: 14px;
-                background: rgba(192, 132, 252, 0.08);
-                border: 1px solid rgba(192, 132, 252, 0.3);
-                border-radius: 4px;
-              "
-            >
-              <div style="font-size: 14px; color: #c084fc; margin-bottom: 4px">
-                🧘 Глубже
-              </div>
-              <div style="font-size: 11px; color: var(--text-dim)">
-                +50% мастерства за выполнение
-              </div>
-            </div>
-            <div
-              data-action="apply-evolution-frequency"
-              style="
-                cursor: pointer;
-                padding: 14px;
-                background: rgba(96, 165, 250, 0.08);
-                border: 1px solid rgba(96, 165, 250, 0.3);
-                border-radius: 4px;
-              "
-            >
-              <div style="font-size: 14px; color: #60a5fa; margin-bottom: 4px">
-                ⚡ Чаще
-              </div>
-              <div style="font-size: 11px; color: var(--text-dim)">
-                +1 к пулу стата за каждое выполнение<br />Ускоренный рост
-                атрибута
-              </div>
-            </div>
-            <div
-              data-action="apply-evolution-stability"
-              style="
-                cursor: pointer;
-                padding: 14px;
-                background: rgba(52, 211, 153, 0.08);
-                border: 1px solid rgba(52, 211, 153, 0.3);
-                border-radius: 4px;
-              "
-            >
-              <div style="font-size: 14px; color: #34d399; margin-bottom: 4px">
-                🌟 Стабильнее
-              </div>
-              <div style="font-size: 11px; color: var(--text-dim)">
-                Двойная защита стрика<br />Один пропуск простителен
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="demo-btn" data-action="evolution-skip">
-            Пропустить
-          </button>
-        </div>
-      </div>
-    </div>
-    <div
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
       id="weeklyReportModal"
     >
       <div class="modal">
@@ -1382,12 +1348,12 @@
       </div>
     </div>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="js/perf.js?v=57"></script>
-    <script src="js/perf-compat.js?v=57"></script>
-    <script src="js/stronghold-data.js?v=57"></script>
-<script src="js/state-guards.js?v=57"></script>
-    <script src="js/storage.js?v=57"></script>
-    <script src="js/stronghold-model.js?v=57"></script>
-    <script src="js/app.js?v=57"></script>
+    <script src="js/perf.js?v=58"></script>
+    <script src="js/perf-compat.js?v=58"></script>
+    <script src="js/stronghold-data.js?v=58"></script>
+<script src="js/state-guards.js?v=58"></script>
+    <script src="js/storage.js?v=58"></script>
+    <script src="js/stronghold-model.js?v=58"></script>
+    <script src="js/app.js?v=58"></script>
   </body>
 </html>
