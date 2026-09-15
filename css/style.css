@@ -169,15 +169,14 @@ margin-left: 4px;
 .card-adaptation-tag.streak-mid { color: var(--yellow); border-color: rgba(251, 191, 36, 0.4); }
 .card-adaptation-tag.streak-low { color: var(--text-dim); border-color: var(--border); }
 .card-mastery {
-position: absolute; bottom: 30px; left: 12px; right: 12px;
+margin-top: 8px;
 font-size: var(--fs-secondary); color: var(--text-dim);
 letter-spacing: 1px;
-margin-bottom: 4px;
 }
 .card-mastery b { color: var(--gold-bright); font-weight: normal; }
-.card-progress { position: absolute; bottom: 10px; left: 12px; right: 12px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.card-progress { margin-top: 6px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
 .card-progress-bar { height: 100%; background: var(--rank-color); box-shadow: 0 0 8px var(--rank-glow); transition: width 0.5s; }
-.card-stats-line { position: absolute; bottom: 46px; left: 12px; font-size: var(--fs-secondary); color: var(--text-dim); letter-spacing: 1px; }
+.card-stats-line { margin-top: 10px; font-size: var(--fs-secondary); color: var(--text-dim); letter-spacing: 1px; }
 .card-stats-line b { color: var(--text); font-weight: normal; }
 .card-btn { position: relative; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
 /* ponytail: pseudo hit-area 44x44; adjacent buttons' zones overlap an ~8px edge strip */
@@ -821,11 +820,11 @@ textarea:focus-visible {
 
 /* ===================== КАРТА КОРОЛЕВСТВА ===================== */
 .sh-kingdom-path { display: flex; align-items: center; gap: 0; padding: 8px 4px; margin-bottom: 12px; background: rgba(0,0,0,0.25); border-radius: 6px; overflow-x: auto; }
-.sh-kp { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--border); }
+.sh-kp { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--border); }
 .sh-kp.owned { background: var(--gold-bright); border-color: var(--gold-bright); box-shadow: 0 0 6px rgba(251,191,36,0.4); }
 .sh-kp.front { background: var(--blood-bright); border-color: var(--blood-bright); animation: shKpPulse 1.5s ease-in-out infinite; }
 .sh-kp.locked { background: var(--border); }
-.sh-kp-link { width: 8px; height: 2px; background: var(--border); flex-shrink: 0; }
+.sh-kp-link { width: 5px; height: 2px; background: var(--border); flex-shrink: 0; }
 .sh-kp.owned + .sh-kp-link { background: var(--gold-bright); }
 @keyframes shKpPulse { 0%,100% { box-shadow: 0 0 4px rgba(200,62,77,0.3); } 50% { box-shadow: 0 0 12px rgba(200,62,77,0.7); } }
 :root.perf-eco .sh-kp.front { animation: none; }

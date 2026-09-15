@@ -2926,7 +2926,7 @@ if (!c.lastCompletedAt) return true;
 return getMSKDayKey(c.lastCompletedAt) !== getMSKDayKey();
 });
 if (uncompleted.length > 0) {
-new Notification('NeuroDeck ⚔', { body: 'Осталось ' + uncompleted.length + ' карточек! Доход тракта капает каждый день.', icon: '🗡', tag: 'nd-warn' });
+new Notification('NeuroDeck ⚔', { body: 'Осталось ' + uncompleted.length + ' карточек! Доход твердынь капает каждый день.', icon: '🗡', tag: 'nd-warn' });
 }
 }, diff * 1000);
 }
