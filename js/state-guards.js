@@ -121,7 +121,16 @@
             dailyUniqueStats: (hero.dailyUniqueStats && typeof hero.dailyUniqueStats === 'object') ? hero.dailyUniqueStats : {},
             cardHistory: (hero.cardHistory && typeof hero.cardHistory === 'object') ? hero.cardHistory : {},
             lastWeeklyReport: hero.lastWeeklyReport || null,
-            weeklyPrev: sanitizeWeeklyPrev(hero.weeklyPrev) // #42: снапшот прошлой недели для дельт
+            weeklyPrev: sanitizeWeeklyPrev(hero.weeklyPrev), // #42: снапшот прошлой недели для дельт
+            totem: (hero.totem && typeof hero.totem === 'object' && !Array.isArray(hero.totem)) ? { // волна 3 Ф2: тотемное животное
+                id: (['wolf', 'owl', 'bear'].indexOf(hero.totem.id) !== -1 ? hero.totem.id : null),
+                chosenDayKey: safeString(hero.totem.chosenDayKey, '', 10),
+                rechoose: hero.totem.rechoose === true
+            } : null,
+            tower: (hero.tower && typeof hero.tower === 'object' && !Array.isArray(hero.tower)) ? { // волна 3 Ф3: башня-марафон
+                floor: Math.round(clampNumber(hero.tower.floor, 0, 50, 0)),
+                lastFloorDay: safeString(hero.tower.lastFloorDay, '', 10)
+            } : null
         };
     }
 

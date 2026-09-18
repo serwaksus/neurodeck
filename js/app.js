@@ -157,6 +157,8 @@ case 'treasury-info': showTreasuryBreakdown(); break;
 case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
 case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
 case 'counter-siege': requestCounterSiege(); break;
+case 'totem-choose': requestTotem(el.dataset.id); break; // Ф2
+case 'tower-climb': requestTowerClimb(); break; // Ф3
 case 'sh-hire-army': hireUnit(el.dataset.tier, false, parseInt(el.dataset.idx)); break;
 case 'sh-hire-garrison': hireUnit(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
 case 'sh-to-army': moveStack(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
@@ -241,6 +243,87 @@ var HOLIDAYS = { // #8: календарные праздники (MSK-дата)
 };
 function holidayBonus(todayKey) { var h = HOLIDAYS[(todayKey || getMSKDayKey()).slice(5)]; return h || null; }
 function holidayRewardMult() { var h = holidayBonus(); return (h && h.rewardMult) || 1; }
+var TOTEMS = [ // Ф2: тотемное животное — выбор открывается после первого захвата твердыни
+    { id: 'wolf', icon: '🐺', name: 'Волк', tip: '+5% золото тика казны' },
+    { id: 'owl', icon: '🦉', name: 'Сова', tip: '+10% XP карточек' },
+    { id: 'bear', icon: '🐻', name: 'Медведь', tip: '+2% обороны осады' }
+];
+function totemOf() {
+    var id = HERO.totem && HERO.totem.id;
+    if (!id) return null;
+    for (var i = 0; i < TOTEMS.length; i++) if (TOTEMS[i].id === id) return TOTEMS[i];
+    return null;
+}
+function totemGoldMult() { var t = totemOf(); return (t && t.id === 'wolf') ? 1.05 : 1; }
+function totemXpMult() { var t = totemOf(); return (t && t.id === 'owl') ? 1.10 : 1; }
+function totemDefMult() { var t = totemOf(); return (t && t.id === 'bear') ? 1.02 : 1; }
+function renderTotemCard() { // Ф2: карточка «Тотем» в Hero-вкладке (до 1 захвата не существует)
+    var box = document.getElementById('totemCard');
+    if (!box) return;
+    if (capturedCount() < 1) { box.innerHTML = ''; return; }
+    var t = totemOf();
+    if (t && !(HERO.totem && HERO.totem.rechoose)) {
+        box.innerHTML = '<div class="totem-chosen" title="' + esc(t.tip) + '"><span class="totem-icon">' + t.icon + '</span><div><b>Тотем: ' + t.name + '</b><div class="totem-tip">' + t.tip + '</div></div></div>';
+        return;
+    }
+    var html = '<div class="totem-title">🐾 Тотемное животное</div><div class="totem-tip">' + (t ? 'Смена сезона позволяет сменить тотем.' : 'Выбирай спутника: бонус действует постоянно. Смена — на смене сезона.') + '</div><div class="totem-row">';
+    TOTEMS.forEach(function(x) {
+        html += '<button class="totem-opt' + (t && t.id === x.id ? ' active' : '') + '" data-action="totem-choose" data-id="' + x.id + '" title="' + x.tip + '">' + x.icon + ' ' + x.name + '<span class="totem-tip">' + x.tip + '</span></button>';
+    });
+    box.innerHTML = html + '</div>';
+}
+function requestTotem(id) { // Ф2: выбор через dungeonConfirm
+    var x = null;
+    for (var i = 0; i < TOTEMS.length; i++) if (TOTEMS[i].id === id) x = TOTEMS[i];
+    if (!x) return;
+    dungeonConfirm('🐾 Тотем: ' + x.name + '?', x.tip + '<br><span style="color:var(--text-dim)">Сменить можно будет только на смене сезона.</span>').then(function(ok) {
+        if (!ok) return;
+        HERO.totem = { id: x.id, chosenDayKey: getMSKDayKey(), rechoose: false };
+        showToast(x.icon + ' ' + x.name + ' — твой тотем', x.tip, 'save');
+        haptic('success');
+        renderTotemCard(); renderDashboard(); saveGameState();
+    });
+}
+var TOWER_MAX_FLOOR = 50; // Ф3: кап этажа башни-марафона
+function towerWeek1Base() { // эталонная сила недели 1 из SM — считаем на вызове, не топ-левел
+    return SM.siegePower(STRONGHOLDS[0].total, 1, 1, 0);
+}
+function towerEnemyPower(floor) { // враг растёт ×1.2 за этаж
+    return Math.round(towerWeek1Base() * Math.pow(1.2, floor));
+}
+function renderTowerCard(cap) { // Ф3: карточка «🗼 Башня» — эндгейм при 20/20
+    if (cap !== 20) return '';
+    if (!HERO.tower || typeof HERO.tower !== 'object') HERO.tower = { floor: 0, lastFloorDay: '' };
+    var t = HERO.tower;
+    if (t.floor >= TOWER_MAX_FLOOR) return '<div class="tower-card" title="👑 Башня покорена — марафон завершён"><b>🗼 Башня покорена</b> · этаж ' + TOWER_MAX_FLOOR + '/' + TOWER_MAX_FLOOR + ' 👑</div>';
+    var used = t.lastFloorDay === getMSKDayKey();
+    return '<div class="tower-card" title="Враг этажа: ~' + towerEnemyPower(t.floor) + ' · награда за подъём: ' + (100 * (t.floor + 1)) + ' 💰 · 1 попытка в день">'
+        + '🗼 <b>Башня</b> · этаж <b>' + t.floor + '/' + TOWER_MAX_FLOOR + '</b> · враг ~<b>' + towerEnemyPower(t.floor) + '</b> · награда <b>' + (100 * (t.floor + 1)) + ' 💰</b> · '
+        + (used ? '<span style="color:var(--text-dim)">Попытка израсходована — приходи завтра</span>'
+                : '<button data-action="tower-climb">🧗 Подъём</button>')
+        + '</div>';
+}
+function requestTowerClimb() { // Ф3: подъём — 1 попытка/день, поражение без потерь
+    ensureStrongholdState();
+    if (!HERO.tower || typeof HERO.tower !== 'object') HERO.tower = { floor: 0, lastFloorDay: '' };
+    var t = HERO.tower;
+    if (t.floor >= TOWER_MAX_FLOOR) return;
+    if (t.lastFloorDay === getMSKDayKey()) { showToast('🗼 Попытка израсходована', 'Вернись завтра — башня ждёт', 'blood'); return; }
+    if (!SM || SM.armyPower(army.units) <= 0) { showToast('⚔ Армии нет', 'Найми существ в твердыне', 'blood'); sfxError(); return; }
+    t.lastFloorDay = getMSKDayKey(); // попытка сгорает в ОБОИХ исходах
+    var atk = Math.round(SM.armyPower(army.units) * (1 + 0.02 * STATS.str.value));
+    var out = SM.assaultOutcome(atk, towerEnemyPower(t.floor), { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random });
+    if (out.win) {
+        t.floor += 1;
+        goldGain(100 * t.floor, 'tower');
+        showToast('🗼 Этаж ' + t.floor + '/' + TOWER_MAX_FLOOR + ' покорён!', '+' + (100 * t.floor) + ' 💰 · враг следующего этажа: ~' + (t.floor >= TOWER_MAX_FLOOR ? '—' : towerEnemyPower(t.floor)), 'crit');
+        sfxBossDefeated(); haptic('success');
+    } else {
+        showToast('↩ Отступление с высоты ' + t.floor, 'Потерь нет — попытка израсходована', 'blood');
+        sfxFail(); haptic('error');
+    }
+    renderStrongholds(); updateHeroUI(); saveGameState();
+}
 var _dailyPairIds = {}; // #29: карты дня (✨) — детерминированная пара по дате
 function dailyCardPair() {
     var tk = getMSKDayKey();
@@ -399,7 +482,7 @@ const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
 const comboMult = getComboMultiplier();
 const prestigeMult = getPrestigeXPBonus(card.stat);
-const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult(); // #8/#41: праздник +10%, луна ×2
+const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult() * totemXpMult(); // #8/#41: праздник +10%, луна ×2; Ф2: сова +10% XP
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
@@ -631,6 +714,7 @@ if (pav) { // #55: портрет героя по высшему стату
     pp.textContent = pi.icon;
     pp.title = 'Путь: ' + pi.name;
 }
+renderTotemCard(); // Ф2: карточка тотема в Hero-вкладке
 renderStreakCalendar();
 updateHeroSummary();
 }
@@ -1553,6 +1637,7 @@ function finishSeason() {
     var earnedCrown = (d.captured > 0 || d.completions >= 10); // венец за живой сезон
     var newCrownBonus = Math.min(5, (season.crownBonus || 0) + (earnedCrown ? 1 : 0));
     showSeasonReport(season.num, d, earnedCrown, newCrownBonus);
+    if (HERO.totem) HERO.totem.rechoose = true; // Ф2: смена сезона разрешает выбрать тотем заново (id сохраняется)
     season = STATE_GUARDS.sanitizeSeason({ num: season.num + 1, start: getMSKDayKey(), crownBonus: newCrownBonus, snapshot: { totalXp: HERO.totalXp || 0, gold: HERO.gold || 0, captured: capturedCount(), completions: completions, level: HERO.level || 1 } }, getMSKDayKey());
     saveGameState();
 }
@@ -1721,6 +1806,7 @@ var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { retu
 var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
 taxes = Math.round(taxes * (1 + tBonus));
 taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
+taxes = Math.round(taxes * totemGoldMult()); // Ф2: тотем Волк +5% золота тика
 var _hol = holidayBonus(); if (_hol && _hol.tickMult) taxes = Math.round(taxes * _hol.tickMult); // #8: Новый год — казначейский кэшбэк ×1.5
 var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 gold += income;
@@ -1772,6 +1858,7 @@ var t = lastCapturedIdx();
 if (t < 0) break;
 var def = STRONGHOLDS[t];
 var garDef = SM.defensePower(def, strongholds[t].garrison, STATS.end.value, defBonusOf(t));
+garDef = Math.round(garDef * totemDefMult()); // Ф2: тотем Медведь +2% обороны
 var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult);
 if (garDef >= power) {
 strongholds[t].garrison = applyStackLoss(strongholds[t].garrison, 0.15);
@@ -2026,6 +2113,35 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 '<button class="sh-mini" data-action="' + action + '" data-idx="' + idx + '" data-tier="' + st.tier + '">' + label + '</button></div>';
 }).join('');
 }
+function daysToSiegeNow() { return (7 - ((new Date(Date.now() + 3 * 3600000).getUTCDay() + 1) % 7)); }
+function siegeWrathNow() { return Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)); }
+function siegeAlarmVerdict(ratio) { // Ф1: вербальный совет по соотношению сил
+    if (!Number.isFinite(ratio) || ratio <= 0) return 'Обороны нет — вложись в казармы';
+    if (ratio < 0.9) return 'Гарнизон тонкий — вложись в казармы';
+    if (ratio >= 1.2) return 'Оборона крепка';
+    return 'Держимся, но запас гарнизона не лишний';
+}
+function siegeAlarmPreview() { // Ф1: превью сил следующей осады (неделя W+1) vs оборона игрока
+    if (!SM || capturedCount() === 0) return null;
+    var t = lastCapturedIdx();
+    if (t < 0) return null;
+    var power = SM.siegePower(STRONGHOLDS[t].total, siege.week, capturedCount(), siegeWrathNow());
+    var def = SM.armyPower(army.units);
+    strongholds.forEach(function(s) { if (s.captured) def += SM.stackPower(s.garrison || []); });
+    def = Math.round(def);
+    return { power: power, def: def, ratio: def / power, advice: siegeAlarmVerdict(def / power) };
+}
+function checkSiegeAlarmToast() { // Ф1: тост+haptic в день N-2 и день N, однократно/день
+    var d = daysToSiegeNow();
+    if (d !== 2 && d !== 0) return;
+    var tk = getMSKDayKey();
+    var flag = 'nd_siegealarm_' + tk;
+    try { if (localStorage.getItem(flag)) return; localStorage.setItem(flag, tk); } catch (e) { return; }
+    var p = siegeAlarmPreview();
+    if (!p) return;
+    showToast(d === 0 ? '⚠ Осада сегодня!' : '⚠ Осадная тревога', 'Враг ~' + p.power + ' · оборона ' + p.def + ' — ' + p.advice, 'blood');
+    haptic('warning');
+}
 function renderStrongholds() {
 ensureStrongholdState();
 if (!SM) return;
@@ -2042,8 +2158,8 @@ var html = '<div class="sh-treasury">' +
 '<div>Содержание: <b style="color:var(--blood-bright)">−' + shUpkeepPerDay() + ' 💰/день</b></div>' +
 '<div>⚔ Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
 var fi = frontIdx();
-var daysToSiege = (7 - ((new Date(Date.now() + 3 * 3600000).getUTCDay() + 1) % 7));
-html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)) + '/10</b></div>';
+var daysToSiege = daysToSiegeNow();
+html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
 // Kingdom path: визуальная полоса прогресса
 html += '<div class="sh-kingdom-path">';
 for (var pi = 0; pi < 20; pi++) {
@@ -2059,7 +2175,11 @@ var _season = ensureSeason();
 var _sTotal = seasonDaysTotal(_season.start);
 var _sDone = seasonDaysDone(_season.start);
 html += '<div class="sh-season"><div class="sh-season-line">🍂 Сезон ' + _season.num + ': <b>' + seasonName(_season.num) + '</b> · осталось <b>' + Math.max(0, _sTotal - _sDone) + '</b> дн.</div><div class="sh-season-bar"><div class="sh-season-fill" style="width:' + Math.min(100, Math.round(_sDone / _sTotal * 100)) + '%;"></div></div></div>';
-html += '<div class="sh-wrath">😮 Гнев: <b>' + Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)) + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
+html += '<div class="sh-wrath">😮 Гнев: <b>' + siegeWrathNow() + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
+var _alarm = (daysToSiege <= 2) ? siegeAlarmPreview() : null; // Ф1: осадная тревога за 2 дня и в день осады
+if (_alarm) html += '<div class="siege-alarm">⚠ <b>Осадная тревога</b> · враг ~<b>' + _alarm.power + '</b> · оборона <b>' + _alarm.def + '</b> (' + Math.round(_alarm.ratio * 100) + '%) — ' + _alarm.advice + '</div>';
+html += renderTowerCard(cap); // Ф3: башня-марафон (только при 20/20)
+checkSiegeAlarmToast();
 // Квест-доска (3 ротационных дневных задания)
 if (!dailyQuests || dailyQuests.day !== getMSKDayKey() || !dailyQuests.quests || !dailyQuests.quests.length) {
     var seed = parseInt(getMSKDayKey().replace(/-/g, ''));
@@ -2790,6 +2910,8 @@ function renderDashboard() {
     if (dailyEvent) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span style="color:var(--gold-bright)">📅 ' + dailyEvent.icon + ' ' + dailyEvent.name + '</span> <button data-action="reroll-event" title="Переролл события дня (50 💰, 1/день)" style="margin-left:6px; font-size:11px; background:none; border:1px solid var(--gold); border-radius:6px; color:var(--gold-bright); cursor:pointer; padding:1px 6px;">🎲 50💰</button></div>'; // #50/#48: чип события + реролл
     var hol = holidayBonus();
     if (hol) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(hol.tip) + '">🎉 ' + esc(hol.label) + '</span></div>'; // #8: праздник
+    var _tot = totemOf(); // Ф2: чип активного тотема
+    if (_tot && HERO.totem && !HERO.totem.rechoose) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(_tot.tip) + '">' + _tot.icon + ' ' + esc(_tot.name) + '</span></div>';
     var pom = activePomodoro();
     if (pom) { // #65: помодоро — чип-обратный отсчёт
         var left = Math.max(0, Math.round((pom.end - Date.now()) / 1000));

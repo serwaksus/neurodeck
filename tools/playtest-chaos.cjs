@@ -14,6 +14,9 @@ const srv = http.createServer((req, res) => {
   catch (e) { res.writeHead(404); res.end('nf'); urls404.push(p); }
 });
 const urls404 = [];
+// getMSKDayKey-семантика (UTC+3) для node-контекста: все сценарии — от относительных дат, никаких абсолютных
+const mskDayKey = (ts) => new Date((ts || Date.now()) + 3 * 3600000).toISOString().slice(0, 10);
+const PAST_RESET = mskDayKey(Date.now() - 90 * 86400000); // относительное «далёкое прошлое» для lastWeekReset
 
 const results = [];
 const hangs = [];        // шаги >15 c — кандидаты «зависание»
@@ -49,6 +52,10 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
     catch (e2) { console.error('SKIP-infra: браузер не поднялся после 1 повтора: ' + e2.message.split('\n')[0]); process.exit(3); }
   }
   const pg = await b.newPage({ viewport: { width: 390, height: 844 } });
+  // Стресс-детерминизм: CHAOS_DAY_SHIFT=±N — сдвиг «сегодня» на N дней ДО загрузки приложения.
+  // Все date-ветки продукта (пара дня, праздники, сезоны, недели) отрабатывают на сдвинутом todayKey.
+  const DAY_SHIFT = parseInt(process.env.CHAOS_DAY_SHIFT || '0', 10) || 0;
+  if (DAY_SHIFT) await pg.addInitScript((d) => { const off = d * 86400000; const real = Date.now.bind(Date); Date.now = function () { return real() + off; }; }, DAY_SHIFT);
   const errors = [];
   pg.on('pageerror', (e) => { const m = 'PAGEERROR: ' + e.message; errors.push(m); crashes.push(m); });
   pg.on('console', (m) => {
@@ -118,7 +125,7 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
       tasks: [], taskIdCounter: 1,
       tractState: { regions: 0, building: null },
       xpHistory: [], bloodOath: null,
-      lastDayReset: null, lastWeekReset: '2000-01-03',
+      lastDayReset: null, lastWeekReset: PAST_RESET,
       savedAt: Date.now(),
       strongholds,
       army: { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 },
@@ -198,21 +205,32 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
   // ===================== БЛОК B. Оффлайн −7/−8/−30 =====================
   await step('B.1 оффлайн −7 дней: докрутка ровно 7 (налог 1×7), осада ровно 1 раз (week 1→2), reset=сегодня', async () => {
     await applyFixture(v8payload((p) => { p.strongholds[0].captured = true; p.hero.gold = 0; p.siege.week = 1; }));
+    await pinRandom(0.8); // quiet — иначе случайный market ×1.5 на сегодняшнем тике меняет дельту бэкфилла (детерминизм)
     const r = await ev(() => {
       lastDayReset = getMSKDayKey(Date.now() - 7 * 86400000);
-      lastWeekReset = '2000-01-03';
+      lastWeekReset = getMSKDayKey(Date.now() - 90 * 86400000); // относительное «далёкое прошлое» — новая неделя гарантирована на любом todayKey
       const before = HERO.gold;
       checkDailyReset();
       return { delta: HERO.gold - before, week: siege.week, reset: lastDayReset, today: getMSKDayKey() };
     });
+    await unpinRandom();
     await pg.waitForTimeout(2300);
-    await ev(() => { closeSiegeReport(); closeWeeklyReportModal(); });
+    // Очередь модалок (app.js:3229 enqueueModal(showWeeklyReport, 2000)): отчёт ждёт в _pendingModal, пока открыт siegeReport.
+    // Флаг «уже показано на этой неделе» ставим ДО dequeue (MutationObserver стреляет микротаском после close) —
+    // иначе dequeue откроет weeklyReport заново ПОСЛЕ наших close и накроет все UI-клики следующих блоков.
+    await ev(() => { closeSiegeReport(); HERO.lastWeeklyReport = getThisMondayKey(); });
+    await pg.waitForTimeout(150);
+    await ev(() => { closeWeeklyReportModal(); _pendingModal = null; }); // страховка
+    await pg.waitForTimeout(100);
+    const stuck = await ev(() => [...document.querySelectorAll('.modal-overlay.show, .onboarding-overlay.show')].map((e) => e.id || e.className));
+    if (stuck.length) throw new Error('модалки остались открыты после B.1 (недельная очередь?): ' + JSON.stringify(stuck));
     if (r.delta !== 7) throw new Error('докручено ' + r.delta + ', ожидалось 7');
     if (r.week !== 2) throw new Error('осада отработала не ровно один раз: week=' + r.week);
     if (r.reset !== r.today) throw new Error('lastDayReset не довёрнут: ' + r.reset);
   });
   await step('B.2 оффлайн −8 дней: кап — докручено те же 7, не 8', async () => {
     await applyFixture(v8payload((p) => { p.strongholds[0].captured = true; p.hero.gold = 0; p.siege.week = 1; }));
+    await pinRandom(0.8); // quiet — детерминизм бэкфилла
     const r = await ev(() => {
       lastDayReset = getMSKDayKey(Date.now() - 8 * 86400000);
       lastWeekReset = getThisMondayKey();
@@ -220,6 +238,7 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
       checkDailyReset();
       return { delta: HERO.gold - before };
     });
+    await unpinRandom();
     if (r.delta !== 7) throw new Error('−8 дней докрутило ' + r.delta + ' (кап 7 нарушен?)');
   });
   await step('B.3 оффлайн −30 дней: кап 7, без спирали и без зависания (zh1+df1+ec1, казна 0 → дефицит)', async () => {
@@ -231,6 +250,7 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
       p.siege.week = 1;
     }));
     const t0 = Date.now();
+    await pinRandom(0.8); // quiet — детерминизм бэкфилла
     const r = await ev(() => {
       lastDayReset = getMSKDayKey(Date.now() - 30 * 86400000);
       lastWeekReset = getThisMondayKey();
@@ -242,6 +262,7 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
         stages: Object.values(strongholds[0].buildings).map((b) => b.corruptionStage),
       };
     });
+    await unpinRandom();
     const ms = Date.now() - t0;
     if (ms > 5000) throw new Error('тик −30 дней занял ' + ms + 'ms — признак спирали/зависания');
     if (r.delta > 7) throw new Error('докручено ' + r.delta + ' — кап 7 нарушен');
@@ -262,11 +283,11 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
     await pg.waitForTimeout(300);
   });
   await step('C.2 даблклик «Выполнить» карточки: XP/💰/мастерство начислены РОВНО один раз', async () => {
-    const before = await ev(() => ({ gold: HERO.gold, xp: HERO.totalXp, mastery: findCard(1).mastery, comp: findCard(1).totalCompletions || 0 }));
+    const before = await ev(() => ({ gold: HERO.gold, xp: HERO.totalXp, mastery: findCard(1).mastery, comp: findCard(1).totalCompletions || 0, mult: _dailyPairIds[1] ? 2 : 1 })); // #29: карта дня ×2 (id-зависимо от todayKey)
     const r = await dblClick('.card-complete-btn[data-id="1"]');
     await pg.waitForTimeout(300);
     const after = await ev(() => ({ gold: HERO.gold, xp: HERO.totalXp, mastery: findCard(1).mastery, comp: findCard(1).totalCompletions || 0 }));
-    if (after.comp !== 1 || after.mastery !== before.mastery + 1 || after.gold !== before.gold + 1) {
+    if (after.comp !== 1 || after.mastery !== before.mastery + 1 || after.gold !== before.gold + 1 * before.mult) {
       throw new Error('двойное начисление? до ' + JSON.stringify(before) + ' после ' + JSON.stringify(after) + ', 2й клик: ' + r.second);
     }
   });
@@ -523,9 +544,10 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
   await step('H.2 при казне −500: выполнение карточки +1💰 и пропуск (clamp max(0,…)) — без краша', async () => {
     await ev(() => { switchView('deck'); });
     await pg.waitForTimeout(200);
+    const mult = await ev(() => (_dailyPairIds[1] ? 2 : 1)); // #29: карта дня ×2 — ожидание дельты id-зависимо от todayKey
     await ev(() => { completeCard({ target: document.body, stopPropagation() {} }, 1); });
     const g1 = await ev(() => HERO.gold);
-    if (g1 !== -499) throw new Error('после выполнения карточки казна ' + g1 + ', ожидалось −499');
+    if (g1 !== -500 + 1 * mult) throw new Error('после выполнения карточки казна ' + g1 + ', ожидалось ' + (-500 + 1 * mult));
     await ev(() => { failCard({ stopPropagation() {} }, 1); });
     const g2 = await ev(() => ({ gold: HERO.gold, streak: findCard(1).streak }));
     if (g2.gold !== 0) throw new Error('failCard при отрицательной казне дал ' + g2.gold + ' (ожидался clamp на 0)');
@@ -535,6 +557,7 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
 
   // ===================== Итоги =====================
   console.log('\n===== QA-CHAOS ПРОГОН =====');
+  if (DAY_SHIFT) console.log(`[stress] CHAOS_DAY_SHIFT=${DAY_SHIFT} (todayKey=${mskDayKey()})`);
   for (const [st, name, err] of results) console.log(`${st} ${name}${err ? '\n     -> ' + err : ''}`);
   const fails = results.filter((r) => r[0] === 'FAIL').length;
   console.log(`\nИТОГО: ${results.length - fails}/${results.length} OK, провалено: ${fails}`);
