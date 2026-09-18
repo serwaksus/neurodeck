@@ -77,7 +77,7 @@ MIGRATIONS[8] = function(data) {
         var strongholdsArr = [];
         for (var i = 0; i < 20; i++) {
             strongholdsArr.push({
-                id: ids[i] || ('sh' + (i + 1)),
+                id: ids[i] || ('sh' + String(i + 1).padStart(2, '0')),
                 captured: i < regions,
                 garrison: [],
                 buildings: {},
@@ -127,7 +127,12 @@ MIGRATIONS[10] = function(data) {
     } catch(e) {}
 };
 function migrateSyncData(data) {
-    var v = typeof data.v === 'number' ? data.v : 4;
+    // QA3-H1: битый/отсутствующий v (строка/0/NaN) больше не реплеит миграции
+    // вниз как v4: MIGRATIONS[8] пересобирал strongholds с нуля и терял
+    // захваты/гарнизоны (вплоть до 20/20), MIGRATIONS[9] сносил season.
+    // Нет валидного числа → считаем сейв текущей схемы; признаки v10
+    // (strongholds/season/throne) тем более исключают откат.
+    var v = (typeof data.v === 'number' && Number.isFinite(data.v) && data.v > 0) ? data.v : SCHEMA_VERSION;
     while (v < SCHEMA_VERSION) {
         v++;
         if (typeof MIGRATIONS[v] === 'function') MIGRATIONS[v](data);
@@ -166,6 +171,10 @@ function maxExistingId(arr) {
     });
     return m;
 }
+function safeTs(v, fallback) { // T2-M3: битые даты (NaN/строки/1e300) → null, иначе призраки зависают навсегда
+    var n = Number(v);
+    return (Number.isFinite(n) && n > 0 && n < 8.64e15) ? Math.round(n) : (fallback === undefined ? null : fallback);
+}
 function saveGameState() {
 try {
 // Мульти-вкладка (LWW-гвард): если другая вкладка сохранила свежее поколение —
@@ -182,6 +191,7 @@ showToast('🔄 Синхронизировано между вкладками',
 } catch(e) {}
 stateGen = remoteGen;
 }
+stateGen++; // живой LWW-гвард: поколение растёт при каждом сохранении (T1-H2)
 localEpoch++;
 if (FORGED.length === 0) {
 var emergency = localStorage.getItem('neurodeck_cards_backup');
@@ -205,16 +215,16 @@ tasks: TASKS, taskIdCounter, hirePool, savedAt: Date.now()
 try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; } catch(e) {}
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
-localStorage.setItem('neurodeck_full_save', json);
 if (FORGED.length > 0) { try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {} } // ever_saved = «игрок с карточками»: пустой сейв не должен блокировать старт-колоду (O-10)
 try { localStorage.setItem('neurodeck_backup', json); } catch(e) {}
 if (FORGED.length > 0) {
 try { localStorage.setItem('neurodeck_cards_backup', json); } catch(e) {}
 }
 try { localStorage.setItem(GEN_KEY, String(stateGen)); } catch(e) {}
-saveToIDB(snapshot);
+saveToIDB(snapshot); // IDB/cloud/backup до full_save: квота localStorage не должна обрывать цепочку бэкапов (T5-M1)
 saveGoals();
-autoCloudSave(json);
+try { autoCloudSave(json); } catch(e) {}
+localStorage.setItem('neurodeck_full_save', json);
 } catch (e) {
 console.warn('Save failed:', e);
 showToast('⚠ Ошибка сохранения', 'Хранилище переполнено — экспортируйте данные!', 'blood');
@@ -261,7 +271,7 @@ function pushCloudChunks(cs, json, onDone) {
     try {
         var chunks = [];
         for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
-        { if (chunks.length >= 200) return; /* cap */ } }
+        { if (chunks.length >= 200) { updateSyncBadge('offline'); if (typeof showToast === 'function') showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); settle(); return; } } }
         var doneCount = 0;
         var aborted = false;
         function failChunk(err) {
@@ -390,7 +400,8 @@ applySyncData(data, true);
 return;
 }
 } catch (e) { console.warn('Load failed:', e); }
-var emergFinal = localStorage.getItem('neurodeck_cards_backup');
+var emergFinal = null;
+try { emergFinal = localStorage.getItem('neurodeck_cards_backup'); } catch(e) {}
 if (emergFinal) {
 try {
 var emergData2 = JSON.parse(emergFinal);
@@ -562,7 +573,10 @@ hero: HERO, stats: STATS, forged: FORGED, goals: GOALS, inventory: INVENTORY,
 lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, hirePool, dailyQuests,
-season: (typeof season !== 'undefined') ? season : null
+season: (typeof season !== 'undefined') ? season : null,
+savedAt: Date.now(),
+throne: (typeof throne !== 'undefined') ? throne : 0,
+dailyEvent: (typeof dailyEvent !== 'undefined') ? dailyEvent : null
 };
 try {
     ensureStrongholdState();
@@ -602,7 +616,7 @@ if (el) el.textContent = '☁ Сохраняю...';
 var json = JSON.stringify(buildSyncData());
 var chunks = [];
 for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
-        { if (chunks.length >= 200) return; /* cap */ } }
+        { if (chunks.length >= 200) { finished = true; if (el) el.textContent = '⚠ Слишком много данных'; showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); return; } } }
 var finished = false;
 setTimeout(function() {
 if (!finished) {
@@ -799,7 +813,7 @@ Object.keys(sanitizedHero).forEach(function(k) { HERO[k] = sanitizedHero[k]; });
 }
 if (data.stats) {
 Object.keys(data.stats).forEach(k => {
-if (!STATS[k]) return;
+if (!Object.prototype.hasOwnProperty.call(STATS, k)) return;
 var maxCap = STATS[k].max;
 Object.assign(STATS[k], data.stats[k]);
 if (data.stats[k] && typeof data.stats[k].max === 'number') {
@@ -833,8 +847,11 @@ if (data.bloodOath !== undefined) {
 bloodOath = (data.bloodOath && typeof data.bloodOath === 'object' && typeof data.bloodOath.status === 'string' && data.bloodOath.cardId !== undefined)
 ? data.bloodOath : null;
 }
-if (typeof data.lastWeekReset === 'string') lastWeekReset = data.lastWeekReset;
-if (typeof data.lastDayReset === 'string') lastDayReset = data.lastDayReset;
+// QA3-M2: только строго датированные строки; мусор → null (= «сброс»: дневной/
+// недельный цикл сам выставит свежий ключ при следующем тике, app.js:2820)
+var RESET_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+if (typeof data.lastWeekReset === 'string') lastWeekReset = RESET_DATE_RE.test(data.lastWeekReset) ? data.lastWeekReset : null;
+if (typeof data.lastDayReset === 'string') lastDayReset = RESET_DATE_RE.test(data.lastDayReset) ? data.lastDayReset : null;
 if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongholds(data.strongholds, strongholdCatalog());
 if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
@@ -847,8 +864,8 @@ if (Array.isArray(data.tasks)) {
 TASKS = data.tasks.filter(function(t) {
 return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&
 ['active', 'done', 'ghost', 'chest_open'].indexOf(t.status) >= 0;
-}).map(function(t) {
-return { id: STATE_GUARDS.sanitizeCounter(t.id, 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: typeof t.deadline === 'number' ? t.deadline : null, status: t.status, createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(), doneAt: typeof t.doneAt === 'number' ? t.doneAt : null, ghostSince: typeof t.ghostSince === 'number' ? t.ghostSince : null };
+}).map(function(t, i) {
+return { id: (Number.isFinite(Number(t.id)) && Number(t.id) >= 1) ? Math.min(1000000000, Math.round(Number(t.id))) : (i + 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: safeTs(t.deadline), status: t.status, createdAt: safeTs(t.createdAt, Date.now()), doneAt: safeTs(t.doneAt), ghostSince: safeTs(t.ghostSince) };
 });
 }
 TASKS = TASKS.filter(function(t, i) { return TASKS.findIndex(function(x) { return x.id === t.id; }) === i; });

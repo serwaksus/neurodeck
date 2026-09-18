@@ -11,6 +11,7 @@ module.exports = defineConfig({
     baseURL: 'http://localhost:8099',
     headless: true,
     viewport: { width: 390, height: 844 },
+    trace: 'retain-on-failure', // QA-6 п.60: трейсы падений уезжают в test-results/ (upload-artifact в CI)
     launchOptions: {
       args: [...(process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : []), '--use-gl=angle'],
     },

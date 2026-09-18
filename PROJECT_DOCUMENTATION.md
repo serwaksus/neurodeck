@@ -4,10 +4,12 @@
 > Боевка/боссы/Hollow/Эстус/лавка осколков **удалены** (архив: тег `souls-final`, ветка `legacy/souls`).
 > Новая базовая петля (HoMM-стиль): карточки/цели → 💰 золото → **Тракт** (11 локаций, стройка за дни, ежедневный доход) → золото → следующая локация.
 > **Задачи дня** (новая система): дедлайн → сундук (💰/XP на выбор) → просрочка → призрак (−1 💰/ночь, исчезает через N ночей по тиру).
-> Схема сохранений: **v7** (`tasks`, `tractState`, `taskIdCounter`, `hero.gold`; миграция 6→7 конвертирует осколки/фляги в золото 2:1+20 и сносит боевые поля).
+> Схема сохранений: **v10** (`v10 = v7` + миграции 7→8 твердыни/армия/осада, 8→9 сезоны, 9→10 трон; фактический снапшот — §13, миграции — js/storage.js `MIGRATIONS[7..10]`, спецификация — docs/strongholds-v2/SPEC.md).
 > Регионы тракта: Сендер-Хутор → Лаголь Земли → Лесопилка → Медные Копи → Житницы → Чертож Воли → Златоград → Дозорный Замок → Башня Тягости → Врата Свободы → Терновый Трон.
 > Экономика: карточка +1💰, пропуск −1💰, уровень +30💰, задачи +5/+10/+20💰, тракт +1..+65💰/день. Осколки-валюта боёвки упразднены.
-> Ниже устаревшие разделы описывают souls-версию — актуальны §4.1-4.5, §4.8 (инвентарь без боевых бонусов), §5 (частично), §7, §13.
+> Актуальны (сверены с кодом, аудит 2026-09-17): §2, §3, §4.1, §7, §12, §13, §15, §16 (легаси-пометка), §17, §18.
+> Частично актуальны: §4.7 (цели — без HP-урона), §5 (дневные циклы — без босса/эстуса).
+> Остальные разделы (§4.2-4.6, §4.8-4.11, §6, §8-11, §14) описывают souls-эру до пивота v49 и оставлены как история.
 
 
 > **NeuroDeck** — геймифицированный трекер привычек в стиле Dark Souls, реализованный как Telegram Mini App. Игрок — узник подземелья, чьё единственное оружие против тьмы — собственная дисциплина.
@@ -96,7 +98,7 @@
 | Платформа | Telegram Mini App |
 | Внешние библиотеки | `telegram-web-app.js` (единственная) |
 
-**Cache-busting:** версии `?v=N` в URL CSS/JS (текущая `?v=23`) — Telegram WebView агрессивно кэширует.
+**Cache-busting:** версии `?v=N` в URL CSS/JS (текущая `?v=62`) — Telegram WebView агрессивно кэширует.
 
 ---
 
@@ -104,11 +106,19 @@
 
 ```
 neurodeck/
-├── index.html          (~450 строк) — разметка, модалки, вкладки
+├── index.html            (1341 строк) — разметка, модалки, вкладки
 ├── css/
-│   └── style.css       (~760 строк) — все стили, анимации, адаптив
+│   └── style.css         (1157 строк) — все стили, анимации, адаптив
 ├── js/
-│   └── app.js          (~2750 строк) — вся логика приложения
+│   ├── app.js               (3343) — логика приложения
+│   ├── storage.js            (924) — сейвы, миграции v4→v10, облако, IDB
+│   ├── state-guards.js       (360) — санитайзеры всех импортируемых данных
+│   ├── perf.js               (271) — режимы производительности
+│   ├── stronghold-model.js   (160) — формулы твердынь (штурм/осада/коррапшн/трейд)
+│   ├── stronghold-data.js     (56) — канон-каталог: 20 твердынь, 20 построек, 7 тиров
+│   └── perf-compat.js         (55) — совместимость perf-мостов
+├── bot/                  — Telegram-бот (polling.js + systemd-юнит, §17)
+├── docs/                 — SPEC/ART_MANIFEST/BALANCE/ENDGAME, audit/, session-handoff/
 └── PROJECT_DOCUMENTATION.md — этот файл
 ```
 
@@ -132,28 +142,32 @@ neurodeck/
   │   └── #tooltip                     — тултипы предметов
   │
   ├── Модальные окна:
+  │   ├── #siegeReportModal — отчёт о воскресной осаде
   │   ├── #goalModal       — создание цели
+  │   ├── #taskModal       — создание задачи дня
   │   ├── #forgeModal      — ковка карточки
   │   ├── #editCardModal   — редактирование карточки (после ранг-апа)
   │   ├── #syncModal       — синхронизация и настройки
-  │   ├── #roomDetailModal — детали комнаты на карте
+  │   ├── #returnModal     — возврат/сброс данных
+  │   ├── #seasonModal     — итоги сезона
+  │   ├── #weeklyReportModal — недельный отчёт
+  │   ├── #starterDeckModal — выбор стартовой колоды
   │   └── #confirmOverlay  — универсальный диалог подтверждения
   │
   ├── <div class="app"> (shakeWrap)
-  │   ├── .header          — лого, кнопка синхры, мини-герой, слайдер побега
+  │   ├── .header          — лого, кнопка синхры, мини-герой, сводка казны
   │   ├── .main
   │   │   ├── nav.tabs     — навигация (6 вкладок)
   │   │   └── main.content — 6 секций:
-  │   │       ├── #view-deck  — Колода карточек
-  │   │       ├── #view-hero  — Герой (статы + цели)
-  │   │       ├── #view-inv   — Инвентарь (paperdoll + рюкзак)
-  │   │       ├── #view-boss  — Босс (крупный вид)
-  │   │       ├── #view-map   — Карта подземелья
-  │   │       └── #view-stats — Статистика
-  │   ├── aside.boss-panel — боковая панель босса (мини)
+  │   │       ├── #view-deck        — Колода карточек
+  │   │       ├── #view-quests      — Квесты (задачи дня)
+  │   │       ├── #view-hero        — Герой (статы + цели)
+  │   │       ├── #view-inv         — Инвентарь (paperdoll + рюкзак)
+  │   │       ├── #view-strongholds — Твердыни (фронт, постройки, гарнизон)
+  │   │       └── #view-stats       — Статистика
   │   └── footer.bottom-nav — нижняя навигация (мобильная)
   │
-  └── <script> telegram-web-app.js + app.js
+  └── <script> telegram-web-app.js + perf/perf-compat/stronghold-data/state-guards/storage/stronghold-model/app
 ```
 
 ---
@@ -187,8 +201,8 @@ neurodeck/
 - **🗑 Удалить** — удалить с подтверждением
 
 **Ковка карточки** (`forgeCard()`):
-- Игрок выбирает: название, стат, время суток, длительность, **стартовый ранг (все 12: C→SSS)**, порог мастерства
-- Стартовый ранг можно задать любой — полезно при восстановлении после потери данных
+- Игрок выбирает: название, стат, время суток, длительность, порог мастерства
+- Стартовый ранг жёстко `C` (`const rank = 'C'`, app.js:1281) — поля выбора ранга в форме нет
 - При создании: +10 XP, эффект частиц, звук ковки
 - Карточка добавляется в начало массива `FORGED`
 
@@ -870,10 +884,10 @@ AudioContext создаётся при первом клике пользова�
 | Вкладка | Иконка | ID view |
 |---------|--------|---------|
 | Колода | 📖 | `view-deck` |
+| Квесты | 📜 | `view-quests` |
 | Герой | 👤 | `view-hero` |
 | Инвентарь | 🎒 | `view-inv` |
-| Босс | 🐍 | `view-boss` |
-| Карта | 🗺 | `view-map` |
+| Твердыни | 🏰 | `view-strongholds` |
 | Статистика | 📊 | `view-stats` |
 
 ### Навигация
@@ -939,15 +953,18 @@ AudioContext создаётся при первом клике пользова�
 ### 4 слоя хранения
 
 ```
-saveGameState()
+saveGameState()  (js/storage.js)
   │
-  ├── localStorage['neurodeck_full_save']     ← основной (мгновенно)
-  ├── localStorage['neurodeck_backup']        ← резервный (мгновенно)
+  ├── localStorage['neurodeck_backup']        ← резервный (первым)
   ├── localStorage['neurodeck_cards_backup']  ← только при FORGED > 0
+  ├── localStorage['neurodeck_gen']           ← поколение stateGen (LWW-гвард мульти-вкладок)
   ├── IndexedDB ('neurodeck_db')              ← не очищается Telegram
-  ├── autoCloudSave() → CloudStorage          ← облако (throttle 30 сек)
   ├── saveGoals() → localStorage['neurodeck_goals']  ← legacy
-  └── window.beforeunload → saveGameState + forceCloudSave
+  ├── autoCloudSave() → CloudStorage          ← облако (throttle 30 сек)
+  └── localStorage['neurodeck_full_save']     ← основной (последним: квота localStorage
+                                                не обрывает цепочку бэкапов, фикс T5-M1)
+
+window.beforeunload → saveGameState() + forceCloudSave()  (app.js:2928)
 ```
 
 ### 5 программных защит от потери данных
@@ -964,29 +981,39 @@ saveGameState()
 - `setTimeout(deepRecovery, 1000)` — глубокое сканирование всех 4 слоёв
 - Диалог с предложением восстановить найденные данные
 
-### Структура `saveGameState()` snapshot
+### Структура `saveGameState()` snapshot (схема v10, js/storage.js:204-210)
 
 ```json
 {
-  "hero": { "name", "level", "xp", "hp", "isHollow", "estus", ... },
+  "v": 10,
+  "gen": 42,
+  "hero": { "name", "title", "level", "xp", "totalXp", "gold", ... },
   "stats": { "str": {...}, "end": {...}, ... },
   "forged": [ { "id", "name", "rank", "mastery", ... } ],
   "goals": [ { "id", "type", "name", "deadline", "steps": [{"text","done"}], ... } ],
   "inventory": { "backpack": [...], "equipped": {...} },
-  "escapeProgress": 0,
-  "bossHp": 100,
-  "bossStage": 0,
-  "bossDefeated": false,
-  "lastDayReset": "2026-06-15",
-  "chimeraShield": 5,
+  "lastDayReset": "2026-09-17",
   "forgedIdCounter": 100,
   "uidCounter": 10,
   "goalIdCounter": 1,
-  "xpHistory": [ { "date": "2026-06-15", "xp": 120 } ],
-  "bossKills": { "snake": 0, "social": 0, "chimera": 0 },
-  "savedAt": 1718448000000
+  "xpHistory": [ { "date": "2026-09-17", "xp": 120 } ],
+  "bloodOath": null,
+  "lastWeekReset": "2026-09-15",
+  "tasks": [ { "id", "title", "deadline", ... } ],
+  "taskIdCounter": 1,
+  "hirePool": { ... },
+  "savedAt": 1718448000000,
+  "strongholds": [ { "id": "sh01", "captured", "garrison": [], "buildings": {}, "corruption": {...} }, ... ],
+  "army": { "units": { "t1".."t7" }, "week": 0 },
+  "siege": { "week": 1, "lastResult": null },
+  "dailyQuests": { ... },
+  "dailyEvent": null,
+  "season": { "num", "start", "snapshot", "crownBonus" },
+  "throne": 0
 }
 ```
+
+Крепостные поля (`strongholds/army/siege/dailyQuests/dailyEvent/season/throne`) пишутся в защищённом блоке после базового снапшота (storage.js:210). Поля souls-эпохи (`hp`, `estus`, `bossHp`, `escapeProgress`, `chimeraShield`, `bossKills`…) удалены миграциями v7/v8 — в снапшоте их нет.
 
 ### Загрузка (`loadGameState()`)
 
@@ -1117,21 +1144,20 @@ saveGameState()
 
 | Константа | Значение | Описание |
 |-----------|---------|----------|
-| `ATTR_POOL_THRESHOLD` | 5 | Очков пула для +1 атрибута |
-| `BASE_DAMAGE` | 5 | Базовый урон по боссу |
-| `LOOT_CHANCE` | 0.08 (8%) | Шанс выпадения артефакта |
-| `BOSS_HEAL_ON_FAIL` | 8 | HP босса при пропуске карточки |
-| `ESCAPE_MAX` | 140 | Максимум прогресса побега |
-| `ROOMS_STEP` | 10 | Ранг-апов на комнату |
-| `CLOUD_MAX_CHUNK` | 4096 | Размер чанка CloudStorage |
-| `CLOUD_META_KEY` | `nd_meta` | Ключ метаданных в облаке |
-| `CLOUD_DATA_PREFIX` | `nd_` | Префикс чанков данных |
-| `MSK_OFFSET_MS` | 3 часа | Смещение Москвы от UTC |
-| `MAX_PARTICLES` | 500 | Лимит частиц на canvas |
-| Auto-cloud throttle | 30000 (30 сек) | Мин. интервал авто-сохранения в облако |
-| Dust particles | 60 | Кол-во частиц пыли |
-| Heatmap weeks | 8 (56 ячеек) | Размер тепловой карты стиков |
-| XP history limit | 90 дней | Глубина истории XP |
+| `ATTR_POOL_THRESHOLD` | 5 | Очков пула для +1 атрибута (app.js:51) |
+| `CLOUD_MAX_CHUNK` | 4096 | Размер чанка CloudStorage (storage.js:517) |
+| `CLOUD_META_KEY` | `nd_meta` | Ключ метаданных в облаке (storage.js:518) |
+| `CLOUD_DATA_PREFIX` | `nd_` | Префикс чанков данных (storage.js:519) |
+| `MSK_OFFSET_MS` | 3 часа | Смещение Москвы от UTC (app.js:2207) |
+| `MAX_PARTICLES` | 500 | Лимит частиц burst-эффекта (локальная в `burstParticles`, app.js:3132) |
+| Auto-cloud throttle | 30000 (30 сек) | Мин. интервал авто-сохранения в облако (storage.js:234) |
+| Dust particles | 60 | Кол-во частиц пыли (app.js:3098) |
+| Heatmap weeks | 8 (56 ячеек) | Размер тепловой карты стриков (app.js:2263) |
+| xpHistory cap | 366 записей | Санитайзер истории XP (~1 год, state-guards.js:168) |
+| History prune | 120 дней | Обрезка `cardHistory`/`dailyUniqueStats` (storage.js:211) |
+| SCHEMA_VERSION | 10 | Текущая схема сейва (storage.js:37) |
+
+Легаси-константы souls-эпохи (`BASE_DAMAGE`, `LOOT_CHANCE`, `BOSS_HEAL_ON_FAIL`, `ESCAPE_MAX`, `ROOMS_STEP`) удалены вместе с боёвкой — в js/ их нет.
 
 ---
 
@@ -1158,7 +1184,9 @@ saveGameState()
 
 При загрузке проверяются `navigator.deviceMemory` и `navigator.hardwareConcurrency`. Если устройство слабое (mem < 4 или cores < 4) — при `mode=auto` показывается one-time toast с предложением включить Экономный режим.
 
-### PixiJS Combat (`js/combat-pixi.js`)
+### PixiJS Combat (`js/combat-pixi.js`) — УДАЛЕНО (легаси)
+
+> Файл `js/combat-pixi.js` и зависимость PixiJS удалены вместе с боёвкой (пивот v49). Оставлено как история; perf-гейтинг эффектов живёт в `js/perf.js` + `js/perf-compat.js`.
 
 При `NeuroDeckPerf.prefersReducedMotion()`:
   - `S.hitStop = 0` (нет заморозки)
@@ -1174,7 +1202,16 @@ saveGameState()
 
 ---
 
-## 17. Telegram Bot Backend (пункт 7 плана) — в ветке feature/bot-backend
+## 17. Telegram Bot Backend — фактическое состояние (актуализировано 2026-09-17)
+
+Бот живёт в `bot/` как standalone long-polling сервис **без зависимостей** (node ≥ 18, global fetch):
+- `bot/polling.js` — getUpdates-long-polling: `/start` подписка чата, `/stop` отписка, ежедневное напоминание 21:30 МСК; токен из `TELEGRAM_BOT_TOKEN`; исходящий трафик через SOCKS5-прокси (`TELEGRAM_PROXY`, по умолчанию `socks5h://127.0.0.1:1080` — для VPS в РФ); чаты хранятся в `bot/data/chats.json`
+- `bot/neurodeck-bot.service` — systemd-юнит для запуска на VPS
+- Тесты: `tests/bot-unit.test.js`
+
+**Чего НЕТ** (удалено/не существует, в отличие от старого описания ниже в истории): Express-webhook (`bot/index.js`), `bot/package.json`, `bot/Dockerfile`, `bot/.env.example`, `bot/scheduler.js`, HMAC-верификация initData, `tests/bot-webhook.test.js` / `tests/notification-flow.test.js`. Бот — только исходящие напоминания, webhook-эндпоинтов нет.
+
+> Историческое описание Express/Docker-варианта ветки `feature/bot-backend` сохранено ниже как архив — в main оно не мержилось.
 
 Backend для настоящих Telegram notifications реализован как отдельный сервис в подпапке `bot/`:
 - `bot/index.js` — Express HTTP webhook (GET /api/health, POST /api/notify, POST /api/register-user)
@@ -1202,16 +1239,16 @@ Backend для настоящих Telegram notifications реализован к
 
 ### Security audit
 - ✅ `state-guards.js` покрывает все импорты через whitelist (card rank, artifact validation, counter clamping)
-- ✅ HMAC initData верификация в bot backend (HMAC-SHA256 + bot token + secret_token middleware)
+- ⚠️ **Правка 2026-09-17:** HMAC initData верификации в боте НЕТ — актуальный `bot/polling.js` это исходящий long-polling без входящих HTTP-эндпоинтов (историческая строка про HMAC относилась к неслитой ветке `feature/bot-backend`)
 - ✅ Никаких `eval()`, `Function()` конструкторов в коде frontend / bot
 - ✅ `esc()` используется во всех render-функциях для user-input strings
 - ⚠️ **TODO:** при добавлении Telegram bot URL в config, проверить что он через HTTPS и rate-limited
 
 ### Performance audit
 - ✅ `setInterval`/`setTimeout` — все очищаются через `clearInterval` при unload в новом коде; legacy таймеры в app.js не трогаются (они и так короткоживущие)
-- ✅ PixiJS renderer инициализируется только при `#view-boss.active`
-- ✅ При `prefers-reduced-motion` canvas-анимации не используют RAF (Pixi pause-not-documented, но hit-stop = 0 даёт визуальный эквивалент)
-- ⚠️ **TODO:** явный `PIXI.Ticker.stop()` при уходе со вкладки босса (можно добавить через `visibilitychange`)
+- ⚠️ **Правка 2026-09-17:** PixiJS renderer удалён вместе с боёвкой (пивот v49) — пункт исторический
+- ⚠️ **Правка 2026-09-17:** явный `PIXI.Ticker.stop()` не требуется — PIXI в проекте больше нет
+- ✅ При `prefers-reduced-motion` canvas-анимации гейтятся через `js/perf.js`
 
 ### Logic bugs
 - ✅ `forgeCard()` стартовый ранг = C (locked)
@@ -1222,7 +1259,7 @@ Backend для настоящих Telegram notifications реализован к
 ### UX audit
 - ✅ touch targets: кнопки в app.js ≥ 36px (passing iOS HIG ≥44px on most)
 - ⚠️ **TODO:** long-press на мобильных иногда ломает scroll на Firefox Android — добавить `touch-action: manipulation` в CSS
-- ✅ Cache-bump версии синхронизированы (все `?v=45`)
+- ✅ Cache-bump версии синхронизированы (актуально `?v=62`, style.css + 7 скриптов, index.html:15,1333-1339)
 - ✅ Все emoji отображаются на уровне ОС (Georgia serif fallback)
 
 ### Documentation

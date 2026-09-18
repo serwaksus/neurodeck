@@ -91,6 +91,52 @@ animation: flicker 3s infinite ease-in-out;
 .progress-track { width: 100%; height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg,#8a6d1f,#d4af37); transition: width .4s ease; }
 .progress-control .val { color: var(--gold-bright); font-weight: bold; }
+.sh-wrath { margin: 0 0 10px; font-size: var(--fs-secondary); color: var(--blood-bright); }
+.sh-wrath b { color: var(--blood-bright); }
+.day-card-badge {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #1a120b;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    z-index: 2;
+}
+.card.day-card { border-color: rgba(251, 191, 36, 0.55); box-shadow: 0 0 10px rgba(251, 191, 36, 0.12); }
+.toast .t-action {
+    margin-top: 6px;
+    background: none;
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    color: var(--gold-bright);
+    font-size: var(--fs-secondary);
+    padding: 3px 10px;
+    cursor: pointer;
+}
+.treasury-chip { cursor: pointer; }
+.streak-calendar { margin-top: 10px; }
+.streak-title { font-size: var(--fs-secondary); color: var(--text-dim); margin-bottom: 6px; }
+.streak-title b { color: var(--gold-bright); }
+.streak-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.streak-chip {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: rgba(0, 0, 0, 0.25);
+}
+.streak-chip.claimed {
+    border-color: var(--gold);
+    color: var(--gold-bright);
+    background: rgba(251, 191, 36, 0.08);
+}
 .main { display: grid; grid-template-columns: 190px 1fr 260px; gap: 12px; min-height: 0; }
 .tabs { display: flex; flex-direction: column; gap: 4px; background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; padding: 12px 8px; overflow-y: auto; }
 .tab { padding: 9px 12px; font-size: 12px; letter-spacing: 1.5px; color: var(--text-dim); border-left: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
@@ -1155,3 +1201,19 @@ body::before {
 .sh-season-line b { color: var(--gold-bright); }
 .sh-season-bar { height: 6px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
 .sh-season-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+
+/* ===================== Round 2 QA fixes (Fix-B, 2026-09-17) ===================== */
+/* QA1-M1: Telegram light-тема через themeParams → body.tg-light (--tg-bg/--tg-text ставит app.js); тёмная — дефолт */
+body.tg-light { background: var(--tg-bg, var(--bg-deep)); color: var(--tg-text, var(--text)); }
+body.tg-light .header,
+body.tg-light .content,
+body.tg-light .tabs { background: var(--tg-bg, var(--surface)); color: var(--tg-text, var(--text)); }
+body.tg-light .bottom-nav { background: var(--tg-bg, rgba(10, 10, 15, 0.95)); border-top-color: rgba(0, 0, 0, 0.25); }
+body.tg-light .view-title,
+body.tg-light .view-subtitle,
+body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
+/* QA5-M4: заголовок опасной зоны в syncModal */
+.sync-danger-title { margin-top: 14px; padding: 6px 8px; border: 1px dashed var(--blood); border-radius: 2px; color: var(--blood-bright); font-size: 12px; letter-spacing: 1px; text-align: center; }
+/* QA1-M5: переполнение нижней навигации скроллится по горизонтали (zoom 200/300%) */
+.bottom-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.bottom-nav::-webkit-scrollbar { display: none; }

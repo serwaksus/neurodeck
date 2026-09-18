@@ -111,6 +111,10 @@
             totalXp: clampNumber(hero.totalXp, 0, 1e10, 0),
             gold: Math.round(clampNumber(hero.gold, 0, 1e9, 30)),
             consecutivePerfectDays: Math.round(clampNumber(hero.consecutivePerfectDays, 0, 1000, 0)),
+            streakShields: Math.round(clampNumber(hero.streakShields, 0, 100, 0)), // QA3-M1: whitelist вместо Object.assign-потери
+            dayStreak: Math.round(clampNumber(hero.dayStreak, 0, 100000, 0)), // #19: дневной стрик активности
+            streakMilestones: (hero.streakMilestones && typeof hero.streakMilestones === 'object') ? hero.streakMilestones : {},
+            lastActiveDay: safeString(hero.lastActiveDay, '', 10),
             dailyCompletions: Math.round(clampNumber(hero.dailyCompletions, 0, 1000, 0)),
             dailySkips: Math.round(clampNumber(hero.dailySkips, 0, 1000, 0)),
             lastSessionAt: Number.isFinite(Number(hero.lastSessionAt)) ? Number(hero.lastSessionAt) : Date.now(),
@@ -259,9 +263,17 @@
         (Array.isArray(input) ? input : []).forEach(function(s) {
             if (s && typeof s === 'object' && typeof s.id === 'string') byId[s.id] = s;
         });
-        return defs.map(function(def) {
+        var catIds = Object.create(null);
+        defs.forEach(function(d) { if (d && typeof d.id === 'string') catIds[d.id] = true; });
+        return defs.map(function(def, di) {
             if (!def || typeof def.id !== 'string') return null;
-            var s = Object.prototype.hasOwnProperty.call(byId, def.id) ? byId[def.id] : {};
+            var s = Object.prototype.hasOwnProperty.call(byId, def.id) ? byId[def.id] : null;
+            if (!s && Array.isArray(input)) {
+                var legacy = input[di]; // fallback: легаси-id sh5..sh20 мимо каталога — только если номер совпадает с позицией (чужой/мусор id не матчится)
+                var lm = legacy && typeof legacy === 'object' && typeof legacy.id === 'string' ? /^sh(\d{1,2})$/.exec(legacy.id) : null;
+                if (lm && Number(lm[1]) === di + 1) s = legacy;
+            }
+            if (!s) s = {};
             var corr = (s.corruption && typeof s.corruption === 'object') ? s.corruption : {};
             return {
                 id: def.id,

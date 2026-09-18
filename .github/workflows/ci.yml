@@ -9,28 +9,43 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: npm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
       - run: npm ci
       - run: npx playwright install chromium
       - run: npm run check:js
       - run: npm test
-      - run: npm run test:e2e
+      # retries=1 только в CI (флаг поверх конфига; локально поведение не меняется)
+      - run: npm run test:e2e -- --retries=1
       - run: npm run test:e2e:visual
         id: visual
         # Baselines were captured off-CI; ubuntu-latest rendering differs.
         # Non-blocking until CI-native baselines prove stable.
         continue-on-error: true
+      - run: npm run test:playtest:strongholds
+      - run: npm run test:playtest:acceptance
+      - run: npm run test:qa:data
+      - run: npm run test:qa:chaos
+      - run: npm run test:qa:parity
       - uses: actions/upload-artifact@v7
         # failure() misses the visual step (continue-on-error keeps the job
         # green), so also fire on its raw outcome.
         if: failure() || steps.visual.outcome == 'failure'
         with:
-          name: test-failure-artifacts
+          name: test-failure-artifacts-node${{ matrix.node }}
           path: |
             test-results/
             tests/e2e/snapshots/*-diff.png

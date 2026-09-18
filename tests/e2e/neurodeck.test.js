@@ -44,7 +44,7 @@ test('tab navigation switches views', async ({ page }) => {
   if (await closeBtn.isVisible()) await closeBtn.click();
   await page.waitForTimeout(500);
   for (const v of ['deck', 'hero', 'inv', 'strongholds', 'stats']) {
-    await page.locator(`.bnav-btn[data-view="${v}"]`).click({ force: true });
+    await page.locator(`.bnav-btn[data-view="${v}"]`).click();
     await page.waitForTimeout(300);
     await expect(page.locator(`#view-${v}`)).toBeVisible();
   }
@@ -57,7 +57,7 @@ test('hero view shows character stats', async ({ page }) => {
   const closeBtn = page.locator('#starterDeckModal .modal-close');
   if (await closeBtn.isVisible()) await closeBtn.click();
   await page.waitForTimeout(500);
-  await page.locator('.bnav-btn[data-view="hero"]').click({ force: true });
+  await page.locator('.bnav-btn[data-view="hero"]').click();
   await page.waitForTimeout(500);
   await expect(page.locator('#heroName')).toHaveText('Странник');
   await expect(page.locator('#heroLevelLabel')).toContainText('LVL');

@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"></noscript>
-    <link rel="stylesheet" href="css/style.css?v=61" />
+    <link rel="stylesheet" href="css/style.css?v=64" />
   </head>
   <body>
     <div class="app-wrap">
@@ -84,6 +84,7 @@
       <div class="toast" id="toast" aria-live="polite">
         <div class="t-title"></div>
         <div class="t-body"></div>
+        <button type="button" class="t-action" style="display:none"></button>
       </div>
       <div class="tooltip" id="tooltip"></div>
     </div>
@@ -96,7 +97,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3>⚔ Итоги воскресной осады</h3>
-            <button class="modal-close" data-action="close-siege-report">
+            <button class="modal-close" aria-label="Закрыть" data-action="close-siege-report">
               ✕
             </button>
           </div>
@@ -117,7 +118,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3>🔥 Выковать карточку</h3>
-            <button class="modal-close" data-action="close-forge">✕</button>
+            <button class="modal-close" aria-label="Закрыть" data-action="close-forge">✕</button>
           </div>
           <div class="modal-body">
             <div class="form-row">
@@ -125,6 +126,7 @@
               ><input
                 class="form-input"
                 id="forgeName"
+                data-autofocus
                 placeholder="Медитация"
               />
             </div>
@@ -238,7 +240,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3 id="editCardTitle">✏ Редактировать карточку</h3>
-            <button class="modal-close" data-action="close-edit-card">✕</button>
+            <button class="modal-close" aria-label="Закрыть" data-action="close-edit-card">✕</button>
           </div>
           <div class="modal-body">
             <div class="form-warning" id="editCardWarning">
@@ -398,7 +400,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3>☁ Синхронизация</h3>
-            <button class="modal-close" data-action="close-sync-modal">
+            <button class="modal-close" aria-label="Закрыть" data-action="close-sync-modal" data-autofocus>
               ✕
             </button>
           </div>
@@ -530,6 +532,7 @@
                 style="font-size: 11px; color: var(--text-dim); margin-top: 6px"
               ></div>
             </div>
+            <div class="sync-danger-title">⚠ Опасная зона</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px">
               <button
                 class="demo-btn"
@@ -593,7 +596,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3>🎯 Новая цель</h3>
-            <button class="modal-close" data-action="close-goal-modal">
+            <button class="modal-close" aria-label="Закрыть" data-action="close-goal-modal">
               ✕
             </button>
           </div>
@@ -609,7 +612,7 @@
                   <div class="type-icon">🟢</div>
                   <div class="type-name">Краткая</div>
                   <div class="type-desc">1-7 дней</div>
-                  <div class="type-reward">+30 XP · -5 HP</div>
+                  <div class="type-reward">+30 XP · +5 💰</div>
                 </div>
                 <div
                   class="goal-type-option medium"
@@ -619,7 +622,7 @@
                   <div class="type-icon">🔵</div>
                   <div class="type-name">Средняя</div>
                   <div class="type-desc">1-4 недели</div>
-                  <div class="type-reward">+80 XP · -12 HP</div>
+                  <div class="type-reward">+80 XP · +12 💰</div>
                 </div>
                 <div
                   class="goal-type-option long"
@@ -629,7 +632,7 @@
                   <div class="type-icon">🟡</div>
                   <div class="type-name">Долгая</div>
                   <div class="type-desc">1+ месяц</div>
-                  <div class="type-reward">+200 XP · -25 HP</div>
+                  <div class="type-reward">+200 XP · +25 💰</div>
                 </div>
               </div>
             </div>
@@ -744,7 +747,7 @@
       <div class="modal">
         <div class="modal-header">
           <h3>📋 Новая задача</h3>
-          <button class="modal-close" data-action="close-task-modal">✕</button>
+          <button class="modal-close" aria-label="Закрыть" data-action="close-task-modal">✕</button>
         </div>
         <div class="modal-body">
           <div class="form-row">
@@ -866,6 +869,7 @@
               <div id="progressFill" class="progress-fill"></div>
             </div>
             <span class="val" id="progressVal">0/20</span>
+            <span class="val" id="seasonChip" title="Сезон"></span>
           </div>
         </div>
         <div class="main">
@@ -912,7 +916,7 @@
               <span class="icon">📊</span>Статистика
             </div>
           </nav>
-          <main class="content">
+          <main class="content" tabindex="0" aria-label="Основная область прокрутки">
             <section class="view active" id="view-deck">
               <div class="view-title">📖 Колода</div>
               <div
@@ -1051,6 +1055,7 @@
                       <span>Твердынь</span><b id="statStrongholds">0 / 20</b>
                     </div>
                   </div>
+                  <div class="streak-calendar" id="streakCalendar"></div>
                 </div>
                 <div>
                   <div class="stats-grid" id="statsGrid"></div>
@@ -1072,6 +1077,8 @@
                         class="slot"
                         data-slot="head"
                         data-slot-label="Голова"
+                        role="img"
+                        aria-label="Слот: Голова"
                       >
                         ◇
                       </div>
@@ -1079,6 +1086,8 @@
                         class="slot"
                         data-slot="amulet"
                         data-slot-label="Амулет"
+                        role="img"
+                        aria-label="Слот: Амулет"
                       >
                         △
                       </div>
@@ -1086,16 +1095,26 @@
                         class="slot"
                         data-slot="chest"
                         data-slot-label="Торс"
+                        role="img"
+                        aria-label="Слот: Торс"
                       >
                         □
                       </div>
-                      <div class="slot" data-slot="cape" data-slot-label="Плащ">
+                      <div
+                        class="slot"
+                        data-slot="cape"
+                        data-slot-label="Плащ"
+                        role="img"
+                        aria-label="Слот: Плащ"
+                      >
                         ◁
                       </div>
                       <div
                         class="slot"
                         data-slot="weapon"
                         data-slot-label="Оружие"
+                        role="img"
+                        aria-label="Слот: Оружие"
                       >
                         ✕
                       </div>
@@ -1103,6 +1122,8 @@
                         class="slot"
                         data-slot="shield"
                         data-slot-label="Щит"
+                        role="img"
+                        aria-label="Слот: Щит"
                       >
                         ◯
                       </div>
@@ -1110,6 +1131,8 @@
                         class="slot"
                         data-slot="ring1"
                         data-slot-label="Кольцо 1"
+                        role="img"
+                        aria-label="Слот: Кольцо 1"
                       >
                         ○
                       </div>
@@ -1117,6 +1140,8 @@
                         class="slot"
                         data-slot="ring2"
                         data-slot-label="Кольцо 2"
+                        role="img"
+                        aria-label="Слот: Кольцо 2"
                       >
                         ○
                       </div>
@@ -1124,6 +1149,8 @@
                         class="slot"
                         data-slot="boots"
                         data-slot-label="Обувь"
+                        role="img"
+                        aria-label="Слот: Обувь"
                       >
                         ▽
                       </div>
@@ -1237,7 +1264,7 @@
       <div class="modal">
         <div class="modal-header">
           <h3>📅 С возвращением</h3>
-          <button class="modal-close" data-action="close-return-modal">
+          <button class="modal-close" aria-label="Закрыть" data-action="close-return-modal">
             ✕
           </button>
         </div>
@@ -1258,7 +1285,7 @@
       <div class="modal">
         <div class="modal-header">
           <h3>🍂 Итоги сезона</h3>
-          <button class="modal-close" data-action="close-season-report">
+          <button class="modal-close" aria-label="Закрыть" data-action="close-season-report">
             ✕
           </button>
         </div>
@@ -1279,7 +1306,7 @@
       <div class="modal">
         <div class="modal-header">
           <h3>📊 Недельный отчёт</h3>
-          <button class="modal-close" data-action="close-weekly-report">
+          <button class="modal-close" aria-label="Закрыть" data-action="close-weekly-report">
             ✕
           </button>
         </div>
@@ -1300,7 +1327,7 @@
       <div class="modal">
         <div class="modal-header">
           <h3>🎴 Готовые испытания</h3>
-          <button class="modal-close" data-action="close-starter-deck">
+          <button class="modal-close" aria-label="Закрыть" data-action="close-starter-deck">
             ✕
           </button>
         </div>
@@ -1330,12 +1357,12 @@
       </div>
     </div>
     <script src="https://telegram.org/js/telegram-web-app.js" async onload="window.__tgReady && window.__tgReady()"></script>
-    <script src="js/perf.js?v=61"></script>
-    <script src="js/perf-compat.js?v=61"></script>
-    <script src="js/stronghold-data.js?v=61"></script>
-<script src="js/state-guards.js?v=61"></script>
-    <script src="js/storage.js?v=61"></script>
-    <script src="js/stronghold-model.js?v=61"></script>
-    <script src="js/app.js?v=61"></script>
+    <script src="js/perf.js?v=64"></script>
+    <script src="js/perf-compat.js?v=64"></script>
+    <script src="js/stronghold-data.js?v=64"></script>
+<script src="js/state-guards.js?v=64"></script>
+    <script src="js/storage.js?v=64"></script>
+    <script src="js/stronghold-model.js?v=64"></script>
+    <script src="js/app.js?v=64"></script>
   </body>
 </html>

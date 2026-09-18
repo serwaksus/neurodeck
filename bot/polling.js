@@ -13,8 +13,14 @@ const TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const API_HOST = 'api.telegram.org';
 const PROXY = process.env.TELEGRAM_PROXY || 'socks5h://127.0.0.1:1080'; // xray SOCKS5 (VPS в РФ: прямой выход к TG заблокирован)
 const SOCKS_PORT = parseInt((process.env.TELEGRAM_PROXY || 'socks5h://127.0.0.1:1080').split(':')[2], 10) || 1080;
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.ND_BOT_DATA_DIR || path.join(__dirname, 'data'); // QA-6: песочница для юнит-тестов (контракт draft-теста)
 const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
+function loadChats() {
+  try { return JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8')); } catch (e) { return {}; }
+}
+function saveChats(db) {
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(CHATS_FILE, JSON.stringify(db)); } catch (e) { console.error('[bot] saveChats:', e.message); }
+}
 const WEBAPP_URL = process.env.NEURODECK_WEBAPP_URL || 'https://serwaksus.github.io/neurodeck/';
 const REMIND_HOUR = 21, REMIND_MIN = 30; // МСК
 
@@ -56,8 +62,8 @@ function socks5Connect(targetHost, targetPort, timeoutMs) {
   });
 }
 
-// API-запрос через SOCKS-туннель + TLS (createConnection подменяет транспорт)
-async function api(method, body) {
+// API-запрос через SOCKS-туннель + TLS. let + сеттер: юнит-тесты подменяют транспорт (setApiForTests), прод не трогает.
+let api = async function (method, body) {
   const payload = JSON.stringify(body || {});
   const sock = await socks5Connect(API_HOST, 443, method === 'getUpdates' ? 70000 : 15000);
   return new Promise((resolve, reject) => {
@@ -77,13 +83,14 @@ async function api(method, body) {
     req.on('error', (e) => { sock.destroy(); reject(e); });
     req.end(payload);
   });
-}
+};
+function setApiForTests(fn) { api = fn; }
 
-function mskParts() {
+function mskParts(ts) {
   const p = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Moscow', hour12: false,
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-  }).formatToParts(new Date());
+  }).formatToParts(new Date(ts || Date.now()));
   const g = (t) => parseInt(p.find((x) => x.type === t).value, 10);
   return { key: `${g('year')}-${g('month')}-${g('day')}`, hour: g('hour'), minute: g('minute') };
 }
@@ -99,10 +106,11 @@ async function sendReminder(chatId) {
 }
 
 let lastFireKey = '';
-async function schedulerTick() {
-  const now = mskParts();
-  if (now.hour === REMIND_HOUR && now.minute >= REMIND_MIN && now.minute < REMIND_MIN + 5 && lastFireKey !== now.key) {
-    lastFireKey = now.key;
+function _resetForTests() { lastFireKey = ''; }
+async function schedulerTick(now = Date.now()) {
+  const p = mskParts(now);
+  if (p.hour === REMIND_HOUR && p.minute >= REMIND_MIN && p.minute < REMIND_MIN + 5 && lastFireKey !== p.key) {
+    lastFireKey = p.key;
     const db = loadChats();
     let sent = 0;
     for (const id of Object.keys(db)) {
@@ -110,7 +118,7 @@ async function schedulerTick() {
       try { await sendReminder(id); sent++; }
       catch (e) { console.error('[bot] reminder ->', id, e.message); }
     }
-    console.log('[bot] reminder', now.key, 'sent:', sent);
+    console.log('[bot] reminder', p.key, 'sent:', sent);
   }
 }
 
@@ -138,8 +146,8 @@ async function handleMessage(msg) {
   }
 }
 
-async function pollLoop() {
-  let offset = 0;
+async function pollOnce(offset, opts) {
+  const sleepMs = (opts && opts.sleepMs) || 5000;
   for (;;) {
     try {
       const updates = await api('getUpdates', { offset, timeout: 50 });
@@ -147,16 +155,25 @@ async function pollLoop() {
         offset = u.update_id + 1;
         if (u.message && u.message.text) await handleMessage(u.message).catch((e) => console.error('[bot] msg:', e.message));
       }
+      return offset;
     } catch (e) {
       console.error('[bot] poll:', e.message);
-      await new Promise((r) => setTimeout(r, 5000));
+      await new Promise((r) => setTimeout(r, sleepMs));
     }
   }
 }
+async function pollLoop() {
+  let offset = 0;
+  for (;;) offset = await pollOnce(offset);
+}
 
-(async () => {
+async function main() {
   const me = await api('getMe');
   console.log('[bot] запущен как @' + me.username + ' | напоминание в ' + REMIND_HOUR + ':' + String(REMIND_MIN).padStart(2, '0') + ' МСК | webapp: ' + WEBAPP_URL);
   setInterval(() => schedulerTick().catch((e) => console.error('[bot] tick:', e.message)), 30 * 1000);
   pollLoop();
-})().catch((e) => { console.error('[bot] fatal:', e.message); process.exit(1); });
+}
+if (require.main === module) {
+  main().catch((e) => { console.error('[bot] fatal:', e.message); process.exit(1); });
+}
+module.exports = { mskParts, schedulerTick, handleMessage, pollOnce, setApiForTests, _resetForTests, REMIND_HOUR, REMIND_MIN };

@@ -142,9 +142,9 @@ test('sanitizeHero: CRITICAL #1 — unknown fields dropped, no Object.assign lea
   assert.equal(out.customStat, undefined, 'must NOT leak');
   // only whitelisted keys present
   var allowed = ['name','title','level','xp','xpToNext','totalXp','gold',
-                'consecutivePerfectDays','dailyCompletions','dailySkips',
+                'consecutivePerfectDays','streakShields','dailyCompletions','dailySkips',
                 'lastSessionAt','dailyUniqueStats','cardHistory',
-                'lastWeeklyReport'];
+                'lastWeeklyReport','dayStreak','streakMilestones','lastActiveDay']; // streakShields: QA3-M1; dayStreak/streakMilestones/lastActiveDay: волна 1 фича #19
   Object.keys(out).forEach(function(k) {
     assert.ok(allowed.indexOf(k) !== -1, 'unexpected key leaked: ' + k);
   });

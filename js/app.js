@@ -152,6 +152,8 @@ case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(
 case 'sh-back': currentShIdx = null; renderStrongholds(); break;
 case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
 case 'sh-buy': buyBuilding(parseInt(el.dataset.idx), el.dataset.bid); break;
+case 'reroll-event': rerollDailyEvent(); break;
+case 'treasury-info': showTreasuryBreakdown(); break;
 case 'sh-hire-army': hireUnit(el.dataset.tier, false, parseInt(el.dataset.idx)); break;
 case 'sh-hire-garrison': hireUnit(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
 case 'sh-to-army': moveStack(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
@@ -227,16 +229,34 @@ if (mult >= 1.5) return { label: '🔥 ×' + mult.toFixed(2) + ' (+' + pct + '%)
 if (mult >= 1.2) return { label: '🔥 ×' + mult.toFixed(2) + ' (+' + pct + '%)', cls: 'streak-mid' };
 return { label: '🔥 ×' + mult.toFixed(2), cls: 'streak-low' };
 }
+const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+function getMSKDate(ts) { return new Date((ts || Date.now()) + MSK_OFFSET_MS); }
+var _dailyPairIds = {}; // #29: карты дня (✨) — детерминированная пара по дате
+function dailyCardPair() {
+    var tk = getMSKDayKey();
+    var seed = parseInt(tk.replace(/-/g, ''), 10) || 0;
+    var eligible = FORGED.filter(function(c) { return !(c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === tk); });
+    eligible.sort(function(a, b) { return ((((a.id || 0) * 2654435761) ^ seed) >>> 0) - ((((b.id || 0) * 2654435761) ^ seed) >>> 0); });
+    return eligible.slice(0, 2); // ponytail: пара сдвигается в течение дня по мере выполнения карт — приемлемо
+}
 function renderCards() {
 const grid = document.getElementById('cardGrid');
 grid.innerHTML = '';
 const all = [...FORGED];
 document.getElementById('deckCount').textContent = all.length;
+_dailyPairIds = {};
+dailyCardPair().forEach(function(c) { _dailyPairIds[c.id] = true; });
 if (all.length === 0) {
 grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Пока пусто. Нажми «🔨 Выковать карточку», чтобы создать первую карточку.</div>';
 return;
 }
-all.forEach(c => renderOneCard(c, grid));
+if (all.length <= 100) { all.forEach(c => renderOneCard(c, grid)); return; }
+var _ri = 0;
+(function renderChunk() { // QA2-H3: чанкованный рендер (50/rAF) — 500 карт больше не блокируют кадр
+    var end = Math.min(_ri + 50, all.length);
+    for (; _ri < end; _ri++) renderOneCard(all[_ri], grid);
+    if (_ri < all.length) requestAnimationFrame(renderChunk);
+})();
 }
 function renderOneCard(card, grid) {
 if (!card.rank) card.rank = 'C';
@@ -253,13 +273,16 @@ const el = document.createElement('div');
 el.className = 'card rank-' + card.rank;
 const doneToday = card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === getMSKDayKey();
 if (doneToday) el.className += ' done-today';
+if (_dailyPairIds[card.id]) el.className += ' day-card';
 if (bloodOath && bloodOath.status === 'active' && bloodOath.cardId === card.id) {
 el.className += ' blood-oath';
 }
 const nextRankText = getNextRank(card.rank) || 'MAX';
 var oathBadge = (bloodOath && bloodOath.status === 'active' && bloodOath.cardId === card.id)
 ? '<div class="blood-oath-badge">🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
+var dayBadge = _dailyPairIds[card.id] ? '<div class="day-card-badge" title="Карта дня: XP и золото ×2">✨</div>' : '';
 el.innerHTML =
+dayBadge +
 oathBadge +
 '<div class="card-corner-actions">' +
    '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать">✎</div>' +
@@ -358,12 +381,13 @@ card.firstCompletedAt = Date.now();
 card.daysActive = 0;
 }
 const baseCardXp = 15;
+const dayMult = _dailyPairIds[card.id] ? 2 : 1; // #29: карта дня ×2
 const gear = getTotalGearBonuses();
 const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
 const comboMult = getComboMultiplier();
 const prestigeMult = getPrestigeXPBonus(card.stat);
-const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult);
+const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult;
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
@@ -378,6 +402,7 @@ var todayKey = getMSKDayKey();
 HERO.cardHistory = HERO.cardHistory || {};
 HERO.cardHistory[todayKey] = HERO.cardHistory[todayKey] || {};
 HERO.cardHistory[todayKey][card.id] = true;
+HERO.lastActiveDay = todayKey; // #19: активность дня
 if (card.stat && STATS[card.stat]) {
 STATS[card.stat].attributePoints = (STATS[card.stat].attributePoints || 0) + 1;
 if (card.evolutionPath === 'frequency') STATS[card.stat].attributePoints += 1;
@@ -407,8 +432,8 @@ showToast('👑 МАКСИМУМ!', card.name + ' достигла SSS', 'crit')
 spiritSay('«Легенда... Твоя дисциплина несокрушима.»');
 }
 }
-HERO.gold = (HERO.gold || 0) + 1;
-dqProgress('cards'); dqProgress('gold');
+goldGain(dayMult, 'card');
+dqProgress('cards');
 hintOnce('firstcard', 'За выполнение капает 💰, а Мастерство растит ранг карточки — ранг-ап качает атрибут.');
 if (lootPityCheck(card)) dropRandomLoot(x, y);
 checkHeroLevelUp();
@@ -417,7 +442,7 @@ renderDashboard();
 updateHeroUI();
 if (!rankUpHappened) {
 const streakBonusTxt = streakMult > 1.0 ? ' (🔥 ×' + streakMult.toFixed(2) + ')' : '';
-showToast('✅ Выполнено', '+' + finalXp + ' XP' + streakBonusTxt + ' · +1 💰 · 🔥 ' + card.streak + ' дней');
+showToast('✅ Выполнено', '+' + finalXp + ' XP' + streakBonusTxt + ' · +' + dayMult + ' 💰 · 🔥 ' + card.streak + ' дней' + (dayMult > 1 ? ' · ✨ Карта дня' : ''));
 sfxHit(); haptic('light');
 }
 saveGameState();
@@ -430,6 +455,8 @@ if (card.lastFailDay === getMSKDayKey()) {
 showToast('Карта уже отмечена пропущенной сегодня', '', 'blood');
 return;
 }
+var undo = { streak: card.streak || 0, shields: HERO.streakShields || 0, gold: HERO.gold || 0 }; // #89: снимок до пропуска
+var oathBreak = bloodOath && bloodOath.status === 'active' && bloodOath.cardId === id;
  card.lastFailDay = getMSKDayKey();
  spawnBloodRain(15);
  screenShake(6, 300);
@@ -447,12 +474,24 @@ showToast('🛡 Щит стрика!', 'Щит поглотил пропуск. 
 } else {
 HERO.gold = Math.max(0, (HERO.gold || 0) - 1);
 }
- showToast('💢 Пропуск', '«' + card.name + '» — стрик сброшен, −1 💰', 'blood');
+showToast('💢 Пропуск', '«' + card.name + '» — стрик сброшен, −1 💰', 'blood', (!oathBreak && (HERO.gold || 0) >= 1) ? { label: '↩ Отменить (−1💰)', fn: function() { undoSkip(id, undo); } } : null); // #89: undo пропуска, клятву не отменяем
  updateHeroUI();
  renderDashboard();
  renderStatsView();
  onBloodOathSkip(id);
  saveGameState();
+}
+function undoSkip(id, undo) { // #89: восстановить прогресс/стрик, пошлина −1💰
+var card = findCard(id);
+if (!card) return;
+HERO.gold = Math.max(0, undo.gold - 1);
+card.streak = undo.streak;
+card.lastFailDay = null;
+HERO.dailySkips = Math.max(0, (HERO.dailySkips || 0) - 1);
+siege.wkSkips = Math.max(0, (siege.wkSkips || 0) - 1);
+HERO.streakShields = undo.shields;
+showToast('↩ Отменено', '«' + card.name + '» — стрик восстановлен, пошлина −1 💰', 'save');
+renderCards(); updateHeroUI(); renderDashboard(); saveGameState();
 }
 function deleteCard(id) {
 const card = findCard(id);
@@ -464,6 +503,7 @@ bloodOath = null;
 showToast('🩸 Клятва', 'Клятва нарушена — карта уничтожена', 'blood');
 }
 FORGED = FORGED.filter(c => c.id !== id);
+if (FORGED.length === 0) { try { localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {} } // hard-delete последней карточки мимо бэкапа (T1-M1)
 renderCards();
 showToast('🗑 Удалено', card.name, 'blood');
 saveGameState();
@@ -538,6 +578,21 @@ if (poolLabelEl) {
 poolLabelEl.innerHTML = '<span>Развитие</span><span><b>' + stat.attributePoints + '</b> / ' + getStatThreshold(stat.value) + '</span>';
 }
 }
+var STREAK_MILESTONES = [
+    { d: 3, gold: 20 },
+    { d: 7, gold: 50, shield: 1 },
+    { d: 14, gold: 100 },
+    { d: 30, gold: 250, shield: 1 }
+];
+function renderStreakCalendar() { // #19: стрик-календарь в Hero-вкладке
+    var sc = document.getElementById('streakCalendar');
+    if (!sc) return;
+    var chips = STREAK_MILESTONES.map(function(m) {
+        var claimed = !!(HERO.streakMilestones || {})[m.d];
+        return '<div class="streak-chip' + (claimed ? ' claimed' : '') + '">' + m.d + 'д +' + m.gold + '💰' + (m.shield ? '+1🛡' : '') + (claimed ? ' ✓' : '') + '</div>';
+    }).join('');
+    sc.innerHTML = '<div class="streak-title">🔥 Стрик: <b>' + (HERO.dayStreak || 0) + '</b> дн.</div><div class="streak-chips">' + chips + '</div>';
+}
 function updateHeroUI() {
 document.getElementById('heroMiniLvl').textContent = HERO.level;
 document.getElementById('heroMiniName').textContent = HERO.name;
@@ -556,6 +611,7 @@ document.getElementById('ringFill').setAttribute('stroke-dasharray', ringCirc);
 document.getElementById('ringFill').setAttribute('stroke-dashoffset', ringCirc * (1 - HERO.xp / HERO.xpToNext));
 var goldEl = document.getElementById('heroGoldVal');
 if (goldEl) goldEl.textContent = (HERO.gold || 0).toLocaleString('ru');
+renderStreakCalendar();
 updateHeroSummary();
 }
 function updateHeroSummary() {
@@ -590,7 +646,7 @@ ov.classList.add('show'); bn.classList.add('show');
 const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 burstParticles(cx, cy, 100, { color: '#fbbf24', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12, life: 1.3 });
 screenShake(8, 400);
-HERO.gold = (HERO.gold || 0) + 30;
+goldGain(30, 'level');
 var avatarEl = document.getElementById('heroAvatar'); if (avatarEl) { avatarEl.classList.add('level-flash'); setTimeout(function() { avatarEl.classList.remove('level-flash'); }, 1500); } updateHeroAvatarSprites();
 document.getElementById('lvlSub2').textContent = '+30 💰 в казну';
 var avatarWrap = document.querySelector('.hero-avatar-wrap');
@@ -789,7 +845,7 @@ spiritSay('«' + artifact.name + '... Этот артефакт ждал теб�
 }
 function dropRandomLoot(x, y) {
 const pool = Object.values(ARTIFACTS).filter(a => !INVENTORY.backpack.some(b => b.id === a.id) && !Object.values(INVENTORY.equipped).some(e => e && e.id === a.id));
-if (pool.length === 0) { HERO.gold = (HERO.gold || 0) + 5; return; }
+if (pool.length === 0) { goldGain(5, 'loot'); return; }
 const weights = pool.map(a => a.rank === 'S' ? 1 : a.rank === 'A' ? 3 : a.rank === 'B' ? 6 : 10);
 const total = weights.reduce((a, b) => a + b, 0);
 let r = Math.random() * total;
@@ -878,6 +934,7 @@ function hideTextTooltip() { if (tooltipEl) tooltipEl.classList.remove('show'); 
 window.__ndSetEcoMode = function(isEco) {
     try { dustRunning = !isEco; if (!isEco) animateDust(); } catch (e) { /* bot restored mid-init */ }
     try { particlesRunning = !isEco; if (!isEco) animate(); } catch (e) { /* same */ }
+    try { var dc = document.getElementById('dustCanvas'); if (dc) dc.style.visibility = isEco ? 'hidden' : ''; } catch (e) {} // QA2-L6: прямой вызов мимо perf.js — прячем канву вручную
 };
 function selectItem(uid) {
 selectedItemId = uid;
@@ -1047,7 +1104,7 @@ medium: { xp: 80, gold: 12, statXp: 2, label: 'Средняя' },
 long:   { xp: 200, gold: 25, statXp: 5, label: 'Долгая' },
 };
 let GOALS = [], goalIdCounter = 1, selectedGoalType = 'short', selectedGoalStat = 'str', currentGoalFilter = 'all';
-try { const saved = localStorage.getItem('neurodeck_goals'); if (saved) { const p = JSON.parse(saved); GOALS = p.goals || []; goalIdCounter = p.counter || 1; } } catch (e) {}
+try { const saved = localStorage.getItem('neurodeck_goals'); if (saved) { const p = JSON.parse(saved); GOALS = Array.isArray(p.goals) ? p.goals.map(function(g, i) { return STATE_GUARDS.sanitizeGoal(g, i + 1); }) : []; goalIdCounter = p.counter || 1; } } catch (e) {}
 function saveGoals() { try { localStorage.setItem('neurodeck_goals', JSON.stringify({ goals: GOALS, counter: goalIdCounter })); } catch (e) {} }
 function renderStepInputs() {
     var n = Math.max(1, Math.min(20, parseInt(document.getElementById('goalSteps').value) || 3));
@@ -1244,12 +1301,13 @@ burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color, spee
 screenShake(10, 500);
 const goalXp = Math.round(goal.xp / 2);
 addXpReward(goalXp);
+goldGain(goal.gold || 0, 'goal');
 if (goal.stat && STATS[goal.stat]) {
 STATS[goal.stat].attributePoints = (STATS[goal.stat].attributePoints || 0) + goal.statBonus;
 checkAttributePoolGrowth(goal.stat);
 }
     const statIcon = goal.stat && STATS[goal.stat] ? STATS[goal.stat].icon + ' ' + STATS[goal.stat].name : '';
-    showToast('🏆 Цель достигнута!', '+' + goalXp + ' XP' + (statIcon ? ' · +' + goal.statBonus + ' к пулу ' + statIcon : ''), 'crit');
+    showToast('🏆 Цель достигнута!', '+' + goalXp + ' XP' + (goal.gold ? ' · +' + goal.gold + ' 💰' : '') + (statIcon ? ' · +' + goal.statBonus + ' к пулу ' + statIcon : ''), 'crit');
 spiritSay('«' + goal.name + '... Ты стал сильнее.»');
 renderGoals();
 saveGameState();
@@ -1396,6 +1454,7 @@ if (view === 'stats') renderStatsView();
 if (typeof window.__ndSetCombatActive === 'function') window.__ndSetCombatActive(view === 'boss');
 var vh = VIEW_HINTS[view];
 if (vh) hintOnce('view_' + view, vh);
+haptic('light'); // QA5-M1: тактильный отклик на смену вкладки (как complete-card)
 }
 var VIEW_ORDER = ['deck', 'quests', 'strongholds', 'hero', 'inv', 'stats'];
 var currentViewIndex = 0;
@@ -1430,7 +1489,8 @@ var season = null;
 var throne = 0; // Вечный трон: 0..5 возведений, +1% налогов навсегда за каждое
 var SEASON_DAYS = 30;
 var SEASON_NAMES = ['Пробуждение', 'Закалка', 'Разлив', 'Венец'];
-var THRONE_COST = 100000;
+var THRONE_COSTS = [100000, 250000, 500000, 1000000, 2000000]; // QA4-M1: прогрессивная цена (анти-void)
+function throneCost() { return THRONE_COSTS[Math.min(throne, THRONE_COSTS.length - 1)]; }
 function ensureSeason() {
     if (season && season.num && season.start) return season;
     season = STATE_GUARDS.sanitizeSeason(season, getMSKDayKey());
@@ -1471,8 +1531,9 @@ function finishSeason() {
 }
 function investThrone() {
 if (throne >= 5) { showToast('👑 Предел', 'Трон возведён полностью: +5% налогов навсегда', 'save'); return; }
-if ((HERO.gold || 0) < THRONE_COST) { showToast('💰 Мало золота', 'Нужно ' + THRONE_COST.toLocaleString('ru-RU') + ' 💰', 'blood'); sfxError(); return; }
-HERO.gold -= THRONE_COST;
+var cost = throneCost();
+if ((HERO.gold || 0) < cost) { showToast('💰 Мало золота', 'Нужно ' + cost.toLocaleString('ru-RU') + ' 💰', 'blood'); sfxError(); return; }
+HERO.gold -= cost;
 throne++;
 showToast('👑 Вечный трон', 'Ярус ' + throne + '/5: +' + throne + '% налогов навсегда', 'crit');
 spiritSay('«Камень к камню — трон, что переживёт века.»');
@@ -1510,6 +1571,12 @@ function dqProgress(counter, n) {
     var p = dailyQuests.progress || (dailyQuests.progress = {});
     p[counter] = (p[counter] || 0) + (n || 1);
 }
+function goldGain(n, src) {
+    n = Math.round(Number(n)) || 0;
+    if (n <= 0) return;
+    HERO.gold = (HERO.gold || 0) + n;
+    dqProgress('gold', n);
+}
 function dqQuestById(qid) {
     var q = null;
     ((dailyQuests && dailyQuests.quests) || []).forEach(function(x) { if (x.id === qid) q = x; });
@@ -1522,7 +1589,7 @@ if (!_q) return;
 var _p = (dailyQuests.progress || {})[_q.counter] || 0;
 if (_p < _q.goal) { showToast('📋 Ещё не выполнено', 'Прогресс: ' + Math.min(_p, _q.goal) + '/' + _q.goal, 'blood'); return; }
 dailyQuests.done[qid] = true;
-HERO.gold = (HERO.gold || 0) + reward;
+goldGain(reward, 'quest');
 showToast('📋 Квест выполнен!', '+' + reward + ' 💰', 'save');
 sfxGoalComplete(); haptic('success');
 burstParticles(window.innerWidth/2, 120, 40, { color: '#fbbf24', speed: 8, decay: 0.012, size: 3, shape: 'star', gravity: 0.08 });
@@ -1773,6 +1840,7 @@ strongholds[idx].buildings[bid].builtAt = Date.now();
 dqProgress('build');
 var bdDef = BUILDINGS[bid]; if (bdDef.grow) { hirePool[bdDef.tier] += Math.round(bdDef.grow * (hasSpecialOk('sp4') ? 1.4 : 1)); showToast('⛺ Первый прирост', '+' + Math.round(bdDef.grow * (hasSpecialOk('sp4') ? 1.4 : 1)) + ' ' + UNIT_TIERS[bdDef.tier].name + ' — сразу в пул найма', 'save'); }
 recalcHirePool();
+if (bdDef.grow && Object.keys(hirePool).every(function(k) { return !(hirePool[k] > 0); })) hirePool[bdDef.tier] = (hirePool[bdDef.tier] || 0) + Math.round(bdDef.grow * (hasSpecialOk('sp4') ? 1.4 : 1)); // #17: первое жилище даёт прирост сразу — стена найма д2-д8
 showToast('🏗 Построено: ' + d.name, '−' + d.cost + ' 💰 · содержание ' + d.upkeep + ' 💰/день', 'save');
 sfxForge(); haptic('medium');
 renderStrongholds(); updateHeroUI(); saveGameState();
@@ -1865,13 +1933,15 @@ function updateStrongholdProgress() {
 var n = capturedCount();
 var el = document.getElementById('progressVal');
 if (el) el.textContent = n + '/' + STRONGHOLDS.length;
+var chip = document.getElementById('seasonChip');
+if (chip) { var _s = ensureSeason(); chip.textContent = '🍂 S' + _s.num + ' · ' + Math.max(0, seasonDaysTotal(_s.start) - seasonDaysDone(_s.start)) + 'д'; } // #11: сезон в шапке
 updateProgressFill((n / STRONGHOLDS.length) * 100);
 }
 function garrisonRows(stacks, idx, action, label) {
 if (!stacks || stacks.length === 0) return '<div class="empty-state">Пусто.</div>';
 return stacks.map(function(st) {
 var u = UNIT_TIERS[st.tier];
-return '<div class="sh-hire-row"><div class="sh-build-icon">' + u.icon + '</div>' +
+return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img/units/tier' + st.tier.slice(1) + '.png', u.icon) + '</div>' + // #9: иконка тира с emoji-фолбэком
 '<div class="sh-build-body"><div class="sh-build-name">' + u.name + ' × ' + st.count + '</div>' +
 '<div class="sh-build-meta">Сила: ' + (st.count * u.power) + '</div></div>' +
 '<button class="sh-mini" data-action="' + action + '" data-idx="' + idx + '" data-tier="' + st.tier + '">' + label + '</button></div>';
@@ -1894,7 +1964,7 @@ var html = '<div class="sh-treasury">' +
 '<div>⚔ Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
 var fi = frontIdx();
 var daysToSiege = (7 - ((new Date(Date.now() + 3 * 3600000).getUTCDay() + 1) % 7));
-html += '<div class="sh-context-anchor">📍 Фронт: <b>' + STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—' + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)) + '/10</b></div>';
+html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)) + '/10</b></div>';
 // Kingdom path: визуальная полоса прогресса
 html += '<div class="sh-kingdom-path">';
 for (var pi = 0; pi < 20; pi++) {
@@ -1910,6 +1980,7 @@ var _season = ensureSeason();
 var _sTotal = seasonDaysTotal(_season.start);
 var _sDone = seasonDaysDone(_season.start);
 html += '<div class="sh-season"><div class="sh-season-line">🍂 Сезон ' + _season.num + ': <b>' + seasonName(_season.num) + '</b> · осталось <b>' + Math.max(0, _sTotal - _sDone) + '</b> дн.</div><div class="sh-season-bar"><div class="sh-season-fill" style="width:' + Math.min(100, Math.round(_sDone / _sTotal * 100)) + '%;"></div></div></div>';
+html += '<div class="sh-wrath">😮 Гнев: <b>' + Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)) + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
 // Квест-доска (3 ротационных дневных задания)
 if (!dailyQuests || dailyQuests.day !== getMSKDayKey() || !dailyQuests.quests || !dailyQuests.quests.length) {
     var seed = parseInt(getMSKDayKey().replace(/-/g, ''));
@@ -1977,7 +2048,7 @@ html += '<div class="sh-panel-head"><div class="sh-panel-title">' + d.icon + ' '
 if (idx === 19 && typeof throne !== 'undefined') {
 html += '<div class="sh-sec-title">👑 Вечный трон — ' + throne + '/5 · налоги +' + throne + '%</div>';
 if (throne >= 5) html += '<div class="empty-state">Трон возведён полностью: +5% налогов навсегда.</div>';
-else html += '<div class="sh-build-row buy"><div class="sh-build-body"><div class="sh-build-name">Возвести ярус трона</div><div class="sh-build-meta">+' + (throne + 1) + '% налогов навсегда · цена ' + THRONE_COST + ' 💰</div></div>' + ((HERO.gold || 0) >= THRONE_COST ? '<button class="sh-buy" data-action="throne-invest">👑 ' + THRONE_COST + '</button>' : '<span class="sh-stage lock">🔒 ' + THRONE_COST + '</span>') + '</div>';
+else { var tc = throneCost(); html += '<div class="sh-build-row buy"><div class="sh-build-body"><div class="sh-build-name">Возвести ярус трона</div><div class="sh-build-meta">+' + (throne + 1) + '% налогов навсегда · цена ' + tc.toLocaleString('ru-RU') + ' 💰</div></div>' + ((HERO.gold || 0) >= tc ? '<button class="sh-buy" data-action="throne-invest">👑 ' + tc.toLocaleString('ru-RU') + '</button>' : '<span class="sh-stage lock">🔒 ' + tc.toLocaleString('ru-RU') + '</span>') + '</div>'; }
 }
 html += '<div class="sh-sec-title">🏗 Постройки</div>';
 var built = builtList(idx);
@@ -2046,6 +2117,7 @@ var dailyEvent = null; // объявление было утеряно при у
 
 
 function pluralDays(n) { return n === 1 ? 'день' : (n < 5 ? 'дня' : 'дней'); }
+function pluralRu(n, one, few, many) { var m10 = n % 10, m100 = n % 100; if (m10 === 1 && m100 !== 11) return one; if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few; return many; } // QA5-M5
 function daysBetween(keyA, keyB) { return Math.round((new Date(keyB) - new Date(keyA)) / 86400000); }
 
 
@@ -2092,9 +2164,11 @@ function completeTask(id) {
 var t = findTask(id);
 if (!t || t.status !== 'active') return;
 t.status = 'done'; t.doneAt = Date.now();
+HERO.lastActiveDay = getMSKDayKey(); // #19: активность дня
 sfxGoalComplete(); haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: '#fbbf24', speed: 10, decay: 0.01, size: 3, shape: 'star', gravity: 0.08 });
 showToast('✅ Сделано!', 'Открой сундук: +💰 или +XP', 'crit');
+hintOnce('claim_xor', 'Сундук — выбор взаимоисключающий: 💰 ИЛИ ✨. Что не выбрал — сгорает.'); // QA5-L3
 renderTasks(); renderDashboard(); saveGameState();
 }
 function claimTaskChest(id, choice) {
@@ -2102,7 +2176,7 @@ var t = findTask(id);
 if (!t || t.status !== 'done') return;
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
 if (choice === 'gold') {
-HERO.gold = (HERO.gold || 0) + tier.gold;
+goldGain(tier.gold, 'chest');
 showToast('🎁 Сундук открыт', '+' + tier.gold + ' 💰 в казну', 'save');
 sfxEquip();
 } else {
@@ -2111,7 +2185,6 @@ showToast('🎁 Сундук открыт', '+' + tier.xp + ' XP', 'save');
 sfxCrit();
 }
 dqProgress('quest');
-if (choice === 'gold') dqProgress('gold', tier.gold);
 haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: choice === 'gold' ? '#fbbf24' : '#c084fc', speed: 11, decay: 0.009, size: 4, shape: 'star', gravity: 0.1 });
 t.status = 'chest_open';
@@ -2138,7 +2211,7 @@ t.status = 'ghost'; t.ghostSince = Date.now(); newGhosts++; changed = true;
 } else if (t.status === 'done' && t.doneAt) {
 if (daysBetween(getMSKDayKey(t.doneAt), yesterdayKey) >= tier.doneGraceDays) {
 var half = Math.floor(tier.gold / 2);
-HERO.gold = (HERO.gold || 0) + half;
+goldGain(half, 'autochest');
 t.status = 'chest_open'; changed = true;
 showToast('📦 Сундук открыт сам', '«' + t.name + '»: +' + half + ' 💰 (не выбрал сам)', 'save');
 }
@@ -2157,9 +2230,9 @@ TASKS.forEach(function(t) { if (t.status === 'ghost') ghostNights++; });
 if (ghostNights > 0) {
 var p = Math.min(5, ghostNights); // кап 5💰/ночь — анти-спираль (BALANCE круг 7)
 HERO.gold = Math.max(0, (HERO.gold || 0) - p);
-showToast('👻 Призраки ночью', '−' + p + ' 💰 (' + ghostNights + ' призраков · кап 5)', 'blood');
+showToast('👻 Призраки ночью', '−' + p + ' 💰 (' + ghostNights + ' ' + pluralRu(ghostNights, 'призрак', 'призрака', 'призраков') + ' · кап 5)', 'blood');
 }
-if (changed || newGhosts > 0 || ghostNights > 0) { renderTasks(); renderDashboard(); updateHeroUI(); saveGameState(); }
+if (changed || newGhosts > 0 || ghostNights > 0) { renderTasks(); renderDashboard(); updateHeroUI(); saveSoon(); }
 return { ghostNights: ghostNights, free: false };
 }
 function taskCard(t) {
@@ -2197,8 +2270,6 @@ var ghosts = TASKS.filter(function(t) { return t.status === 'ghost'; });
 activeEl.innerHTML = active.length === 0 ? '<div class="empty-state">Задач нет. Жми «📋 Задача».</div>' : active.map(taskCard).join('');
 goneEl.innerHTML = ghosts.length === 0 ? '' : '<div class="ghosts-title">👻 Призраки просроченных (−1 💰 за ночь, пока не изгонишь делом или ✕)</div>' + ghosts.map(taskCard).join('');
 }
-const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
-function getMSKDate(ts) { return new Date((ts || Date.now()) + MSK_OFFSET_MS); }
 function getMSKDayKey(ts) {
 const d = getMSKDate(ts);
 return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
@@ -2526,7 +2597,7 @@ function showReturnScreen() {
         modal.querySelector('.modal-body').innerHTML = html;
         modal.classList.add('show');
     }
-    saveGameState();
+    saveSoon();
 }
 function closeReturnModal() { document.getElementById('returnModal').classList.remove('show'); }
 
@@ -2585,6 +2656,7 @@ function renderDashboard() {
     if (!bar) return;
     var isBeginner = (HERO.level || 1) <= 2 && FORGED.length > 0 && FORGED.length <= 5;
     var html = '<button class="info-btn" data-action="toggle-help" title="Что получишь и чем рискуешь" style="position:absolute; right:6px; top:6px;">?</button>';
+    if (dailyEvent) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span style="color:var(--gold-bright)">📅 ' + dailyEvent.icon + ' ' + dailyEvent.name + '</span> <button data-action="reroll-event" title="Переролл события дня (50 💰, 1/день)" style="margin-left:6px; font-size:11px; background:none; border:1px solid var(--gold); border-radius:6px; color:var(--gold-bright); cursor:pointer; padding:1px 6px;">🎲 50💰</button></div>'; // #50/#48: чип события + реролл
     html += isBeginner ? renderDashboardBeginner() : renderDashboardVeteran();
     bar.innerHTML = html;
 }
@@ -2616,7 +2688,7 @@ function renderDashboardVeteran() {
     var comboInfo = comboMult > 1.0 ? ' · 🎯 Комбо ×' + comboMult.toFixed(2) : '';
     var maxStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
     return '<div style="padding-right:22px;">' +
-        '<div class="dashboard-row"><span>💰 Казна: <b style="color:var(--gold-bright)">' + (HERO.gold || 0) + '</b></span><span>🏰 Твердыней: <b>' + capturedCount() + '/20</b> · доход <b style="color:#34d399">+' + revenue + ' 💰/день</b>' + toNext + '</span></div>' +
+        '<div class="dashboard-row"><span class="treasury-chip" data-action="treasury-info" title="Разбивка казны">💰 Казна: <b style="color:var(--gold-bright)">' + (HERO.gold || 0) + '</b></span><span>🏰 Твердыней: <b>' + capturedCount() + '/20</b> · доход <b style="color:#34d399">+' + revenue + ' 💰/день</b>' + toNext + '</span></div>' +
         '<div class="dashboard-row"><span>📖 ' + doneToday + '/' + FORGED.length + ' сегодня' + (remaining > 0 ? ' (осталось ' + remaining + ')' : '') + '</span>' + (openTasks > 0 ? '<span>📋 Задач в работе: <b style="color:#60a5fa">' + openTasks + '</b></span>' : '') + '<span>👻 Призраков: <b style="color:var(--blood-bright)">' + countGhostTasks() + '</b></span></div>' +
         '<div class="dashboard-row"><span>🔥 Макс. стрик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>' +
         '</div>';
@@ -2803,10 +2875,40 @@ function showWeeklyReport() {
         modal.querySelector('.modal-body').innerHTML = html;
         modal.classList.add('show');
     }
-    saveGameState();
+    saveSoon();
 }
 function closeWeeklyReportModal() { document.getElementById('weeklyReportModal').classList.remove('show'); }
 
+function buildDailyEvents() {
+    return [
+        { id: 'caravan', icon: '🐎', name: 'Караван', text: 'Торговцы из-за гор: +' + Math.max(20, capturedCount() * 15) + ' 💰 мгновенно!' },
+        { id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
+        { id: 'market', icon: '🏪', name: 'Ярмарка', text: 'Налоги твердынь ×1.5 сегодня!' },
+        { id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: 'Призраки задач сегодня безобидны.' },
+        { id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' }
+    ];
+}
+function rerollDailyEvent() { // #48: переролл события дня, 1/день, 50💰 — флаг дня в localStorage (в сейв не пишем)
+    if (!dailyEvent) return;
+    var tk = getMSKDayKey();
+    try { if (localStorage.getItem('neurodeck_reroll_day') === tk) { showToast('🎲 Реролл уже был', 'Один переролл события в день', 'blood'); return; } } catch (e) {}
+    if ((HERO.gold || 0) < 50) { showToast('💰 Мало золота', 'Переролл события: 50 💰', 'blood'); sfxError(); return; }
+    HERO.gold -= 50;
+    var pool = buildDailyEvents().filter(function(x) { return x.id !== dailyEvent.id; });
+    dailyEvent = pool[Math.floor(Math.random() * pool.length)];
+    try { localStorage.setItem('neurodeck_reroll_day', tk); } catch (e) {}
+    showToast(dailyEvent.icon + ' ' + dailyEvent.name, dailyEvent.text, 'save');
+    sfxHit(); haptic('light');
+    renderDashboard(); renderStrongholds(); updateHeroUI(); saveGameState();
+}
+function showTreasuryBreakdown() { // #45: та же математика, что в taxMultiplier (app.js taxMultiplier)
+    ensureSeason();
+    var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
+    var trade = Math.round((SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0) * 100);
+    var crown = Math.round(Math.min(0.10, (season.crownBonus || 0) * 0.02) * 100);
+    var th = Math.round(Math.min(0.05, throne * 0.01) * 100);
+    showToast('💰 Разбивка казны', 'База ' + strongholdTaxPerDay() + ' 💰/день · Пути +' + trade + '% · Венцы +' + crown + '% · Трон +' + th + '%', 'save');
+}
 function checkDailyReset() {
 const todayKey = getMSKDayKey();
 const yesterdayKey = getMSKDayKey(Date.now() - 86400000);
@@ -2817,18 +2919,25 @@ if (_prevDay !== null) {
 var gapDays = Math.max(1, daysBetween(_prevDay, todayKey));
 if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7 (ADR §5: кап 7 суток)
 var _isBackfill = gapDays > 1;
-// Ежедневное событие: ролл ДО тиков дня — Кузнец/Ярмарка/Духи действуют в свой день
-var dailyEvents = [
-{ id: 'caravan', icon: '🐎', name: 'Караван', text: 'Торговцы из-за гор: +' + Math.max(20, capturedCount() * 15) + ' 💰 мгновенно!' },
-{ id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
-{ id: 'market', icon: '🏪', name: 'Ярмарка', text: 'Налоги твердынь ×1.5 сегодня!' },
-{ id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: 'Призраки задач сегодня безобидны.' },
-{ id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' }
-];
-var ev = dailyEvents[Math.floor(Math.random() * dailyEvents.length)];
-dailyEvent = ev;
-if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); HERO.gold = (HERO.gold || 0) + bonus; }
-if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
+        // Ежедневное событие: ролл ДО тиков дня — Кузнец/Ярмарка/Духи действуют в свой день
+        var _events = buildDailyEvents();
+        var ev = _events[Math.floor(Math.random() * _events.length)];
+        dailyEvent = ev;
+        if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); goldGain(bonus, 'caravan'); }
+        if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
+        if (ev.id === 'smith') {
+            var _pt = Object.keys(hirePool).reduce(function(a, k) { return a + (hirePool[k] || 0); }, 0);
+            if (_pt < 2) {
+                var _st = 't1';
+                strongholds.forEach(function(s) { Object.keys(s.buildings || {}).forEach(function(id) { var b = s.buildings[id], d = BUILDINGS[id]; if (b && b.built && d && d.grow) _st = d.tier; }); });
+                hirePool[_st] = (hirePool[_st] || 0) + 2; // #47: скидке кузнеца нужен кто-то в пуле
+                showToast('⚒ Кузнец снарядил найм', '+2 ' + UNIT_TIERS[_st].name + ' в пул со скидкой 25%', 'save');
+            }
+        }
+        if (ev.id === 'ghostfree' && countGhostTasks() === 0) {
+            HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + 1); // #47: «Духи дремлют» при 0 призраков не мертвеет
+            showToast('👻 Духи дремлют', 'Призраков нет: +1 щит стрика', 'save');
+        }
 var revenue = 0, upkeepTotal = 0, unpaid = 0;
 for (var gd = gapDays; gd >= 1; gd--) {
 if (gd > 1) dailyEvent = null; // события дня не действуют задним числом на пропущенные ночи
@@ -2871,7 +2980,7 @@ showToast('🗓 Новая неделя', 'Путь продолжается', '
 recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
 runWeeklySiege();
 siege.wkSkips = 0; siege.wkTaskFails = 0;
-setTimeout(showWeeklyReport, 2000);
+setTimeout(function() { enqueueModal(showWeeklyReport); }, 2000);
 }
 FORGED.forEach(c => {
 if (c.firstCompletedAt) {
@@ -2879,6 +2988,15 @@ c.daysActive = getCardDaysActive(c);
 }
 var lastPlayKey = c.lastCompletedAt ? getMSKDayKey(c.lastCompletedAt) : null;
 if (c.streak && lastPlayKey !== yesterdayKey && lastPlayKey !== todayKey) c.streak = 0;
+});
+HERO.dayStreak = (HERO.lastActiveDay === yesterdayKey) ? (HERO.dayStreak || 0) + 1 : 0; // #19: вчера был активен — стрик растёт, иначе сброс
+(HERO.streakMilestones = HERO.streakMilestones || {});
+STREAK_MILESTONES.forEach(function(m) {
+    if ((HERO.dayStreak || 0) < m.d || HERO.streakMilestones[m.d]) return;
+    HERO.streakMilestones[m.d] = true;
+    goldGain(m.gold, 'streak');
+    if (m.shield) HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + m.shield);
+    showToast('🔥 Стрик ' + m.d + ' дней!', '+' + m.gold + ' 💰' + (m.shield ? ' +1 🛡' : ''), 'crit');
 });
 checkBloodOathDaily();
 }
@@ -2896,6 +3014,7 @@ if (goal.completed || goal.failed || !goal.deadline) return;
         if (now >= goal.deadline) {
             goal.failed = true;
             changed = true;
+            HERO.gold = Math.max(0, (HERO.gold || 0) - (goal.gold || 0));
             screenShake(10, 600);
             spawnBloodRain(20);
             sfxFail(); haptic('error');
@@ -2906,7 +3025,7 @@ if (goal.completed || goal.failed || !goal.deadline) return;
 if (changed) {
 renderGoals();
 updateHeroUI();
-saveGameState();
+saveSoon();
 }
 }
 var lastNotifDay = getMSKDayKey();
@@ -2917,8 +3036,15 @@ if (dayKey !== lastNotifDay) { lastNotifDay = dayKey; scheduleNotifs(); }
 }, 60 * 1000);
 setInterval(checkGoalDeadlines, 30000);
 checkGoalDeadlines();
-window.addEventListener('beforeunload', function() { saveGameState(); forceCloudSave(); });
-var notifEnabled = localStorage.getItem('neurodeck_notif') === '1';
+var _saveSoonTimer = null;
+function saveSoon() { if (_saveSoonTimer) return; _saveSoonTimer = setTimeout(function() { _saveSoonTimer = null; saveGameState(); }, 300); } // QA2-H1: дебаунс некритичных тиков; критические пути зовут saveGameState напрямую
+function flushSaveSoon() { if (_saveSoonTimer) { clearTimeout(_saveSoonTimer); _saveSoonTimer = null; saveGameState(); } }
+window.addEventListener('beforeunload', function() { flushSaveSoon(); saveGameState(); forceCloudSave(); });
+window.addEventListener('pagehide', function() { flushSaveSoon(); saveGameState(); forceCloudSave(); }); // QA1-H1: iOS Telegram шлёт pagehide надёжнее beforeunload (свайп-килл)
+window.addEventListener('offline', function() { updateSyncBadge('offline'); }); // QA1-M6
+window.addEventListener('online', function() { updateSyncBadge('syncing'); try { smartCloudSync(); } catch (e) {} }); // QA1-M6: retry облака после возврата онлайн
+var notifEnabled = false;
+try { notifEnabled = localStorage.getItem('neurodeck_notif') === '1'; } catch(e) {}
 function toggleNotif() {
 if (!('Notification' in window)) { showToast('⚠ Не поддерживается', 'Браузер не поддерживает уведомления', 'blood'); return; }
 if (Notification.permission === 'granted') {
@@ -3043,8 +3169,85 @@ function initPerfMode() {
 }
 initPerfMode();
 document.getElementById('syncModal').addEventListener('click', (e) => { if (e.target.id === 'syncModal') closeSyncModal(); });
+document.getElementById('starterDeckModal').addEventListener('click', (e) => { if (e.target.id === 'starterDeckModal') closeStarterDeck(); });
 document.getElementById('siegeReportModal').addEventListener('click', (e) => { if (e.target.id === 'siegeReportModal') closeSiegeReport(); });
 document.getElementById('syncFileInput').addEventListener('change', importSyncFile);
+document.getElementById('taskName').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); createTask(); } }); // QA1-M4: Enter сабмитит форму задачи
+// ===================== Модалки: очередь, a11y-хром, фокус-ловушка, BackButton (QA1-M2/M7, QA5-H1) =====================
+var _pendingModal = null;
+function enqueueModal(fn) {
+    if (document.querySelectorAll('.modal-overlay.show').length === 0) fn();
+    else _pendingModal = fn; // QA1-M2: returnModal и weeklyReport показываются ПО ОДНОЙ
+}
+function dequeuePendingModal() {
+    if (_pendingModal && document.querySelectorAll('.modal-overlay.show').length === 0) { var fn = _pendingModal; _pendingModal = null; fn(); }
+}
+var _prevShown = 0;
+function updateModalChrome() {
+    var shown = document.querySelectorAll('.modal-overlay.show');
+    var hidden = shown.length > 0;
+    ['.app', '.bottom-nav'].forEach(function(sel) {
+        var el = document.querySelector(sel);
+        if (!el) return;
+        if (hidden) el.setAttribute('aria-hidden', 'true'); else el.removeAttribute('aria-hidden'); // QA5-H1b: фон скрыт от SR
+    });
+    if (shown.length > _prevShown) {
+        var top = shown[shown.length - 1];
+        var tgt = top.querySelector('[data-autofocus]');
+        if (tgt) setTimeout(function() { try { tgt.focus(); } catch (e) {} }, 60); // QA5-H1d: автофокус в forge/sync
+    }
+    if (shown.length === 0 && _prevShown > 0) dequeuePendingModal();
+    _prevShown = shown.length;
+    updateBackButton(shown);
+}
+function updateBackButton(shown) { // QA1-M7: BackButton = «закрыть верхнюю модалку»
+    try {
+        var tg = window.Telegram && Telegram.WebApp;
+        if (!tg || !tg.BackButton) return;
+        var vis = shown || document.querySelectorAll('.modal-overlay.show');
+        var onlyConfirm = vis.length === 1 && vis[0].id === 'confirmOverlay';
+        if (vis.length > 0 && !onlyConfirm) {
+            tg.BackButton.show();
+            if (!tg.BackButton._ndBound) {
+                tg.BackButton._ndBound = true;
+                tg.BackButton.onClick(function() {
+                    var list = document.querySelectorAll('.modal-overlay.show');
+                    var t = list[list.length - 1];
+                    if (t && t.id !== 'confirmOverlay') closeOverlayEl(t);
+                });
+            }
+        } else tg.BackButton.hide();
+    } catch (e) {}
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Tab') return;
+    var shown = document.querySelectorAll('.modal-overlay.show');
+    if (!shown.length) return;
+    var modal = shown[shown.length - 1];
+    var list = [];
+    modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])').forEach(function(el) {
+        if (!el.disabled && el.offsetParent !== null) list.push(el);
+    });
+    if (!list.length) return;
+    var first = list[0], last = list[list.length - 1];
+    if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); } // QA5-H1a: фокус-ловушка Tab
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+(function initModalA11y() {
+    try {
+        var mo = new MutationObserver(function() { updateModalChrome(); });
+        document.querySelectorAll('.modal-overlay').forEach(function(o) { mo.observe(o, { attributes: true, attributeFilter: ['class'] }); });
+    } catch (e) {}
+    updateModalChrome();
+})();
+(function initBnavHint() { // QA1-M5: подсказка при горизонтальном переполнении нижней навигации
+    var nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    var check = function() { if (nav.scrollWidth > nav.clientWidth + 2) hintOnce('bnav_scroll', 'Нижнее меню прокручивается по горизонтали — покажи остальные разделы.'); };
+    check();
+    window.addEventListener('resize', check);
+})();
 document.addEventListener('keydown', (e) => {
 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 e.preventDefault();
@@ -3087,12 +3290,15 @@ draw(ctx) { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color
 }
 for (var i = 0; i < 60; i++) dustParticles.push(new Dust());
 var dustRunning = true;
-function animateDust() {
+var _dustTs = 0;
+function animateDust(ts) {
 if (!dustRunning) return;
+requestAnimationFrame(animateDust);
+if (ts && ts - _dustTs < 33) return; // QA2-M1: ~30fps троттлинг (пропуск кадров)
+_dustTs = ts || 0;
 dustCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
 dustCanvas.style.opacity = 0.6;
 dustParticles.forEach(d => { d.update(); d.draw(dustCtx); });
-requestAnimationFrame(animateDust);
 }
 animateDust();
 const canvas = document.getElementById('particles');
@@ -3120,7 +3326,8 @@ ctx.restore();
 }
 var particlesRunning = true;
 function burstParticles(x, y, count, o) { o = o || {}; var MAX_PARTICLES = 500; if (particles.length + count > MAX_PARTICLES) { particles.splice(0, particles.length + count - MAX_PARTICLES); } for (var i = 0; i < count; i++) { var a = (i / count) * Math.PI * 2; var sp = (o.speed !== undefined ? o.speed : 6) * (0.5 + Math.random() * 0.5); particles.push(new Particle(x, y, Object.assign({}, o, { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp }))); } }
-function animate() { if (!particlesRunning) return; ctx.clearRect(0, 0, canvas.width, canvas.height); particles = particles.filter(p => p.life > 0); particles.forEach(p => { p.update(); p.draw(ctx); }); requestAnimationFrame(animate); }
+var _partTs = 0;
+function animate(ts) { if (!particlesRunning) return; requestAnimationFrame(animate); if (ts && ts - _partTs < 33) return; _partTs = ts || 0; ctx.clearRect(0, 0, canvas.width, canvas.height); particles = particles.filter(p => p.life > 0); particles.forEach(p => { p.update(); p.draw(ctx); }); } // QA2-M1: ~30fps троттлинг
 animate();
 document.addEventListener('visibilitychange', function() {
 if (document.hidden) {
@@ -3135,6 +3342,7 @@ animate();
 });
 const shakeWrap = document.getElementById('shakeWrap');
 function screenShake(intensity, duration) {
+if (ecoOn()) return;
 intensity = intensity || 8; duration = duration || 400;
 const t0 = performance.now();
 function shake(now) {
@@ -3148,9 +3356,9 @@ requestAnimationFrame(shake);
 function spawnBloodRain(n) { if (ecoOn()) return; for (let i = 0; i < n; i++) { setTimeout(() => { const d = document.createElement('div'); d.className = 'blood-drop'; d.style.left = (Math.random() * 100) + 'vw'; d.style.animationDuration = (1 + Math.random() * 1.5) + 's'; d.style.opacity = 0.4 + Math.random() * 0.6; document.body.appendChild(d); setTimeout(() => d.remove(), 3000); }, i * 30); } }
 var toastQueue = [];
 var toastActive = false;
-function showToast(title, body, type) {
+function showToast(title, body, type, action) { // #89: action={label, fn} — тост с кнопкой (5с), обратная совместимость: без action — как раньше
 if (toastQueue.length >= 3) toastQueue.shift();
-toastQueue.push({ title: title, body: body, type: type });
+toastQueue.push({ title: title, body: body, type: type, action: action || null });
 if (!toastActive) playNextToast();
 }
 function playNextToast() {
@@ -3161,10 +3369,15 @@ var type = t.type || '';
 const el = document.getElementById('toast');
 el.querySelector('.t-title').textContent = t.title;
 el.querySelector('.t-body').textContent = t.body;
+var actBtn = el.querySelector('.t-action');
+if (actBtn) {
+if (t.action && typeof t.action.fn === 'function') { actBtn.style.display = ''; actBtn.textContent = t.action.label || 'OK'; actBtn.onclick = function() { t.action.fn(); }; }
+else { actBtn.style.display = 'none'; actBtn.onclick = null; }
+}
 el.style.borderLeftColor = type === 'blood' ? 'var(--blood-bright)' : type === 'crit' || type === 'save' ? '#fbbf24' : 'var(--gold-bright)';
 el.style.borderColor = type === 'blood' ? 'var(--blood)' : type === 'crit' || type === 'save' ? '#fbbf24' : 'var(--gold)';
 el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-setTimeout(() => { el.classList.remove('show'); setTimeout(playNextToast, 200); }, 2500);
+setTimeout(() => { el.classList.remove('show'); setTimeout(playNextToast, 200); }, t.action ? 5000 : 2500);
 }
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
 function dungeonConfirm(title, body) {
@@ -3311,18 +3524,27 @@ updateStrongholdProgress();
 renderCards();
 renderDashboard();
 importFromHash();
-window.__tgReady = function(){ try{ var tg=window.Telegram&&Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); } }catch(e){} };
+window.__tgReady = function(){ try{ var tg=window.Telegram&&Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); applyTelegramTheme(tg); } }catch(e){} };
+function applyTelegramTheme(tg) { // QA1-M1: themeParams → CSS-переменные (только light; тёмная схема — дефолт)
+    try {
+        if (!tg || tg.colorScheme !== 'light') return;
+        var p = tg.themeParams || {};
+        if (p.bg_color) document.body.style.setProperty('--tg-bg', p.bg_color);
+        if (p.text_color) document.body.style.setProperty('--tg-text', p.text_color);
+        if (p.bg_color || p.text_color) document.body.classList.add('tg-light');
+    } catch (e) {}
+}
 window.__tgReady();
 window.addEventListener('load', function(){ window.__tgReady(); });
 if (!hasEverSaved() && FORGED.length === 0) {
-    pendingOnboarding = !localStorage.getItem('neurodeck_onboarding_done');
+    try { pendingOnboarding = !localStorage.getItem('neurodeck_onboarding_done'); } catch(e) { pendingOnboarding = false; }
     setTimeout(showStarterDeck, 900);
 } else {
 if (FORGED.length === 0) { setTimeout(deepRecovery, 1000); }
 if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }
 else { setTimeout(function() { updateSyncBadge('syncing'); smartCloudSync(); }, 2500); }
 if (HERO.lastSessionAt && Date.now() - HERO.lastSessionAt > 86400000 && FORGED.length > 0) {
-setTimeout(showReturnScreen, 1500);
+setTimeout(function() { enqueueModal(showReturnScreen); }, 1500);
 } else {
 HERO.lastSessionAt = Date.now();
 }
