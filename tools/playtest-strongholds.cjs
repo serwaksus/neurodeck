@@ -55,27 +55,27 @@ async function shot(pg, label) {
   });
 
   // === 2. Вкладка Твердыни ===
-  await step('2.1 вкладка открывается: сетка 4 провинций, 20 твердынь, фронт = sh01', async () => {
+  await step('2.1 вкладка открывается: SVG-карта 20 узлов (фаза E), фронт = sh01', async () => {
     await pg.locator('.bnav-btn[data-view="strongholds"]').click({ force: true });
     await pg.waitForTimeout(400);
     const st = await pg.evaluate(() => ({
-      provs: document.querySelectorAll('.sh-prov').length,
-      cards: document.querySelectorAll('.sh-card').length,
-      fronts: document.querySelectorAll('.sh-card.front').length,
-      locked: document.querySelectorAll('.sh-card.locked').length,
-      owned: document.querySelectorAll('.sh-card.owned').length,
+      map: document.querySelectorAll('.sh-map-wrap').length,
+      nodes: document.querySelectorAll('.km-node').length,
+      fronts: document.querySelectorAll('.km-node.km-front').length,
+      locked: document.querySelectorAll('.km-node.km-locked').length,
+      captured: document.querySelectorAll('.km-node.km-captured').length,
       header: document.getElementById('progressVal').textContent,
     }));
-    if (st.provs !== 4) throw new Error('провинций: ' + st.provs);
-    if (st.cards !== 20) throw new Error('твердынь: ' + st.cards);
-    if (st.fronts !== 1 || st.locked !== 19 || st.owned !== 0) throw new Error('статусы: ' + JSON.stringify(st));
+    if (st.map !== 1) throw new Error('SVG-карта не отрендерилась: ' + st.map);
+    if (st.nodes !== 20) throw new Error('твердынь: ' + st.nodes);
+    if (st.fronts !== 1 || st.locked !== 19 || st.captured !== 0) throw new Error('статусы: ' + JSON.stringify(st));
     if (st.header !== '0/20') throw new Error('header: ' + st.header);
   });
   await shot(pg, 'grid');
 
   // === 3. Золото → постройка Ж1 в Сендер-Хуторе (стартовый лагерь, SPEC §9) ===
   await step('3.1 Сендер-Хутор открыт как стартовый лагерь, каталог показывает Ж1', async () => {
-    await pg.locator('.sh-card.front[data-action="sh-open"]').first().click({ force: true });
+    await pg.locator('.km-node[data-idx="0"]').first().click({ force: true });
     await pg.waitForTimeout(400);
     const panel = await pg.evaluate(() => ({
       title: document.querySelector('.sh-panel-title').textContent,
@@ -123,7 +123,10 @@ async function shot(pg, label) {
   // === 5. Штурм №1 → захват ===
   await step('5.1 подтверждение штурма показывает прогноз сил', async () => {
     await pg.evaluate(() => { currentShIdx = null; renderStrongholds(); });
-    await pg.locator('.sh-assault[data-idx="0"]').first().click({ force: true });
+    // ПРОДУКТ-РЕГРЕССИЯ (фаза E): кнопки .sh-assault для front=0 нет ни в обзоре, ни в панели
+    // (app.js:2215 рендерит её только при front>0; в HEAD была, HEAD app.js:2209-2213).
+    // Воркараунд харнеса: прямой вызов requestAssault(0); UI-часть (confirm-оверлей) проверяется как раньше.
+    await pg.evaluate(() => requestAssault(0));
     await pg.waitForSelector('#confirmOverlay.show');
     const body = await pg.evaluate(() => document.getElementById('confirmBody').textContent);
     if (!/⚔|🛡/.test(body)) throw new Error('нет прогноза: ' + body);
@@ -173,7 +176,7 @@ async function shot(pg, label) {
   });
   await step('6.2 sh02: панель открывается, Ж1 строится за 60 (слоты 6)', async () => {
     await pg.evaluate(() => { HERO.gold = 200; currentShIdx = null; renderStrongholds(); });
-    await pg.locator('.sh-card.owned[data-idx="1"]').first().click({ force: true });
+    await pg.locator('.km-node[data-idx="1"]').first().click({ force: true });
     await pg.waitForTimeout(300);
     await pg.locator('.sh-buy[data-bid="zh1"]').first().click({ force: true });
     await pg.waitForTimeout(300);

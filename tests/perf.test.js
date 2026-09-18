@@ -158,13 +158,13 @@ test('index.html loads perf-compat right after perf.js, both before state-guards
     assert.ok(sg < st, 'state-guards must load before storage');
 });
 
-test('index.html cache-bust v66 is uniform across all JS files', () => {
+test('index.html cache-bust v67 is uniform across all JS files', () => {
     ['js/state-guards.js', 'js/perf.js', 'js/storage.js', 'js/stronghold-model.js', 'js/app.js']
         .forEach(function(rel) {
             var re = new RegExp(rel.replace(/\./g, '\\.') + '\\?v=(\\d+)');
             var m = html.match(re);
             assert.ok(m, 'expected entry for ' + rel);
-            assert.equal(m[1], '66', 'cache-bust for ' + rel + ' should be v66, got ' + m[1]);
+            assert.equal(m[1], '67', 'cache-bust for ' + rel + ' should be v67, got ' + m[1]);
         });
     assert.equal(html.indexOf('combat-pixi'), -1, 'combat-pixi must not be referenced in index.html');
 });

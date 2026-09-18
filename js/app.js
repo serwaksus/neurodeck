@@ -2142,6 +2142,50 @@ function checkSiegeAlarmToast() { // Ф1: тост+haptic в день N-2 и д�
     showToast(d === 0 ? '⚠ Осада сегодня!' : '⚠ Осадная тревога', 'Враг ~' + p.power + ' · оборона ' + p.def + ' — ' + p.advice, 'blood');
     haptic('warning');
 }
+function mapNodePos(i) { // ФАЗА E: детерминированная «змейка» Пути Угасания — 2 колонки, ряд сверху вниз; позиция только от индекса
+return { x: (i % 2 === 0 ? 110 : 280), y: 44 + Math.floor(i / 2) * 64 };
+}
+function kmStatusLabel(i) {
+var s = strongholds[i];
+if (s.captured) return 'Захвачена';
+if (i === frontIdx()) return (daysToSiegeNow() === 0) ? 'Осада сегодня' : 'Следующая цель';
+return 'Заперта';
+}
+function kingdomMapHtml(siegeToday) { // ФАЗА E: SVG-карта «Путь Угасания»; имена/иконки/провинции из STRONGHOLDS — хардкодов нет
+var rows = Math.ceil(STRONGHOLDS.length / 2);
+var h = 44 + (rows - 1) * 64 + 48;
+var html = '<div class="km-legend">' +
+'<span><i class="km-lg km-lg-cap"></i>Захвачено</span>' +
+'<span><i class="km-lg km-lg-front"></i>Следующая цель</span>' +
+'<span><i class="km-lg km-lg-siege"></i>Осада</span>' +
+'<span><i class="km-lg km-lg-lock"></i>Заперто</span></div>';
+html += '<div class="sh-map-wrap"><svg viewBox="0 0 390 ' + h + '" width="100%" role="group" aria-label="Карта королевства: Путь Угасания"><clipPath id="kmClip"><circle cx="0" cy="0" r="16"/></clipPath>';
+var segs = '';
+for (var i = 1; i < STRONGHOLDS.length; i++) {
+var a = mapNodePos(i - 1), b = mapNodePos(i);
+segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') + '" d="M' + a.x + ' ' + a.y + ' C' + Math.round((a.x + b.x) / 2) + ' ' + a.y + ', ' + Math.round((a.x + b.x) / 2) + ' ' + b.y + ', ' + b.x + ' ' + b.y + '"/>';
+}
+html += segs;
+var front = frontIdx();
+for (var n = 0; n < STRONGHOLDS.length; n++) {
+var d = STRONGHOLDS[n], s = strongholds[n], p = mapNodePos(n);
+var state = s.captured ? 'km-captured' : (n === front ? (siegeToday ? 'km-siege' : 'km-front') : 'km-locked');
+var node = '<g class="km-node ' + state + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ')">';
+node += '<circle class="km-bg" r="22"/>';
+var stage = s.captured ? shWorstStage(n) : null;
+var frac = stage === 'ruin' ? 1 : (stage === 'worn' ? 0.5 : 0);
+if (frac > 0) node += '<circle class="km-corrupt" r="19" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100" transform="rotate(-90)"/>';
+node += '<circle class="km-ring" r="22"/>';
+node += '<text class="km-emoji" y="7" text-anchor="middle">' + d.icon + '</text>';
+node += '<image href="img/tract/region0' + d.prov + '.png" x="-16" y="-16" width="32" height="32" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" onerror="this.style.display=\'none\'"/>';
+if (state === 'km-siege') node += '<g class="km-badge" transform="translate(17,-17)"><circle r="9"/><text y="3.5" text-anchor="middle">⚔</text></g>';
+node += '</g>';
+html += node;
+html += '<text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (p.y + 36) + '" text-anchor="middle">' + d.name + '</text>';
+}
+html += '</svg></div>';
+return html;
+}
 function renderStrongholds() {
 ensureStrongholdState();
 if (!SM) return;
@@ -2160,15 +2204,21 @@ var html = '<div class="sh-treasury">' +
 var fi = frontIdx();
 var daysToSiege = daysToSiegeNow();
 html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
-// Kingdom path: визуальная полоса прогресса
-html += '<div class="sh-kingdom-path">';
-for (var pi = 0; pi < 20; pi++) {
-    var pd = strongholds[pi];
-    var cls = pd.captured ? 'sh-kp owned' : (pi === frontIdx() ? 'sh-kp front' : 'sh-kp locked');
-    html += '<div class="' + cls + '" title="' + STRONGHOLDS[pi].name + '"></div>';
-    if (pi < 19) html += '<div class="sh-kp-link"></div>';
+// ФАЗА E: карта королевства заменяет ленту провинций (панели твердыни не тронуты)
+html += kingdomMapHtml(daysToSiege === 0);
+// Фронт: штурмовая карточка под картой (штурм остаётся доступным из обзорного состояния)
+if (front > 0 && !strongholds[front].captured) {
+var fd = STRONGHOLDS[front];
+html += '<div class="sh-card front km-front-card"><div class="sh-icon">' + fd.icon + '</div>' +
+'<div class="sh-body"><div class="sh-name">' + fd.name + '</div>' +
+'<div class="sh-meta">Сила нейтралов: ' + fd.total + '</div></div>' +
+'<button class="sh-assault" data-action="sh-assault" data-idx="' + front + '">⚔ Штурм</button></div>';
+} else if (front === 0 && !strongholds[0].captured) {
+html += '<div class="sh-card front km-front-card"><div class="sh-icon">' + STRONGHOLDS[0].icon + '</div>' +
+'<div class="sh-body"><div class="sh-name">' + STRONGHOLDS[0].name + ' <span class="sh-req">стартовый лагерь</span></div>' +
+'<div class="sh-meta">Сила нейтралов: ' + STRONGHOLDS[0].total + '</div></div>' +
+'<button class="sh-assault" data-action="sh-assault" data-idx="0">⚔ Штурм</button></div>';
 }
-html += '</div>';
 var tRoutesUI = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 if (tRoutesUI > 0) html += '<div class="sh-trade">🛃 Торговые пути: <b>' + tRoutesUI + '</b> · налоги <b>+' + Math.round((SM.tradeBonus(tRoutesUI)) * 100) + '%</b></div>';
 var _season = ensureSeason();
@@ -2193,32 +2243,6 @@ dailyQuests.quests.forEach(function(q) {
     html += '<div class="sh-quest" data-action="sh-daily-quest" data-qid="' + q.id + '" data-reward="' + q.reward + '">☐ ' + q.icon + ' ' + q.text + ' (' + Math.min(_qp, q.goal) + '/' + q.goal + ') → +' + q.reward + ' 💰</div>';
 });
 html += '</div>';
-html += '<div class="sh-grid">';
-for (var p = 1; p <= 4; p++) {
-html += '<div class="sh-prov"><div class="sh-prov-title">' + PROVINCES[p] + '</div>';
-STRONGHOLDS.forEach(function(d, i) {
-if (d.prov !== p) return;
-var s = strongholds[i];
-if (s.captured) {
-html += '<div class="sh-card owned" data-action="sh-open" data-idx="' + i + '">' +
-'<div class="sh-icon">' + shSprite(i) + '</div>' +
-'<div class="sh-body"><div class="sh-name">' + d.icon + ' ' + d.name + '</div>' +
-'<div class="sh-meta">+' + d.tax + ' 💰/день · слоты ' + builtList(i).length + '/' + d.slots + '</div>' +
-stageBadgeHtml(shWorstStage(i)) + '</div></div>';
-} else if (i === front) {
-html += '<div class="sh-card front"' + (i === 0 ? ' data-action="sh-open" data-idx="' + i + '"' : '') + '>' +
-'<div class="sh-icon">' + d.icon + '</div>' +
-'<div class="sh-body"><div class="sh-name">' + d.name + (i === 0 ? ' <span class="sh-req">стартовый лагерь</span>' : '') + '</div>' +
-'<div class="sh-meta">Сила нейтралов: ' + d.total + '</div></div>' +
-'<button class="sh-assault" data-action="sh-assault" data-idx="' + i + '">⚔ Штурм</button></div>';
-} else {
-html += '<div class="sh-card locked"><div class="sh-icon">🔒</div>' +
-'<div class="sh-body"><div class="sh-name">' + d.name + '</div>' +
-'<div class="sh-meta">Захвати предыдущую</div></div></div>';
-}
-});
-html += '</div>';
-}
 root.innerHTML = html;
 }
 function html_strongholds_banner(root, cap) {
@@ -2234,6 +2258,23 @@ var html = '<div class="kingdom-banner">' +
 root.innerHTML = html;
 }
 function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" onerror="this.outerHTML=\'' + emoji + '\'">'; }
+function catClass(bd) { // ФАЗА F: категорийная рамка тайла постройки
+return 'cat-' + (bd.cat === 'house' ? 'zh' : bd.cat === 'econ' ? 'ec' : bd.cat === 'defense' ? 'df' : 'sp');
+}
+function builtTileHtml(id, bd, b) {
+return '<div class="sh-tile built ' + catClass(bd) + '"><div class="sh-tile-icon">' + shSpriteImg('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
+'<div class="sh-tile-name">' + bd.name + '</div>' +
+'<div class="sh-tile-meta">' + buildingEffectText(bd) + ' · содержание ' + bd.upkeep + ' 💰/день</div>' +
+stageBadgeHtml(b.corruptionStage) + '</div>';
+}
+function buyTileHtml(idx, id, bd, reqOk, can, reason) {
+return '<div class="sh-tile buy ' + catClass(bd) + (reqOk ? '' : ' locked') + '"><div class="sh-tile-icon">' + shSpriteImg('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
+'<div class="sh-tile-name">' + bd.name + (reqOk ? '' : ' <span class="sh-req">нужна: ' + BUILDINGS[bd.req].name + '</span>') + '</div>' +
+'<div class="sh-tile-meta">' + buildingEffectText(bd) + '</div>' +
+'<div class="sh-tile-badges"><span class="sh-tile-cost">🏗 ' + bd.cost + ' 💰</span><span class="sh-tile-upkeep">−' + bd.upkeep + '/день</span></div>' +
+(can ? '<button class="sh-buy" data-action="sh-buy" data-idx="' + idx + '" data-bid="' + id + '">Купить</button>' : '<span class="sh-stage lock">🔒 ' + reason + '</span>') +
+'</div>';
+}
 function renderStrongholdPanel(idx) {
 ensureStrongholdState();
 if (!SM) return;
@@ -2252,13 +2293,14 @@ else { var tc = throneCost(); html += '<div class="sh-build-row buy"><div class=
 html += '<div class="sh-sec-title">🏗 Постройки</div>';
 var built = builtList(idx);
 if (built.length === 0) html += '<div class="empty-state">Пока ничего не построено.</div>';
+if (built.length > 0) { // ФАЗА F: построенное — тайлы-сетка
+html += '<div class="sh-build-grid">';
 built.forEach(function(id) {
 var bd = BUILDINGS[id], b = s.buildings[id];
-html += '<div class="sh-build-row"><div class="sh-build-icon">' + shSpriteImg('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
-'<div class="sh-build-body"><div class="sh-build-name">' + bd.name + '</div>' +
-'<div class="sh-build-meta">' + buildingEffectText(bd) + ' · содержание ' + bd.upkeep + ' 💰/день</div></div>' +
-stageBadgeHtml(b.corruptionStage) + '</div>';
+html += builtTileHtml(id, bd, b);
 });
+html += '</div>';
+}
 var slotLeft = d.slots - built.length;
 var avail = [];
 Object.keys(BUILDINGS).forEach(function(id) {
@@ -2272,17 +2314,14 @@ var rec = avail.filter(function(id) { var bd = BUILDINGS[id]; return !bd.req || 
 var shown = shCatalogOpen ? avail : rec;
 html += '<div class="sh-sec-title">📓 ' + (shCatalogOpen ? 'Каталог' : 'Что построить сейчас') + ' (свободно\u00A0слотов:\u00A0' + slotLeft + ')</div>';
 var anyShown = false;
-shown.forEach(function(id) {
-var bd = BUILDINGS[id];
-anyShown = true;
-var reqOk = !bd.req || (s.buildings[bd.req] && s.buildings[bd.req].built);
-var can = reqOk && slotLeft > 0 && (HERO.gold || 0) >= bd.cost;
-html += '<div class="sh-build-row buy"><div class="sh-build-icon">' + shSpriteImg('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
-'<div class="sh-build-body"><div class="sh-build-name">' + bd.name + (reqOk ? '' : ' <span class="sh-req">нужна: ' + BUILDINGS[bd.req].name + '</span>') + '</div>' +
-'<div class="sh-build-meta">' + buildingEffectText(bd) + ' · ' + bd.cost + ' 💰 · содержание ' + bd.upkeep + ' 💰/день</div></div>' +
-(can ? '<button class="sh-buy" data-action="sh-buy" data-idx="' + idx + '" data-bid="' + id + '">🏗 ' + bd.cost + '</button>' : '<span class="sh-stage lock">🔒</span>') +
-'</div>';
-});
+ shown.forEach(function(id) {
+  var bd = BUILDINGS[id];
+  anyShown = true;
+  var reqOk = !bd.req || (s.buildings[bd.req] && s.buildings[bd.req].built);
+  var can = reqOk && slotLeft > 0 && (HERO.gold || 0) >= bd.cost;
+  var reason = !reqOk ? 'нужна: ' + BUILDINGS[bd.req].name : (slotLeft <= 0 ? 'нет слотов' : 'мало золота');
+  html += buyTileHtml(idx, id, bd, reqOk, can, reason);
+ });
 if (!anyShown) html += '<div class="empty-state">Каталог пуст — захватывай новые земли.</div>';
 if (avail.length > 3) html += '<button class="sh-back" data-action="sh-catalog-toggle">' + (shCatalogOpen ? '∧ Свернуть каталог' : '📓 Открыть весь каталог (ещё ' + (avail.length - rec.length) + ')') + '</button>';
 html += '<div class="sh-sec-title">⚔ Найм (пул недели · скидка 🎭 ' + Math.round(Math.min(0.30, 0.005 * STATS.cha.value) * 100) + '%)</div>';
@@ -3544,6 +3583,13 @@ document.addEventListener('keydown', function(e) {
     check();
     window.addEventListener('resize', check);
 })();
+document.addEventListener('keydown', function(e) { // ФАЗА E: узел карты (SVG role=button) активируется Enter/Space
+if (e.key !== 'Enter' && e.key !== ' ') return;
+var t = e.target;
+if (!t || !t.dataset || t.dataset.action !== 'sh-open') return;
+e.preventDefault();
+t.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+});
 document.addEventListener('keydown', (e) => {
 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 e.preventDefault();
@@ -3672,7 +3718,7 @@ else { actBtn.style.display = 'none'; actBtn.onclick = null; }
 }
 el.style.borderLeftColor = type === 'blood' ? 'var(--blood-bright)' : type === 'crit' || type === 'save' ? '#fbbf24' : 'var(--gold-bright)';
 el.style.borderColor = type === 'blood' ? 'var(--blood)' : type === 'crit' || type === 'save' ? '#fbbf24' : 'var(--gold)';
-el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+el.classList.remove('show'); void el.offsetWidth; el.dataset.ttype = type; el.classList.add('show');
 setTimeout(() => { el.classList.remove('show'); setTimeout(playNextToast, 200); }, t.action ? 5000 : 2500);
 }
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }

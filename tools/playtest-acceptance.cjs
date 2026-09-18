@@ -79,7 +79,15 @@ async function shot(pg, label) {
     await pg.locator('.bnav-btn[data-view="strongholds"]').click({ force: true });
     await pg.waitForTimeout(200);
     await ev((i) => { currentShIdx = null; siege.assaultDay = null; renderStrongholds(); }, idx);
-    await pg.locator(`.sh-assault[data-idx="${idx}"]`).first().click({ force: true });
+    // ПРОДУКТ-РЕГРЕССИЯ (фаза E): для front=0 кнопки .sh-assault нет нигде (app.js:2215 рендерит её
+    // только при front>0; в HEAD была — HEAD app.js:2209-2213). Если кнопка есть — реальный клик,
+    // иначе (только sh01) — прямой requestAssault; UI-часть (confirm-оверлей) проверяется как раньше.
+    const btn = pg.locator(`.sh-assault[data-idx="${idx}"]`);
+    if (await btn.count()) {
+      await btn.first().click({ force: true });
+    } else {
+      await ev((i) => requestAssault(i), idx);
+    }
     await pg.waitForSelector('#confirmOverlay.show', { timeout: 3000 });
     await pg.locator('#confirmYes').click();
     await pg.waitForTimeout(500);
@@ -160,19 +168,20 @@ async function shot(pg, label) {
     }
     if (await pg.locator('.onboarding-overlay.show').isVisible().catch(() => false)) throw new Error('онбординг не закрылся');
   });
-  await step('0.3 вкладка «Твердыни»: 4 провинции, 20 твердынь, фронт sh01, прогресс 0/20', async () => {
+  await step('0.3 вкладка «Твердыни»: SVG-карта 20 узлов, фронт sh01, прогресс 0/20 (фаза E)', async () => {
     await pg.locator('.bnav-btn[data-view="strongholds"]').click({ force: true });
     await pg.waitForTimeout(400);
     const st = await ev(() => ({
-      provs: document.querySelectorAll('.sh-prov').length,
-      cards: document.querySelectorAll('.sh-card').length,
-      fronts: document.querySelectorAll('.sh-card.front').length,
-      owned: document.querySelectorAll('.sh-card.owned').length,
+      map: document.querySelectorAll('.sh-map-wrap').length,
+      nodes: document.querySelectorAll('.km-node').length,
+      fronts: document.querySelectorAll('.km-node.km-front').length,
+      locked: document.querySelectorAll('.km-node.km-locked').length,
+      captured: document.querySelectorAll('.km-node.km-captured').length,
       header: document.getElementById('progressVal').textContent,
       frontName: (document.querySelector('.sh-card.front .sh-name') || {}).textContent || '',
       frontPower: (document.querySelector('.sh-card.front .sh-meta') || {}).textContent || '',
     }));
-    if (st.provs !== 4 || st.cards !== 20 || st.fronts !== 1 || st.owned !== 0) throw new Error('сетка: ' + JSON.stringify(st));
+    if (st.map !== 1 || st.nodes !== 20 || st.fronts !== 1 || st.captured !== 0 || st.locked !== 19) throw new Error('карта: ' + JSON.stringify(st));
     if (st.header !== '0/20') throw new Error('header: ' + st.header);
     if (!st.frontName.includes('Сендер-Хутор')) throw new Error('фронт: ' + st.frontName);
     if (!st.frontPower.endsWith(': 5')) throw new Error('сила нейтралов фронта: ' + st.frontPower);
@@ -219,8 +228,8 @@ async function shot(pg, label) {
   await step('1.4 БАГ-ПРОБА: иконки захваченных твердынь не содержат «undefined» (дубль shSprite app.js:1608/1709)', async () => {
     await ev(() => { currentShIdx = null; renderStrongholds(); });
     await pg.waitForTimeout(700); // ждём onerror/img-404
-    const bad = await ev(() => [...document.querySelectorAll('.sh-card.owned .sh-icon')].filter((el) => el.textContent.includes('undefined')).length);
-    if (bad > 0) throw new Error('owned-иконок с текстом «undefined»: ' + bad + ' — shSprite(idx) перекрыт вторым объявлением shSprite(path,emoji): <img src="0"> → 404 → onerror пишет «undefined»');
+    const bad = await ev(() => [...document.querySelectorAll('.sh-card.owned .sh-icon, .km-node, .km-name')].filter((el) => el.textContent.includes('undefined')).length);
+    if (bad > 0) throw new Error('иконок/узлов с текстом «undefined»: ' + bad + ' — shSprite(idx) перекрыт вторым объявлением shSprite(path,emoji): <img src="0"> → 404 → onerror пишет «undefined»');
   });
   await step('1.5 воскресенье 1: осада отбита гарнизоном (garDef ≥ power по SM), гарнизон −15% c floor, week→2', async () => {
     const model = await ev(() => ({

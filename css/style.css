@@ -2,18 +2,29 @@
 html { scroll-behavior: smooth; }
 :root {
 --bg-deep: #0a0a0f;
---surface: rgba(20, 20, 32, 0.78);
---surface-hi: rgba(30, 30, 48, 0.88);
+/* ФАЗА A: дизайн-токены «Тёмная сталь» */
+--gold-1: #8b5a2b; --gold-2: #c49a4a; --gold-3: #d4a574; --gold-4: #f4c896; --gold-5: #fde8c8;
+--blood-1: #5e1622; --blood-2: #8b2635; --blood-3: #c73e4d;
+--surface-0: rgba(8, 8, 14, 0.92); --surface-1: rgba(20, 20, 32, 0.78); --surface-2: rgba(30, 30, 48, 0.88);
+--hairline: rgba(212, 165, 116, 0.30);
+--shadow-key: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px var(--hairline);
+--radius-1: 3px; --radius-2: 6px; --radius-3: 10px;
+--surface: var(--surface-1);
+--surface-hi: var(--surface-2);
 --border: rgba(212, 165, 116, 0.18);
 --border-hi: rgba(212, 165, 116, 0.45);
 --text: #e8e4dc;
 --text-dim: #a8a294;
---gold: #d4a574;
---gold-bright: #f4c896;
---blood: #8b2635;
---blood-bright: #c73e4d;
+--gold: var(--gold-3);
+--gold-bright: var(--gold-4);
+--blood: var(--blood-2);
+--blood-bright: var(--blood-3);
 --green: #34d399;
 --blue: #60a5fa;
+--cat-zh: var(--gold-3);
+--cat-ec: #34d399;
+--cat-df: #60a5fa;
+--cat-sp: #c084fc;
 --yellow: #fbbf24;
 --mist-opacity: 0.5;
 --torch-intensity: 0.3;
@@ -34,9 +45,13 @@ transition: background 1.2s ease;
 }
 .dungeon-bg {
 position: fixed; inset: 0; z-index: 0;
-background-image: url('https://image.qwenlm.ai/public_source/cee96af7-cd56-4c1d-b3b1-0932ab53b7fe/16152cb1e-eb42-4404-a5fb-02386aeb59d8.png');
-background-size: cover; background-position: center;
-opacity: calc(0.15 + var(--atmosphere-light) * 0.006);
+/* ФАЗА A: локальная композиция вместо CDN (анти-SPOF): шум + угольное свечение, виньетка в ::after */
+background-image:
+repeating-linear-gradient(45deg, rgba(255,255,255,0.014) 0 2px, transparent 2px 4px),
+radial-gradient(ellipse 120% 55% at 50% 108%, rgba(64, 32, 12, 0.6), transparent 62%),
+radial-gradient(ellipse 90% 45% at 18% -8%, rgba(28, 16, 40, 0.5), transparent 60%);
+background-size: 4px 4px, cover, cover;
+opacity: calc(0.35 + var(--atmosphere-light) * 0.006);
 filter: saturate(calc(0.5 + var(--atmosphere-sat) * 0.008)) brightness(calc(0.35 + var(--atmosphere-light) * 0.01));
 transition: opacity 1.5s ease, filter 1.5s ease;
 pointer-events: none;
@@ -868,6 +883,25 @@ textarea:focus-visible {
 .sh-hire-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .sh-stage { font-size: var(--fs-secondary); letter-spacing: 1px; padding: 2px 7px; border-radius: 2px; white-space: nowrap; flex-shrink: 0; }
 .sh-stage.ok { color: var(--green); background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.4); }
+.sh-build-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sh-tile { display: flex; flex-direction: column; gap: 4px; background: var(--surface-1, rgba(0,0,0,0.3)); border: 1px solid var(--border); border-left: 3px solid var(--tile-cat, var(--cat-zh)); border-radius: var(--radius-1); padding: 8px; box-shadow: var(--shadow-key); }
+.sh-tile.cat-zh { --tile-cat: var(--cat-zh); }
+.sh-tile.cat-ec { --tile-cat: var(--cat-ec); }
+.sh-tile.cat-df { --tile-cat: var(--cat-df); }
+.sh-tile.cat-sp { --tile-cat: var(--cat-sp); }
+.sh-tile-icon { height: 64px; display: flex; align-items: center; justify-content: center; font-size: 40px; background: rgba(0,0,0,0.25); border-radius: 2px; overflow: hidden; }
+.sh-tile-icon img { width: 64px; height: 64px; object-fit: contain; }
+.sh-tile-name { font-size: 12px; color: var(--text-bright, #e8e4dc); }
+.sh-tile-meta { font-size: 10.5px; color: var(--text-dim); }
+.sh-tile-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.sh-tile-cost { font-size: 10.5px; color: var(--gold-bright); }
+.sh-tile-upkeep { font-size: 10.5px; color: var(--blood-bright); }
+.sh-tile .sh-buy { width: 100%; }
+.sh-tile.locked { opacity: 0.75; }
+.sh-tile.built { border-left-color: var(--green); }
+@media (max-width: 420px) { .sh-build-grid { grid-template-columns: 1fr; } }
+:root.perf-eco .sh-tile, :root.perf-eco .sh-tile .sh-buy { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .sh-tile, .sh-tile .sh-buy { transition: none !important; animation: none !important; } }
 .sh-stage.worn { color: var(--yellow); background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.4); }
 .sh-stage.ruin { color: var(--blood-bright); background: rgba(199,62,77,0.1); border: 1px solid rgba(199,62,77,0.45); }
 .sh-stage.lock { border: 1px solid var(--border); color: var(--text-dim); background: rgba(255,255,255,0.03); }
@@ -1235,3 +1269,159 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .dash-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
 /* Волна 2 #55: портрет героя поверх аватара (центр #heroAvatar) */
 .hero-path { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 64px; line-height: 1; z-index: 2; pointer-events: none; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+
+/* ================================================================
+   ФАЗА A «ТЁМНАЯ СТАЛЬ»: применение дизайн-токенов (панели, шрифт)
+   ================================================================ */
+.header, .content, .tabs { box-shadow: var(--shadow-key); }
+.sh-treasury, .sh-quest-board, .sh-prov, .kingdom-banner { box-shadow: var(--shadow-key) !important; }
+.view-title { letter-spacing: 5px; }
+.modal-header h3 { letter-spacing: 5px; }
+.progress-control .val, #progressVal, .sh-treasury, .goal-progress-label, .stat-bar-label,
+.hero-summary, .card-stats-line, .kb-sub, .dash-chip, .hero-mini-xp-wrap { font-variant-numeric: tabular-nums; }
+
+/* ================================================================
+   ФАЗА B «ТЁМНАЯ СТАЛЬ»: карточки колоды
+   ================================================================ */
+/* слоистая рамка: noise-фактура .05 + внешняя золотая hairline + внутренняя тёмная кайма.
+   !important + позиция в конце файла поверх v55 — ранговые глоу переобъявлены ниже */
+.card {
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 4px), linear-gradient(180deg, var(--surface-hi), var(--surface)) !important;
+  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55) !important;
+}
+.card.rank-B, .card.rank-BB, .card.rank-BBB {
+  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55), 0 0 8px rgba(96,165,250,0.08) !important;
+}
+.card.rank-A, .card.rank-AA, .card.rank-AAA {
+  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55), 0 0 12px rgba(192,132,252,0.1) !important;
+}
+.card.rank-S, .card.rank-SS, .card.rank-SSS {
+  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55), 0 0 16px rgba(251,191,36,0.15) !important;
+}
+/* усиленный двойной глоу на hover для B+ */
+.card.rank-B:hover, .card.rank-BB:hover, .card.rank-BBB:hover,
+.card.rank-A:hover, .card.rank-AA:hover, .card.rank-AAA:hover,
+.card.rank-S:hover, .card.rank-SS:hover, .card.rank-SSS:hover {
+  box-shadow: var(--shadow-card-hover), 0 0 18px var(--rank-glow), 0 0 34px var(--rank-shadow) !important;
+}
+/* foil-шиммер S/SS УДАЛЁН (перф-митигация 2026-09-18): 6s-градиент на каждой S/SS-карте
+   валил fps main 28.5→16 / particles 28.6→8 (125 анимир. узлов в 500-карточной колоде).
+   Шиммер остался только на SSS (пре-живший sssShimmer, :209) — анимированных узлов в базовых колодах 0, как до оверхола. */
+/* метаряд: стата-тег и 🔥-стрик-чип на одной оси */
+.card-stat-tag, .card-adaptation-tag { vertical-align: middle; margin-bottom: 0; }
+/* кнопки 22px: бевел-градиент + press */
+.card-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(0,0,0,0.45));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.5);
+}
+.card-btn:active { transform: scale(0.96); }
+
+/* ================================================================
+   ФАЗА C «ТЁМНАЯ СТАЛЬ»: дашборд / Hero / bottom-nav
+   ================================================================ */
+/* прогресс-бары: внутренняя тень + глоу-точка на краю заполнения (без анимации — гейт не нужен) */
+.sh-season-fill, .goal-progress-fill, .kb-bar-fill {
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -1px 2px rgba(0,0,0,0.35);
+}
+.sh-season-fill::after, .goal-progress-fill::after, .kb-bar-fill::after {
+  content: ''; position: absolute; right: 1px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold-5);
+  box-shadow: 0 0 8px 2px rgba(251, 191, 36, 0.55);
+}
+/* чипы: единое стекло (blur 8px — как в тостах) */
+.dash-chip {
+  background: rgba(12, 10, 8, 0.78);
+  border: 1px solid var(--hairline);
+}
+:root.perf-eco .dash-chip { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+/* hero-аватар: радиальный подсвет статуса поверх спрайта, путь крупнее (SVG/DOM, без новых бинарников) */
+.hero-avatar { box-shadow: 0 0 24px rgba(212, 165, 116, 0.4), inset 0 0 34px rgba(0,0,0,0.55) !important; }
+.hero-avatar::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, rgba(255, 232, 180, 0.22), transparent 55%);
+  pointer-events: none; z-index: 1;
+}
+.hero-path { font-size: 76px !important; text-shadow: 0 2px 10px rgba(0,0,0,0.75), 0 0 22px rgba(251, 191, 36, 0.25); }
+/* bottom-nav: активная вкладка — золотая верхняя риска + глоу */
+.bottom-nav .bnav-btn { position: relative; }
+.bottom-nav .bnav-btn.active::before {
+  content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 2px;
+  background: var(--gold-grad); border-radius: 1px;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+/* ================================================================
+   ФАЗА D «ТЁМНАЯ СТАЛЬ»: модалки / тосты
+   ================================================================ */
+/* стекло: blur 12px + затемнение .92 + hairline-рамка */
+.modal-overlay { background: rgba(0, 0, 0, 0.92) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; }
+.modal {
+  background: linear-gradient(180deg, rgba(30, 25, 20, 0.92), rgba(15, 12, 8, 0.92)) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--hairline) !important;
+}
+:root.perf-eco .modal, :root.perf-eco .modal-overlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+/* тонкая золотая линейка-разделитель под шапкой */
+.modal-header { border-bottom-color: transparent; }
+.modal-header::after {
+  content: ''; position: absolute; left: 18px; right: 18px; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.75;
+}
+/* левая ранговая риск-полоска по типу (цвет ставит JS: data-ttype) */
+.toast[data-ttype="blood"] { box-shadow: 0 4px 24px rgba(0,0,0,0.5), -3px 0 14px -4px rgba(199, 62, 77, 0.65); }
+.toast[data-ttype="crit"], .toast[data-ttype="save"] { box-shadow: 0 4px 24px rgba(0,0,0,0.5), -3px 0 14px -4px rgba(251, 191, 36, 0.6); }
+/* бевел + press основных кнопок; focus-visible золотое кольцо — уже в v46, сохранено */
+.demo-btn, .forge-btn, .goals-add { box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 3px rgba(0,0,0,0.4); }
+.demo-btn:active, .forge-btn:active, .goals-add:active { transform: scale(0.96); }
+
+/* ================================================================
+   ФАЗА E «ТЁМНАЯ СТАЛЬ»: карта королевства «Путь Угасания»
+   ================================================================ */
+.sh-map-wrap {
+  margin: 0 0 14px;
+  background: linear-gradient(180deg, rgba(12, 10, 6, 0.55), rgba(5, 5, 8, 0.75));
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-key);
+  overflow: hidden;
+}
+.sh-map-wrap svg { display: block; width: 100%; height: auto; }
+.km-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
+.km-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.km-lg { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.km-lg-cap { background: var(--gold-3); box-shadow: 0 0 6px rgba(212,165,116,0.6); }
+.km-lg-front { background: var(--gold-5); box-shadow: 0 0 8px rgba(251,191,36,0.8); }
+.km-lg-siege { background: var(--blood-3); box-shadow: 0 0 8px rgba(199,62,77,0.8); }
+.km-lg-lock { background: #2c2c38; border: 1px solid var(--border); }
+.km-connector { fill: none; stroke: rgba(212, 165, 116, 0.16); stroke-width: 2; }
+.km-connector.owned { stroke: var(--gold-3); stroke-opacity: 0.65; }
+.km-node { cursor: pointer; }
+.km-node .km-bg { fill: rgba(16, 16, 24, 0.92); stroke: var(--border); stroke-width: 1.5; }
+.km-node .km-ring { fill: none; stroke: transparent; stroke-width: 2.5; pointer-events: none; }
+.km-node.km-captured .km-bg { fill: rgba(42, 30, 16, 0.95); stroke: var(--gold-3); stroke-width: 2; }
+.km-node.km-captured .km-ring { stroke: var(--gold-3); stroke-opacity: 0.5; filter: drop-shadow(0 0 5px rgba(212, 165, 116, 0.55)); }
+.km-node.km-captured:hover .km-ring { stroke: var(--gold-4); stroke-opacity: 1; }
+.km-node.km-front .km-ring { stroke: var(--gold-4); stroke-opacity: 0.9; animation: kmPulse 2s ease-in-out infinite; }
+.km-node.km-siege .km-ring { stroke: var(--blood-3); stroke-opacity: 1; animation: kmPulse 1.2s ease-in-out infinite; }
+.km-node.km-siege .km-bg { stroke: var(--blood-3); }
+.km-node.km-locked .km-bg { fill: rgba(8, 8, 12, 0.95); stroke: var(--border); }
+.km-node.km-locked .km-emoji { opacity: 0.35; filter: grayscale(1); }
+.km-node.km-locked:hover .km-bg { stroke: var(--border-hi); }
+.km-emoji { font-size: 20px; pointer-events: none; }
+.km-corrupt { fill: none; stroke: var(--blood-1); stroke-width: 3; pointer-events: none; }
+.km-badge circle { fill: var(--blood-2); stroke: var(--blood-3); stroke-width: 1.5; }
+.km-badge text { font-size: 10px; fill: #fff; }
+.km-name { font-size: 10.5px; fill: var(--text); letter-spacing: 0.5px; pointer-events: none; }
+.km-name.dim { fill: var(--text-dim); opacity: 0.55; }
+.km-node:focus-visible { outline: none; }
+.km-node:focus-visible .km-ring { stroke: var(--gold-5); stroke-width: 3.5; stroke-opacity: 1; }
+@keyframes kmPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+:root.perf-eco .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring { animation: none !important; }
+.km-front-card { margin: 0 0 12px; }
+@media (prefers-reduced-motion: reduce) {
+  .km-node.km-front .km-ring, .km-node.km-siege .km-ring { animation: none !important; }
+}

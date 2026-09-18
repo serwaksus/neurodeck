@@ -21,9 +21,9 @@ for (const rel of process.argv.slice(2)) {
             checks.push(cls + (has ? ' ok' : ' MISSING'));
         }
     } else if (rel.endsWith('.html')) {
-        const v66 = (src.match(/v=66/g) || []).length;
-        fileOk = fileOk && v66 === 8 && !src.includes('?v=65');
-        checks.push('v66 x' + v66 + '/8');
+        const v67 = (src.match(/v=67/g) || []).length;
+        fileOk = fileOk && v67 === 8 && !src.includes('?v=65');
+        checks.push('v67 x' + v67 + '/8');
         const totem = src.includes('id="totemCard"');
         fileOk = fileOk && totem;
         checks.push('totemCard ' + (totem ? 'ok' : 'MISSING'));
