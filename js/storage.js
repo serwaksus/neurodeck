@@ -424,6 +424,7 @@ loadFromIDB(function(result) {
             if (ok) {
                 applySyncData(result.data);
                 saveGameState();
+                if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
                 showToast('♻ Восстановлено', result.data.forged.length + ' карточек из IndexedDB');
                 screenShake(6, 400);
             }
@@ -446,6 +447,7 @@ dungeonConfirm('☁ Найдено облачное сохранение!', 'Д�
 if (!ok) return;
 applySyncData(data, true);
 saveGameState();
+if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
 showToast('☁ Прогресс восстановлен!', 'Из облака: ' + savedDate);
 spiritSay('«Облако сохранило твой путь...»');
 screenShake(6, 400);
@@ -510,6 +512,7 @@ dungeonConfirm('♻ Глубокое восстановление',
 if (ok) {
 applySyncData(bestData);
 saveGameState();
+if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
 showToast('♻ Восстановлено!', bestCount + ' карточек возвращены');
 spiritSay('«То, что было потеряно — найдено.»');
 screenShake(6, 400);

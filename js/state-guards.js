@@ -121,6 +121,17 @@
             dailyUniqueStats: (hero.dailyUniqueStats && typeof hero.dailyUniqueStats === 'object') ? hero.dailyUniqueStats : {},
             cardHistory: (hero.cardHistory && typeof hero.cardHistory === 'object') ? hero.cardHistory : {},
             lastWeeklyReport: hero.lastWeeklyReport || null,
+            weeklyPrev: sanitizeWeeklyPrev(hero.weeklyPrev) // #42: снапшот прошлой недели для дельт
+        };
+    }
+
+    function sanitizeWeeklyPrev(input) {
+        if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+        return {
+            gold: Math.round(clampNumber(input.gold, 0, 1e9, 0)),
+            xp: Math.round(clampNumber(input.xp, 0, 1e10, 0)),
+            completions: Math.round(clampNumber(input.completions, 0, 1e6, 0)),
+            week: Math.round(clampNumber(input.week, 1, 520, 1))
         };
     }
 
@@ -324,7 +335,7 @@
         var assaultDay = (typeof src.assaultDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(src.assaultDay)) ? src.assaultDay : null;
         var wkSkips = Math.round(clampNumber(src.wkSkips, 0, 1000, 0));
         var wkTaskFails = Math.round(clampNumber(src.wkTaskFails, 0, 1000, 0));
-        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails };
+        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails, retriedThisWeek: src.retriedThisWeek === true };
     }
 
     function sanitizeSeason(input, todayKey) {

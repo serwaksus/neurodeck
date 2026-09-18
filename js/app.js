@@ -154,6 +154,9 @@ case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
 case 'sh-buy': buyBuilding(parseInt(el.dataset.idx), el.dataset.bid); break;
 case 'reroll-event': rerollDailyEvent(); break;
 case 'treasury-info': showTreasuryBreakdown(); break;
+case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
+case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
+case 'counter-siege': requestCounterSiege(); break;
 case 'sh-hire-army': hireUnit(el.dataset.tier, false, parseInt(el.dataset.idx)); break;
 case 'sh-hire-garrison': hireUnit(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
 case 'sh-to-army': moveStack(el.dataset.tier, true, parseInt(el.dataset.idx)); break;
@@ -231,6 +234,13 @@ return { label: '🔥 ×' + mult.toFixed(2), cls: 'streak-low' };
 }
 const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
 function getMSKDate(ts) { return new Date((ts || Date.now()) + MSK_OFFSET_MS); }
+var HOLIDAYS = { // #8: календарные праздники (MSK-дата), в сейв не пишутся — детерминировано датой
+    '01-01': { label: 'Новый год', tip: 'Тик казны ×1.5 сегодня', tickMult: 1.5 },
+    '10-31': { label: 'Хэллоуин', tip: 'Призраки не списывают золото', ghostsFree: true },
+    '09-17': { label: 'День NeuroDeck', tip: 'Все награды +10%', rewardMult: 1.1 }
+};
+function holidayBonus(todayKey) { var h = HOLIDAYS[(todayKey || getMSKDayKey()).slice(5)]; return h || null; }
+function holidayRewardMult() { var h = holidayBonus(); return (h && h.rewardMult) || 1; }
 var _dailyPairIds = {}; // #29: карты дня (✨) — детерминированная пара по дате
 function dailyCardPair() {
     var tk = getMSKDayKey();
@@ -287,6 +297,7 @@ oathBadge +
 '<div class="card-corner-actions">' +
    '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать">✎</div>' +
    '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить">🗑</div>' +
+   '<div class="card-btn pomodoro" data-action="pomodoro-toggle" data-id="' + card.id + '" title="Помодоро 25 мин (+5 XP, 1/день)">⏱</div>' + // #65: помодоро в карточке
    (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" style="color:var(--gold-bright)">⭐</div>' : '') +
 '</div>' +
 '<div class="card-rank">' + card.rank + '</div>' +
@@ -382,12 +393,13 @@ card.daysActive = 0;
 }
 const baseCardXp = 15;
 const dayMult = _dailyPairIds[card.id] ? 2 : 1; // #29: карта дня ×2
+const bloodMult = (dailyEvent && dailyEvent.id === 'bloodmoon') ? 2 : 1; // #41: Кровавая луна — XP ×2
 const gear = getTotalGearBonuses();
 const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
 const comboMult = getComboMultiplier();
 const prestigeMult = getPrestigeXPBonus(card.stat);
-const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult;
+const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult(); // #8/#41: праздник +10%, луна ×2
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
@@ -611,6 +623,14 @@ document.getElementById('ringFill').setAttribute('stroke-dasharray', ringCirc);
 document.getElementById('ringFill').setAttribute('stroke-dashoffset', ringCirc * (1 - HERO.xp / HERO.xpToNext));
 var goldEl = document.getElementById('heroGoldVal');
 if (goldEl) goldEl.textContent = (HERO.gold || 0).toLocaleString('ru');
+var pav = document.getElementById('heroAvatar');
+if (pav) { // #55: портрет героя по высшему стату
+    var pp = pav.querySelector('.hero-path');
+    if (!pp) { pp = document.createElement('div'); pp.className = 'hero-path'; pav.appendChild(pp); }
+    var pi = heroPathInfo();
+    pp.textContent = pi.icon;
+    pp.title = 'Путь: ' + pi.name;
+}
 renderStreakCalendar();
 updateHeroSummary();
 }
@@ -623,6 +643,12 @@ const totalInt = STATS.int.value + gear.int;
 const mult = (1 + (totalInt - 3) * 0.01).toFixed(2);
 document.getElementById('statXpMult').textContent = '×' + mult;
 document.getElementById('statStrongholds').textContent = capturedCount() + ' / ' + STRONGHOLDS.length;
+}
+function heroPathInfo() { // #55: путь героя по высшему стату (str/end/agi; ничья → end/Страж)
+    var cands = [{ k: 'str', icon: '⚔', name: 'Воин' }, { k: 'end', icon: '🛡', name: 'Страж' }, { k: 'agi', icon: '🏹', name: 'Следопыт' }];
+    var best = cands[1];
+    cands.forEach(function(c) { if (((STATS[c.k] || {}).value || 0) > ((STATS[best.k] || {}).value || 0)) best = c; });
+    return best;
 }
 function checkHeroLevelUp() {
 while (HERO.xp >= HERO.xpToNext) {
@@ -1499,6 +1525,7 @@ function ensureSeason() {
 function taxMultiplier() {
     var m = 1;
     if (dailyEvent && dailyEvent.id === 'market') m *= 1.5;
+    if (dailyEvent && dailyEvent.id === 'bloodmoon') m *= 0.5; // #41: Кровавая луна
     ensureSeason();
     m *= 1 + Math.min(0.10, (season.crownBonus || 0) * 0.02); // венцы сезонов
     m *= 1 + Math.min(0.05, throne * 0.01); // Вечный трон
@@ -1576,6 +1603,20 @@ function goldGain(n, src) {
     if (n <= 0) return;
     HERO.gold = (HERO.gold || 0) + n;
     dqProgress('gold', n);
+    checkDailyGoldGoal();
+}
+var DAILY_GOLD_BASE = 50; // #71: цель дня по золоту
+function dailyGoldGoal() { return Math.min(200, DAILY_GOLD_BASE + 10 * capturedCount()); }
+function checkDailyGoldGoal() { // #71: однократный бонус за цель дня — флаг дня в localStorage (в сейв не пишем)
+    var goal = dailyGoldGoal();
+    var p = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
+    if (p < goal) return;
+    var tk = getMSKDayKey();
+    try { if (localStorage.getItem('nd_dailgoaldone_' + tk)) return; localStorage.setItem('nd_dailgoaldone_' + tk, '1'); } catch (e) { return; }
+    HERO.gold = (HERO.gold || 0) + 10; // напрямую: goldGain зациклил бы проверку
+    showToast('🎯 Цель дня!', 'Заработано ' + p + ' 💰 (цель ' + goal + '): +10 💰 бонус', 'crit');
+    sfxGoalComplete(); haptic('success');
+    renderDashboard();
 }
 function dqQuestById(qid) {
     var q = null;
@@ -1680,9 +1721,11 @@ var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { retu
 var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
 taxes = Math.round(taxes * (1 + tBonus));
 taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
+var _hol = holidayBonus(); if (_hol && _hol.tickMult) taxes = Math.round(taxes * _hol.tickMult); // #8: Новый год — казначейский кэшбэк ×1.5
 var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
 gold += income;
 dqProgress('gold', income);
+checkDailyGoldGoal(); // #71: тик тоже двигает цель дня
 var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return; // незахваченный стартовый лагерь вне экономики (решение совета)
@@ -1751,8 +1794,42 @@ ruinAllBuildings(0);
 rows.push({ name: STRONGHOLDS[0].name, refuge: true });
 }
 siege.week = fell ? 1 : siege.week + 1; // потеря = frontSince сброшен, след. воскресенье не каскадирует
+siege.lastResult = fell ? 'fail' : 'win'; // #95: исход недели — для контрштурма
 recalcHirePool();
 showSiegeReport(rows, wrath);
+}
+function canCounterSiege() { // #95: поражение недели + контрштурм не использован + хватает казны
+    return siege.lastResult === 'fail' && !siege.retriedThisWeek && (HERO.gold || 0) >= 100;
+}
+function requestCounterSiege() { // #95: форс-штурм павшей твердыни за 100💰
+    if (!canCounterSiege()) return;
+    HERO.gold -= 100;
+    siege.retriedThisWeek = true;
+    var idx = frontIdx(); // первая незахваченная = павшая на фронте
+    if (idx < 0) { renderDashboard(); return; }
+    showToast('⚔ Контрштурм!', '«' + esc(STRONGHOLDS[idx].name) + '» — фора врага кончилась', 'crit');
+    doAssault(idx, assaultForecast(idx));
+    renderDashboard();
+}
+function capturedRecoveryPlan(snapCaptured, curCaptured, total) { // #49: чистое решение о восстановлении (юнит-тест через фабрику сейвов)
+    if (!Number.isFinite(snapCaptured) || !Number.isFinite(curCaptured)) return null;
+    var lost = snapCaptured - curCaptured;
+    if (lost < 2 || snapCaptured < 0 || snapCaptured > total) return null;
+    return { lost: lost, restoreTo: snapCaptured };
+}
+function checkCapturedRecovery() { // #49: счётчик сезона помнит больше крепостей, чем факт — предложить восстановить
+    try {
+        ensureSeason();
+        var plan = capturedRecoveryPlan((season.snapshot && season.snapshot.captured) || 0, capturedCount(), STRONGHOLDS.length);
+        if (!plan) return;
+        dungeonConfirm('🏰 Следы потерянных крепостей', 'Счётчик сезона помнит <b>' + plan.restoreTo + '</b> захваченных, по факту <b>' + capturedCount() + '</b>.<br><span style="color:var(--gold-bright)">Восстановить первые ' + plan.restoreTo + ' твердынь каталога?</span>').then(function(ok) {
+            if (!ok) return;
+            for (var i = 0; i < plan.restoreTo; i++) strongholds[i].captured = true;
+            showToast('🏰 Восстановлено', 'Первые ' + plan.restoreTo + ' твердынь снова под знаменем', 'save');
+            haptic('success');
+            renderStrongholds(); updateHeroUI(); updateStrongholdProgress(); saveGameState();
+        });
+    } catch (e) {}
 }
 function showSiegeReport(rows, wrath) {
 var modal = document.getElementById('siegeReportModal');
@@ -1764,6 +1841,8 @@ if (r.refuge) html += '<div class="sh-siege-row refuge">🏰 <b>' + esc(r.name) 
 else if (r.held) html += '<div class="sh-siege-row held">🛡 <b>' + esc(r.name) + '</b> — осада отбита: оборона ' + r.garDef + ' против ' + r.power + '. Гарнизон −15%.</div>';
 else html += '<div class="sh-siege-row lost">💀 <b>' + esc(r.name) + '</b> — пала: оборона ' + r.garDef + ' против ' + r.power + '. Нейтралы вернулись, постройки в руине.</div>';
 });
+var _cs = canCounterSiege();
+if (_cs) html += '<div style="text-align:center; margin-top:10px;"><button class="demo-btn" data-action="counter-siege" style="border:1px solid var(--blood-bright); color:var(--blood-bright); background:none; border-radius:8px; padding:6px 14px; cursor:pointer;">⚔ Контрштурм (100 💰)</button></div>'; // #95: контрштурм после поражения недели
 document.getElementById('siegeReportBody').innerHTML = html;
 // Осадный спектакль: полноэкранная вспышка
 var anyHeld = rows.some(function(r) { return r.held; });
@@ -2202,7 +2281,7 @@ renderTasks(); renderDashboard(); saveGameState();
 function expireGhostTasks(yesterdayKey) {
 var changed = false;
 var newGhosts = 0;
-var ghostFree = !!(typeof dailyEvent !== 'undefined' && dailyEvent && dailyEvent.id === 'ghostfree');
+var ghostFree = !!(typeof dailyEvent !== 'undefined' && dailyEvent && dailyEvent.id === 'ghostfree') || !!(holidayBonus() && holidayBonus().ghostsFree); // #8: Хэллоуин — призраки праздникуют
 TASKS.forEach(function(t) {
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
 var dlDay = t.deadline ? getMSKDayKey(t.deadline) : yesterdayKey;
@@ -2651,12 +2730,74 @@ function toggleHelp(e) {
     }
 }
 
+var POMODORO_SECS = 25 * 60; // #65: помодоро 25:00 — таймер в localStorage, переживает reload
+function pomodoroKey(id) { return 'nd_pomodoro_' + id; }
+function activePomodoro() {
+    try {
+        var keys = Object.keys(localStorage), latest = null;
+        keys.forEach(function(k) {
+            if (k.indexOf('nd_pomodoro_') !== 0 || k.indexOf('nd_pomodoro_done_') === 0) return;
+            var end = parseInt(localStorage.getItem(k), 10);
+            if (!Number.isFinite(end)) return;
+            if (end <= Date.now()) { localStorage.removeItem(k); return; } // истёкший таймер снимаем (награда — в тике ниже)
+            var card = findCard(parseInt(k.replace('nd_pomodoro_', ''), 10));
+            if (!card) { localStorage.removeItem(k); return; } // карточка удалена — таймер мусор
+            if (!latest || end > latest.end) latest = { id: card.id, name: card.name, end: end };
+        });
+        return latest;
+    } catch (e) { return null; }
+}
+function togglePomodoro(id) { // #65: клик = старт/перезапуск/отмена; награда +5 XP кап 1/карта/день
+    var card = findCard(id);
+    if (!card) return;
+    var k = pomodoroKey(id), dk = 'nd_pomodoro_done_' + id + '_' + getMSKDayKey();
+    try {
+        if (localStorage.getItem(k)) { localStorage.removeItem(k); showToast('⏱ Помодоро отменён', '«' + esc(card.name) + '»', 'blood'); renderCards(); renderDashboard(); return; }
+        if (localStorage.getItem(dk)) { showToast('🍅 Уже был', 'Фокус за «' + esc(card.name) + '» сегодня получен', 'blood'); return; }
+        localStorage.setItem(k, String(Date.now() + POMODORO_SECS * 1000));
+        showToast('⏱ Помодоро пошёл', '«' + esc(card.name) + '» — 25 минут фокуса', 'save');
+    } catch (e) { showToast('⚠ Нет localStorage', 'Таймер недоступен', 'blood'); return; }
+    haptic('light');
+    renderCards(); renderDashboard();
+}
+function sweepExpiredPomodoros() { // награда за досидевший таймер (в т.ч. после reload)
+    try {
+        var tk = getMSKDayKey();
+        Object.keys(localStorage).forEach(function(k) {
+            if (k.indexOf('nd_pomodoro_done_') === 0 && localStorage.getItem(k) !== tk) localStorage.removeItem(k); // хвосты вчерашних капов
+            if (k.indexOf('nd_pomodoro_') !== 0 || k.indexOf('nd_pomodoro_done_') === 0) return;
+            var end = parseInt(localStorage.getItem(k), 10);
+            if (!Number.isFinite(end) || end > Date.now()) return;
+            localStorage.removeItem(k);
+            var id = parseInt(k.replace('nd_pomodoro_', ''), 10);
+            var card = findCard(id);
+            if (!card) return;
+            if (localStorage.getItem('nd_pomodoro_done_' + id + '_' + tk)) return;
+            localStorage.setItem('nd_pomodoro_done_' + id + '_' + tk, tk);
+            addXpReward(5);
+            showToast('🍅 Фокус завершён: +5 XP', '«' + esc(card.name) + '» — 25 минут выдержаны', 'crit');
+            haptic('success');
+        });
+        renderDashboard();
+    } catch (e) {}
+}
+
 function renderDashboard() {
     var bar = document.getElementById('dashboardBar');
     if (!bar) return;
     var isBeginner = (HERO.level || 1) <= 2 && FORGED.length > 0 && FORGED.length <= 5;
     var html = '<button class="info-btn" data-action="toggle-help" title="Что получишь и чем рискуешь" style="position:absolute; right:6px; top:6px;">?</button>';
     if (dailyEvent) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span style="color:var(--gold-bright)">📅 ' + dailyEvent.icon + ' ' + dailyEvent.name + '</span> <button data-action="reroll-event" title="Переролл события дня (50 💰, 1/день)" style="margin-left:6px; font-size:11px; background:none; border:1px solid var(--gold); border-radius:6px; color:var(--gold-bright); cursor:pointer; padding:1px 6px;">🎲 50💰</button></div>'; // #50/#48: чип события + реролл
+    var hol = holidayBonus();
+    if (hol) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(hol.tip) + '">🎉 ' + esc(hol.label) + '</span></div>'; // #8: праздник
+    var pom = activePomodoro();
+    if (pom) { // #65: помодоро — чип-обратный отсчёт
+        var left = Math.max(0, Math.round((pom.end - Date.now()) / 1000));
+        html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="Помодоро: ' + esc(pom.name) + '">🍅 ' + pom.name + ' · ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + '</span> <button data-action="pomodoro-stop" data-id="' + pom.id + '" title="Отменить таймер" style="font-size:11px; background:none; border:1px solid var(--blood-bright); border-radius:6px; color:var(--blood-bright); cursor:pointer; padding:1px 6px;">✕</button></div>';
+    }
+    var goal = dailyGoldGoal();
+    var gp = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
+    html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="Цель дня: заработай золото любым способом">🎯 Цель дня: ' + Math.min(gp, goal) + '/' + goal + '💰</span><span style="display:inline-block; vertical-align:middle; width:70px; height:6px; background:var(--border); border-radius:3px; margin-left:6px; overflow:hidden;"><span style="display:block; height:100%; width:' + Math.min(100, Math.round(gp / goal * 100)) + '%; background:var(--gold-bright);"></span></span></div>'; // #71: дневная цель золота
     html += isBeginner ? renderDashboardBeginner() : renderDashboardVeteran();
     bar.innerHTML = html;
 }
@@ -2869,13 +3010,36 @@ function showWeeklyReport() {
     '</div>' +
     '<div class="dt-label" style="text-align:center;">🏰 Кампания: ' + captured + '/' + STRONGHOLDS.length + ' · осада №' + (siege.week || 1) + '</div>' +
     '<div class="digest-kp"><div class="digest-kp-fill" style="width:' + Math.round(captured / STRONGHOLDS.length * 100) + '%;"></div></div>' +
+    weeklyDeltaHtml(siege.week || 1) + // #42: дельты vs прошлая неделя
     '<div class="digest-foot">Новая неделя начинается. Используй опыт прошлой.</div>';
     var modal = document.getElementById('weeklyReportModal');
     if (modal) {
         modal.querySelector('.modal-body').innerHTML = html;
         modal.classList.add('show');
     }
+    saveWeeklySnapshot(siege.week || 1); // #42: снимок недели сохраняем ПОСЛЕ показа (дельты — vs прошлый снимок)
     saveSoon();
+}
+function saveWeeklySnapshot(week) { // #42: снапшот недели в hero.weeklyPrev (только при смене недели)
+    var cur = { gold: HERO.gold || 0, xp: HERO.totalXp || 0, completions: FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0), week: week };
+    if (!HERO.weeklyPrev || HERO.weeklyPrev.week !== week) HERO.weeklyPrev = cur;
+}
+function weeklyDeltaHtml(week) { // #42: блок «vs прошлая неделя» со стрелками
+    var prev = HERO.weeklyPrev;
+    if (!prev || prev.week === week) return '';
+    function deltaRow(label, curV, prevV) {
+        var d = curV - prevV;
+        if (d === 0) return '<div style="font-size:12px; color:var(--text-dim);">' + label + ': ' + curV.toLocaleString('ru') + ' (без изменений)</div>';
+        var up = d > 0;
+        return '<div style="font-size:12px; color:' + (up ? '#34d399' : 'var(--blood-bright)') + ';">' + label + ': ' + curV.toLocaleString('ru') + ' <b>' + (up ? '↑' : '↓') + ' ' + Math.abs(d).toLocaleString('ru') + '</b> vs прошлой недели</div>';
+    }
+    var completions = FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0);
+    return '<div class="digest-head" style="margin-top:10px;">📈 vs прошлая неделя</div>' +
+        '<div style="display:flex; flex-direction:column; gap:2px; align-items:center;">' +
+        deltaRow('💰 Казна', HERO.gold || 0, prev.gold) +
+        deltaRow('✨ Всего XP', HERO.totalXp || 0, prev.xp) +
+        deltaRow('✅ Выполнений', completions, prev.completions) +
+        '</div>';
 }
 function closeWeeklyReportModal() { document.getElementById('weeklyReportModal').classList.remove('show'); }
 
@@ -2885,8 +3049,16 @@ function buildDailyEvents() {
         { id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
         { id: 'market', icon: '🏪', name: 'Ярмарка', text: 'Налоги твердынь ×1.5 сегодня!' },
         { id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: 'Призраки задач сегодня безобидны.' },
-        { id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' }
+        { id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' },
+        { id: 'bloodmoon', icon: '🌘', name: 'Кровавая луна', text: 'Налоги ×0.5, но опыт карточек ×2. Ночь безумия!' }, // #41: тёмная ветка — строго в конец (пины chaos-харнеса)
+        { id: 'wanderer', icon: '🧙', name: 'Странник', text: 'Старец оставил дары: +1 🛡 и +30 💰.' }
     ];
+}
+function rollDailyEvent() { // #41: старые 5 — по индексам 0-4 (пины chaos-харнеса 0/0.2/0.4/0.6/0.8/0.99), тёмные — в окне (0.8, 0.985)
+    var events = buildDailyEvents();
+    var r = Math.random();
+    if (r > 0.8 && r < 0.985) return r < 0.895 ? events[5] : events[6]; // ponytail: ~9% у новых против ~18% у старых — окно зажато пинами харнеса; равные веса только после переписки пинов
+    return events[Math.floor(r * 5)];
 }
 function rerollDailyEvent() { // #48: переролл события дня, 1/день, 50💰 — флаг дня в localStorage (в сейв не пишем)
     if (!dailyEvent) return;
@@ -2920,10 +3092,10 @@ var gapDays = Math.max(1, daysBetween(_prevDay, todayKey));
 if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7 (ADR §5: кап 7 суток)
 var _isBackfill = gapDays > 1;
         // Ежедневное событие: ролл ДО тиков дня — Кузнец/Ярмарка/Духи действуют в свой день
-        var _events = buildDailyEvents();
-        var ev = _events[Math.floor(Math.random() * _events.length)];
+        var ev = rollDailyEvent();
         dailyEvent = ev;
         if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); goldGain(bonus, 'caravan'); }
+        if (ev.id === 'wanderer' && !_isBackfill) { HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + 1); goldGain(30, 'wanderer'); } // #41
         if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
         if (ev.id === 'smith') {
             var _pt = Object.keys(hirePool).reduce(function(a, k) { return a + (hirePool[k] || 0); }, 0);
@@ -2980,6 +3152,7 @@ showToast('🗓 Новая неделя', 'Путь продолжается', '
 recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
 runWeeklySiege();
 siege.wkSkips = 0; siege.wkTaskFails = 0;
+siege.retriedThisWeek = false; // #95: контрштурм доступен снова
 setTimeout(function() { enqueueModal(showWeeklyReport); }, 2000);
 }
 FORGED.forEach(c => {
@@ -3031,6 +3204,7 @@ saveSoon();
 var lastNotifDay = getMSKDayKey();
 setInterval(function() {
 checkDailyReset(); checkBloodOath();
+sweepExpiredPomodoros(); // #65: награда/снятие истёкших таймеров и тик обратного отсчёта
 var dayKey = getMSKDayKey();
 if (dayKey !== lastNotifDay) { lastNotifDay = dayKey; scheduleNotifs(); }
 }, 60 * 1000);
@@ -3470,7 +3644,7 @@ TASKS = []; taskIdCounter = 1;
 GOALS = []; goalIdCounter = 1;
 strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false };
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();
 xpHistory = []; bloodOath = null;
@@ -3492,7 +3666,7 @@ HERO.lastSessionAt = Date.now(); HERO.dailyUniqueStats = {}; HERO.cardHistory = 
 Object.keys(STATS).forEach(function(k) { STATS[k].value = 3; STATS[k].attributePoints = 0; });
 strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0 };
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false };
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 TASKS = []; taskIdCounter = 1;
 dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();
@@ -3512,6 +3686,7 @@ showToast('🔄 Новая игра', 'Карточки сохранены. Пр
 ensureStrongholdState();
 if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [], progress: {} };
 loadGameState();
+checkCapturedRecovery(); // #49: следы потерянных крепостей — сразу после загрузки
 checkDailyReset();
 checkBloodOath();
 HERO.xpToNext = getXpToNext(HERO.level);
@@ -3523,6 +3698,7 @@ renderStrongholds();
 updateStrongholdProgress();
 renderCards();
 renderDashboard();
+sweepExpiredPomodoros();
 importFromHash();
 window.__tgReady = function(){ try{ var tg=window.Telegram&&Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); applyTelegramTheme(tg); } }catch(e){} };
 function applyTelegramTheme(tg) { // QA1-M1: themeParams → CSS-переменные (только light; тёмная схема — дефолт)

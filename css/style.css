@@ -1217,3 +1217,9 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 /* QA1-M5: переполнение нижней навигации скроллится по горизонтали (zoom 200/300%) */
 .bottom-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .bottom-nav::-webkit-scrollbar { display: none; }
+
+/* Волна 2: чипы дашборда (праздник #8 / помодоро #65 / дневная цель #71) */
+.dash-chip { background: rgba(212, 165, 116, 0.08); border: 1px solid var(--border); border-radius: 8px; padding: 2px 8px; font-size: 12px; }
+.dash-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Волна 2 #55: портрет героя поверх аватара (центр #heroAvatar) */
+.hero-path { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 64px; line-height: 1; z-index: 2; pointer-events: none; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
