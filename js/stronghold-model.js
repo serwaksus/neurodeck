@@ -39,18 +39,41 @@
         return p;
     }
 
-    function armyPower(units) {
-        return stackPower(units && typeof units === 'object' && units.units ? units.units : units);
+    // Г1-1: число разных тиров с count>0 (смешанный состав)
+    function distinctTierCount(stacks) {
+        var n = 0;
+        if (Array.isArray(stacks)) {
+            stacks.forEach(function(s) {
+                if (!s || typeof s !== 'object') return;
+                if (Number(s.count) > 0) n++;
+            });
+        } else if (stacks && typeof stacks === 'object') {
+            TIER_KEYS.forEach(function(t) {
+                if (Number(stacks[t]) > 0) n++;
+            });
+        }
+        return n;
     }
 
-    // garDef (SPEC §5): Итого_обороны + Σ оборонных построек + round(гарнизонPower × (1 + 0.02 × end))
+    // Г1-1: состав армии — ≥3 разных тиров с count>0 → ×1.08 (диверсификация)
+    function armyPower(units) {
+        var src = units && typeof units === 'object' && units.units ? units.units : units;
+        var p = stackPower(src);
+        if (distinctTierCount(src) >= 3) p = Math.round(p * 1.08);
+        return p;
+    }
+
+    // garDef (SPEC §5): Итого_обороны + Σ оборонных построек + round(гарнизонPower × (1 + 0.02 × end));
+    // Г1-1: mono-гарнизон (ровно 1 тир с count>0) → гарнизонная часть ×1.15 (только ОБОРОНА, атака не трогается)
     function defensePower(stronghold, garrison, end, defenseBonus) {
         if (!stronghold || typeof stronghold !== 'object') return 0;
         var base = Number(stronghold.total);
         if (!isFinite(base)) base = (Number(stronghold.gar) || 0) + (Number(stronghold.def) || 0);
         var e = Number(end); if (!isFinite(e) || e < 0) e = 0;
         var bonus = Number(defenseBonus); if (!isFinite(bonus) || bonus < 0) bonus = 0;
-        return Math.round(base) + Math.round(bonus) + Math.round(stackPower(garrison) * (1 + 0.02 * e));
+        var gp = stackPower(garrison);
+        if (distinctTierCount(garrison) === 1) gp = Math.round(gp * 1.15);
+        return Math.round(base) + Math.round(bonus) + Math.round(gp * (1 + 0.02 * e));
     }
 
     // SPEC §4: победа при ratio > 1; attrition = clamp(0.30/ratio; 0.08; 0.30) × (1 − min(0.50; 0.01×agi)) × (П2 ? 0.8 : 1);
@@ -71,6 +94,8 @@
             var rand = typeof opts.rand === 'function' ? opts.rand : Math.random;
             attritionPct = (10 + rand() * 20) / 100;
         }
+        var am = Number(opts.attritionMult); // Г1-2: veteran attrition ×0.7 (обе ветви)
+        if (isFinite(am) && am > 0 && am !== 1) attritionPct = Math.max(0.01, Math.min(3, attritionPct * am));
         return { win: win, ratio: ratio, attritionPct: attritionPct };
     }
 
@@ -108,6 +133,9 @@
             var d = defs[id];
             if (d && typeof d.upkeep === 'number' && isFinite(d.upkeep)) upkeep += d.upkeep;
         });
+        var upkMult = Number(opts.upkeepMult); // Г1-2: доктрина upkeep −20% (только вниз, 0<m≤1)
+        if (!isFinite(upkMult) || upkMult <= 0 || upkMult > 1) upkMult = 1;
+        upkeep = Math.round(upkeep * upkMult);
         var paid = gold >= upkeep;
         var out = {};
         Object.keys(src).forEach(function(id) {

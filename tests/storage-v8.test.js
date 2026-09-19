@@ -242,12 +242,23 @@ test('armyPower: Σ count×сила, обе формы входа, отрица�
 });
 
 test('defensePower: SPEC §4 — тренировочные нейтралы sh01 (gar 3, def 2, total 5)', () => {
-    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], [{ tier: 't1', count: 10 }], 25, 0), 35);
-    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], { t1: 10 }, undefined, 0), 25);
+    // Г1-1 (осознанный ре-пин): mono-гарнизон ×1.15 — 5 + round(round(20×1.15)×1.5) = 40; {t1:10},end 0 → 5+23 = 28
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], [{ tier: 't1', count: 10 }], 25, 0), 40);
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[0], { t1: 10 }, undefined, 0), 28);
     assert.equal(M.defensePower(DATA.STRONGHOLDS[0], [], 0, 60), 65, '+ оборонные постройки');
     assert.equal(M.defensePower({ gar: 10, def: 5 }, [], 0, 0), 15, 'fallback gar+def');
     assert.equal(M.defensePower(null, [], 0, 0), 0);
     assert.equal(M.defensePower(DATA.STRONGHOLDS[0], 'junk', 'junk', 'junk'), 5, 'мусор → безопасные 0');
+});
+
+test('Г1-1 состав армии: ≥3 тиров ×1.08 атака, mono-гарнизон ×1.15 оборона, 2 тира нейтраль', () => {
+    assert.equal(M.armyPower({ t1: 1, t2: 1, t3: 1 }), 26, '24 × 1.08 — диверсификация');
+    assert.equal(M.armyPower({ t1: 10, t3: 5 }), 100, '2 тира — нейтраль');
+    assert.equal(M.armyPower({ t1: 10 }), 20, '1 тир — нейтраль');
+    assert.equal(M.armyPower({ units: { t2: 3, t7: 1 } }), 1418, '2 тира — пин не сдвинулся');
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[2], [{ tier: 't2', count: 10 }], 0, 0), 109, 'mono-гарнизон: 40 + round(60×1.15)');
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[2], [{ tier: 't2', count: 5 }, { tier: 't3', count: 2 }], 0, 0), 102, '2 тира в гарнизоне — нейтраль');
+    assert.equal(M.defensePower(DATA.STRONGHOLDS[2], [], 0, 0), 40, 'пустой гарнизон — без mono');
 });
 
 test('assaultOutcome: победа/attrition по SPEC §4 (пример 22 против 15 ≈ 20.4%)', () => {

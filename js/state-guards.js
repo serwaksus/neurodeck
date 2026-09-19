@@ -122,6 +122,17 @@
             cardHistory: (hero.cardHistory && typeof hero.cardHistory === 'object') ? hero.cardHistory : {},
             lastWeeklyReport: hero.lastWeeklyReport || null,
             weeklyPrev: sanitizeWeeklyPrev(hero.weeklyPrev), // #42: снапшот прошлой недели для дельт
+            storm: sanitizeStorm(hero.storm), // Г1-5: коррупционная буря сезона
+            warlordAhead: hero.warlordAhead === true, // Г1-6: обгон воеводы
+            doctrines: (function(d) { // Г1-2: whitelist 9 id доктрин по тирам, иначе null
+                if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
+                function pick(v, ids) { return (ids.indexOf(v) !== -1) ? v : null; }
+                return {
+                    t1: pick(d.t1, ['tax', 'upkeep', 'atk']),
+                    t2: pick(d.t2, ['growth', 'lore', 'fort']),
+                    t3: pick(d.t3, ['crown', 'veteran', 'engine'])
+                };
+            })(hero.doctrines),
             totem: (hero.totem && typeof hero.totem === 'object' && !Array.isArray(hero.totem)) ? { // волна 3 Ф2: тотемное животное
                 id: (['wolf', 'owl', 'bear'].indexOf(hero.totem.id) !== -1 ? hero.totem.id : null),
                 chosenDayKey: safeString(hero.totem.chosenDayKey, '', 10),
@@ -131,6 +142,16 @@
                 floor: Math.round(clampNumber(hero.tower.floor, 0, 50, 0)),
                 lastFloorDay: safeString(hero.tower.lastFloorDay, '', 10)
             } : null
+        };
+    }
+
+    function sanitizeStorm(input) { // Г1-5: {num, regionIdx 0-19, dueDayKey, paid} иначе null
+        if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+        return {
+            num: Math.round(clampNumber(input.num, 0, 1e6, 0)),
+            regionIdx: Math.round(clampNumber(input.regionIdx, 0, 19, 0)),
+            dueDayKey: safeString(input.dueDayKey, '', 10),
+            paid: input.paid === true
         };
     }
 
@@ -379,6 +400,7 @@
         sanitizeArmy: sanitizeArmy,
         sanitizeSiege: sanitizeSiege,
         sanitizeHirePool: sanitizeHirePool,
-        sanitizeSeason: sanitizeSeason
+        sanitizeSeason: sanitizeSeason,
+        sanitizeStorm: sanitizeStorm // Г1-5
     };
 });

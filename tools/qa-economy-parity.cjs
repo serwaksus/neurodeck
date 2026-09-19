@@ -133,6 +133,15 @@ async function main() {
     }`);
     l1('1b-пути', '20/20: маршрутов 19, кап бонуса +38%', '19|0.38', capBonus.routes + '|' + capBonus.bonus, 'BALANCE круг 6');
     l1('1b-доход', '20/20: доход = round(8352×1.38) = 11526💰', 11526, capBonus.income, 'пин круг 3: Σ налогов 8352');
+    // Г1-2 контроль: с короной III казна = round(11526×1.10) — авторизованный ре-пин (руководитель Г1)
+    const capCrown = await ev(`() => {
+      __qaReset(); for (let i = 0; i < 20; i++) strongholds[i].captured = true;
+      HERO.doctrines = { t1: null, t2: null, t3: 'crown' };
+      const income = shIncomePerDay();
+      HERO.doctrines = { t1: null, t2: null, t3: null };
+      return income;
+    }`);
+    l1('1b-доход', '20/20 + корона III: доход = round(11526×1.10) = 12679💰', 12679, capCrown, 'Г1-2: доктрина crown +10% ВСЁ золото (тик и доход)');
 
     // --- 1c. siegePower: сетка параметров + продуктовый runWeeklySiege ---
     for (const wk of [1, 2, 5, 12, 13, 14, 20]) for (const cap of [1, 3, 6, 10, 20]) for (const wr of [0, 5, 10, 15]) {

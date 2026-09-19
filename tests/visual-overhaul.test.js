@@ -87,8 +87,9 @@ test('Фаза F: catClass категории zh/ec/df/sp + builtTileHtml img/st
   assert.ok(builtHtml.includes('sh-stage">2'), 'stageBadge');
   assert.ok(builtHtml.includes('содержание 2'), 'upkeep');
 
-  const mkBuy = new Function('BUILDINGS', 'shSpriteImg', 'buildingEffectText', catSrc + extractFn('buyTileHtml') + '\nreturn buyTileHtml;')(
-    { wall: { name: 'Стена' } }, sprite, () => 'эффект'
+  const CAT = { wall: { name: 'Стена' }, fence: { cost: 100 } };
+  const mkBuy = new Function('BUILDINGS', 'shSpriteImg', 'buildingEffectText', 'buildCostOf', catSrc + extractFn('buyTileHtml') + '\nreturn buyTileHtml;')(
+    CAT, sprite, () => 'эффект', (id) => CAT[id].cost // Г1-2: стаб цены (без доктрины = база, пин 100 сохранён)
   );
   const lockedHtml = mkBuy('3', 'fence', { cat: 'defense', name: 'Забор', icon: '🚧', cost: 100, upkeep: 1, req: 'wall' }, false, false, 'нужна: Стена');
   assert.ok(lockedHtml.includes('sh-tile buy cat-df locked'), 'locked + категория');
