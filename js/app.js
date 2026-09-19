@@ -2374,16 +2374,18 @@ html += '<defs>' +
 '<radialGradient id="kmVin" cx="0.5" cy="0.42" r="0.78"><stop offset="0.55" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(0,0,0,0.5)"/></radialGradient>' +
 '<clipPath id="kmClip"><path d="' + HEXC + '"/></clipPath>' +
 '<filter id="kmShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#000000" flood-opacity="0.55"/></filter>' +
+'<linearGradient id="kmBevel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(255,240,200,0.55)"/><stop offset="0.35" stop-color="rgba(255,240,200,0.08)"/><stop offset="1" stop-color="rgba(0,0,0,0.3)"/></linearGradient>' +
 '</defs>';
 html += '<rect x="0" y="0" width="390" height="' + H + '" fill="url(#kmSky)"/>';
-for (var b = 0; b < 6; b++) {
+for (var b = 0; b < 10; b++) {
 var bx = Math.round(40 + prand(b * 7 + 1) * 310), by = Math.round(TOP + 30 + prand(b * 13 + 5) * (h - 40)), br = Math.round(46 + prand(b * 3 + 2) * 52);
 html += '<ellipse cx="' + bx + '" cy="' + by + '" rx="' + br + '" ry="' + Math.round(br * 0.62) + '" fill="rgba(146,120,74,0.06)"/>';
 }
 html += '<rect x="5" y="5" width="380" height="' + (H - 10) + '" fill="none" stroke="rgba(212,165,116,0.35)" stroke-width="1"/>';
 html += '<rect x="9" y="9" width="372" height="' + (H - 18) + '" fill="none" stroke="rgba(0,0,0,0.65)" stroke-width="1"/>';
 html += '<g class="km-corner"><path d="M5 17 L5 5 L17 5"/><path d="M373 5 L385 5 L385 17"/><path d="M385 ' + (H - 17) + ' L385 ' + (H - 5) + ' L373 ' + (H - 5) + '"/><path d="M17 ' + (H - 5) + ' L5 ' + (H - 5) + ' L5 ' + (H - 17) + '"/></g>';
-html += '<g class="km-cartouche"><line x1="84" y1="30" x2="148" y2="30"/><text x="195" y="34" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="242" y1="30" x2="306" y2="30"/></g>';
+html += '<g class="km-cartouche"><line x1="84" y1="30" x2="148" y2="30"/><text class="km-dia" x="78" y="33" text-anchor="middle">◆</text><text x="195" y="34" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="242" y1="30" x2="306" y2="30"/><text class="km-dia" x="312" y="33" text-anchor="middle">◆</text></g>';
+html += '<g class="km-compass" transform="translate(46,' + (H - 54) + ')" pointer-events="none"><circle r="15" class="km-compass-ring"/><path class="km-star" d="M0 -13 L2.6 -2.6 L13 0 L2.6 2.6 L0 13 L-2.6 2.6 L-13 0 L-2.6 -2.6 Z"/><circle r="2" class="km-compass-hub"/><text class="km-compass-n" y="-19" text-anchor="middle">N</text></g>';
 var g = '<g transform="translate(0,' + TOP + ')">';
 for (var di = 0; di < STRONGHOLDS.length; di++) {
 var px = Math.round(30 + prand(di * 31 + 11) * 330), py = Math.round(26 + prand(di * 17 + 3) * (h - 44));
@@ -2407,6 +2409,7 @@ for (var i = 1; i < STRONGHOLDS.length; i++) {
 var a = mapNodePos(i - 1), b2 = mapNodePos(i);
 var dpath = 'M' + a.x + ' ' + a.y + ' C' + Math.round((a.x + b2.x) / 2) + ' ' + a.y + ', ' + Math.round((a.x + b2.x) / 2) + ' ' + b2.y + ', ' + b2.x + ' ' + b2.y;
 segs += '<path class="km-road-case" d="' + dpath + '"/>';
+if (strongholds[i].captured) segs += '<path class="km-road-glow" d="' + dpath + '"/>';
 segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') + '" d="' + dpath + '"/>';
 }
 g += segs;
@@ -2418,10 +2421,12 @@ var stage = s.captured ? shWorstStage(n) : null;
 var frac = stage === 'ruin' ? 1 : (stage === 'worn' ? 0.5 : 0);
 var builtN = 0; var bl = strongholds[n].buildings || {};
 for (var bk in bl) if (bl[bk] && bl[bk].built) builtN++;
-var node = '<g class="km-node ' + state + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ')" filter="url(#kmShadow)">';
+var ns = (state === 'km-front' || state === 'km-siege') ? 1.12 : (state === 'km-locked' ? 0.94 : 1);
+var node = '<g class="km-node ' + state + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ') scale(' + ns + ')" filter="url(#kmShadow)">';
 node += '<title>' + d.name + ' · налог ' + d.tax + '💰 · постройки ' + builtN + '/' + d.slots + ' · оборона ' + (d.gar + d.def) + (frac > 0 ? (frac === 1 ? ' · руина' : ' · обветшало') : '') + '</title>';
 node += '<path class="km-bg" d="' + HEX + '"/>';
 node += '<image href="img/tract/region0' + d.prov + '.png" x="-19" y="-19" width="38" height="38" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" onerror="this.style.display=\'none\'"/>';
+node += '<path class="km-bevel" d="' + HEX + '"/>';
 if (frac > 0) node += '<path class="km-corrupt" d="' + HEXI + '" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100"/>';
 node += '<path class="km-ring" d="' + HEX + '"/>';
 node += '<g class="km-emoji"><circle cx="13" cy="13" r="8"/><text x="13" y="16.5" text-anchor="middle">' + d.icon + '</text></g>';

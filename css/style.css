@@ -1406,9 +1406,19 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.16); stroke: none; }
 /* дороги: тёмный корпус + золотое полотно (захвачено) / пунктир (заперто) */
 .km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 7; stroke-linecap: round; }
+.km-road-glow { fill: none; stroke: rgba(251, 191, 36, 0.16); stroke-width: 9; stroke-linecap: round; }
 .km-connector { fill: none; stroke: rgba(190, 170, 130, 0.22); stroke-width: 2; stroke-dasharray: 1 7; stroke-linecap: round; }
 .km-connector.owned { stroke: url(#kmRoad); stroke-width: 3; stroke-dasharray: 10 6; animation: kmMarch 1.6s linear infinite; }
 @keyframes kmMarch { to { stroke-dashoffset: -16; } }
+/* щиты: внутренний бевел (свет сверху), картуш/компас/декор */
+.km-bevel { fill: none; stroke: url(#kmBevel); stroke-width: 1.5; pointer-events: none; }
+.km-dia { fill: var(--gold-3); font-size: 8px; }
+.km-compass { opacity: 0.9; }
+.km-compass-ring { fill: rgba(10, 8, 6, 0.5); stroke: rgba(212, 165, 116, 0.35); stroke-width: 1; }
+.km-compass-hub { fill: rgba(212, 165, 116, 0.65); }
+.km-star { fill: rgba(212, 165, 116, 0.42); }
+.km-compass-n { fill: rgba(212, 165, 116, 0.65); font-size: 9px; font-family: Georgia, serif; }
+:root.perf-eco .km-connector.owned { animation: none !important; }
 /* узлы-щиты */
 .km-node { cursor: pointer; }
 .km-node .km-bg { fill: #141009; stroke: none; }
