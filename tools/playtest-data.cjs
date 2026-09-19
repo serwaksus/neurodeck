@@ -1,11 +1,11 @@
 // NeuroDeck QA: QA-Data — целостность данных (сейвы v9, миграции v7→v10, 5 слоёв защиты, экспорт/импорт, мульти-вкладка, квота, вайп).
 // Роль: .opencode/agent/qa-data.md. Каркас — tools/playtest-acceptance.cjs (http-сервер, step/shot, ловушка ошибок консоли).
 // Продукт НЕ меняется: только чтение состояния через прод-функции (saveGameState/applySyncData/exportJson/...).
-const { chromium } = require('/root/neurodeck/node_modules/@playwright/test');
+const { chromium } = require('@playwright/test');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const ROOT = '/root/neurodeck';
+const ROOT = require('path').join(__dirname, '..');
 const OUT = '/tmp/opencode/qa-data';
 fs.mkdirSync(OUT, { recursive: true });
 const PORT = 8820; // инфра-протокол qa-data.md

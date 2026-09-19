@@ -2,12 +2,12 @@
 // Слой 1: формула-паритет живых функций против stronghold-model.js / stronghold-data.js / SPEC+BALANCE пин.
 // Слой 2: кампания 50 дней через checkDailyReset (lastDayReset = вчера), Math.random пин 0.99 («Тихий день»).
 // Продукт НЕ меняется. Артефакты: /tmp/opencode/qa-economy/
-const { chromium } = require('/root/neurodeck/node_modules/@playwright/test');
+const { chromium } = require('@playwright/test');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = '/root/neurodeck';
+const ROOT = require('path').join(__dirname, '..');
 const OUT = '/tmp/opencode/qa-economy';
 const PORT = 8830;
 const URL_BASE = 'http://localhost:' + PORT + '/';

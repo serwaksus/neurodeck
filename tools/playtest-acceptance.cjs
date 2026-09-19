@@ -1,11 +1,11 @@
 // NeuroDeck QA: «Твердыни v2» — ФИНАЛЬНАЯ ПРИЁМКА (Фаза 5), сценарий «месяц жизни королевства».
 // Роль: .opencode/agent/qa.md. Каркас — tools/playtest.cjs (http-сервер, step/shot, ловушка ошибок консоли).
 // Числа/формулы — ТОЛЬКО через stronghold-model (SM) и StrongholdData; баги фиксируются, НЕ чинятся.
-const { chromium } = require('/root/neurodeck/node_modules/@playwright/test');
+const { chromium } = require('@playwright/test');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const ROOT = '/root/neurodeck';
+const ROOT = require('path').join(__dirname, '..');
 const OUT = '/tmp/opencode/qa-strongholds';
 fs.mkdirSync(OUT, { recursive: true });
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };

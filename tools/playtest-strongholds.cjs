@@ -1,10 +1,10 @@
 // NeuroDeck QA: «Твердыни v2» — этап 3b (UI, дневные тики, воскресная осада, коррапшн).
 // Каркас — tools/playtest.cjs (реальные клики + машина времени).
-const { chromium } = require('/root/neurodeck/node_modules/@playwright/test');
+const { chromium } = require('@playwright/test');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const ROOT = '/root/neurodeck';
+const ROOT = require('path').join(__dirname, '..');
 const OUT = '/tmp/opencode/playtest-strongholds';
 fs.mkdirSync(OUT, { recursive: true });
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };

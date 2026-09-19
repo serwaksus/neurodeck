@@ -2,11 +2,11 @@
 // трофеи, торговые пути, сезоны) + сквозной сценарий нового игрока.
 // Каркас — tools/playtest-acceptance.cjs (http-сервер, step/shot, ловушка ошибок консоли).
 // Формулы — только через stronghold-model (SM)/StrongholdData; продукт-баги фиксируются, НЕ чинятся.
-const { chromium } = require('/root/neurodeck/node_modules/@playwright/test');
+const { chromium } = require('@playwright/test');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const ROOT = '/root/neurodeck';
+const ROOT = require('path').join(__dirname, '..');
 const OUT = '/tmp/opencode/qa-full';
 fs.mkdirSync(OUT, { recursive: true });
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };

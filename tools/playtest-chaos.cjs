@@ -1,10 +1,10 @@
 // NeuroDeck QA-Chaos — разрушитель. Роль: .opencode/agent/qa-chaos.md. Каркас — tools/playtest-acceptance.cjs.
 // Продукт НЕ меняется: краш/зависание = находка (P1), фиксируется, не чинится. Порт 8840.
-const { chromium } = require('/root/neurodeck/node_modules/@playwright/test');
+const { chromium } = require('@playwright/test');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const ROOT = '/root/neurodeck';
+const ROOT = require('path').join(__dirname, '..');
 const OUT = '/tmp/opencode/qa-chaos';
 fs.mkdirSync(OUT, { recursive: true });
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
