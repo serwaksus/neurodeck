@@ -90,7 +90,7 @@ test('wave2 #8: holidayBonus — 01-01 tickMult 1.5 / 10-31 ghostsFree / 09-17 r
 test('wave2 #71: dailyGoldGoal — captured 0→50 / 10→150 / 20→200 (кап)', () => {
     const goal = (captured) => buildIn({
         decls: [extractFn('dailyGoldGoal')],
-        stubs: { DAILY_GOLD_BASE: 50, capturedCount: () => captured },
+        stubs: { DAILY_GOLD_BASE: 50, capturedCount: () => captured, HERO: { ascension: 0 } },
         body: 'dailyGoldGoal()'
     });
     assert.equal(goal(0), 50);

@@ -52,5 +52,52 @@ t5: { icon: '🐎', name: 'Всадник Пепла',  cost: 160,  power: 140, 
 t6: { icon: '🌿', name: 'Хранитель Терна', cost: 800,  power: 450,  growth: 6 },
 t7: { icon: '👁', name: 'Архонт Угасания', cost: 1800, power: 1400, growth: 4 }
 };
-if (typeof window !== 'undefined') window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS };
-if (typeof module !== 'undefined' && module.exports) module.exports = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS };
+// ===================== Г2-1: ПОВЕРЕННЫЕ ТЬМЫ — боссы провинций (каталог рядом с STRONGHOLDS) =====================
+// Боссы нумеруются I..XI и выстраиваются очередью по провинциям (в данных 4 провинции × 5 твердынь):
+// I–III → пров.1, IV–VI → пров.2, VII–IX → пров.3, X–XI → пров.4. Босс доступен, когда провинция собрана.
+// Эскалация целей к XI: bossEscalation(num) = 1 + 0.05×(num−1) → ×1.5 (app.js).
+// Фазы: {type:'cards',n} — N карт за день; {type:'quests'} — все дневные квесты done;
+// {type:'gold',mult} — заработать mult×dailyGoldGoal сегодня; {type:'streak'} — ≥1 карта (стрик не рвётся).
+var BOSSES = [
+{ num: 1,  prov: 1, name: 'Гнилоух, Пастух Чумных Стад', icon: '🐀', lore: 'Стада мора текут сквозь границы, и пастух свистит им на гнилом свистке.',
+  phases: [ { type: 'cards', n: 3 }, { type: 'streak' }, { type: 'gold', mult: 2 } ],
+  artifact: { kind: 'tax', name: 'Пастуший Посох', desc: '+5% налог провинции I' } },
+{ num: 2,  prov: 1, name: 'Мгла-над-Топью', icon: '🐸', lore: 'Топь дышит, когда молчит король. Мгла считает вдохи путников.',
+  phases: [ { type: 'streak' }, { type: 'cards', n: 3 }, { type: 'gold', mult: 2 } ],
+  artifact: { kind: 'attrition', name: 'Болотный Фонарь', desc: '−10% потерь при штурмах' } },
+{ num: 3,  prov: 1, name: 'Кузень Пепельных Уз', icon: '⚒', lore: 'Каждый узел на его цепи — чья-то клятва, откованная насильно.',
+  phases: [ { type: 'cards', n: 4 }, { type: 'quests' }, { type: 'streak' } ],
+  artifact: { kind: 'def', name: 'Пепельные Окосты', desc: '+5% обороны гарнизонов' } },
+{ num: 4,  prov: 2, name: 'Барон Соляных Руд', icon: '⛏', lore: 'Он платит солью, и соль разъедает всё, кроме долга.',
+  phases: [ { type: 'gold', mult: 2 }, { type: 'cards', n: 3 }, { type: 'streak' } ],
+  artifact: { kind: 'tax', name: 'Соляной Скипетр', desc: '+5% налог провинции II' } },
+{ num: 5,  prov: 2, name: 'Вдова Медных Копей', icon: '🕸', lore: 'Копи закрылись, но паутина в шахтах всё ещё натянута и ждёт.',
+  phases: [ { type: 'quests' }, { type: 'cards', n: 3 }, { type: 'gold', mult: 2 } ],
+  artifact: { kind: 'attrition', name: 'Медная Пряжа', desc: '−10% потерь при штурмах' } },
+{ num: 6,  prov: 2, name: 'Жнец Житниц', icon: '🌾', lore: 'Урожай поспел везде, где он прошёл. Жалобы некому подавать.',
+  phases: [ { type: 'streak' }, { type: 'quests' }, { type: 'cards', n: 4 } ],
+  artifact: { kind: 'def', name: 'Серп Жатв', desc: '+5% обороны гарнизонов' } },
+{ num: 7,  prov: 3, name: 'Стадо-без-Пастуха', icon: '🐂', lore: 'Тысяча рогов на горизонте. Ни одного пастуха. Беги.',
+  phases: [ { type: 'cards', n: 4 }, { type: 'gold', mult: 2 }, { type: 'streak' } ],
+  artifact: { kind: 'tax', name: 'Ярмо Стад', desc: '+5% налог провинции III' } },
+{ num: 8,  prov: 3, name: 'Прилив Изгнанных', icon: '🌊', lore: 'Волна из тех, кого выгнали. Она возвращается дважды в день.',
+  phases: [ { type: 'quests' }, { type: 'streak' }, { type: 'cards', n: 4 } ],
+  artifact: { kind: 'attrition', name: 'Ракушка Прилива', desc: '−10% потерь при штурмах' } },
+{ num: 9,  prov: 3, name: 'Хор Полых Колоколов', icon: '🔔', lore: 'Колокола звонят без звонаря, и каждый удар — по имени.',
+  phases: [ { type: 'gold', mult: 3 }, { type: 'cards', n: 3 }, { type: 'streak' } ],
+  artifact: { kind: 'xp', name: 'Язык Колокола', desc: '+10% ко всему опыту' } },
+{ num: 10, prov: 4, name: 'Морозный Кенти', icon: '❄', lore: 'Улыбается на морозе. Не моргает. Никогда не моргает.',
+  phases: [ { type: 'cards', n: 4 }, { type: 'quests' }, { type: 'gold', mult: 3 } ],
+  artifact: { kind: 'tax', name: 'Сосулечный Клык', desc: '+5% налог провинции IV' } },
+{ num: 11, prov: 4, name: 'Царь-Облупленный', icon: '👑', lore: 'Корона держится на честном слове, а слово он уже дал Тьме.',
+  phases: [ { type: 'gold', mult: 3 }, { type: 'quests' }, { type: 'cards', n: 5 } ],
+  artifact: { kind: 'cost', name: 'Облупленная Корона', desc: '−15% цена построек' } }
+];
+// Артефакт-таблица (11 шт): 4× tax / 3× attrition / 2× def / 1× xp / 1× cost — пассив через bossArtifactMult(kind, prov)
+// Г2-фикс: имя ARTIFACTS занято инвентарными артефактами (app.js:1040) — глобальная коллизия убивала app.js целиком
+var BOSS_ARTIFACTS = BOSSES.map(function(b, i) {
+    return { num: b.num, prov: b.prov, kind: b.artifact.kind, name: b.artifact.name, desc: b.artifact.desc, idx: i };
+});
+var BOSS_KINDS = ['tax', 'attrition', 'def', 'xp', 'cost'];
+if (typeof window !== 'undefined') window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS };
+if (typeof module !== 'undefined' && module.exports) module.exports = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS };

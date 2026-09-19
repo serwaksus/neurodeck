@@ -145,7 +145,8 @@ test('sanitizeHero: CRITICAL #1 — unknown fields dropped, no Object.assign lea
                 'consecutivePerfectDays','streakShields','dailyCompletions','dailySkips',
                 'lastSessionAt','dailyUniqueStats','cardHistory',
                 'lastWeeklyReport','dayStreak','streakMilestones','lastActiveDay',
-                'weeklyPrev','totem','tower','doctrines','storm','warlordAhead']; // streakShields: QA3-M1; dayStreak/streakMilestones/lastActiveDay: волна 1 фича #19; weeklyPrev: волна 2 фича #42; totem/tower: волна 3; doctrines: Г1-2 whitelist; storm: Г1-5; warlordAhead: Г1-6
+                'weeklyPrev','totem','tower','doctrines','storm','warlordAhead','bosses','scouts',
+                'combosFound','dayStatCounts','combosToday','comboDayXp','ascension']; // streakShields: QA3-M1; dayStreak/streakMilestones/lastActiveDay: волна 1 фича #19; weeklyPrev: волна 2 фича #42; totem/tower: волна 3; doctrines: Г1-2 whitelist; storm: Г1-5; warlordAhead: Г1-6; bosses: Г2-1 whitelist; scouts: Г2-3 whitelist; combosFound/dayStatCounts/combosToday/comboDayXp: Г2-4 whitelist; ascension: Г2-5 Вознесение
   Object.keys(out).forEach(function(k) {
     assert.ok(allowed.indexOf(k) !== -1, 'unexpected key leaked: ' + k);
   });

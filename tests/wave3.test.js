@@ -48,7 +48,7 @@ test('wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка
 // ----------------------------------------------------------------
 test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio', () => {
     const p = buildIn({
-        decls: [extractFn('siegeWrathNow'), extractFn('siegeAlarmVerdict'), extractFn('siegeAlarmPreview')],
+        decls: [extractFn('siegeWrathNow'), extractFn('siegeAlarmVerdict'), extractFn('weatherOf'), extractFn('weatherNorth'), extractFn('weatherSouth'), extractFn('weatherFog'), extractFn('weatherSeasonWeek'), extractFn('scoutFresh'), extractFn('daysBetween'), extractFn('siegeAlarmPreview')],
         stubs: {
             SM: {
                 siegePower: (front, week, cap, wrath) => Math.round(front * 0.6 * (1 + 0.12 * wrath)),
@@ -65,7 +65,11 @@ test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гар�
             siege: { week: 2, wkSkips: 1, wkTaskFails: 0 },
             capturedCount: () => 2,
             countGhostTasks: () => 0,
-            lastCapturedIdx: () => 0
+            lastCapturedIdx: () => 0,
+            HERO: { scouts: null },
+            ascEnemyMult: () => 1,
+            ensureSeason: () => ({ num: 1 }),
+            getMSKDayKey: () => '2026-01-01'
         },
         body: 'siegeAlarmPreview()'
     });
@@ -272,15 +276,15 @@ test('wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, по
 });
 
 // ----------------------------------------------------------------
-// Ф3: контракты интеграции + кэш v68
+// Ф3: контракты интеграции + кэш v69
 // ----------------------------------------------------------------
-test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html ?v=68 ×8', () => {
+test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html ?v=69 ×8', () => {
     assert.ok(extractFn('renderStrongholds').includes('renderTowerCard(cap)'), 'renderStrongholds зовёт карточку башни');
     assert.ok(app.includes("case 'tower-climb': requestTowerClimb()"), 'data-action-паттерн tower-climb');
     assert.ok(app.includes('TOWER_MAX_FLOOR = 50'), 'кап этажа 50');
     assert.ok(cssSource().includes('.tower-card'), 'style.css: класс .tower-card существует');
     const html = htmlSource();
-    assert.equal((html.match(/v=68/g) || []).length, 8, 'index.html: 8 вхождений ?v=68');
+    assert.equal((html.match(/v=69/g) || []).length, 8, 'index.html: 8 вхождений ?v=69');
     assert.ok(!html.includes('?v=65'), 'v65 не остался');
     console.log('verified: css/style.css index.html PASS (wave3 contracts)');
 });
@@ -288,7 +292,7 @@ test('package.json: check:ui-скрипт верификации UI-ассето
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
-    assert.ok(htmlSource().includes('id="totemCard"') && (htmlSource().match(/v=68/g) || []).length === 8, 'index.html: PASS (totemCard + v68×8)');
+    assert.ok(htmlSource().includes('id="totemCard"') && (htmlSource().match(/v=69/g) || []).length === 8, 'index.html: PASS (totemCard + v69×8)');
     assert.ok(cssSource().includes('.tower-card') && cssSource().includes('.siege-alarm'), 'css/style.css: PASS (tower-card + siege-alarm)');
     console.log('index.html: PASS');
     console.log('css/style.css: PASS');

@@ -141,7 +141,44 @@
             tower: (hero.tower && typeof hero.tower === 'object' && !Array.isArray(hero.tower)) ? { // волна 3 Ф3: башня-марафон
                 floor: Math.round(clampNumber(hero.tower.floor, 0, 50, 0)),
                 lastFloorDay: safeString(hero.tower.lastFloorDay, '', 10)
-            } : null
+            } : null,
+            bosses: (function(bs) { // Г2-1: Поверенные Тьмы — whitelist-стиль doctrines/totem/tower
+                function bossNum(v) { return (Number.isInteger(v) && v >= 1 && v <= 11) ? v : null; }
+                if (!bs || typeof bs !== 'object' || Array.isArray(bs)) bs = {};
+                return {
+                    defeated: (Array.isArray(bs.defeated) ? bs.defeated : []).map(bossNum).filter(function(n, i, a) { return n !== null && a.indexOf(n) === i; }),
+                    activeNum: bossNum(bs.activeNum),
+                    phase: Math.round(clampNumber(bs.phase, 0, 2, 0)),
+                    attemptDay: safeString(bs.attemptDay, '', 10) || null,
+                    closedDay: safeString(bs.closedDay, '', 10) || null
+                };
+            })(hero.bosses),
+            scouts: (function(sc) { // Г2-3: лазутчик — {idx 0..19, readyDayKey} иначе null
+                if (!sc || typeof sc !== 'object' || Array.isArray(sc)) return null;
+                var idx = Math.round(clampNumber(sc.idx, 0, 19, -1));
+                var day = safeString(sc.readyDayKey, '', 10);
+                return (idx >= 0 && day) ? { idx: idx, readyDayKey: day } : null;
+            })(hero.scouts),
+            ascension: Math.max(0, Math.round(clampNumber(hero.ascension, 0, 999, 0))), // Г2-5: круг Вознесения (0..999)
+            combosFound: (Array.isArray(hero.combosFound) ? hero.combosFound : []).filter(function(id) { // Г2-4: гримуар связей
+                return (typeof id === 'string' && ['fortress', 'blades', 'axis', 'focus', 'harmony', 'triumvirate', 'vortex', 'dawn'].indexOf(id) !== -1);
+            }).filter(function(id, i, a) { return a.indexOf(id) === i; }),
+            dayStatCounts: (function(c) { // Г2-4: счётчик статов дня
+                var out = {};
+                if (c && typeof c === 'object' && !Array.isArray(c)) {
+                    Object.keys(c).forEach(function(k) { var v = Math.round(clampNumber(c[k], 0, 1000, 0)); if (v > 0) out[k] = v; });
+                }
+                return out;
+            })(hero.dayStatCounts),
+            combosToday: (function(t) { // Г2-4: сработавшие сегодня комбо (id → dayKey), ключи — только известные id
+                var ids = ['fortress', 'blades', 'axis', 'focus', 'harmony', 'triumvirate', 'vortex', 'dawn'];
+                var out = {};
+                if (t && typeof t === 'object' && !Array.isArray(t)) {
+                    Object.keys(t).forEach(function(k) { if (ids.indexOf(k) !== -1) out[k] = safeString(t[k], '', 10); });
+                }
+                return out;
+            })(hero.combosToday),
+            comboDayXp: (hero.comboDayXp === 1.1) ? 1.1 : null // Г2-4: Вихрь — единственное допустимое значение
         };
     }
 

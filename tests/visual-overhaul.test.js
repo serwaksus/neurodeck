@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { STRONGHOLDS } = require(path.join(__dirname, '..', 'js', 'stronghold-data.js'));
+const { STRONGHOLDS, BOSSES } = require(path.join(__dirname, '..', 'js', 'stronghold-data.js'));
 
 const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'style.css'), 'utf8');
@@ -21,14 +21,14 @@ function extractFn(name) {
 
 function withState(capturedN, front, siegeToday, stageOf) {
   const strongholds = STRONGHOLDS.map((_, i) => ({ captured: i < capturedN }));
-  const body = extractFn('mapNodePos') + '\n' + extractFn('kmStatusLabel') + '\n' + extractFn('kingdomMapHtml') + '\nreturn kingdomMapHtml;';
-  const fn = new Function('STRONGHOLDS', 'strongholds', 'frontIdx', 'daysToSiegeNow', 'shWorstStage', body);
-  return fn(STRONGHOLDS, strongholds, () => front, () => (siegeToday ? 0 : 3), stageOf || (() => 'ok')).bind(null, siegeToday);
+  const body = extractFn('weatherOf') + '\n' + extractFn('weatherNorth') + '\n' + extractFn('weatherSouth') + '\n' + extractFn('weatherSeasonWeek') + '\n' + extractFn('mapNodePos') + '\n' + extractFn('kmStatusLabel') + '\n' + extractFn('kingdomMapHtml') + '\nreturn kingdomMapHtml;';
+  const fn = new Function('STRONGHOLDS', 'strongholds', 'frontIdx', 'daysToSiegeNow', 'shWorstStage', 'bossActiveFor', 'BOSSES', 'ensureSeason', 'siege', body);
+  return fn(STRONGHOLDS, strongholds, () => front, () => (siegeToday ? 0 : 3), stageOf || (() => 'ok'), () => null, BOSSES, () => ({ num: 1, start: '2026-09-01' }), { week: 1 }).bind(null, siegeToday); // Г2-1: боссы в карту не мешают контрактам фазы E; Г2-2: погода сезона 1 недели 1 (пин-окно)
 }
 
 test('mapNodePos: детерминированная змейка 2 колонки, без хардкодов', () => {
   const body = extractFn('mapNodePos') + '\nreturn mapNodePos;';
-  const fn = new Function('STRONGHOLDS', 'strongholds', 'frontIdx', 'daysToSiegeNow', 'shWorstStage', body)(STRONGHOLDS, [], null, null, null);
+  const fn = new Function('STRONGHOLDS', 'strongholds', 'frontIdx', 'daysToSiegeNow', 'shWorstStage', 'bossActiveFor', body)(STRONGHOLDS, [], null, null, null, () => null);
   assert.deepEqual(fn(0), { x: 110, y: 44 });
   assert.deepEqual(fn(1), { x: 280, y: 44 });
   assert.deepEqual(fn(2), { x: 110, y: 108 });

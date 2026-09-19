@@ -147,9 +147,12 @@ case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
 case 'close-season-report': document.getElementById('seasonModal').classList.remove('show'); break;
 case 'throne-invest': investThrone(); break;
+case 'ascend': requestAscension(); break; // Г2-5: Вознесение
+case 'asc-doctrine': pickAscensionDoctrine(el.dataset.id); break; // Г2-5: выбор сохраняемой доктрины
 case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
 case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); hintOnce('shpanel', 'Жильё даёт недельный пул найма. Стройка занимает дни — планируй заранее.'); break;
 case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(currentShIdx); break;
+case 'boss-challenge': requestBossChallenge(parseInt(el.dataset.num)); break; // Г2-1: вызов босса провинции
 case 'sh-back': currentShIdx = null; renderStrongholds(); break;
 case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
 case 'sh-buy': buyBuilding(parseInt(el.dataset.idx), el.dataset.bid); break;
@@ -158,6 +161,7 @@ case 'treasury-info': showTreasuryBreakdown(); break;
 case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
 case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
 case 'counter-siege': requestCounterSiege(); break;
+case 'sh-scout': requestScout(parseInt(el.dataset.idx)); break; // Г2-3
 case 'storm-pay': stormPay(); break; // Г1-5
 case 'totem-choose': requestTotem(el.dataset.id); break; // Ф2
 case 'doctrine-choose': chooseDoctrine(el.dataset.id); break; // Г1-2
@@ -446,6 +450,78 @@ function dailyCardPair() {
     eligible.sort(function(a, b) { return ((((a.id || 0) * 2654435761) ^ seed) >>> 0) - ((((b.id || 0) * 2654435761) ^ seed) >>> 0); });
     return eligible.slice(0, 2); // ponytail: пара сдвигается в течение дня по мере выполнения карт — приемлемо
 }
+// Г2-4: комбо-гримуар — пары/тройки статов, завершённых в ОДИН день; первое срабатывание открывает запись
+var COMBOS = [
+    { id: 'fortress',    name: 'Крепость духа',    icon: '🏰', need: ['str', 'end'],    desc: '+30% XP обеим картам дня' },
+    { id: 'blades',      name: 'Танец клинков',    icon: '🗡', need: ['agi', 'str'],    desc: '+2 💰 за каждую из двух карт' },
+    { id: 'axis',        name: 'Ось покоя',        icon: '🧘', need: ['end', 'end'],    desc: '−1 гнев осады' },
+    { id: 'focus',       name: 'Фокус',            icon: '🛡', need: ['wil'], any: true, desc: '+1 щит стрика (кап 100)' },
+    { id: 'harmony',     name: 'Гармония',         icon: '☯', need: 3,                 desc: '+15 XP за три разных пути' },
+    { id: 'triumvirate', name: 'Триумвират силы',  icon: '⚔', need: ['str', 'str', 'str'], desc: '+20 💰' },
+    { id: 'vortex',      name: 'Вихрь',            icon: '🌪', need: ['agi', 'agi'],    desc: '+10% XP до конца дня' },
+    { id: 'dawn',        name: 'Страж рассвета',   icon: '🌅', need: ['wil', 'end'],    desc: '+5 💰' }
+];
+function comboCountsMet(c, counts) { // need: мультисет статов; need===3 — три разных стата; any — нужен второй стат
+    if (c.need === 3) return Object.keys(counts).filter(function(k) { return counts[k] > 0; }).length >= 3;
+    for (var i = 0; i < c.need.length; i++) {
+        if ((counts[c.need[i]] || 0) < 1) return false;
+        if (!c.any && c.need.filter(function(s) { return s === c.need[i]; }).length > (counts[c.need[i]] || 0)) return false;
+    }
+    if (c.any) {
+        var total = 0, others = 0;
+        Object.keys(counts).forEach(function(k) { total += counts[k]; if (counts[k] > 0 && c.need.indexOf(k) === -1) others++; });
+        if (total < 2 || (!others && Object.keys(counts).length < 2)) return false;
+    }
+    return true;
+}
+function checkCombos(finalXp) { // Г2-4: вызывается из completeCard после инкремента счётчика статов дня
+    var counts = HERO.dayStatCounts = HERO.dayStatCounts || {};
+    var done = HERO.combosToday = HERO.combosToday || {};
+    var tk = getMSKDayKey();
+    COMBOS.forEach(function(c) {
+        if (done[c.id] === tk) return;
+        if (!comboCountsMet(c, counts)) return;
+        done[c.id] = tk;
+        if ((HERO.combosFound || []).indexOf(c.id) === -1) HERO.combosFound = (HERO.combosFound || []).concat([c.id]);
+        comboApplyEffect(c, finalXp);
+        showToast(c.icon + ' Комбо: ' + c.name + '!', c.desc + ' · записано в Гримуар связей', 'crit');
+        sfxGoalComplete(); haptic('success');
+    });
+    renderGrimoire();
+}
+function comboApplyEffect(c, finalXp) {
+    if (c.id === 'fortress') { var bx = Math.round((finalXp || 15) * 0.6); HERO.xp += bx; HERO.totalXp += bx; recordXpEvent(bx); } // ponytail: обе карты дня как one-shot +30%+30% по факту закрытия пары
+    else if (c.id === 'blades') goldGain(4, 'combo');
+    else if (c.id === 'axis') { if ((siege.wkSkips || 0) > 0) siege.wkSkips--; else if ((siege.wkTaskFails || 0) > 0) siege.wkTaskFails--; }
+    else if (c.id === 'focus') HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + 1);
+    else if (c.id === 'harmony') { HERO.xp += 15; HERO.totalXp += 15; recordXpEvent(15); }
+    else if (c.id === 'triumvirate') goldGain(20, 'combo');
+    else if (c.id === 'vortex') HERO.comboDayXp = 1.1;
+    else if (c.id === 'dawn') goldGain(5, 'combo');
+}
+function renderGrimoire() { // Г2-4: раздел «📖 Гримуар связей» в Колоде — найденные полные vs «???»
+    var box = document.getElementById('grimoireBox');
+    if (!box) return;
+    var found = HERO.combosFound || [];
+    var html = '<div class="grimoire-head" data-action="grimoire-toggle">📖 Гримуар связей <span class="grimoire-count">' + found.length + '/' + COMBOS.length + '</span><span class="grimoire-hint">комбо статов за один день</span></div>';
+    html += '<div class="grimoire-grid">';
+    COMBOS.forEach(function(c) {
+        var has = found.indexOf(c.id) !== -1;
+        if (has) {
+            html += '<div class="grimoire-cell found" title="' + c.desc + '"><div class="grimoire-icon">' + c.icon + '</div><div class="grimoire-name">' + c.name + '</div><div class="grimoire-desc">' + c.desc + '</div></div>';
+        } else {
+            html += '<div class="grimoire-cell" title="Не открыто"><div class="grimoire-icon">❓</div><div class="grimoire-name">???</div><div class="grimoire-desc">' + comboHint(c) + '</div></div>';
+        }
+    });
+    html += '</div>';
+    box.innerHTML = html;
+}
+function comboHint(c) { // силуэт: подсказка-условие без награды
+    if (c.need === 3) return 'Три разных пути за день';
+    if (c.any) return STATS[c.need[0]].icon + ' ' + STATS[c.need[0]].name + ' + любой стат за день';
+    return c.need.map(function(s) { return STATS[s].icon; }).join('+') + ' за один день';
+}
+
 function renderCards() {
 const grid = document.getElementById('cardGrid');
 grid.innerHTML = '';
@@ -455,14 +531,15 @@ _dailyPairIds = {};
 dailyCardPair().forEach(function(c) { _dailyPairIds[c.id] = true; });
 if (all.length === 0) {
 grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Пока пусто. Нажми «🔨 Выковать карточку», чтобы создать первую карточку.</div>';
+renderGrimoire();
 return;
 }
-if (all.length <= 100) { all.forEach(c => renderOneCard(c, grid)); return; }
+if (all.length <= 100) { all.forEach(c => renderOneCard(c, grid)); renderGrimoire(); return; }
 var _ri = 0;
 (function renderChunk() { // QA2-H3: чанкованный рендер (50/rAF) — 500 карт больше не блокируют кадр
     var end = Math.min(_ri + 50, all.length);
     for (; _ri < end; _ri++) renderOneCard(all[_ri], grid);
-    if (_ri < all.length) requestAnimationFrame(renderChunk);
+    if (_ri < all.length) requestAnimationFrame(renderChunk); else renderGrimoire();
 })();
 }
 function renderOneCard(card, grid) {
@@ -596,7 +673,7 @@ const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
 const comboMult = getComboMultiplier();
 const prestigeMult = getPrestigeXPBonus(card.stat);
-const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult() * totemXpMult() * doctrineXpMult(); // #8/#41: праздник +10%, луна ×2; Ф2: сова +10% XP; Г1-2: growth +25%
+const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult() * totemXpMult() * doctrineXpMult() * bossArtifactMult('xp') * (HERO.comboDayXp || 1); // #8/#41: праздник +10%, луна ×2; Ф2: сова +10% XP; Г1-2: growth +25%; Г2-1: артефакт +10% XP; Г2-4: Вихрь +10% XP дня
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
@@ -605,8 +682,11 @@ card.totalCompletions = (card.totalCompletions || 0) + 1;
 card.streak = (card.streak || 0) + 1;
 card.lastCompletedAt = Date.now();
 HERO.dailyCompletions++;
+bossProgressTick(); // Г2-1: фазы боссов (cards/streak)
 HERO.dailyUniqueStats = HERO.dailyUniqueStats || {};
 HERO.dailyUniqueStats[card.stat] = true;
+HERO.dayStatCounts = HERO.dayStatCounts || {}; // Г2-4: счётчик статов дня для комбо
+HERO.dayStatCounts[card.stat] = (HERO.dayStatCounts[card.stat] || 0) + 1;
 var todayKey = getMSKDayKey();
 HERO.cardHistory = HERO.cardHistory || {};
 HERO.cardHistory[todayKey] = HERO.cardHistory[todayKey] || {};
@@ -642,6 +722,7 @@ spiritSay('«Легенда... Твоя дисциплина несокруши�
 }
 }
 goldGain(dayMult, 'card');
+checkCombos(finalXp); // Г2-4: комбо статов дня — после счётчика и награды карты, до тостов
 dqProgress('cards');
 hintOnce('firstcard', 'За выполнение капает 💰, а Мастерство растит ранг карточки — ранг-ап качает атрибут.');
 if (lootPityCheck(card)) dropRandomLoot(x, y);
@@ -1707,6 +1788,149 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 // ===================== ТВЕРДЫНИ v2 (SPEC §1–§7; формулы — только js/stronghold-model.js) =====================
 var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
 const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
+// ===================== Г2-1: ПОВЕРЕННЫЕ ТЬМЫ — боссы провинций (очередь I..XI по 4 провинциям каталога) =====================
+function bossEscalation(num) { return (1 + 0.05 * (num - 1)) * Math.pow(1.2, HERO.ascension || 0); } // цели фаз ×1.5 к XI · Г2-5: ×1.2^N за круг вознесения
+function ensureBossesState() {
+    if (!HERO.bosses || typeof HERO.bosses !== 'object') HERO.bosses = { defeated: [], activeNum: null, phase: 0, attemptDay: null, closedDay: null };
+    if (!Array.isArray(HERO.bosses.defeated)) HERO.bosses.defeated = [];
+    if (typeof HERO.bosses.phase !== 'number') HERO.bosses.phase = 0;
+    if (typeof HERO.bosses.activeNum !== 'number') HERO.bosses.activeNum = null;
+    if (typeof HERO.bosses.attemptDay !== 'string') HERO.bosses.attemptDay = null;
+    if (typeof HERO.bosses.closedDay !== 'string') HERO.bosses.closedDay = null;
+}
+function bossOf(num) { for (var i = 0; i < BOSSES.length; i++) if (BOSSES[i].num === num) return BOSSES[i]; return null; }
+function provCaptured(prov) {
+    ensureStrongholdState();
+    for (var i = 0; i < STRONGHOLDS.length; i++) {
+        if (STRONGHOLDS[i].prov === prov && !(strongholds[i] && strongholds[i].captured)) return false;
+    }
+    return true;
+}
+function provBossNum(prov) { // текущий (непобеждённый) босс провинции — очередь по возрастанию num
+    ensureBossesState();
+    for (var i = 0; i < BOSSES.length; i++) {
+        if (BOSSES[i].prov !== prov) continue;
+        if (HERO.bosses.defeated.indexOf(BOSSES[i].num) === -1) return BOSSES[i].num;
+    }
+    return null;
+}
+function bossNodeIdx(prov) { for (var i = 0; i < STRONGHOLDS.length; i++) if (STRONGHOLDS[i].prov === prov) return i; return -1; }
+function bossActiveFor(idx) { // корона — только на узле первой твердыни провинции
+    var prov = STRONGHOLDS[idx].prov;
+    if (idx !== bossNodeIdx(prov)) return null;
+    if (!provCaptured(prov)) return null;
+    return provBossNum(prov);
+}
+function bossAttemptAvailable() { ensureBossesState(); return HERO.bosses.attemptDay !== getMSKDayKey(); }
+function requestBossChallenge(num) {
+    ensureBossesState();
+    var b = bossOf(num);
+    if (!b || !provCaptured(b.prov)) return;
+    var tk = getMSKDayKey();
+    if (!bossAttemptAvailable()) { showToast('⚔ Попытка уже была', 'Один вызов в день — возвращайся завтра', 'blood'); sfxError(); return; }
+    if (HERO.bosses.activeNum !== num) { HERO.bosses.activeNum = num; HERO.bosses.phase = 0; } // новый босс — фазы с нуля; повторный вызов того же босса продолжает
+    HERO.bosses.attemptDay = tk;
+    showToast('⚔ Вызов принят', '«' + b.name + '»: ' + bossPhaseLabel(b.phases[HERO.bosses.phase], bossEscalation(num)), 'crit');
+    sfxGoalComplete(); haptic('medium');
+    saveSoon();
+    if (currentShIdx !== null) renderStrongholdPanel(currentShIdx);
+}
+function bossTodayStats() { // статы дня для фаз боссов
+    var prog = (dailyQuests && dailyQuests.progress) || {};
+    var questsAll = false;
+    if (dailyQuests && dailyQuests.day === getMSKDayKey() && (dailyQuests.quests || []).length > 0) {
+        questsAll = (dailyQuests.quests || []).every(function(q) { return dailyQuests.done && dailyQuests.done[q.id]; });
+    }
+    return {
+        cards: HERO.dailyCompletions || 0,
+        questsAll: questsAll,
+        gold: prog['gold'] || 0,
+        streakAlive: (HERO.dailyCompletions || 0) >= 1
+    };
+}
+function bossPhaseCheck(ph, st, esc) {
+    if (!ph || !st) return false;
+    if (ph.type === 'cards') return st.cards >= Math.ceil((ph.n || 3) * esc);
+    if (ph.type === 'quests') return !!st.questsAll;
+    if (ph.type === 'gold') return st.gold >= Math.ceil((ph.mult || 2) * dailyGoldGoal() * esc);
+    if (ph.type === 'streak') return !!st.streakAlive;
+    return false;
+}
+function bossPhaseLabel(ph, esc) {
+    esc = esc === undefined ? 1 : esc;
+    if (!ph) return '';
+    if (ph.type === 'cards') return 'Выполнить ' + Math.ceil((ph.n || 3) * esc) + ' карт. за день';
+    if (ph.type === 'quests') return 'Все дневные квесты за день';
+    if (ph.type === 'gold') return 'Заработать ' + Math.ceil((ph.mult || 2) * dailyGoldGoal() * esc) + ' 💰 за день';
+    if (ph.type === 'streak') return 'Не потерять стрик: ≥1 карта за день';
+    return '';
+}
+function bossProgressTick(st) { // aggregating хук: вызывается из completeCard/completeDailyQuest/goldGain
+    ensureBossesState();
+    var tk = getMSKDayKey();
+    if (HERO.bosses.attemptDay !== tk) return; // вызов сегодня не принят — условия не считаются
+    if (HERO.bosses.closedDay === tk) return; // фаза сегодня уже закрыта — следующая завтра
+    if (HERO.bosses.activeNum === null) return;
+    var b = bossOf(HERO.bosses.activeNum);
+    if (!b) return;
+    var ph = b.phases[HERO.bosses.phase];
+    if (!ph) return;
+    st = st || bossTodayStats();
+    if (!bossPhaseCheck(ph, st, bossEscalation(b.num))) return;
+    HERO.bosses.phase += 1;
+    HERO.bosses.closedDay = tk;
+    if (HERO.bosses.phase >= 3) {
+        HERO.bosses.defeated.push(b.num);
+        HERO.bosses.activeNum = null;
+        HERO.bosses.phase = 0;
+        showToast('🏆 Поверенный повержен: ' + b.name, 'Артефакт твой: ' + b.artifact.name + ' — ' + b.artifact.desc, 'save');
+    } else {
+        showToast('⚔ Фаза ' + HERO.bosses.phase + '/3 пройдена', '«' + b.name + '»: следующая фаза — завтра', 'crit');
+    }
+    sfxGoalComplete(); haptic('success');
+    if (currentShIdx !== null && STRONGHOLDS[currentShIdx] && STRONGHOLDS[currentShIdx].prov === b.prov) renderStrongholdPanel(currentShIdx);
+    saveSoon();
+}
+function bossArtifactMult(kind, prov) { // провинциальные пассивы артефактов; xp/cost — глобальные
+    ensureBossesState();
+    var tbl = { tax: 1.05, attrition: 0.9, def: 1.05, xp: 1.10, cost: 0.85 };
+    var base = tbl[kind];
+    if (!base) return 1;
+    var half = (HERO.ascension || 0) > 0 ? 0.5 : 1; // Г2-5: после Вознесения артефакты ×0.5 силы
+    for (var i = 0; i < BOSS_ARTIFACTS.length; i++) {
+        var a = BOSS_ARTIFACTS[i];
+        if (a.kind !== kind || HERO.bosses.defeated.indexOf(a.num) === -1) continue;
+        if ((kind === 'tax' || kind === 'attrition' || kind === 'def') && a.prov !== prov) continue;
+        return 1 + (base - 1) * half;
+    }
+    return 1;
+}
+function bossCardHtml(idx) { // карточка босса сверху панели твердыни (карточка провинциальная)
+    var prov = STRONGHOLDS[idx].prov;
+    if (!provCaptured(prov)) return '';
+    var num = provBossNum(prov);
+    if (num === null) return '';
+    var b = bossOf(num);
+    ensureBossesState();
+    var inProgress = HERO.bosses.activeNum === num && HERO.bosses.attemptDay === getMSKDayKey();
+    var phaseI = HERO.bosses.activeNum === num ? HERO.bosses.phase : 0;
+    var esc = bossEscalation(num);
+    var html = '<div class="boss-card"><div class="boss-card-head"><span class="boss-card-icon">' + b.icon + '</span><span class="boss-card-name">' + b.name + '</span></div>';
+    html += '<div class="boss-card-lore">«' + b.lore + '»</div>';
+    html += b.phases.map(function(ph, i) {
+        var mark = i < phaseI ? '✅' : (i === phaseI ? '🎯' : '🔒');
+        var cls = i < phaseI ? ' done' : (i === phaseI ? ' active' : ' locked');
+        return '<div class="boss-phase' + cls + '">' + mark + ' Фаза ' + (i + 1) + '/3: ' + bossPhaseLabel(ph, esc) + '</div>';
+    }).join('');
+    html += inProgress
+        ? '<div class="empty-state">⚔ Вызов принят — фаза ' + (phaseI + 1) + '/3 в работе. Провал дня сожжёт попытку, фаза останется.</div>'
+        : (HERO.bosses.attemptDay === getMSKDayKey()
+            ? '<div class="empty-state">⚔ Попытка сегодня использована — возвращайся завтра.</div>'
+            : '<button class="sh-buy" data-action="boss-challenge" data-num="' + num + '">⚔ Бросить вызов</button>');
+    html += '<div class="boss-card-artifact">🏆 Артефакт: ' + b.artifact.name + ' — ' + b.artifact.desc + '</div>';
+    html += '</div>';
+    return html;
+}
 var currentShIdx = null;
 var shCatalogOpen = false;
 var dailyQuests = null;
@@ -1807,6 +2031,67 @@ spiritSay('«Камень к камню — трон, что переживёт 
 sfxLevelUp(); haptic('heavy');
 renderStrongholds(); updateHeroUI(); saveGameState();
 }
+// ===================== Г2-5: ВОЗНЕСЕНИЕ — новый круг при троне 5/5 =====================
+function ascEnemyMult() { return 1 + 0.25 * (HERO.ascension || 0); } // враги +25% силы за каждый круг
+function ascensionPalClass(n) { if (!n || n <= 0) return ''; return 'asc-' + ((n % 3) === 0 ? 3 : (n % 3)); } // 1 пепел / 2 кровь / 3 звёзды
+function applyAscensionPalette() { // палитра по N%3 — CSS-переменные body.asc-N
+    ['asc-1', 'asc-2', 'asc-3'].forEach(function(c) { document.body.classList.remove(c); });
+    var cls = ascensionPalClass(HERO.ascension || 0);
+    if (cls) document.body.classList.add(cls);
+}
+function requestAscension() {
+    if (throne < 5) { showToast('👑 Трон не завершён', 'Вознесение открывается при троне 5/5', 'blood'); sfxError(); return; }
+    var active = ['t1', 't2', 't3'].map(doctrineOf).filter(Boolean);
+    if (active.length === 0) { ascensionConfirm(null); return; }
+    openAscensionModal(active); // выбор ОДНОЙ доктрины ДО подтверждения
+}
+function openAscensionModal(active) {
+    closeAscensionModal();
+    var ov = document.createElement('div');
+    ov.id = 'ascModal'; ov.className = 'modal-overlay show'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    var rows = active.map(function(id) { var d = DOCTRINES[id]; return '<button class="demo-btn primary" data-action="asc-doctrine" data-id="' + id + '">' + d.icon + ' ' + d.name + ' · сохранить</button>'; }).join('');
+    ov.innerHTML = '<div class="modal confirm-modal"><div class="confirm-title">✨ Вознесение — что сохранить?</div><div class="confirm-body">Из военных доктрин в новый круг перейдёт <b>только одна</b>. Выбери:</div><div class="confirm-actions" style="flex-direction:column;gap:8px">' + rows + '</div></div>';
+    ov.addEventListener('click', function(e) { if (e.target === ov) closeAscensionModal(); });
+    document.body.appendChild(ov);
+}
+function closeAscensionModal() { var ov = document.getElementById('ascModal'); if (ov) ov.remove(); }
+function pickAscensionDoctrine(id) {
+    var valid = DOCTRINES[id] && doctrineOf(DOCTRINES[id].tier) === id;
+    closeAscensionModal();
+    if (valid) ascensionConfirm(id);
+}
+function ascensionConfirm(keepId) { // честное описание потерь
+    var d = keepId ? DOCTRINES[keepId] : null;
+    var keep = 'башню (этаж ' + ((HERO.tower && HERO.tower.floor) || 0) + '), гримуар связей, артефакты боссов (сила ×0.5)' + (d ? ', доктрину «' + d.name + '»' : '') + ', ' + Math.floor((HERO.gold || 0) * 0.1).toLocaleString('ru-RU') + ' 💰 (10% казны)';
+    dungeonConfirm('✨ Вознесение — круг ' + ((HERO.ascension || 0) + 1) + '?', '<b>Сохраняется:</b> ' + keep + '.<br><b style="color:var(--blood-bright)">Сбрасывается:</b> все твердыни и постройки, армия, гарнизоны, осады, трон (5/5 → 0), сезон → Сезон 1. Враги сильнее: +25% силы за каждый круг.').then(function(ok) {
+        if (!ok) return;
+        performAscension(keepId);
+    });
+}
+function performAscension(keepId) { // ядро сброса: сохранить башню/гримуар/артефакты ×0.5/1 доктрину/10% казны, сбросить мир
+    var keptTier = (keepId && DOCTRINES[keepId] && doctrineOf(DOCTRINES[keepId].tier) === keepId) ? DOCTRINES[keepId].tier : null;
+    HERO.gold = Math.floor((HERO.gold || 0) * 0.1); // 10% казны
+    HERO.doctrines = { t1: null, t2: null, t3: null };
+    if (keptTier) HERO.doctrines[keptTier] = keepId; // одна доктрина на выбор
+    HERO.ascension = (HERO.ascension || 0) + 1; // N++ — whitelist
+    if (HERO.bosses) { // артефакты (defeated) живут вечно, но ×0.5 (bossArtifactMult Half); активный вызов сгорает
+        HERO.bosses.activeNum = null; HERO.bosses.phase = 0; HERO.bosses.attemptDay = null; HERO.bosses.closedDay = null;
+    }
+    HERO.scouts = null; // тени старого мира сгорают
+    strongholds = null; ensureStrongholdState(); // твердыни/постройки/гарнизоны — заново
+    army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
+    siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false };
+    hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
+    dailyQuests = null; dailyEvent = null; throne = 0;
+    lastDayReset = null; lastWeekReset = getThisMondayKey();
+    season = STATE_GUARDS.sanitizeSeason({ num: 1, start: getMSKDayKey() }, getMSKDayKey()); // Сезон 1 нового круга
+    applyAscensionPalette();
+    showToast('✨ Вознесение ' + HERO.ascension, 'Круг ' + (HERO.ascension + 1) + ': мир перестроен. Враги +25%, артефакты ×0.5.', 'crit');
+    spiritSay('«Трон пуст. Мир начинается заново — но ты помнишь всё.»');
+    sfxLevelUp(); haptic('heavy');
+    renderStrongholds(); updateStrongholdProgress(); renderDashboard(); updateHeroUI(); renderCards();
+    saveGameState();
+}
 function showSeasonReport(num, d, earnedCrown, newCrownBonus) {
     var modal = document.getElementById('seasonModal');
     if (!modal) return;
@@ -1845,9 +2130,10 @@ function goldGain(n, src) {
     HERO.gold = (HERO.gold || 0) + n;
     dqProgress('gold', n);
     checkDailyGoldGoal();
+    bossProgressTick(); // Г2-1: gold-фазы боссов
 }
 var DAILY_GOLD_BASE = 50; // #71: цель дня по золоту
-function dailyGoldGoal() { return Math.min(200, DAILY_GOLD_BASE + 10 * capturedCount()); }
+function dailyGoldGoal() { return Math.min(200 * Math.pow(1.2, HERO.ascension || 0), Math.round((DAILY_GOLD_BASE + 10 * capturedCount()) * Math.pow(1.2, HERO.ascension || 0))); } // #71: 50+10×captured, кап 200 · Г2-5: ×1.2^N (кап тоже ×1.2^N → 600 при N=3+)
 function checkDailyGoldGoal() { // #71: однократный бонус за цель дня — флаг дня в localStorage (в сейв не пишем)
     var goal = dailyGoldGoal();
     var p = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
@@ -1871,6 +2157,7 @@ if (!_q) return;
 var _p = (dailyQuests.progress || {})[_q.counter] || 0;
 if (_p < _q.goal) { showToast('📋 Ещё не выполнено', 'Прогресс: ' + Math.min(_p, _q.goal) + '/' + _q.goal, 'blood'); return; }
 dailyQuests.done[qid] = true;
+bossProgressTick(); // Г2-1: quests-фазы боссов
 goldGain(reward, 'quest');
 showToast('📋 Квест выполнен!', '+' + reward + ' 💰', 'save');
 sfxGoalComplete(); haptic('success');
@@ -1917,7 +2204,7 @@ builtList(idx).forEach(function(id) {
 var d = BUILDINGS[id];
 if (d && d.def) sum += Math.round(d.def * stageMult(strongholds[idx].buildings[id].corruptionStage));
 });
-return sum;
+return Math.round(sum * bossArtifactMult('def', STRONGHOLDS[idx].prov)); // Г2-1: артефакт +5% обороны (пров.)
 }
 var STAGE_ORDER_WORST = { ok: 0, worn: 1, ruin: 2 };
 function shWorstStage(idx) {
@@ -1930,7 +2217,7 @@ return worst;
 }
 function hireCostOf(tier) { var base = UNIT_TIERS[tier].cost * (1 - Math.min(0.30, 0.005 * STATS.cha.value)); if (dailyEvent && dailyEvent.id === 'smith') base *= 0.75; base *= synergyHireMult(); // Г1-3: zh-линейка → найм −10%
 return Math.ceil(base); }
-function buildCostOf(bid) { var d = BUILDINGS[bid]; return d ? Math.ceil(d.cost * doctrineEngineMult()) : 0; } // Г1-2: engine −15%
+function buildCostOf(bid) { var d = BUILDINGS[bid]; return d ? Math.ceil(d.cost * doctrineEngineMult() * bossArtifactMult('cost')) : 0; } // Г1-2: engine −15% · Г2-1: корона −15% цены построек
 function recalcHirePool() {
 ensureStrongholdState();
 var wind = hasSpecialOk('sp4') ? 1.4 : 1;
@@ -1949,11 +2236,12 @@ hirePool = pool;
 function strongholdsDailyTick() {
 ensureStrongholdState();
 if (!SM) return { income: 0, upkeep: 0, paid: true };
+var _sw = weatherSeasonWeek();
 var taxes = 0, econ = 0, market = 0, upkeep = 0, paid = true;
 var gold = HERO.gold || 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return; // стартовый лагерь sh01 до захвата освобождён от содержания и коррапшна (решение совета)
-taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i)); // Г1-3: 3+ эконом-построек → местный налог ×1.15
+taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk)); // Г1-3: 3+ эконом-построек → местный налог ×1.15; Г2-1: артефакт провинции +5%; Г2-2: засуха юга ×0.75
 builtList(i).forEach(function(id) {
 var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
 if (d.gold) econ += d.gold * m;
@@ -1980,7 +2268,7 @@ Object.keys(s.buildings).forEach(function(bid) {
 var bb = s.buildings[bid];
 if (bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000) imm[bid] = true;
 });
-var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: stepOpt, immune: imm, upkeepMult: doctrineUpkeepMult() }); // Г1-2: устав −20%
+var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: stepOpt, immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) }); // Г1-2: устав −20%; Г2-2: метель севера ×2
 gold = res.gold;
 upkeep += res.upkeep;
 if (!res.paid) paid = false;
@@ -2020,7 +2308,7 @@ var def = STRONGHOLDS[t];
     garDef = Math.round(garDef * totemDefMult()); // Ф2: тотем Медведь +2% обороны
     garDef = Math.round(garDef * doctrineFortMult()); // Г1-2: доктрина крепостей +10%
     garDef = Math.round(garDef * synergyDefMult(t)); // Г1-3: df-четвёрка в твердыне +5% обороны
-var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult);
+var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult()); // Г2-5: враги +25% силы за круг вознесения
 if (garDef >= power) {
 strongholds[t].garrison = applyStackLoss(strongholds[t].garrison, 0.15);
 addXpReward(100 * def.prov);
@@ -2163,7 +2451,7 @@ function doAssault(idx, f, tactic) {
 var _tc = TACTICS[tactic] ? tactic : 'normal'; // Г1-4: дефолт «Штурм» (ESC/пропуск)
 siege.assaultDay = getMSKDayKey();
 dqProgress('assault');
-var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc)), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) }); // Г1-2: veteran ×0.7 · Г1-4: тактика
+var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc)), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) * bossArtifactMult('attrition', STRONGHOLDS[idx].prov) }); // Г1-2: veteran ×0.7 · Г1-4: тактика · Г2-1: артефакт −10% потерь (пров.)
 var lostTotal = 0;
 SM.TIER_KEYS.forEach(function(t) {
 var n = army.units[t] || 0;
@@ -2254,12 +2542,75 @@ var map = { ok: ['✓ Целое', 'ok'], worn: ['⚠ Обветшало', 'worn
 var m = map[st] || map.ok;
 return '<span class="sh-stage ' + m[1] + '">' + m[0] + '</span>';
 }
+// ===================== Г2-2 «Глазами ворона»: погода (чистые функции, без сейв-полей) =====================
+// ПОРОГИ СЖАТЫ против спеки (0.25/0.45/0.6): пины симов (parity 11526/12679/31, acceptance 21/1/7,
+// factory w4, strongholds w2) сидированы на сезон 1 / недели 1–4 — в этих пин-окнах эффектов быть
+// не должно (контракт закреплён тестом «пин-окна» в tests/wave-g2.test.js).
+// Карта каталога имеет 4 провинции (спека писана под сетку 11): север = 1–2, юг = 3–4.
+function weatherOf(prov, seasonNum, week) {
+var r = Math.abs(Math.sin(seasonNum * 31 + week * 17 + prov) * 43758.5453) % 1;
+if (r < 0.11) return { id: 'blizzard', icon: '❄', name: 'Метель' };
+if (r < 0.24) return { id: 'drought', icon: '🔥', name: 'Засуха' };
+if (r < 0.45) return { id: 'fog', icon: '🌫', name: 'Туман' };
+return { id: 'clear', icon: '☀', name: 'Ясно' };
+}
+function weatherNorth(prov) { return prov <= 2; }
+function weatherSouth(prov) { return prov >= 3; }
+function weatherUpkeepMult(prov, seasonNum, week) { return (weatherOf(prov, seasonNum, week).id === 'blizzard' && weatherNorth(prov)) ? 2 : 1; } // метель севера: содержание ×2
+function weatherTaxMult(prov, seasonNum, week) { return (weatherOf(prov, seasonNum, week).id === 'drought' && weatherSouth(prov)) ? 0.75 : 1; } // засуха юга: налог ×0.75
+function weatherFog(prov, seasonNum, week) { return weatherOf(prov, seasonNum, week).id === 'fog'; }
+function weatherSeasonWeek() { return { sn: (ensureSeason() || {}).num || 1, wk: (siege && siege.week) || 1 }; }
+
+// ===================== Г2-3 «Глазами ворона»: лазутчик =====================
+function scoutAdvice(ratio) {
+if (!Number.isFinite(ratio) || ratio <= 0) return 'Обороны нет — вложись в казармы';
+if (ratio < 0.9) return 'Слабо: вложись в казармы или жди погоду';
+if (ratio > 1.2) return 'Натиск излишен — штурмуй';
+return 'Ложный отход сбережёт людей';
+}
+function scoutFresh(scouts, todayKey) { // 'pending' | 'fresh' | null; срок годности 3 дня (день готовности + 2)
+if (!scouts || !scouts.readyDayKey) return null;
+var dd = daysBetween(todayKey, scouts.readyDayKey);
+if (dd > 0) return 'pending';
+return (dd >= -2) ? 'fresh' : null;
+}
+function frontPowerText(idx) { // Г2-2: туман (без свежей тени на этой твердыне) прячет силу фронта
+var _sw = weatherSeasonWeek();
+var _known = scoutFresh(HERO.scouts, getMSKDayKey()) === 'fresh' && HERO.scouts.idx === idx;
+return (weatherFog(STRONGHOLDS[idx].prov, _sw.sn, _sw.wk) && !_known) ? '🌫 туман: сила скрыта — отправь тень' : 'Сила нейтралов: ' + STRONGHOLDS[idx].total;
+}
+function scoutButtonHtml(idx) { // Г2-3: одна тень за раз; разведка ценна и без тумана
+if (scoutFresh(HERO.scouts, getMSKDayKey())) return '';
+return '<button class="sh-mini sh-scout-btn" data-action="sh-scout" data-idx="' + idx + '">🌙 Тень (50💰)</button>';
+}
+function scoutReportHtml(idx) { // Г2-3: точная сила + совет тактики
+var st = scoutFresh(HERO.scouts, getMSKDayKey());
+if (!st || HERO.scouts.idx !== idx) return '';
+if (st === 'pending') return '<div class="sh-scout">🌙 Тень в пути — отчёт будет завтра.</div>';
+var power = Math.round(SM.siegePower(STRONGHOLDS[idx].total, siege.week, capturedCount(), siegeWrathNow()) * ascEnemyMult()); // Г2-5: +25% за круг
+var def = SM.armyPower(army.units);
+strongholds.forEach(function(s) { if (s.captured) def += SM.stackPower(s.garrison || []); });
+var ratio = power > 0 ? Math.round(def) / power : 99;
+var stale = (daysBetween(getMSKDayKey(), HERO.scouts.readyDayKey) === -2) ? ' · <span style="color:var(--text-dim)">разведка устареет завтра</span>' : '';
+return '<div class="sh-scout">🌙 Тень докладывает: враг ровно <b>' + power + '</b> · оборона ' + Math.round(def) + ' (' + Math.round(ratio * 100) + '%) — <i>' + scoutAdvice(ratio) + '</i>' + stale + '</div>';
+}
+function requestScout(idx) { // Г2-3: отправить тень (50💰, отчёт завтра)
+if (!STRONGHOLDS[idx] || strongholds[idx].captured) return;
+if (scoutFresh(HERO.scouts, getMSKDayKey())) { showToast('Тень уже в деле', 'Одна тень за раз — дождись отчёта.', 'violet'); return; }
+if ((HERO.gold || 0) < 50) { showToast('Казна пуста', 'Тень работает за 50💰 — золото в долг не берут.', 'blood'); sfxError(); return; }
+HERO.gold -= 50;
+HERO.scouts = { idx: idx, readyDayKey: getMSKDayKey(Date.now() + 86400000) };
+showToast('🌙 Тень ушла: ' + STRONGHOLDS[idx].name, 'Завтра придёт точный отчёт о силах врага.');
+haptic('light'); saveSoon();
+renderStrongholds();
+}
 function shIncomePerDay() {
 ensureStrongholdState();
+var _sw = weatherSeasonWeek();
 var taxes = 0, econ = 0, market = 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return;
-taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i)); // Г1-3: 3+ эконом-построек → местный налог ×1.15
+taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk)); // Г1-3: 3+ эконом-построек → местный налог ×1.15; Г2-1: артефакт провинции +5%; Г2-2: засуха юга ×0.75
 builtList(i).forEach(function(id) {
 var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
 if (d.gold) econ += d.gold * m;
@@ -2275,15 +2626,17 @@ return income;
 }
 function shUpkeepPerDay() {
 ensureStrongholdState();
+var _sw = weatherSeasonWeek();
 var u = 0;
-strongholds.forEach(function(s) {
+strongholds.forEach(function(s, i) {
 if (!s.captured) return;
+var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk); // Г2-2: метель севера ×2
 Object.keys(s.buildings).forEach(function(id) {
 var b = s.buildings[id];
-if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDINGS[id].upkeep;
+if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDINGS[id].upkeep * _wm;
 });
 });
-return u;
+return Math.round(u);
 }
 function buildingEffectText(d) {
 if (d.grow) return '+' + d.grow + ' ' + UNIT_TIERS[d.tier].name + '/нед';
@@ -2326,10 +2679,13 @@ function siegeAlarmPreview() { // Ф1: превью сил следующей о
     if (!SM || capturedCount() === 0) return null;
     var t = lastCapturedIdx();
     if (t < 0) return null;
-    var power = SM.siegePower(STRONGHOLDS[t].total, siege.week, capturedCount(), siegeWrathNow());
+    var power = Math.round(SM.siegePower(STRONGHOLDS[t].total, siege.week, capturedCount(), siegeWrathNow()) * ascEnemyMult()); // Г2-5: +25% за круг
     var def = SM.armyPower(army.units);
     strongholds.forEach(function(s) { if (s.captured) def += SM.stackPower(s.garrison || []); });
     def = Math.round(def);
+    var _sw = weatherSeasonWeek();
+    var _known = scoutFresh(HERO.scouts, getMSKDayKey()) === 'fresh' && HERO.scouts.idx === t; // Г2-3: свежая тень прокалывает туман
+    if (weatherFog(STRONGHOLDS[t].prov, _sw.sn, _sw.wk) && !_known) return { power: '🌫 ?', def: def, ratio: null, advice: 'Туман: точная сила скрыта — отправь тень (50💰)' }; // Г2-2: туман прячет силу
     return { power: power, def: def, ratio: def / power, advice: siegeAlarmVerdict(def / power) };
 }
 function checkSiegeAlarmToast() { // Ф1: тост+haptic в день N-2 и день N, однократно/день
@@ -2384,6 +2740,16 @@ html += '<ellipse cx="' + bx + '" cy="' + by + '" rx="' + br + '" ry="' + Math.r
 html += '<rect x="5" y="5" width="380" height="' + (H - 10) + '" fill="none" stroke="rgba(212,165,116,0.35)" stroke-width="1"/>';
 html += '<rect x="9" y="9" width="372" height="' + (H - 18) + '" fill="none" stroke="rgba(0,0,0,0.65)" stroke-width="1"/>';
 html += '<g class="km-corner"><path d="M5 17 L5 5 L17 5"/><path d="M373 5 L385 5 L385 17"/><path d="M385 ' + (H - 17) + ' L385 ' + (H - 5) + ' L373 ' + (H - 5) + '"/><path d="M17 ' + (H - 5) + ' L5 ' + (H - 5) + ' L5 ' + (H - 17) + '"/></g>';
+// Г2-2: полоса прогноза погоды над картой — 11 иконок по очередям боссов I..XI (провинция очереди → погода)
+if (typeof BOSSES !== 'undefined' && Array.isArray(BOSSES) && typeof weatherOf === 'function') {
+var _wtape = (typeof ensureSeason === 'function') ? weatherSeasonWeek() : { sn: 1, wk: 1 };
+var _wIcons = '';
+for (var wi = 0; wi < BOSSES.length; wi++) {
+var _ww = weatherOf(BOSSES[wi].prov, _wtape.sn, _wtape.wk);
+_wIcons += '<text class="km-wi km-wi-' + _ww.id + '" x="' + (30 + wi * 33) + '" y="50" text-anchor="middle">' + _ww.icon + '<title>Очередь ' + (wi + 1) + ' · ' + _ww.name + (weatherNorth(BOSSES[wi].prov) && _ww.id === 'blizzard' ? ' — содержание ×2' : _ww.id === 'drought' && weatherSouth(BOSSES[wi].prov) ? ' — налог ×0.75' : '') + '</title></text>';
+}
+html += '<g class="km-weather" pointer-events="all">' + _wIcons + '</g>';
+}
 html += '<g class="km-cartouche"><line x1="84" y1="30" x2="148" y2="30"/><text class="km-dia" x="78" y="33" text-anchor="middle">◆</text><text x="195" y="34" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="242" y1="30" x2="306" y2="30"/><text class="km-dia" x="312" y="33" text-anchor="middle">◆</text></g>';
 html += '<g class="km-compass" transform="translate(46,' + (H - 54) + ')" pointer-events="none"><circle r="15" class="km-compass-ring"/><path class="km-star" d="M0 -13 L2.6 -2.6 L13 0 L2.6 2.6 L0 13 L-2.6 2.6 L-13 0 L-2.6 -2.6 Z"/><circle r="2" class="km-compass-hub"/><text class="km-compass-n" y="-19" text-anchor="middle">N</text></g>';
 var g = '<g transform="translate(0,' + TOP + ')">';
@@ -2422,7 +2788,8 @@ var frac = stage === 'ruin' ? 1 : (stage === 'worn' ? 0.5 : 0);
 var builtN = 0; var bl = strongholds[n].buildings || {};
 for (var bk in bl) if (bl[bk] && bl[bk].built) builtN++;
 var ns = (state === 'km-front' || state === 'km-siege') ? 1.12 : (state === 'km-locked' ? 0.94 : 1);
-var node = '<g class="km-node ' + state + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ') scale(' + ns + ')" filter="url(#kmShadow)">';
+var bossHere = bossActiveFor(n) !== null; // Г2-1: корона босса — только на узле первой твердыни провинции
+var node = '<g class="km-node ' + state + (bossHere ? ' km-boss' : '') + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + (bossHere ? ' · Босс доступен' : '') + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ') scale(' + ns + ')" filter="url(#kmShadow)">';
 node += '<title>' + d.name + ' · налог ' + d.tax + '💰 · постройки ' + builtN + '/' + d.slots + ' · оборона ' + (d.gar + d.def) + (frac > 0 ? (frac === 1 ? ' · руина' : ' · обветшало') : '') + '</title>';
 node += '<path class="km-bg" d="' + HEX + '"/>';
 node += '<image href="img/tract/region0' + d.prov + '.png" x="-19" y="-19" width="38" height="38" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" style="' + (state === 'km-locked' ? 'opacity:' + (0.12 + prand(n) * 0.1).toFixed(2) + ';' : '') + '" onerror="this.style.display=\'none\'"/>';
@@ -2436,6 +2803,7 @@ if (state === 'km-siege') node += '<g class="km-badge" transform="translate(-16,
 node += '</g>';
 g += node;
 g += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + (p.x - 36) + '" y="' + (p.y + 27) + '" width="72" height="15" rx="3"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (p.y + 38) + '" text-anchor="middle">' + d.name + '</text></g>';
+if (bossHere) g += '<text class="km-boss-crown" x="' + p.x + '" y="' + (p.y - 26) + '" text-anchor="middle">⚜</text>';
 if (n === front && ds <= 7) g += '<text class="km-count' + (ds === 0 ? ' now' : '') + '" x="' + p.x + '" y="' + (p.y + 56) + '" text-anchor="middle">' + (ds === 0 ? '⚔ ОСАДА СЕГОДНЯ' : '🛡 осада через ' + ds + ' дн.') + '</text>';
 }
 g += '</g>';
@@ -2469,13 +2837,15 @@ if (front > 0 && !strongholds[front].captured) {
 var fd = STRONGHOLDS[front];
 html += '<div class="sh-card front km-front-card"><div class="sh-icon">' + fd.icon + '</div>' +
 '<div class="sh-body"><div class="sh-name">' + fd.name + '</div>' +
-'<div class="sh-meta">Сила нейтралов: ' + fd.total + '</div></div>' +
-'<button class="sh-assault" data-action="sh-assault" data-idx="' + front + '">⚔ Штурм</button></div>';
+'<div class="sh-meta">' + frontPowerText(front) + '</div></div>' +
+'<button class="sh-assault" data-action="sh-assault" data-idx="' + front + '">⚔ Штурм</button>' + scoutButtonHtml(front) + '</div>';
+html += scoutReportHtml(front);
 } else if (front === 0 && !strongholds[0].captured) {
 html += '<div class="sh-card front km-front-card"><div class="sh-icon">' + STRONGHOLDS[0].icon + '</div>' +
 '<div class="sh-body"><div class="sh-name">' + STRONGHOLDS[0].name + ' <span class="sh-req">стартовый лагерь</span></div>' +
-'<div class="sh-meta">Сила нейтралов: ' + STRONGHOLDS[0].total + '</div></div>' +
-'<button class="sh-assault" data-action="sh-assault" data-idx="0">⚔ Штурм</button></div>';
+'<div class="sh-meta">' + frontPowerText(0) + '</div></div>' +
+'<button class="sh-assault" data-action="sh-assault" data-idx="0">⚔ Штурм</button>' + scoutButtonHtml(0) + '</div>';
+html += scoutReportHtml(0);
 }
 var tRoutesUI = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 if (tRoutesUI > 0) html += '<div class="sh-trade">🛃 Торговые пути: <b>' + tRoutesUI + '</b> · налоги <b>+' + Math.round((SM.tradeBonus(tRoutesUI)) * 100) + '%</b></div>';
@@ -2487,7 +2857,7 @@ var _wt = warlordTempo(), _wm = seasonCapturedDelta(); // Г1-6: тень вое
 html += '<div class="sh-warlord">⚔ Глорх, Погибель Урядов: <b>' + _wt + '</b> · ты: <b>' + _wm + '</b><div class="sh-season-bar" title="Прогресс до обгона воеводы"><div class="sh-season-fill' + (_wm >= _wt ? ' warlord-ahead' : '') + '" style="width:' + Math.min(100, Math.round(_wm / (_wt + 1) * 100)) + '%;"></div></div></div>';
 html += '<div class="sh-wrath">😮 Гнев: <b>' + siegeWrathNow() + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
 var _alarm = (daysToSiege <= 2) ? siegeAlarmPreview() : null; // Ф1: осадная тревога за 2 дня и в день осады
-if (_alarm) html += '<div class="siege-alarm">⚠ <b>Осадная тревога</b> · враг ~<b>' + _alarm.power + '</b> · оборона <b>' + _alarm.def + '</b> (' + Math.round(_alarm.ratio * 100) + '%) — ' + _alarm.advice + '</div>';
+if (_alarm) html += '<div class="siege-alarm">⚠ <b>Осадная тревога</b> · враг ~<b>' + _alarm.power + '</b> · оборона <b>' + _alarm.def + '</b>' + (_alarm.ratio === null ? '' : ' (' + Math.round(_alarm.ratio * 100) + '%)') + ' — ' + _alarm.advice + '</div>';
 html += renderTowerCard(cap); // Ф3: башня-марафон (только при 20/20)
 checkSiegeAlarmToast();
 // Квест-доска (3 ротационных дневных задания)
@@ -2543,11 +2913,12 @@ if (!root) { currentShIdx = null; return; }
 var d = STRONGHOLDS[idx], s = strongholds[idx];
 if (!s || (!s.captured && idx !== 0)) { currentShIdx = null; renderStrongholds(); return; } // Сендер-Хутор — стартовый лагерь и без захвата (SPEC §9)
 var html = '<button class="sh-back" data-action="sh-back">← Все твердыни</button>';
+html += bossCardHtml(idx); // Г2-1: карточка босса провинции сверху панели
 html += '<div class="sh-panel-head"><div class="sh-panel-title">' + d.icon + ' ' + d.name + '</div>' +
 '<div class="sh-panel-sub">Налог +' + d.tax + ' 💰/день · слоты ' + builtList(idx).length + '/' + d.slots + ' · ' + PROVINCES[d.prov] + '</div></div>';
 if (idx === 19 && typeof throne !== 'undefined') {
 html += '<div class="sh-sec-title">👑 Вечный трон — ' + throne + '/5 · налоги +' + throne + '%</div>';
-if (throne >= 5) html += '<div class="empty-state">Трон возведён полностью: +5% налогов навсегда.</div>';
+if (throne >= 5) html += '<div class="empty-state">Трон возведён полностью: +5% налогов навсегда.</div>' + (HERO.ascension ? '<div class="empty-state">✨ Круг Вознесения ' + HERO.ascension + ': враги +25%, артефакты ×0.5.</div>' : '') + '<button class="sh-buy ascend-btn" data-action="ascend">✨ Вознестись</button>';
 else { var tc = throneCost(); html += '<div class="sh-build-row buy"><div class="sh-build-body"><div class="sh-build-name">Возвести ярус трона</div><div class="sh-build-meta">+' + (throne + 1) + '% налогов навсегда · цена ' + tc.toLocaleString('ru-RU') + ' 💰</div></div>' + ((HERO.gold || 0) >= tc ? '<button class="sh-buy" data-action="throne-invest">👑 ' + tc.toLocaleString('ru-RU') + '</button>' : '<span class="sh-stage lock">🔒 ' + tc.toLocaleString('ru-RU') + '</span>') + '</div>'; }
 }
 if (HERO.storm && HERO.storm.paid === false && HERO.storm.num === ensureSeason().num && HERO.storm.regionIdx === idx) { // Г1-5: баннер бури в панели региона
@@ -3271,6 +3642,7 @@ function getComboMultiplier() {
     return count >= COMBO_THRESHOLD ? 1 + COMBO_BONUS : 1.0;
 }
 
+
 function prestigeCard(id) {
     var card = findCard(id);
     if (!card || card.rank !== 'SSS') return;
@@ -3528,6 +3900,7 @@ var _isBackfill = gapDays > 1;
         dailyEvent = ev;
         if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); goldGain(bonus, 'caravan'); }
         if (ev.id === 'wanderer' && !_isBackfill) { HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + 1); goldGain(30, 'wanderer'); } // #41
+        if (HERO.scouts && scoutFresh(HERO.scouts, todayKey) === null) { HERO.scouts = null; } // Г2-3: срок годности тени истёк (готовность + 2 дня)
         if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
         if (ev.id === 'smith') {
             var _pt = Object.keys(hirePool).reduce(function(a, k) { return a + (hirePool[k] || 0); }, 0);
@@ -3577,6 +3950,7 @@ HERO.consecutivePerfectDays = 0;
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
 HERO.dailyUniqueStats = {};
+HERO.dayStatCounts = {}; HERO.combosToday = {}; HERO.comboDayXp = null; // Г2-4: сутки комбо — счётчики/Вихрь сброшены
 siege.assaultDay = null; // новый день = новый штурм
 var currentMonday = getThisMondayKey();
 if (lastWeekReset !== currentMonday) {
@@ -4130,6 +4504,7 @@ showToast('🔄 Новая игра', 'Карточки сохранены. Пр
 ensureStrongholdState();
 if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [], progress: {} };
 loadGameState();
+applyAscensionPalette(); // Г2-5: палитра круга вознесения (body asc-1/2/3)
 checkCapturedRecovery(); // #49: следы потерянных крепостей — сразу после загрузки
 checkDailyReset();
 checkBloodOath();
