@@ -6,6 +6,9 @@ const path = require('node:path');
 const UNIT_PATH = '/etc/systemd/system/neurodeck-bot.service';
 const UNIT_REPO = path.join(__dirname, '..', 'bot', 'neurodeck-bot.service');
 const BOT_DIR = path.join(__dirname, '..', 'bot');
+// Тесты 13-15 проверяют состояние ХОСТА деплоя (systemd-симлинк, /opt, token.conf):
+// на CI-раннере их физически не существует — гвард по process.env.CI (GitHub Actions).
+const ON_CI = process.env.CI === 'true';
 
 test('bot/neurodeck-bot.service (каноничный юнит в репо): file exists and parses structurally', () => {
     const raw = fs.readFileSync(UNIT_REPO, 'utf8');
@@ -14,7 +17,7 @@ test('bot/neurodeck-bot.service (каноничный юнит в репо): fil
     assert.ok(raw.includes('[Install]'), 'missing [Install] section');
 });
 
-test('/etc/systemd/system/neurodeck-bot.service must be a symlink to the repo copy (single source of truth, no drift possible)', () => {
+test('/etc/systemd/system/neurodeck-bot.service must be a symlink to the repo copy (single source of truth, no drift possible)', { skip: ON_CI ? 'host-state test: CI runner has no systemd deployment' : false }, () => {
     const st = fs.lstatSync(UNIT_PATH);
     assert.ok(st.isSymbolicLink(), '/etc/systemd/system/neurodeck-bot.service must be a symlink to bot/neurodeck-bot.service');
     assert.equal(fs.realpathSync(UNIT_PATH), fs.realpathSync(UNIT_REPO));
@@ -22,7 +25,7 @@ test('/etc/systemd/system/neurodeck-bot.service must be a symlink to the repo co
     assert.equal(fs.readFileSync(UNIT_PATH, 'utf8'), fs.readFileSync(UNIT_REPO, 'utf8'));
 });
 
-test('neurodeck-bot unit: ExecStart/EnvironmentFile targets exist on disk', () => {
+test('neurodeck-bot unit: ExecStart/EnvironmentFile targets exist on disk', { skip: ON_CI ? 'host-state test: CI runner has no systemd deployment' : false }, () => {
     const raw = fs.readFileSync(UNIT_PATH, 'utf8');
     const refs = [...raw.matchAll(/^(?:ExecStart=.*)?(\/root\/\S+\.(?:js|conf))$/gm)]
         .map((m) => m[1]);
@@ -39,7 +42,7 @@ test('neurodeck-bot unit: ExecStart/EnvironmentFile targets exist on disk', () =
     assert.ok(refs.length >= 0); // refs — информативный сбор, основной assert выше
 });
 
-test('neurodeck-bot unit: restart policy and token env are wired', () => {
+test('neurodeck-bot unit: restart policy and token env are wired', { skip: ON_CI ? 'host-state test: CI runner has no systemd deployment' : false }, () => {
     const raw = fs.readFileSync(UNIT_PATH, 'utf8');
     assert.ok(raw.includes('Restart=always'), 'bot must auto-restart');
     assert.ok(/EnvironmentFile=.*token\.conf$/m.test(raw), 'token must come from token.conf (never inline)');
