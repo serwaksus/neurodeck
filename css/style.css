@@ -1379,49 +1379,67 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .demo-btn:active, .forge-btn:active, .goals-add:active { transform: scale(0.96); }
 
 /* ================================================================
-   ФАЗА E «ТЁМНАЯ СТАЛЬ»: карта королевства «Путь Угасания»
+   ФАЗА E+ «ТЁМНАЯ СТАЛЬ»: карта королевства — пергамент, гексы-щиты,
+   дороги-каскады, таблички, картуш (контракты фазы E сохранены)
    ================================================================ */
 .sh-map-wrap {
   margin: 0 0 14px;
-  background: linear-gradient(180deg, rgba(12, 10, 6, 0.55), rgba(5, 5, 8, 0.75));
   border: 1px solid var(--hairline);
   border-radius: var(--radius-3);
-  box-shadow: var(--shadow-key);
+  box-shadow: var(--shadow-key), 0 0 40px rgba(0, 0, 0, 0.45) inset;
   overflow: hidden;
 }
 .sh-map-wrap svg { display: block; width: 100%; height: auto; }
 .km-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
-.km-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.km-lg { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.km-lg-cap { background: var(--gold-3); box-shadow: 0 0 6px rgba(212,165,116,0.6); }
-.km-lg-front { background: var(--gold-5); box-shadow: 0 0 8px rgba(251,191,36,0.8); }
-.km-lg-siege { background: var(--blood-3); box-shadow: 0 0 8px rgba(199,62,77,0.8); }
+.km-legend span { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; background: rgba(12, 10, 8, 0.78); border: 1px solid var(--hairline); border-radius: 8px; }
+.km-lg { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.km-lg-cap { background: var(--gold-3); box-shadow: 0 0 6px rgba(212, 165, 116, 0.6); }
+.km-lg-front { background: var(--gold-5); box-shadow: 0 0 8px rgba(251, 191, 36, 0.8); }
+.km-lg-siege { background: var(--blood-3); box-shadow: 0 0 8px rgba(199, 62, 77, 0.8); }
 .km-lg-lock { background: #2c2c38; border: 1px solid var(--border); }
-.km-connector { fill: none; stroke: rgba(212, 165, 116, 0.16); stroke-width: 2; }
-.km-connector.owned { stroke: var(--gold-3); stroke-opacity: 0.65; }
+/* картуш и зоны */
+.km-cartouche text { fill: var(--gold-bright); font-family: Georgia, serif; font-size: 13px; letter-spacing: 5px; }
+.km-cartouche line { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1; }
+.km-corner path { fill: none; stroke: rgba(212, 165, 116, 0.55); stroke-width: 2; }
+.km-zone { fill: rgba(212, 165, 116, 0.42); font-size: 8.5px; letter-spacing: 3px; font-family: Georgia, serif; }
+.km-deco { stroke: rgba(180, 150, 100, 0.22); stroke-width: 1.5; fill: none; }
+.km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.16); stroke: none; }
+/* дороги: тёмный корпус + золотое полотно (захвачено) / пунктир (заперто) */
+.km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 7; stroke-linecap: round; }
+.km-connector { fill: none; stroke: rgba(190, 170, 130, 0.22); stroke-width: 2; stroke-dasharray: 1 7; stroke-linecap: round; }
+.km-connector.owned { stroke: url(#kmRoad); stroke-width: 3; stroke-dasharray: 10 6; animation: kmMarch 1.6s linear infinite; }
+@keyframes kmMarch { to { stroke-dashoffset: -16; } }
+/* узлы-щиты */
 .km-node { cursor: pointer; }
-.km-node .km-bg { fill: rgba(16, 16, 24, 0.92); stroke: var(--border); stroke-width: 1.5; }
-.km-node .km-ring { fill: none; stroke: transparent; stroke-width: 2.5; pointer-events: none; }
-.km-node.km-captured .km-bg { fill: rgba(42, 30, 16, 0.95); stroke: var(--gold-3); stroke-width: 2; }
-.km-node.km-captured .km-ring { stroke: var(--gold-3); stroke-opacity: 0.5; filter: drop-shadow(0 0 5px rgba(212, 165, 116, 0.55)); }
+.km-node .km-bg { fill: #141009; stroke: none; }
+.km-node image { opacity: 0.92; }
+.km-node .km-ring { fill: none; stroke: rgba(212, 165, 116, 0.45); stroke-width: 2; pointer-events: none; }
+.km-node.km-captured .km-ring { stroke: var(--gold-3); stroke-width: 2.5; stroke-opacity: 0.9; }
 .km-node.km-captured:hover .km-ring { stroke: var(--gold-4); stroke-opacity: 1; }
-.km-node.km-front .km-ring { stroke: var(--gold-4); stroke-opacity: 0.9; animation: kmPulse 2s ease-in-out infinite; }
-.km-node.km-siege .km-ring { stroke: var(--blood-3); stroke-opacity: 1; animation: kmPulse 1.2s ease-in-out infinite; }
-.km-node.km-siege .km-bg { stroke: var(--blood-3); }
-.km-node.km-locked .km-bg { fill: rgba(8, 8, 12, 0.95); stroke: var(--border); }
-.km-node.km-locked .km-emoji { opacity: 0.35; filter: grayscale(1); }
-.km-node.km-locked:hover .km-bg { stroke: var(--border-hi); }
-.km-emoji { font-size: 20px; pointer-events: none; }
+.km-node.km-front .km-ring { stroke: var(--gold-4); stroke-width: 2.5; stroke-opacity: 0.9; animation: kmPulse 2s ease-in-out infinite; }
+.km-node.km-siege .km-ring { stroke: var(--blood-3); stroke-width: 2.5; stroke-opacity: 1; animation: kmPulse 1.2s ease-in-out infinite; }
+.km-node.km-locked .km-bg { fill: #0b0908; }
+.km-node.km-locked image { opacity: 0.2; filter: saturate(0.3); }
+.km-node.km-locked .km-ring { stroke: var(--border); }
+.km-node.km-locked:hover .km-ring { stroke: var(--border-hi); }
+.km-lockglyph { font-size: 12px; opacity: 0.85; pointer-events: none; }
+.km-emoji circle { fill: rgba(10, 8, 6, 0.85); stroke: rgba(212, 165, 116, 0.45); stroke-width: 1; }
+.km-emoji text { font-size: 9px; pointer-events: none; }
 .km-corrupt { fill: none; stroke: var(--blood-1); stroke-width: 3; pointer-events: none; }
 .km-badge circle { fill: var(--blood-2); stroke: var(--blood-3); stroke-width: 1.5; }
-.km-badge text { font-size: 10px; fill: #fff; }
-.km-name { font-size: 10.5px; fill: var(--text); letter-spacing: 0.5px; pointer-events: none; }
+.km-badge text { font-size: 10px; fill: #fff; font-weight: bold; }
+/* таблички имён */
+.km-plaque rect { fill: rgba(8, 6, 4, 0.85); stroke: rgba(212, 165, 116, 0.3); stroke-width: 0.75; }
+.km-plaque.km-captured rect, .km-plaque:not(.dim) rect { stroke: rgba(212, 165, 116, 0.45); }
+.km-name { font-size: 9.5px; fill: var(--text); letter-spacing: 1px; font-family: Georgia, serif; pointer-events: none; }
 .km-name.dim { fill: var(--text-dim); opacity: 0.55; }
+.km-count { font-size: 9px; font-style: italic; fill: var(--gold); letter-spacing: 1px; pointer-events: none; }
+.km-count.now { fill: var(--blood-bright); font-style: normal; font-weight: bold; }
 .km-node:focus-visible { outline: none; }
 .km-node:focus-visible .km-ring { stroke: var(--gold-5); stroke-width: 3.5; stroke-opacity: 1; }
 @keyframes kmPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
-:root.perf-eco .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring { animation: none !important; }
+:root.perf-eco .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, :root.perf-eco .km-connector.owned { animation: none !important; }
 .km-front-card { margin: 0 0 12px; }
 @media (prefers-reduced-motion: reduce) {
-  .km-node.km-front .km-ring, .km-node.km-siege .km-ring { animation: none !important; }
+  .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, .km-connector.owned { animation: none !important; }
 }

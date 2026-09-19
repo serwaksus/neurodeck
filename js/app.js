@@ -2352,38 +2352,89 @@ if (s.captured) return 'Захвачена';
 if (i === frontIdx()) return (daysToSiegeNow() === 0) ? 'Осада сегодня' : 'Следующая цель';
 return 'Заперта';
 }
-function kingdomMapHtml(siegeToday) { // ФАЗА E: SVG-карта «Путь Угасания»; имена/иконки/провинции из STRONGHOLDS — хардкодов нет
+function kingdomMapHtml(siegeToday) { // ФАЗА E+: премиум-карта «Путь Угасания»: пергамент/дороги/гексы-щиты/таблички; контракты фазы E (классы, aria, mapNodePos) сохранены
+var ds = (typeof siegeToday === 'number') ? siegeToday : (siegeToday ? 0 : 99);
 var rows = Math.ceil(STRONGHOLDS.length / 2);
 var h = 44 + (rows - 1) * 64 + 48;
+var TOP = 54;
+var H = h + TOP + 26;
+var ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+function prand(i) { return Math.abs(Math.sin((i + 1) * 127.1) * 43758.5453) % 1; }
+function hexPath(r) { var k = 0.8660254; return 'M0 ' + (-r) + ' L' + (r * k).toFixed(2) + ' ' + (-r / 2) + ' L' + (r * k).toFixed(2) + ' ' + (r / 2) + ' L0 ' + r + ' L' + (-r * k).toFixed(2) + ' ' + (r / 2) + ' L' + (-r * k).toFixed(2) + ' ' + (-r / 2) + ' Z'; }
+var HEX = hexPath(22), HEXI = hexPath(18), HEXC = hexPath(19);
 var html = '<div class="km-legend">' +
 '<span><i class="km-lg km-lg-cap"></i>Захвачено</span>' +
 '<span><i class="km-lg km-lg-front"></i>Следующая цель</span>' +
 '<span><i class="km-lg km-lg-siege"></i>Осада</span>' +
 '<span><i class="km-lg km-lg-lock"></i>Заперто</span></div>';
-html += '<div class="sh-map-wrap"><svg viewBox="0 0 390 ' + h + '" width="100%" role="group" aria-label="Карта королевства: Путь Угасания"><clipPath id="kmClip"><circle cx="0" cy="0" r="16"/></clipPath>';
+html += '<div class="sh-map-wrap"><svg class="km-svg" viewBox="0 0 390 ' + H + '" width="100%" role="group" aria-label="Карта королевства: Путь Угасания">';
+html += '<defs>' +
+'<linearGradient id="kmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1611"/><stop offset="0.5" stop-color="#12100c"/><stop offset="1" stop-color="#0b0a07"/></linearGradient>' +
+'<linearGradient id="kmRoad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ecd28c"/><stop offset="1" stop-color="#a97f45"/></linearGradient>' +
+'<radialGradient id="kmVin" cx="0.5" cy="0.42" r="0.78"><stop offset="0.55" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(0,0,0,0.5)"/></radialGradient>' +
+'<clipPath id="kmClip"><path d="' + HEXC + '"/></clipPath>' +
+'<filter id="kmShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#000000" flood-opacity="0.55"/></filter>' +
+'</defs>';
+html += '<rect x="0" y="0" width="390" height="' + H + '" fill="url(#kmSky)"/>';
+for (var b = 0; b < 6; b++) {
+var bx = Math.round(40 + prand(b * 7 + 1) * 310), by = Math.round(TOP + 30 + prand(b * 13 + 5) * (h - 40)), br = Math.round(46 + prand(b * 3 + 2) * 52);
+html += '<ellipse cx="' + bx + '" cy="' + by + '" rx="' + br + '" ry="' + Math.round(br * 0.62) + '" fill="rgba(146,120,74,0.06)"/>';
+}
+html += '<rect x="5" y="5" width="380" height="' + (H - 10) + '" fill="none" stroke="rgba(212,165,116,0.35)" stroke-width="1"/>';
+html += '<rect x="9" y="9" width="372" height="' + (H - 18) + '" fill="none" stroke="rgba(0,0,0,0.65)" stroke-width="1"/>';
+html += '<g class="km-corner"><path d="M5 17 L5 5 L17 5"/><path d="M373 5 L385 5 L385 17"/><path d="M385 ' + (H - 17) + ' L385 ' + (H - 5) + ' L373 ' + (H - 5) + '"/><path d="M17 ' + (H - 5) + ' L5 ' + (H - 5) + ' L5 ' + (H - 17) + '"/></g>';
+html += '<g class="km-cartouche"><line x1="84" y1="30" x2="148" y2="30"/><text x="195" y="34" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="242" y1="30" x2="306" y2="30"/></g>';
+var g = '<g transform="translate(0,' + TOP + ')">';
+for (var di = 0; di < STRONGHOLDS.length; di++) {
+var px = Math.round(30 + prand(di * 31 + 11) * 330), py = Math.round(26 + prand(di * 17 + 3) * (h - 44));
+var nearNode = false;
+for (var dn = 0; dn < STRONGHOLDS.length; dn++) { var np = mapNodePos(dn); var ddx = px - np.x, ddy = py - np.y; if (ddx * ddx + ddy * ddy < 38 * 38) { nearNode = true; break; } }
+if (nearNode) continue;
+if (prand(di * 5 + 7) < 0.5) g += '<path class="km-deco" transform="translate(' + px + ',' + py + ')" d="M0 0 L8 -11 L16 0 M6 0 L11 -7 L15 0"/>';
+else g += '<g class="km-deco km-trees" transform="translate(' + px + ',' + py + ')"><circle cx="-5" cy="0" r="5"/><circle cx="3" cy="-3" r="6"/><circle cx="9" cy="1" r="4.5"/></g>';
+}
+var lastProv = 0;
+for (var zi = 0; zi < STRONGHOLDS.length; zi++) {
+var zd = STRONGHOLDS[zi];
+if (zd.prov !== lastProv) {
+lastProv = zd.prov;
+var zp = mapNodePos(zi);
+g += '<text class="km-zone" x="' + ((zi % 2 === 0) ? 36 : 354) + '" y="' + (zp.y - 28) + '" text-anchor="' + ((zi % 2 === 0) ? 'start' : 'end') + '">ПРОВИНЦИЯ ' + (ROMAN[zd.prov - 1] || zd.prov) + '</text>';
+}
+}
 var segs = '';
 for (var i = 1; i < STRONGHOLDS.length; i++) {
-var a = mapNodePos(i - 1), b = mapNodePos(i);
-segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') + '" d="M' + a.x + ' ' + a.y + ' C' + Math.round((a.x + b.x) / 2) + ' ' + a.y + ', ' + Math.round((a.x + b.x) / 2) + ' ' + b.y + ', ' + b.x + ' ' + b.y + '"/>';
+var a = mapNodePos(i - 1), b2 = mapNodePos(i);
+var dpath = 'M' + a.x + ' ' + a.y + ' C' + Math.round((a.x + b2.x) / 2) + ' ' + a.y + ', ' + Math.round((a.x + b2.x) / 2) + ' ' + b2.y + ', ' + b2.x + ' ' + b2.y;
+segs += '<path class="km-road-case" d="' + dpath + '"/>';
+segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') + '" d="' + dpath + '"/>';
 }
-html += segs;
+g += segs;
 var front = frontIdx();
 for (var n = 0; n < STRONGHOLDS.length; n++) {
 var d = STRONGHOLDS[n], s = strongholds[n], p = mapNodePos(n);
-var state = s.captured ? 'km-captured' : (n === front ? (siegeToday ? 'km-siege' : 'km-front') : 'km-locked');
-var node = '<g class="km-node ' + state + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ')">';
-node += '<circle class="km-bg" r="22"/>';
+var state = s.captured ? 'km-captured' : (n === front ? (ds === 0 ? 'km-siege' : 'km-front') : 'km-locked');
 var stage = s.captured ? shWorstStage(n) : null;
 var frac = stage === 'ruin' ? 1 : (stage === 'worn' ? 0.5 : 0);
-if (frac > 0) node += '<circle class="km-corrupt" r="19" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100" transform="rotate(-90)"/>';
-node += '<circle class="km-ring" r="22"/>';
-node += '<text class="km-emoji" y="7" text-anchor="middle">' + d.icon + '</text>';
-node += '<image href="img/tract/region0' + d.prov + '.png" x="-16" y="-16" width="32" height="32" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" onerror="this.style.display=\'none\'"/>';
-if (state === 'km-siege') node += '<g class="km-badge" transform="translate(17,-17)"><circle r="9"/><text y="3.5" text-anchor="middle">⚔</text></g>';
+var builtN = 0; var bl = strongholds[n].buildings || {};
+for (var bk in bl) if (bl[bk] && bl[bk].built) builtN++;
+var node = '<g class="km-node ' + state + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ')" filter="url(#kmShadow)">';
+node += '<title>' + d.name + ' · налог ' + d.tax + '💰 · постройки ' + builtN + '/' + d.slots + ' · оборона ' + (d.gar + d.def) + (frac > 0 ? (frac === 1 ? ' · руина' : ' · обветшало') : '') + '</title>';
+node += '<path class="km-bg" d="' + HEX + '"/>';
+node += '<image href="img/tract/region0' + d.prov + '.png" x="-19" y="-19" width="38" height="38" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" onerror="this.style.display=\'none\'"/>';
+if (frac > 0) node += '<path class="km-corrupt" d="' + HEXI + '" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100"/>';
+node += '<path class="km-ring" d="' + HEX + '"/>';
+node += '<g class="km-emoji"><circle cx="13" cy="13" r="8"/><text x="13" y="16.5" text-anchor="middle">' + d.icon + '</text></g>';
+if (state === 'km-locked') node += '<text class="km-lockglyph" y="6" text-anchor="middle">🔒</text>';
+if (state === 'km-siege') node += '<g class="km-badge" transform="translate(-16,-16)"><circle r="9.5"/><text y="4" text-anchor="middle">⚔</text></g>';
 node += '</g>';
-html += node;
-html += '<text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (p.y + 36) + '" text-anchor="middle">' + d.name + '</text>';
+g += node;
+g += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + (p.x - 36) + '" y="' + (p.y + 27) + '" width="72" height="15" rx="3"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (p.y + 38) + '" text-anchor="middle">' + d.name + '</text></g>';
+if (n === front && ds <= 7) g += '<text class="km-count' + (ds === 0 ? ' now' : '') + '" x="' + p.x + '" y="' + (p.y + 56) + '" text-anchor="middle">' + (ds === 0 ? '⚔ ОСАДА СЕГОДНЯ' : '🛡 осада через ' + ds + ' дн.') + '</text>';
 }
+g += '</g>';
+html += g;
+html += '<rect x="0" y="0" width="390" height="' + H + '" fill="url(#kmVin)" pointer-events="none"/>';
 html += '</svg></div>';
 return html;
 }
@@ -2406,7 +2457,7 @@ var fi = frontIdx();
 var daysToSiege = daysToSiegeNow();
 html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
 // ФАЗА E: карта королевства заменяет ленту провинций (панели твердыни не тронуты)
-html += kingdomMapHtml(daysToSiege === 0);
+html += kingdomMapHtml(daysToSiege);
 // Фронт: штурмовая карточка под картой (штурм остаётся доступным из обзорного состояния)
 if (front > 0 && !strongholds[front].captured) {
 var fd = STRONGHOLDS[front];
