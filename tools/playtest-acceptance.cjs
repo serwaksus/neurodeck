@@ -191,7 +191,7 @@ async function shot(pg, label) {
   // ===================== БЛОК 1. Долгая кампания, недели 1–6 (сценарий 1) =====================
   await step('1.1 казна выдана (чит 500), Ж1 в Сендер-Хуторе построен через UI, иммунитет записан', async () => {
     await ev(() => { HERO.gold = 500; });
-    await pg.locator('.sh-card.front[data-action="sh-open"]').first().click({ force: true });
+    await pg.locator('.km-node[data-idx="0"]').first().click({ force: true }); // фаза E: панель открывается тапом по узлу карты
     await pg.waitForTimeout(300);
     await pg.locator('.sh-buy[data-bid="zh1"]').first().click({ force: true });
     await pg.waitForTimeout(300);
