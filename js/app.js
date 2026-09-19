@@ -2425,7 +2425,8 @@ var ns = (state === 'km-front' || state === 'km-siege') ? 1.12 : (state === 'km-
 var node = '<g class="km-node ' + state + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ') scale(' + ns + ')" filter="url(#kmShadow)">';
 node += '<title>' + d.name + ' · налог ' + d.tax + '💰 · постройки ' + builtN + '/' + d.slots + ' · оборона ' + (d.gar + d.def) + (frac > 0 ? (frac === 1 ? ' · руина' : ' · обветшало') : '') + '</title>';
 node += '<path class="km-bg" d="' + HEX + '"/>';
-node += '<image href="img/tract/region0' + d.prov + '.png" x="-19" y="-19" width="38" height="38" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" onerror="this.style.display=\'none\'"/>';
+node += '<image href="img/tract/region0' + d.prov + '.png" x="-19" y="-19" width="38" height="38" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" style="' + (state === 'km-locked' ? 'opacity:' + (0.12 + prand(n) * 0.1).toFixed(2) + ';' : '') + '" onerror="this.style.display=\'none\'"/>';
+node += '<path class="km-shade" d="' + HEX + '"/>';
 node += '<path class="km-bevel" d="' + HEX + '"/>';
 if (frac > 0) node += '<path class="km-corrupt" d="' + HEXI + '" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100"/>';
 node += '<path class="km-ring" d="' + HEX + '"/>';

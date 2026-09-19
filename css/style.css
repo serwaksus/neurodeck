@@ -1401,14 +1401,14 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .km-cartouche text { fill: var(--gold-bright); font-family: Georgia, serif; font-size: 13px; letter-spacing: 5px; }
 .km-cartouche line { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1; }
 .km-corner path { fill: none; stroke: rgba(212, 165, 116, 0.55); stroke-width: 2; }
-.km-zone { fill: rgba(212, 165, 116, 0.42); font-size: 8.5px; letter-spacing: 3px; font-family: Georgia, serif; }
-.km-deco { stroke: rgba(180, 150, 100, 0.22); stroke-width: 1.5; fill: none; }
-.km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.16); stroke: none; }
+.km-zone { fill: rgba(212, 165, 116, 0.6); font-size: 9px; letter-spacing: 3px; font-family: Georgia, serif; }
+.km-deco { stroke: rgba(180, 150, 100, 0.34); stroke-width: 1.5; fill: none; }
+.km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.26); stroke: none; }
 /* дороги: тёмный корпус + золотое полотно (захвачено) / пунктир (заперто) */
-.km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 7; stroke-linecap: round; }
+.km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 8; stroke-linecap: round; }
 .km-road-glow { fill: none; stroke: rgba(251, 191, 36, 0.16); stroke-width: 9; stroke-linecap: round; }
-.km-connector { fill: none; stroke: rgba(190, 170, 130, 0.22); stroke-width: 2; stroke-dasharray: 1 7; stroke-linecap: round; }
-.km-connector.owned { stroke: url(#kmRoad); stroke-width: 3; stroke-dasharray: 10 6; animation: kmMarch 1.6s linear infinite; }
+.km-connector { fill: none; stroke: rgba(190, 170, 130, 0.32); stroke-width: 2.25; stroke-dasharray: 1 7; stroke-linecap: round; }
+.km-connector.owned { stroke: url(#kmRoad); stroke-width: 3.5; stroke-dasharray: 10 6; animation: kmMarch 1.6s linear infinite; }
 @keyframes kmMarch { to { stroke-dashoffset: -16; } }
 /* щиты: внутренний бевел (свет сверху), картуш/компас/декор */
 .km-bevel { fill: none; stroke: url(#kmBevel); stroke-width: 1.5; pointer-events: none; }
@@ -1422,7 +1422,9 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 /* узлы-щиты */
 .km-node { cursor: pointer; }
 .km-node .km-bg { fill: #141009; stroke: none; }
-.km-node image { opacity: 0.92; }
+.km-node image { opacity: 0.78; }
+.km-node .km-bg { fill: #141009; stroke: none; }
+.km-node .km-shade { fill: rgba(10, 8, 5, 0.34); pointer-events: none; }
 .km-node .km-ring { fill: none; stroke: rgba(212, 165, 116, 0.45); stroke-width: 2; pointer-events: none; }
 .km-node.km-captured .km-ring { stroke: var(--gold-3); stroke-width: 2.5; stroke-opacity: 0.9; }
 .km-node.km-captured:hover .km-ring { stroke: var(--gold-4); stroke-opacity: 1; }
