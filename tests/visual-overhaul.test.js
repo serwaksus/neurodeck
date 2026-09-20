@@ -112,6 +112,20 @@ test('тап по узлу открывает панель + keydown Enter/Space
   assert.ok(css.includes('.km-terr.km-captured'), 'сталь captured в CSS');
   assert.ok(css.includes(':root.perf-eco .km-node.km-front .km-ring'), 'eco-гейт пульса цели');
   assert.ok(/@media \(prefers-reduced-motion: reduce\)[\s\S]*km-node\.km-front/.test(css), 'reduced-motion гейт пульса');
+  const savedName = STRONGHOLDS[17].name;
+  try {
+    STRONGHOLDS[17].name = 'Шёпотящий Монастырь Забытых Перепутьев Багрового Предела'; // 48 симв: крайний случай клампа таблички
+    const longHtml = withState(0, 0, false)();
+    assert.ok(!longHtml.slice(longHtml.indexOf('km-plaque')).includes('NaN'), 'длинное имя: координаты табличек без NaN');
+    const longRects = [...longHtml.matchAll(/<g class="km-plaque[^"]*"><rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="(\d+)"/g)];
+    assert.equal(longRects.length, 20, '20 табличек с координатами');
+    for (const [, xs, , ws] of longRects) {
+      const x = parseFloat(xs), w = parseInt(ws);
+      assert.ok(Number.isFinite(x) && Number.isFinite(w) && w > 0, 'rect таблички конечен');
+    }
+  } finally {
+    STRONGHOLDS[17].name = savedName;
+  }
 });
 
 // ФАЗА F: тайлы построек

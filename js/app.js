@@ -3009,8 +3009,12 @@ node += '<g class="km-town" transform="translate(' + p.x + ',' + p.y + ')" filte
 (state === 'km-locked' ? '<text class="km-lockglyph" x="-24" y="16" text-anchor="middle">🔒</text>' : '') +
 '</g>';
 var pw2 = Math.max(110, Math.round(d.name.length * 12 + 28));
+var pl = p.x - Math.round(pw2 / 2);
+var pfr = KG.provinces[d.prov - 1].frame;
+if (pl < pfr.x0 + 8) pl = pfr.x0 + 8; // кламп: табличка не заходит за сушу провинции
+if (pl + pw2 > pfr.x1 - 8) pl = pfr.x1 - 8 - pw2;
 var py2 = (n % 2 === 0) ? (p.y + 24) : (p.y - 54); // чередование: чёт — снизу, нечёт — сверху (имена не липнут к стенам)
-node += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + (p.x - Math.round(pw2 / 2)) + '" y="' + py2 + '" width="' + pw2 + '" height="28" rx="5"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (py2 + 19) + '" text-anchor="middle">' + d.name + '</text></g>';
+node += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + pl + '" y="' + py2 + '" width="' + pw2 + '" height="28" rx="5"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + Math.round(pl + pw2 / 2) + '" y="' + (py2 + 19) + '" text-anchor="middle">' + d.name + '</text></g>';
 if (bossHere) node += '<text class="km-boss-crown" x="' + p.x + '" y="' + (p.y - 70) + '" text-anchor="middle">⚜</text>';
 if (n === front && ds <= 7) node += '<text class="km-count' + (ds === 0 ? ' now' : '') + '" x="' + p.x + '" y="' + (p.y + 74) + '" text-anchor="middle">' + (ds === 0 ? '⚔ ОСАДА СЕГОДНЯ' : '🛡 осада через ' + ds + ' дн.') + '</text>';
 node += '</g>';
