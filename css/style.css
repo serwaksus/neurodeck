@@ -1390,20 +1390,31 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
   overflow: hidden;
 }
 .sh-map-wrap svg { display: block; width: 100%; height: auto; }
+/* Г3 камера-вьюпорт (стадия B) */
+.km-viewport { position: relative; height: min(160vw, 660px); overflow: hidden; }
+.km-viewport svg { width: 100%; height: 100%; touch-action: none; }
+.km-cam-reset { position: absolute; top: 8px; right: 8px; z-index: 2; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--hairline); background: rgba(12, 10, 8, 0.85); color: var(--gold); font-size: 16px; cursor: pointer; }
+.km-cam-reset:active { background: rgba(30, 24, 16, 0.95); }
 .km-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
 .km-legend span { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; background: rgba(12, 10, 8, 0.78); border: 1px solid var(--hairline); border-radius: 8px; }
 .km-lg { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.km-lg-cap { background: var(--gold-3); box-shadow: 0 0 6px rgba(212, 165, 116, 0.6); }
-.km-lg-front { background: var(--gold-5); box-shadow: 0 0 8px rgba(251, 191, 36, 0.8); }
+.km-lg-cap { background: rgba(70, 130, 180, 0.6); box-shadow: 0 0 6px rgba(70, 130, 180, 0.6); }
+.km-lg-front { background: repeating-linear-gradient(45deg, rgba(70, 130, 180, 0.6) 0 3px, rgba(139, 26, 53, 0.6) 3px 6px); box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
 .km-lg-siege { background: var(--blood-3); box-shadow: 0 0 8px rgba(199, 62, 77, 0.8); }
-.km-lg-lock { background: #2c2c38; border: 1px solid var(--border); }
+.km-lg-lock { background: rgba(139, 26, 53, 0.45); border: 1px solid var(--border); }
 /* картуш и зоны */
-.km-cartouche text { fill: var(--gold-bright); font-family: Georgia, serif; font-size: 13px; letter-spacing: 5px; }
-.km-cartouche line { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1; }
+.km-cartouche text { fill: var(--gold-bright); font-family: Georgia, serif; font-size: 22px; letter-spacing: 8px; }
+.km-cartouche line { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1.5; }
 .km-corner path { fill: none; stroke: rgba(212, 165, 116, 0.55); stroke-width: 2; }
-.km-zone { fill: rgba(212, 165, 116, 0.6); font-size: 9px; letter-spacing: 3px; font-family: Georgia, serif; }
-.km-deco { stroke: rgba(180, 150, 100, 0.34); stroke-width: 1.5; fill: none; }
+.km-zone { fill: rgba(212, 165, 116, 0.6); font-size: 20px; letter-spacing: 5px; font-family: Georgia, serif; }
+/* Г3: море/река/декор */
+.km-sea { fill: rgba(20, 42, 62, 0.4); stroke: rgba(96, 140, 170, 0.3); stroke-width: 1.5; }
+.km-wave { fill: none; stroke: rgba(150, 190, 220, 0.22); stroke-width: 2.5; stroke-linecap: round; }
+.km-river { fill: none; stroke: rgba(96, 140, 170, 0.45); stroke-width: 7; stroke-linecap: round; }
+.km-bridge line { stroke: rgba(146, 120, 74, 0.8); stroke-width: 3.5; stroke-linecap: round; }
+.km-deco { stroke: rgba(180, 150, 100, 0.34); stroke-width: 2.5; fill: none; }
 .km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.26); stroke: none; }
+.km-deco.km-furrow line { stroke: rgba(180, 150, 100, 0.26); stroke-width: 3; }
 /* дороги: тёмный корпус + золотое полотно (захвачено) / пунктир (заперто) */
 .km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 8; stroke-linecap: round; }
 .km-road-glow { fill: none; stroke: rgba(251, 191, 36, 0.16); stroke-width: 9; stroke-linecap: round; }
@@ -1411,44 +1422,54 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .km-connector.owned { stroke: url(#kmRoad); stroke-width: 3.5; stroke-dasharray: 10 6; animation: kmMarch 1.6s linear infinite; }
 @keyframes kmMarch { to { stroke-dashoffset: -16; } }
 /* щиты: внутренний бевел (свет сверху), картуш/компас/декор */
-.km-bevel { fill: none; stroke: url(#kmBevel); stroke-width: 1.5; pointer-events: none; }
-.km-dia { fill: var(--gold-3); font-size: 8px; }
+.km-dia { fill: var(--gold-3); font-size: 18px; }
+.km-town { pointer-events: none; }
 .km-compass { opacity: 0.9; }
 .km-compass-ring { fill: rgba(10, 8, 6, 0.5); stroke: rgba(212, 165, 116, 0.35); stroke-width: 1; }
 .km-compass-hub { fill: rgba(212, 165, 116, 0.65); }
 .km-star { fill: rgba(212, 165, 116, 0.42); }
 .km-compass-n { fill: rgba(212, 165, 116, 0.65); font-size: 9px; font-family: Georgia, serif; }
 :root.perf-eco .km-connector.owned { animation: none !important; }
-/* узлы-щиты */
+/* Г3: полит-заливки территорий (сталь captured / штриховка front / кровь+fog locked) */
+.km-terr.km-captured { fill: rgba(70, 130, 180, 0.30); stroke: none; }
+.km-terr.km-captured:hover { fill: rgba(70, 130, 180, 0.45); }
+.km-terr.km-front { fill: url(#kmHatch); stroke: none; }
+.km-terr.km-siege { fill: url(#kmHatch); stroke: none; }
+.km-terr.km-locked { fill: rgba(139, 26, 53, 0.22); stroke: none; }
+.km-fog { fill: #0d0b12; stroke: none; pointer-events: none; }
+.km-prov-out { fill: none; stroke: rgba(212, 165, 116, 0.75); stroke-width: 2.5; pointer-events: none; }
+/* городки: hit-полигон + башня с флагом владельца */
+.km-hit { fill: transparent; stroke: none; }
 .km-node { cursor: pointer; }
-.km-node .km-bg { fill: #141009; stroke: none; }
-.km-node image { opacity: 0.78; }
-.km-node .km-bg { fill: #141009; stroke: none; }
-.km-node .km-shade { fill: rgba(10, 8, 5, 0.34); pointer-events: none; }
-.km-node .km-ring { fill: none; stroke: rgba(212, 165, 116, 0.45); stroke-width: 2; pointer-events: none; }
-.km-node.km-captured .km-ring { stroke: var(--gold-3); stroke-width: 2.5; stroke-opacity: 0.9; }
+.km-tower { fill: #1b150d; stroke: rgba(212, 165, 116, 0.5); stroke-width: 1.5; }
+.km-pole { stroke: rgba(146, 120, 74, 0.9); stroke-width: 1.5; }
+.km-flag { fill: var(--blood-2); stroke: rgba(0, 0, 0, 0.5); stroke-width: 0.75; }
+.km-node.km-captured .km-flag { fill: #4a7ba6; }
+.km-node.km-captured .km-tower { stroke: var(--gold-3); }
+.km-node .km-ring { fill: none; stroke: rgba(212, 165, 116, 0.45); stroke-width: 3; pointer-events: none; }
+.km-node.km-captured .km-ring { stroke: var(--gold-3); stroke-width: 4; stroke-opacity: 0.9; }
 .km-node.km-captured:hover .km-ring { stroke: var(--gold-4); stroke-opacity: 1; }
-.km-node.km-front .km-ring { stroke: var(--gold-4); stroke-width: 2.5; stroke-opacity: 0.9; animation: kmPulse 2s ease-in-out infinite; }
-.km-node.km-siege .km-ring { stroke: var(--blood-3); stroke-width: 2.5; stroke-opacity: 1; animation: kmPulse 1.2s ease-in-out infinite; }
-.km-node.km-locked .km-bg { fill: #0b0908; }
-.km-node.km-locked image { opacity: 0.2; filter: saturate(0.3); }
+.km-node.km-front .km-ring { stroke: var(--gold-4); stroke-width: 4; stroke-opacity: 0.9; animation: kmPulse 2s ease-in-out infinite; }
+.km-node.km-siege .km-ring { stroke: var(--blood-3); stroke-width: 4; stroke-opacity: 1; animation: kmPulse 1.2s ease-in-out infinite; }
+.km-node.km-locked .km-tower { fill: #0b0908; stroke: var(--border); }
+.km-node.km-locked .km-flag { fill: #3a1520; }
 .km-node.km-locked .km-ring { stroke: var(--border); }
 .km-node.km-locked:hover .km-ring { stroke: var(--border-hi); }
-.km-lockglyph { font-size: 12px; opacity: 0.85; pointer-events: none; }
-.km-emoji circle { fill: rgba(10, 8, 6, 0.85); stroke: rgba(212, 165, 116, 0.45); stroke-width: 1; }
-.km-emoji text { font-size: 9px; pointer-events: none; }
-.km-corrupt { fill: none; stroke: var(--blood-1); stroke-width: 3; pointer-events: none; }
-.km-badge circle { fill: var(--blood-2); stroke: var(--blood-3); stroke-width: 1.5; }
-.km-badge text { font-size: 10px; fill: #fff; font-weight: bold; }
+.km-lockglyph { font-size: 26px; opacity: 0.85; pointer-events: none; }
+.km-emoji circle { fill: rgba(10, 8, 6, 0.85); stroke: rgba(212, 165, 116, 0.45); stroke-width: 1.5; }
+.km-emoji text { font-size: 19px; pointer-events: none; }
+.km-corrupt { fill: none; stroke: var(--blood-1); stroke-width: 5; pointer-events: none; }
+.km-badge circle { fill: var(--blood-2); stroke: var(--blood-3); stroke-width: 2.5; }
+.km-badge text { font-size: 24px; fill: #fff; font-weight: bold; }
 /* таблички имён */
-.km-plaque rect { fill: rgba(8, 6, 4, 0.85); stroke: rgba(212, 165, 116, 0.3); stroke-width: 0.75; }
+.km-plaque rect { fill: rgba(8, 6, 4, 0.85); stroke: rgba(212, 165, 116, 0.3); stroke-width: 1; }
 .km-plaque.km-captured rect, .km-plaque:not(.dim) rect { stroke: rgba(212, 165, 116, 0.45); }
-.km-name { font-size: 9.5px; fill: var(--text); letter-spacing: 1px; font-family: Georgia, serif; pointer-events: none; }
+.km-name { font-size: 19px; fill: var(--text); letter-spacing: 2px; font-family: Georgia, serif; pointer-events: none; }
 .km-name.dim { fill: var(--text-dim); opacity: 0.55; }
-.km-count { font-size: 9px; font-style: italic; fill: var(--gold); letter-spacing: 1px; pointer-events: none; }
+.km-count { font-size: 19px; font-style: italic; fill: var(--gold); letter-spacing: 2px; pointer-events: none; }
 .km-count.now { fill: var(--blood-bright); font-style: normal; font-weight: bold; }
 .km-node:focus-visible { outline: none; }
-.km-node:focus-visible .km-ring { stroke: var(--gold-5); stroke-width: 3.5; stroke-opacity: 1; }
+.km-node:focus-visible .km-ring { stroke: var(--gold-5); stroke-width: 5; stroke-opacity: 1; }
 @keyframes kmPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 :root.perf-eco .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, :root.perf-eco .km-connector.owned { animation: none !important; }
 .km-front-card { margin: 0 0 12px; }
@@ -1457,7 +1478,7 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 }
 
 /* ===================== Г2-1: Поверенные Тьмы — боссы провинций ===================== */
-.km-boss-crown { fill: var(--gold-bright); font-size: 15px; filter: drop-shadow(0 0 3px rgba(255, 200, 100, 0.8)); pointer-events: none; }
+.km-boss-crown { fill: var(--gold-bright); font-size: 30px; filter: drop-shadow(0 0 3px rgba(255, 200, 100, 0.8)); pointer-events: none; }
 .boss-card { border: 1px solid rgba(255, 200, 100, 0.35); background: rgba(212, 165, 116, 0.07); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
 .boss-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .boss-card-icon { font-size: 22px; }
@@ -1469,7 +1490,7 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .boss-phase.locked { opacity: 0.55; }
 .boss-card-artifact { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 6px; font-size: 12px; color: var(--gold-bright); }
 /* Г2-2 «Глазами ворона»: погода */
-.km-weather { font-size: 13px; }
+.km-weather { font-size: 26px; }
 .km-wi-clear { fill: #d9c98a; }
 .km-wi-blizzard { fill: #9fd0e8; }
 .km-wi-drought { fill: #d98a5a; }

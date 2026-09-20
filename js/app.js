@@ -2699,9 +2699,6 @@ function checkSiegeAlarmToast() { // Ф1: тост+haptic в день N-2 и д�
     showToast(d === 0 ? '⚠ Осада сегодня!' : '⚠ Осадная тревога', 'Враг ~' + p.power + ' · оборона ' + p.def + ' — ' + p.advice, 'blood');
     haptic('warning');
 }
-function mapNodePos(i) { // ФАЗА E: детерминированная «змейка» Пути Угасания — 2 колонки, ряд сверху вниз; позиция только от индекса
-return { x: (i % 2 === 0 ? 110 : 280), y: 44 + Math.floor(i / 2) * 64 };
-}
 function kmStatusLabel(i) {
 var s = strongholds[i];
 if (s.captured) return 'Захвачена';
@@ -2723,7 +2720,7 @@ var KG = (function () {
       var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
       var px = -dy / len, py = dx / len, mids = [];
       for (var k = 1; k <= 2; k++) {
-        var t = k / 3 + j(key * 7 + k) * 0.14, off = j(key * 13 + k) * 9;
+        var t = k / 3 + j(lo * 7 + hi * 11 + k) * 0.14, off = j(lo * 13 + hi * 5 + k) * 9;
         mids.push({ x: a.x + dx * t + px * off, y: a.y + dy * t + py * off });
       }
       _emid[key] = mids;
@@ -2756,25 +2753,26 @@ var KG = (function () {
     }
     var P00 = P(0, 0), P01 = P(0, 1), P02 = P(0, 2), P10 = P(1, 0), P11 = P(1, 1), P12 = P(1, 2), P20 = P(2, 0), P21 = P(2, 1), P22 = P(2, 2), P30 = P(3, 0), P31 = P(3, 1), P32 = P(3, 2);
     var cells = [
-      { cor: [P20, P21, P11, P10] },
-      { cor: [P21, P22, P12, P11] },
-      { cor: [P12, P22, P21, P11] },
-      { cor: [P11, P21, P20, P10] },
-      { cor: [P00, P02, P12, P11, P10] }
+      { cor: [P00, P01, P11, P10] },
+      { cor: [P01, P02, P12, P11] },
+      { cor: [P10, P11, P21, P20] },
+      { cor: [P11, P12, P22, P21] },
+      { cor: [P20, P21, P22, P32, P31, P30] }
     ];
     var out = [];
     for (var i = 0; i < cells.length; i++) {
       var cor = cells[i].cor;
       out.push({ idx: (prov - 1) * 5 + i, prov: prov, poly: cellPath(cor), center: centroid(cor) });
     }
-    return out;
+    var outline = cellPath([P00, P01, P02, P12, P22, P32, P31, P30, P20, P10]);
+    return { tiles: out, outline: outline };
   }
   var tiles = [], provinces = [];
   [1, 2, 3, 4].forEach(function (pv) {
     var t = provinceTiles(pv);
-    for (var i = 0; i < t.length; i++) tiles.push(t[i]);
+    for (var i = 0; i < t.tiles.length; i++) tiles.push(t.tiles[i]);
     var f = FR[pv];
-    provinces.push({ id: pv, name: PROV_NAME[pv], roman: ROMAN[pv], label: { x: Math.round((f.x0 + f.x1) / 2), y: f.y0 + 22 }, frame: f });
+    provinces.push({ id: pv, name: PROV_NAME[pv], roman: ROMAN[pv], label: { x: Math.round((f.x0 + f.x1) / 2), y: f.y0 + 22 }, frame: f, outline: t.outline });
   });
   var adj = {};
   for (var ai = 0; ai < 20; ai++) adj[ai] = [];
@@ -2782,108 +2780,215 @@ var KG = (function () {
   return { WORLD: WORLD, SEA: SEA, tiles: tiles, provinces: provinces, adj: adj, center: function (i) { return tiles[i].center; } };
 })();
 
-function kingdomMapHtml(siegeToday) { // ФАЗА E+: премиум-карта «Путь Угасания»: пергамент/дороги/гексы-щиты/таблички; контракты фазы E (классы, aria, mapNodePos) сохранены
+/* Г3-B1: камера TW — пан (1 палец, порог 8px), пинч 1..3x, даблтап-зум, сброс; viewBox-манипуляция, event-driven без rAF */
+var KM_CAM = { x: 0, y: 0, w: 780, h: 1120, scale: 1, bound: false, dragged: false };
+function kmCamApply(svg) { svg.setAttribute('viewBox', KM_CAM.x.toFixed(2) + ' ' + KM_CAM.y.toFixed(2) + ' ' + KM_CAM.w.toFixed(2) + ' ' + KM_CAM.h.toFixed(2)); }
+function kmCamClamp() {
+  KM_CAM.w = 780 / KM_CAM.scale; KM_CAM.h = 1120 / KM_CAM.scale;
+  KM_CAM.x = Math.min(780 - KM_CAM.w, Math.max(0, KM_CAM.x));
+  KM_CAM.y = Math.min(1120 - KM_CAM.h, Math.max(0, KM_CAM.y));
+}
+function kmCamReset(svg) { KM_CAM.x = 0; KM_CAM.y = 0; KM_CAM.scale = 1; KM_CAM.w = 780; KM_CAM.h = 1120; if (svg) kmCamApply(svg); }
+function kmCamInit() {
+  if (KM_CAM.bound) return;
+  if (typeof document === 'undefined' || !document.addEventListener) return;
+  KM_CAM.bound = true;
+  var pts = {}, pinch = null, lastTap = 0, lastTapXY = null, downXY = null;
+  function ptList() { return Object.keys(pts).map(function (k) { return pts[k]; }); }
+  function vpOf(e) { var t = e.target && e.target.closest ? e.target.closest('.km-viewport') : null; return t || null; }
+  document.addEventListener('pointerdown', function (e) {
+    if (!vpOf(e)) return;
+    pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (Object.keys(pts).length === 1) { downXY = { x: e.clientX, y: e.clientY }; KM_CAM.dragged = false; }
+    if (Object.keys(pts).length === 2) {
+      var a = ptList();
+      pinch = { d0: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1, scale0: KM_CAM.scale, cx: (a[0].x + a[1].x) / 2, cy: (a[0].y + a[1].y) / 2 };
+    }
+  }, { passive: true });
+  document.addEventListener('pointermove', function (e) {
+    if (!pts[e.pointerId]) return;
+    var prev = pts[e.pointerId];
+    pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var vp = vpOf(e); if (!vp) return;
+    var svg = vp.querySelector('svg'); if (!svg) return;
+    var n = Object.keys(pts).length;
+    if (n === 1) {
+      if (!KM_CAM.dragged && downXY && Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 8) KM_CAM.dragged = true;
+      if (KM_CAM.dragged) {
+        var k = KM_CAM.w / (svg.clientWidth || 1);
+        KM_CAM.x -= (e.clientX - prev.x) * k; KM_CAM.y -= (e.clientY - prev.y) * k;
+        kmCamClamp(); kmCamApply(svg);
+      }
+    } else if (n === 2 && pinch) {
+      var a = ptList();
+      var d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1;
+      var rect = svg.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      var ax = pinch.cx - rect.left, ay = pinch.cy - rect.top;
+      var wx = KM_CAM.x + ax / rect.width * KM_CAM.w, wy = KM_CAM.y + ay / rect.height * KM_CAM.h;
+      KM_CAM.scale = Math.min(3, Math.max(1, pinch.scale0 * d / pinch.d0));
+      kmCamClamp();
+      KM_CAM.x = wx - ax / rect.width * KM_CAM.w; KM_CAM.y = wy - ay / rect.height * KM_CAM.h;
+      kmCamClamp(); kmCamApply(svg);
+    }
+  }, { passive: true });
+  function up(e) {
+    delete pts[e.pointerId];
+    if (Object.keys(pts).length < 2) pinch = null;
+    if (Object.keys(pts).length === 0) {
+      if (KM_CAM.dragged && downXY && Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 8) {
+        var once = function (ce) { ce.stopPropagation(); ce.preventDefault(); document.removeEventListener('click', once, true); };
+        document.addEventListener('click', once, true);
+      }
+      downXY = null;
+    }
+  }
+  document.addEventListener('pointerup', up);
+  document.addEventListener('pointercancel', up);
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('.km-cam-reset')) {
+      var vp = e.target.closest('.km-viewport');
+      kmCamReset(vp && vp.querySelector('svg'));
+      return;
+    }
+    if (KM_CAM.dragged) return;
+    var vp2 = vpOf(e); if (!vp2) return;
+    if (e.target.closest('.km-node')) return; // тап по тайлу = канон-контракт панели, зум только по местности
+    var now = Date.now();
+    if (lastTap && now - lastTap < 300 && lastTapXY && Math.hypot(e.clientX - lastTapXY.x, e.clientY - lastTapXY.y) < 24) {
+      lastTap = 0;
+      var svg2 = vp2.querySelector('svg'); if (!svg2) return;
+      var rect = svg2.getBoundingClientRect(); if (!rect.width || !rect.height) return;
+      var ax = e.clientX - rect.left, ay = e.clientY - rect.top;
+      var wx = KM_CAM.x + ax / rect.width * KM_CAM.w, wy = KM_CAM.y + ay / rect.height * KM_CAM.h;
+      KM_CAM.scale = (KM_CAM.scale >= 3) ? 1 : Math.min(3, KM_CAM.scale * 2);
+      kmCamClamp();
+      if (KM_CAM.scale === 1) { KM_CAM.x = 0; KM_CAM.y = 0; }
+      else { KM_CAM.x = wx - ax / rect.width * KM_CAM.w; KM_CAM.y = wy - ay / rect.height * KM_CAM.h; kmCamClamp(); }
+      kmCamApply(svg2);
+    } else { lastTap = now; lastTapXY = { x: e.clientX, y: e.clientY }; }
+  });
+}
+
+function kingdomMapHtml(siegeToday) { // Г3: политическая карта Total War — KG-тайлы (сталь/кровь/туман), мир 780×1120; контракты фазы E сохранены (km-node/sh-open/aria)
 var ds = (typeof siegeToday === 'number') ? siegeToday : (siegeToday ? 0 : 99);
-var rows = Math.ceil(STRONGHOLDS.length / 2);
-var h = 44 + (rows - 1) * 64 + 48;
-var TOP = 54;
-var H = h + TOP + 26;
-var ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+var W = KG.WORLD.w, H = KG.WORLD.h;
 function prand(i) { return Math.abs(Math.sin((i + 1) * 127.1) * 43758.5453) % 1; }
-function hexPath(r) { var k = 0.8660254; return 'M0 ' + (-r) + ' L' + (r * k).toFixed(2) + ' ' + (-r / 2) + ' L' + (r * k).toFixed(2) + ' ' + (r / 2) + ' L0 ' + r + ' L' + (-r * k).toFixed(2) + ' ' + (r / 2) + ' L' + (-r * k).toFixed(2) + ' ' + (-r / 2) + ' Z'; }
-var HEX = hexPath(22), HEXI = hexPath(18), HEXC = hexPath(19);
+var front = frontIdx();
+var fogD = {};
+if (front >= 0 && KG.adj[front]) { fogD[front] = 0; var _q = [front]; while (_q.length) { var _c = _q.shift(); for (var _fi = 0; _fi < KG.adj[_c].length; _fi++) { var _nb = KG.adj[_c][_fi]; if (fogD[_nb] === undefined) { fogD[_nb] = fogD[_c] + 1; _q.push(_nb); } } } }
 var html = '<div class="km-legend">' +
 '<span><i class="km-lg km-lg-cap"></i>Захвачено</span>' +
 '<span><i class="km-lg km-lg-front"></i>Следующая цель</span>' +
 '<span><i class="km-lg km-lg-siege"></i>Осада</span>' +
 '<span><i class="km-lg km-lg-lock"></i>Заперто</span></div>';
-html += '<div class="sh-map-wrap"><svg class="km-svg" viewBox="0 0 390 ' + H + '" width="100%" role="group" aria-label="Карта королевства: Путь Угасания">';
+html += '<div class="sh-map-wrap"><div class="km-viewport"><svg class="km-svg" viewBox="' + KM_CAM.x + ' ' + KM_CAM.y + ' ' + KM_CAM.w + ' ' + KM_CAM.h + '" width="100%" role="group" aria-label="Карта королевства: Путь Угасания">';
 html += '<defs>' +
-'<linearGradient id="kmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1611"/><stop offset="0.5" stop-color="#12100c"/><stop offset="1" stop-color="#0b0a07"/></linearGradient>' +
+'<linearGradient id="kmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#191510"/><stop offset="0.5" stop-color="#131009"/><stop offset="1" stop-color="#0b0a07"/></linearGradient>' +
 '<linearGradient id="kmRoad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ecd28c"/><stop offset="1" stop-color="#a97f45"/></linearGradient>' +
 '<radialGradient id="kmVin" cx="0.5" cy="0.42" r="0.78"><stop offset="0.55" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(0,0,0,0.5)"/></radialGradient>' +
-'<clipPath id="kmClip"><path d="' + HEXC + '"/></clipPath>' +
+'<pattern id="kmHatch" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="rgba(139,26,53,0.32)"/><rect width="6" height="14" fill="rgba(70,130,180,0.40)"/></pattern>' +
 '<filter id="kmShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#000000" flood-opacity="0.55"/></filter>' +
-'<linearGradient id="kmBevel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(255,240,200,0.55)"/><stop offset="0.35" stop-color="rgba(255,240,200,0.08)"/><stop offset="1" stop-color="rgba(0,0,0,0.3)"/></linearGradient>' +
 '</defs>';
-html += '<rect x="0" y="0" width="390" height="' + H + '" fill="url(#kmSky)"/>';
-for (var b = 0; b < 10; b++) {
-var bx = Math.round(40 + prand(b * 7 + 1) * 310), by = Math.round(TOP + 30 + prand(b * 13 + 5) * (h - 40)), br = Math.round(46 + prand(b * 3 + 2) * 52);
-html += '<ellipse cx="' + bx + '" cy="' + by + '" rx="' + br + '" ry="' + Math.round(br * 0.62) + '" fill="rgba(146,120,74,0.06)"/>';
+html += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#kmSky)"/>';
+for (var b = 0; b < 12; b++) {
+var bx = Math.round(60 + prand(b * 7 + 1) * 660), by = Math.round(100 + prand(b * 13 + 5) * 920), br = Math.round(60 + prand(b * 3 + 2) * 70);
+html += '<ellipse cx="' + bx + '" cy="' + by + '" rx="' + br + '" ry="' + Math.round(br * 0.62) + '" fill="rgba(146,120,74,0.05)"/>';
 }
-html += '<rect x="5" y="5" width="380" height="' + (H - 10) + '" fill="none" stroke="rgba(212,165,116,0.35)" stroke-width="1"/>';
-html += '<rect x="9" y="9" width="372" height="' + (H - 18) + '" fill="none" stroke="rgba(0,0,0,0.65)" stroke-width="1"/>';
-html += '<g class="km-corner"><path d="M5 17 L5 5 L17 5"/><path d="M373 5 L385 5 L385 17"/><path d="M385 ' + (H - 17) + ' L385 ' + (H - 5) + ' L373 ' + (H - 5) + '"/><path d="M17 ' + (H - 5) + ' L5 ' + (H - 5) + ' L5 ' + (H - 17) + '"/></g>';
+html += '<g class="km-sea-g"><rect class="km-sea" x="' + KG.SEA.x0 + '" y="' + KG.SEA.y0 + '" width="' + (KG.SEA.x1 - KG.SEA.x0) + '" height="' + (KG.SEA.y1 - KG.SEA.y0) + '" rx="10"/>';
+for (var sw = 0; sw < 6; sw++) {
+var sy = KG.SEA.y0 + 130 + sw * 160, sx = KG.SEA.x0 + 6;
+html += '<path class="km-wave" d="M' + sx + ' ' + sy + ' q7 -7 14 0 q7 7 14 0"/>';
+}
+html += '</g>';
+html += '<rect x="5" y="5" width="' + (W - 10) + '" height="' + (H - 10) + '" fill="none" stroke="rgba(212,165,116,0.35)" stroke-width="1"/>';
+html += '<rect x="9" y="9" width="' + (W - 18) + '" height="' + (H - 18) + '" fill="none" stroke="rgba(0,0,0,0.65)" stroke-width="1"/>';
+html += '<g class="km-corner"><path d="M5 17 L5 5 L17 5"/><path d="M' + (W - 17) + ' 5 L' + (W - 5) + ' 5 L' + (W - 5) + ' 17"/><path d="M' + (W - 5) + ' ' + (H - 17) + ' L' + (W - 5) + ' ' + (H - 5) + ' L' + (W - 17) + ' ' + (H - 5) + '"/><path d="M17 ' + (H - 5) + ' L5 ' + (H - 5) + ' L5 ' + (H - 17) + '"/></g>';
 // Г2-2: полоса прогноза погоды над картой — 11 иконок по очередям боссов I..XI (провинция очереди → погода)
 if (typeof BOSSES !== 'undefined' && Array.isArray(BOSSES) && typeof weatherOf === 'function') {
 var _wtape = (typeof ensureSeason === 'function') ? weatherSeasonWeek() : { sn: 1, wk: 1 };
 var _wIcons = '';
 for (var wi = 0; wi < BOSSES.length; wi++) {
 var _ww = weatherOf(BOSSES[wi].prov, _wtape.sn, _wtape.wk);
-_wIcons += '<text class="km-wi km-wi-' + _ww.id + '" x="' + (30 + wi * 33) + '" y="50" text-anchor="middle">' + _ww.icon + '<title>Очередь ' + (wi + 1) + ' · ' + _ww.name + (weatherNorth(BOSSES[wi].prov) && _ww.id === 'blizzard' ? ' — содержание ×2' : _ww.id === 'drought' && weatherSouth(BOSSES[wi].prov) ? ' — налог ×0.75' : '') + '</title></text>';
+_wIcons += '<text class="km-wi km-wi-' + _ww.id + '" x="' + (60 + wi * 66) + '" y="52" text-anchor="middle">' + _ww.icon + '<title>Очередь ' + (wi + 1) + ' · ' + _ww.name + (weatherNorth(BOSSES[wi].prov) && _ww.id === 'blizzard' ? ' — содержание ×2' : _ww.id === 'drought' && weatherSouth(BOSSES[wi].prov) ? ' — налог ×0.75' : '') + '</title></text>';
 }
 html += '<g class="km-weather" pointer-events="all">' + _wIcons + '</g>';
 }
-html += '<g class="km-cartouche"><line x1="84" y1="30" x2="148" y2="30"/><text class="km-dia" x="78" y="33" text-anchor="middle">◆</text><text x="195" y="34" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="242" y1="30" x2="306" y2="30"/><text class="km-dia" x="312" y="33" text-anchor="middle">◆</text></g>';
-html += '<g class="km-compass" transform="translate(46,' + (H - 54) + ')" pointer-events="none"><circle r="15" class="km-compass-ring"/><path class="km-star" d="M0 -13 L2.6 -2.6 L13 0 L2.6 2.6 L0 13 L-2.6 2.6 L-13 0 L-2.6 -2.6 Z"/><circle r="2" class="km-compass-hub"/><text class="km-compass-n" y="-19" text-anchor="middle">N</text></g>';
-var g = '<g transform="translate(0,' + TOP + ')">';
-for (var di = 0; di < STRONGHOLDS.length; di++) {
-var px = Math.round(30 + prand(di * 31 + 11) * 330), py = Math.round(26 + prand(di * 17 + 3) * (h - 44));
-var nearNode = false;
-for (var dn = 0; dn < STRONGHOLDS.length; dn++) { var np = mapNodePos(dn); var ddx = px - np.x, ddy = py - np.y; if (ddx * ddx + ddy * ddy < 38 * 38) { nearNode = true; break; } }
-if (nearNode) continue;
-if (prand(di * 5 + 7) < 0.5) g += '<path class="km-deco" transform="translate(' + px + ',' + py + ')" d="M0 0 L8 -11 L16 0 M6 0 L11 -7 L15 0"/>';
-else g += '<g class="km-deco km-trees" transform="translate(' + px + ',' + py + ')"><circle cx="-5" cy="0" r="5"/><circle cx="3" cy="-3" r="6"/><circle cx="9" cy="1" r="4.5"/></g>';
+html += '<g class="km-cartouche"><line x1="279" y1="30" x2="343" y2="30"/><text class="km-dia" x="273" y="40" text-anchor="middle">◆</text><text x="' + Math.round(W / 2) + '" y="42" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="437" y1="30" x2="501" y2="30"/><text class="km-dia" x="507" y="40" text-anchor="middle">◆</text></g>';
+html += '<g class="km-compass" transform="translate(52,' + (H - 64) + ') scale(2)" pointer-events="none"><circle r="15" class="km-compass-ring"/><path class="km-star" d="M0 -13 L2.6 -2.6 L13 0 L2.6 2.6 L0 13 L-2.6 2.6 L-13 0 L-2.6 -2.6 Z"/><circle r="2" class="km-compass-hub"/><text class="km-compass-n" y="-19" text-anchor="middle">N</text></g>';
+// Г3 политический слой: заливки территорий (сталь captured / штриховка front / кровь+fog locked) — не интерактивно
+var terr = '<g class="km-terr-layer">';
+for (var t = 0; t < KG.tiles.length; t++) {
+var tt = KG.tiles[t], tcap = strongholds[t].captured;
+var tstate = tcap ? 'km-captured' : (t === front ? (ds === 0 ? 'km-siege' : 'km-front') : 'km-locked');
+terr += '<path class="km-terr ' + tstate + '" d="' + tt.poly + '"/>';
+if (tstate === 'km-locked') { var fd = fogD[t] === undefined ? 9 : fogD[t]; terr += '<path class="km-fog" d="' + tt.poly + '" fill-opacity="' + (fd <= 1 ? 0.15 : (fd === 2 ? 0.32 : 0.5)) + '"/>'; }
 }
-var lastProv = 0;
-for (var zi = 0; zi < STRONGHOLDS.length; zi++) {
-var zd = STRONGHOLDS[zi];
-if (zd.prov !== lastProv) {
-lastProv = zd.prov;
-var zp = mapNodePos(zi);
-g += '<text class="km-zone" x="' + ((zi % 2 === 0) ? 36 : 354) + '" y="' + (zp.y - 28) + '" text-anchor="' + ((zi % 2 === 0) ? 'start' : 'end') + '">ПРОВИНЦИЯ ' + (ROMAN[zd.prov - 1] || zd.prov) + '</text>';
+terr += '</g>';
+html += terr;
+for (var pi = 0; pi < KG.provinces.length; pi++) {
+var pv = KG.provinces[pi];
+html += '<path class="km-prov-out" d="' + pv.outline + '"/>';
+html += '<text class="km-zone" x="' + pv.label.x + '" y="' + pv.label.y + '" text-anchor="middle">ПРОВИНЦИЯ ' + pv.roman + ' · ' + pv.name + '</text>';
 }
+// декор: река I/II с мостом, горы II/IV, лес I, пашни III/IV — статично
+var c4 = KG.center(4), c5 = KG.center(5), rbx = Math.round((c4.x + c5.x) / 2);
+html += '<g class="km-decor">' +
+'<path class="km-river" d="M30 560 Q90 546 150 562 T270 558 T368 560"/>' +
+'<g class="km-bridge" transform="translate(' + rbx + ',559)"><line x1="-9" y1="-7" x2="-9" y2="7"/><line x1="9" y1="-7" x2="9" y2="7"/><line x1="-14" y1="0" x2="14" y2="0"/></g>';
+for (var dv = 0; dv < 60; dv++) {
+var dpv = (dv % 4) + 1, fr = KG.provinces[dpv - 1].frame;
+var dpx = Math.round(fr.x0 + 22 + prand(dv * 31 + 11) * (fr.x1 - fr.x0 - 44)), dpy = Math.round(fr.y0 + 48 + prand(dv * 17 + 3) * (fr.y1 - fr.y0 - 96));
+var near = false;
+for (var dn = 0; dn < KG.tiles.length; dn++) { var cp = KG.center(dn); var ddx = dpx - cp.x, ddy = dpy - cp.y; if (ddx * ddx + ddy * ddy < 58 * 58) { near = true; break; } }
+if (near) continue;
+if (dpv === 2 || dpv === 4) html += '<path class="km-deco" transform="translate(' + dpx + ',' + dpy + ')" d="M0 0 L12 -18 L24 0 M9 0 L16 -11 L22 0"/>';
+else if (dpv === 1) html += '<g class="km-deco km-trees" transform="translate(' + dpx + ',' + dpy + ')"><circle cx="-6" cy="0" r="8"/><circle cx="5" cy="-4" r="9"/><circle cx="14" cy="1" r="7"/></g>';
+else html += '<g class="km-deco km-furrow" transform="translate(' + dpx + ',' + dpy + ')"><line x1="-14" y1="-5" x2="14" y2="-5"/><line x1="-14" y1="3" x2="14" y2="3"/></g>';
 }
-var segs = '';
+html += '</g>';
+// дороги: пунктир по смежности фронта, захваченное — золотое полотно с kmMarch (eco/reduced-гейты)
+var segs = '<g class="km-roads">';
 for (var i = 1; i < STRONGHOLDS.length; i++) {
-var a = mapNodePos(i - 1), b2 = mapNodePos(i);
-var dpath = 'M' + a.x + ' ' + a.y + ' C' + Math.round((a.x + b2.x) / 2) + ' ' + a.y + ', ' + Math.round((a.x + b2.x) / 2) + ' ' + b2.y + ', ' + b2.x + ' ' + b2.y;
+var a = KG.center(i - 1), b2 = KG.center(i);
+var dpath = 'M' + a.x + ' ' + a.y + ' Q' + Math.round((a.x + b2.x) / 2) + ' ' + Math.round((a.y + b2.y) / 2) + ' ' + b2.x + ' ' + b2.y;
 segs += '<path class="km-road-case" d="' + dpath + '"/>';
 if (strongholds[i].captured) segs += '<path class="km-road-glow" d="' + dpath + '"/>';
 segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') + '" d="' + dpath + '"/>';
 }
-g += segs;
-var front = frontIdx();
+segs += '</g>';
+html += segs;
+// интерактивные тайлы: hit-полигон + городок с флагом + табличка (контракт km-node фазы E)
+var g = '';
 for (var n = 0; n < STRONGHOLDS.length; n++) {
-var d = STRONGHOLDS[n], s = strongholds[n], p = mapNodePos(n);
+var d = STRONGHOLDS[n], s = strongholds[n], p = KG.center(n);
 var state = s.captured ? 'km-captured' : (n === front ? (ds === 0 ? 'km-siege' : 'km-front') : 'km-locked');
 var stage = s.captured ? shWorstStage(n) : null;
 var frac = stage === 'ruin' ? 1 : (stage === 'worn' ? 0.5 : 0);
 var builtN = 0; var bl = strongholds[n].buildings || {};
 for (var bk in bl) if (bl[bk] && bl[bk].built) builtN++;
-var ns = (state === 'km-front' || state === 'km-siege') ? 1.12 : (state === 'km-locked' ? 0.94 : 1);
 var bossHere = bossActiveFor(n) !== null; // Г2-1: корона босса — только на узле первой твердыни провинции
-var node = '<g class="km-node ' + state + (bossHere ? ' km-boss' : '') + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + (bossHere ? ' · Босс доступен' : '') + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + ' transform="translate(' + p.x + ',' + p.y + ') scale(' + ns + ')" filter="url(#kmShadow)">';
+var node = '<g class="km-node ' + state + (bossHere ? ' km-boss' : '') + '" data-action="sh-open" data-idx="' + n + '" role="button" tabindex="0" aria-label="' + d.name + ': ' + kmStatusLabel(n) + (bossHere ? ' · Босс доступен' : '') + '"' + (state === 'km-locked' ? ' aria-disabled="true"' : '') + '>';
 node += '<title>' + d.name + ' · налог ' + d.tax + '💰 · постройки ' + builtN + '/' + d.slots + ' · оборона ' + (d.gar + d.def) + (frac > 0 ? (frac === 1 ? ' · руина' : ' · обветшало') : '') + '</title>';
-node += '<path class="km-bg" d="' + HEX + '"/>';
-node += '<image href="img/tract/region0' + d.prov + '.png" x="-19" y="-19" width="38" height="38" clip-path="url(#kmClip)" preserveAspectRatio="xMidYMid slice" style="' + (state === 'km-locked' ? 'opacity:' + (0.12 + prand(n) * 0.1).toFixed(2) + ';' : '') + '" onerror="this.style.display=\'none\'"/>';
-node += '<path class="km-shade" d="' + HEX + '"/>';
-node += '<path class="km-bevel" d="' + HEX + '"/>';
-if (frac > 0) node += '<path class="km-corrupt" d="' + HEXI + '" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100"/>';
-node += '<path class="km-ring" d="' + HEX + '"/>';
-node += '<g class="km-emoji"><circle cx="13" cy="13" r="8"/><text x="13" y="16.5" text-anchor="middle">' + d.icon + '</text></g>';
-if (state === 'km-locked') node += '<text class="km-lockglyph" y="6" text-anchor="middle">🔒</text>';
-if (state === 'km-siege') node += '<g class="km-badge" transform="translate(-16,-16)"><circle r="9.5"/><text y="4" text-anchor="middle">⚔</text></g>';
+node += '<path class="km-hit" d="' + KG.tiles[n].poly + '"/>';
+node += '<g class="km-town" transform="translate(' + p.x + ',' + p.y + ')" filter="url(#kmShadow)">' +
+'<path class="km-tower" d="M-13 18 L-13 -7 L-8 -7 L-8 -13 L-4 -13 L-4 -7 L4 -7 L4 -13 L8 -13 L8 -7 L13 -7 L13 18 Z"/>' +
+'<line class="km-pole" x1="13" y1="-7" x2="13" y2="-32"/><path class="km-flag" d="M13 -32 L30 -25.5 L13 -19 Z"/>' +
+'<g class="km-emoji"><circle cx="27" cy="9" r="14"/><text x="27" y="15" text-anchor="middle">' + d.icon + '</text></g>' +
+(frac > 0 ? '<circle class="km-corrupt" r="30" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100"/>' : '') +
+'<circle class="km-ring" r="30"/>' +
+(state === 'km-siege' ? '<g class="km-badge" transform="translate(-26,-26)"><circle r="18"/><text y="7" text-anchor="middle">⚔</text></g>' : '') +
+(state === 'km-locked' ? '<text class="km-lockglyph" x="-24" y="16" text-anchor="middle">🔒</text>' : '') +
+'</g>';
+node += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + (p.x - 75) + '" y="' + (p.y + 16) + '" width="150" height="28" rx="5"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (p.y + 35) + '" text-anchor="middle">' + d.name + '</text></g>';
+if (bossHere) node += '<text class="km-boss-crown" x="' + p.x + '" y="' + (p.y - 38) + '" text-anchor="middle">⚜</text>';
+if (n === front && ds <= 7) node += '<text class="km-count' + (ds === 0 ? ' now' : '') + '" x="' + p.x + '" y="' + (p.y + 66) + '" text-anchor="middle">' + (ds === 0 ? '⚔ ОСАДА СЕГОДНЯ' : '🛡 осада через ' + ds + ' дн.') + '</text>';
 node += '</g>';
 g += node;
-g += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + (p.x - 36) + '" y="' + (p.y + 27) + '" width="72" height="15" rx="3"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (p.y + 38) + '" text-anchor="middle">' + d.name + '</text></g>';
-if (bossHere) g += '<text class="km-boss-crown" x="' + p.x + '" y="' + (p.y - 26) + '" text-anchor="middle">⚜</text>';
-if (n === front && ds <= 7) g += '<text class="km-count' + (ds === 0 ? ' now' : '') + '" x="' + p.x + '" y="' + (p.y + 56) + '" text-anchor="middle">' + (ds === 0 ? '⚔ ОСАДА СЕГОДНЯ' : '🛡 осада через ' + ds + ' дн.') + '</text>';
 }
-g += '</g>';
 html += g;
-html += '<rect x="0" y="0" width="390" height="' + H + '" fill="url(#kmVin)" pointer-events="none"/>';
-html += '</svg></div>';
+html += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#kmVin)" pointer-events="none"/>';
+html += '</svg><button class="km-cam-reset" type="button" aria-label="Сбросить масштаб карты" title="Сбросить масштаб">⤢</button></div></div>';
 return html;
 }
 function renderStrongholds() {
@@ -2892,6 +2997,7 @@ if (!SM) return;
 if (currentShIdx !== null) { renderStrongholdPanel(currentShIdx); return; }
 var root = document.getElementById('strongholdsRoot');
 if (!root) return;
+kmCamInit();
 var front = frontIdx();
 var cap = capturedCount();
 // Королевский баннер
