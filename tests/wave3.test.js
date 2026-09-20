@@ -276,15 +276,15 @@ test('wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, по
 });
 
 // ----------------------------------------------------------------
-// Ф3: контракты интеграции + кэш v71
+// Ф3: контракты интеграции + кэш v72
 // ----------------------------------------------------------------
-test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html ?v=71 ×8', () => {
+test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html ?v=72 ×8', () => {
     assert.ok(extractFn('renderStrongholds').includes('renderTowerCard(cap)'), 'renderStrongholds зовёт карточку башни');
     assert.ok(app.includes("case 'tower-climb': requestTowerClimb()"), 'data-action-паттерн tower-climb');
     assert.ok(app.includes('TOWER_MAX_FLOOR = 50'), 'кап этажа 50');
     assert.ok(cssSource().includes('.tower-card'), 'style.css: класс .tower-card существует');
     const html = htmlSource();
-    assert.equal((html.match(/v=71/g) || []).length, 8, 'index.html: 8 вхождений ?v=71');
+    assert.equal((html.match(/v=72/g) || []).length, 8, 'index.html: 8 вхождений ?v=72');
     assert.ok(!html.includes('?v=65'), 'v65 не остался');
     console.log('verified: css/style.css index.html PASS (wave3 contracts)');
 });
@@ -292,7 +292,7 @@ test('package.json: check:ui-скрипт верификации UI-ассето
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
-    assert.ok(htmlSource().includes('id="totemCard"') && (htmlSource().match(/v=71/g) || []).length === 8, 'index.html: PASS (totemCard + v71×8)');
+    assert.ok(htmlSource().includes('id="totemCard"') && (htmlSource().match(/v=72/g) || []).length === 8, 'index.html: PASS (totemCard + v72×8)');
     assert.ok(cssSource().includes('.tower-card') && cssSource().includes('.siege-alarm'), 'css/style.css: PASS (tower-card + siege-alarm)');
     console.log('index.html: PASS');
     console.log('css/style.css: PASS');

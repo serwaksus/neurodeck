@@ -30,7 +30,7 @@ const MATH_WITH = (rand) => { // статик-методы Math не enumerable 
 
 function core(picks) {
   const body = g4Core() + '\nreturn [' + picks.join(',') + '];';
-  const fn = new Function('STRONGHOLDS', 'strongholds', 'ensureSeason', 'HERO', 'EDICTS_LABEL_PROV', 'TASKS', 'taskIdCounter', 'builtList', 'ruinAllBuildings', 'showToast', 'sfxFail', 'haptic', 'saveSoon', 'siege', 'Math', 'document', body);
+  const fn = new Function('STRONGHOLDS', 'strongholds', 'ensureSeason', 'HERO', 'EDICTS_LABEL_PROV', 'TASKS', 'taskIdCounter', 'builtList', 'ruinAllBuildings', 'showToast', 'sfxFail', 'haptic', 'saveSoon', 'siege', 'Math', 'document', 'addChronicle', body);
   return fn;
 }
 
@@ -149,7 +149,7 @@ test('Г4: провинциальный order — resolveProvinceOrder двиг�
   const fn = core(['resolveProvinceOrder', 'checkRevolts', 'provOrder', 'provLastRevoltDay'])(
     SH, cap, () => season2, { gold: 1000 },
     (p) => ({ 1: 'Низовья', 2: 'Нагорье' })[p] || 'X',
-    TASKS, 1, null, () => {}, () => {}, () => {}, () => {}, () => {}, { week: 5 }, MATH_WITH(() => 0.0), { getElementById: () => null }
+    TASKS, 1, null, () => {}, () => {},     () => {}, () => {}, () => {}, { week: 5 }, MATH_WITH(() => 0.0), { getElementById: () => null }, () => {}
   );
   const [resolveProvinceOrder, checkRevolts] = fn;
   resolveProvinceOrder();

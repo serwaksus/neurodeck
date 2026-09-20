@@ -1507,6 +1507,12 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .km-edict-cost { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
 .km-prov-chip { fill: rgba(212, 165, 116, 0.7); font-size: 16px; font-family: Georgia, serif; letter-spacing: 1px; }
 .km-prov-chip.hot { fill: var(--blood-bright); }
+/* Г5-Ф: хроника кампании */
+.km-chron-btn { flex: 0 0 auto; border-style: dashed; }
+.km-chron-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); }
+.km-chron-ico { font-size: 17px; flex: 0 0 24px; text-align: center; }
+.km-chron-text { flex: 1; font-size: 13px; color: var(--text); }
+.km-chron-day { font-size: 11px; color: var(--text-dim); white-space: nowrap; font-family: Georgia, serif; }
 @media (prefers-reduced-motion: reduce) {
   .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, .km-connector.owned { animation: none !important; }
 }

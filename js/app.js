@@ -163,6 +163,8 @@ case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodor
 case 'counter-siege': requestCounterSiege(); break;
 case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
 case 'km-edict': requestEdict(parseInt(el.dataset.idx), String(el.dataset.edict || '')); break; // Г4: эдикт провинции
+case 'km-chronicle-open': showChronicle(); break; // Г5-Ф: летопись
+case 'km-chronicle-close': closeChronicle(); break; // Г5-Ф
 case 'sh-scout': requestScout(parseInt(el.dataset.idx)); break; // Г2-3
 case 'storm-pay': stormPay(); break; // Г1-5
 case 'totem-choose': requestTotem(el.dataset.id); break; // Ф2
@@ -1742,6 +1744,9 @@ function closeStarterDeck() {
     if (pendingOnboarding) { pendingOnboarding = false; startOnboarding(); }
 }
 function switchView(view) {
+cancelPendingModal(); // Г5-Ф: ручная навигация отменяет отложенные модалки (гонка weeklyReport блокировала extended-e2e)
+var _wr = document.getElementById('weeklyReportModal'); // Г5-Ф: уже показанный пассивный отчёт закрывается навигацией — намерение игрока приоритетно
+if (_wr && _wr.classList.contains('show')) closeWeeklyReportModal();
 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 document.querySelectorAll('.tab[role="tab"]').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === view)));
 document.querySelectorAll('.bnav-btn').forEach(t => t.classList.remove('active'));
@@ -1970,6 +1975,7 @@ function seasonEndDate(startKey) {
 function seasonDaysTotal(startKey) { return Math.max(1, daysBetween(startKey, seasonEndDate(startKey))); }
 function seasonDaysDone(startKey) { return Math.max(0, Math.min(seasonDaysTotal(startKey), daysBetween(startKey, getMSKDayKey()))); }
 function finishSeason() {
+  addChronicle('🍂', 'Сезон ' + season.num + ' («' + seasonName(season.num) + '») завершён: ' + capturedCount() + '/20 твердынь'); // Г5-Ф
     ensureSeason();
     var completions = FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0);
     var d = {
@@ -2341,6 +2347,7 @@ rows.push({ name: STRONGHOLDS[0].name, refuge: true });
 siege.week = fell ? 1 : siege.week + 1; // потеря = frontSince сброшен, след. воскресенье не каскадирует
 siege.lastResult = fell ? 'fail' : 'win'; // #95: исход недели — для контрштурма
 recalcHirePool();
+chronicleSiegeRows(rows); // Г5-Ф: осады недели в хронику
 showSiegeReport(rows, wrath);
 }
 function canCounterSiege() { // #95: поражение недели + контрштурм не использован + хватает казны
@@ -2406,6 +2413,13 @@ if (anyFell) { screenShake(15, 800); burstParticles(window.innerWidth/2, window.
 else if (anyHeld) { burstParticles(window.innerWidth/2, window.innerHeight/3, 60, { color: '#34d399', speed: 8, decay: 0.012, size: 3, shape: 'star', gravity: 0.08 }); sfxLevelUp(); haptic('medium'); }
 }
 function closeSiegeReport() { document.getElementById('siegeReportModal').classList.remove('show'); }
+function chronicleSiegeRows(rows) { // Г5-Ф: итоги воскресной осады в хронику
+  rows.forEach(function(r) {
+    if (r.refuge) addChronicle('🏰', 'Прибежище восстановлено после полного разгрома');
+    else if (r.held) addChronicle('🛡', r.name + ' — осада отбита (' + r.garDef + ' против ' + r.power + ')');
+    else addChronicle('💀', r.name + ' пала под ударом осады (' + r.power + ')');
+  });
+}
 var TACTICS = { normal: { atk: 1, attr: 1 }, feint: { atk: 0.8, attr: 0.7 }, rush: { atk: 1.25, attr: 2 } }; // Г1-4: тактики штурма
 function tacticAtkMult(t) { return (TACTICS[t] || TACTICS.normal).atk; }
 function tacticAttrMult(t) { return (TACTICS[t] || TACTICS.normal).attr; }
@@ -2474,6 +2488,7 @@ lostTotal += loss;
 if (out.win) {
 strongholds[idx].captured = true;
 siege.week = 1;
+addChronicle('⚔', STRONGHOLDS[idx].name + ' взята штурмом: ' + lostTotal + ' потерь'); // Г5-Ф
 addXpReward(Math.round(150 * (1 + (STATS.int.value - 3) * 0.01)));
 showToast('🏰 ' + STRONGHOLDS[idx].name + ' захвачена!', 'Потери: ' + lostTotal + ' · налог +' + STRONGHOLDS[idx].tax + ' 💰/день', 'crit');
 checkDoctrineOffer(); // Г1-2: подсказка на гейте 3/8/14
@@ -2757,6 +2772,7 @@ function checkRevolts(todayKey) {
       strongholds[first].garrison = [];
       ruinAllBuildings(first);
       if (siege.assaultDay && siege.assaultDay === frontIdxOld()) { /* no-op: штурм дня сбросится сам */ }
+      addChronicle('🔥', STRONGHOLDS[first].name + ' захвачена восставшими: ' + EDICTS_LABEL_PROV(p) + ' отвергла власть'); // Г5-Ф
       siege.week = 1;
       fired = { prov: p, idx: first };
       showToast('🔥 Восстание!', STRONGHOLDS[first].name + ' пала: ' + EDICTS_LABEL_PROV(p) + ' отвергла власть. Порядок был ' + provOrder(p) + '.', 'blood');
@@ -3211,7 +3227,7 @@ var html = '<div class="sh-treasury">' +
 var fi = frontIdx();
 var daysToSiege = daysToSiegeNow();
 html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
-html += '<div class="km-stance-row">' + Object.keys(STANCES).map(function(sid) {
+html += '<div class="km-stance-row">' + '<button class="km-stance km-chron-btn" data-action="km-chronicle-open"><span class="km-stance-ico">📜</span><span class="km-stance-name">Хроника</span><span class="km-stance-desc">летопись кампании</span></button>' + Object.keys(STANCES).map(function(sid) {
   var st = STANCES[sid], act = weekStance() === sid;
   return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-stance" data-stance="' + sid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + st.icon + '</span><span class="km-stance-name">' + st.name + '</span><span class="km-stance-desc">' + st.desc + '</span></button>';
 }).join('') + '</div>';
@@ -4354,7 +4370,7 @@ recalcHirePool(); // понедельник: пул = Σ прироста жил
 runWeeklySiege();
 siege.wkSkips = 0; siege.wkTaskFails = 0;
 siege.retriedThisWeek = false; // #95: контрштурм доступен снова
-setTimeout(function() { enqueueModal(showWeeklyReport); }, 2000);
+if (siege.lastResult || siege.wkSkips > 0 || siege.wkTaskFails > 0) scheduleModal(showWeeklyReport, 2000); // Г5-Ф: пассивный отчёт только неделе с событиями — свежий бут не завешивает UI (гонка extended-e2e)
 }
 FORGED.forEach(c => {
 if (c.firstCompletedAt) {
@@ -4554,6 +4570,29 @@ document.getElementById('syncFileInput').addEventListener('change', importSyncFi
 document.getElementById('taskName').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); createTask(); } }); // QA1-M4: Enter сабмитит форму задачи
 // ===================== Модалки: очередь, a11y-хром, фокус-ловушка, BackButton (QA1-M2/M7, QA5-H1) =====================
 var _pendingModal = null;
+var _modalTimer = null;
+function scheduleModal(fn, ms) { _modalTimer = setTimeout(function() { _modalTimer = null; enqueueModal(fn); }, ms); } // Г5-Ф: отслеживаемый таймер
+function cancelPendingModal() { if (_modalTimer) { clearTimeout(_modalTimer); _modalTimer = null; } _pendingModal = null; } // Г5-Ф: полная отмена (таймер + очередь)
+/* ===================== Г5-Ф: хроника кампании (localStorage, cap 50 — вне сейва: байт-стабильность) ===================== */
+function addChronicle(icon, text) {
+  try {
+    var list = JSON.parse(localStorage.getItem('neurodeck_chronicle') || '[]');
+    if (!Array.isArray(list)) list = [];
+    list.unshift({ d: getMSKDayKey(), icon: String(icon || '•'), text: String(text || '').slice(0, 200) });
+    localStorage.setItem('neurodeck_chronicle', JSON.stringify(list.slice(0, 50)));
+  } catch (e) {}
+}
+function chronicleList() { try { var l = JSON.parse(localStorage.getItem('neurodeck_chronicle') || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+function showChronicle() {
+  var modal = document.getElementById('chronicleModal');
+  if (!modal) return;
+  var rows = chronicleList().map(function(e) {
+    return '<div class="km-chron-row"><span class="km-chron-ico">' + e.icon + '</span><span class="km-chron-text">' + esc(e.text) + '</span><span class="km-chron-day">' + esc(e.d) + '</span></div>';
+  });
+  document.getElementById('chronicleBody').innerHTML = rows.length ? rows.join('') : '<div class="empty-state">Летопись пуста — история ещё не началась.</div>';
+  modal.classList.add('show');
+}
+function closeChronicle() { var m = document.getElementById('chronicleModal'); if (m) m.classList.remove('show'); }
 function enqueueModal(fn) {
     if (document.querySelectorAll('.modal-overlay.show').length === 0) fn();
     else _pendingModal = fn; // QA1-M2: returnModal и weeklyReport показываются ПО ОДНОЙ
