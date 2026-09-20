@@ -2705,14 +2705,15 @@ if (s.captured) return 'Захвачена';
 if (i === frontIdx()) return (daysToSiegeNow() === 0) ? 'Осада сегодня' : 'Следующая цель';
 return 'Заперта';
 }
-/* Г3: политическая карта Total War — геометрия «Путь Угасания» (детерминированная, watertight) */
+/* Г3.5: политическая карта Total War — ЕДИНЫЙ массив суши (фреймы встык, общие углы), watertight по всему миру */
 var KG = (function () {
   var WORLD = { w: 780, h: 1120 };
   function j(seed) { return (Math.abs(Math.sin(seed * 127.1 + 311.7) * 43758.5453) % 1) * 2 - 1; }
-  var FR = { 1: { x0: 25, y0: 590, x1: 370, y1: 1090 }, 2: { x0: 25, y0: 70, x1: 370, y1: 530 }, 3: { x0: 410, y0: 590, x1: 730, y1: 1090 }, 4: { x0: 410, y0: 70, x1: 730, y1: 530 } };
-  var SEA = { x0: 738, y0: 60, x1: 776, y1: 1090 };
+  var FR = { 1: { x0: 20, y0: 560, x1: 390, y1: 1100 }, 2: { x0: 20, y0: 20, x1: 390, y1: 560 }, 3: { x0: 390, y0: 560, x1: 740, y1: 1100 }, 4: { x0: 390, y0: 20, x1: 740, y1: 560 } };
+  var SEA = { x0: 742, y0: 20, x1: 776, y1: 1100 };
   var PROV_NAME = { 1: 'НИЗОВЬЯ', 2: 'НАГОРЬЕ', 3: 'ПРИМОРЬЕ', 4: 'ПЕПЕЛЬНЫЙ ЧЕРТОГ' };
   var ROMAN = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+  var BIOME = { 1: '#262b20', 2: '#2b2722', 3: '#302b1e', 4: '#332019' };
   var _emid = {};
   function edgeMids(a, b) {
     var lo = Math.min(a.id, b.id), hi = Math.max(a.id, b.id), key = lo + '_' + hi;
@@ -2743,13 +2744,17 @@ var KG = (function () {
     return { x: Math.round(x / cor.length), y: Math.round(y / cor.length) };
   }
   function provinceTiles(prov) {
-    var f = FR[prov], base = prov * 1000;
+    var f = FR[prov];
     var cx0 = f.x0 + (f.x1 - f.x0) * 0.52, ry1 = f.y0 + (f.y1 - f.y0) / 3, ry2 = f.y0 + (f.y1 - f.y0) * 2 / 3;
     function P(r, c) {
       var border = (r === 0 || r === 3 || c === 0 || c === 2);
-      var x = (c === 0 ? f.x0 : (c === 1 ? cx0 : f.x1)) + (c === 1 ? j(base + r * 10 + c) * 14 : j(base + r * 10 + c) * 7);
-      var y = (r === 0 ? f.y0 : (r === 3 ? f.y1 : (r === 1 ? ry1 : ry2))) + (border ? j(base + r * 10 + c + 5) * 7 : j(base + r * 10 + c + 5) * 14);
-      return { x: x, y: y, id: base + r * 10 + c };
+      var ux = (c === 0 ? f.x0 : (c === 1 ? cx0 : f.x1));
+      var uy = (r === 0 ? f.y0 : (r === 3 ? f.y1 : (r === 1 ? ry1 : ry2)));
+      // канонический сид от физической точки: общие углы соседних провинций дают одинаковый джиттер → швов нет
+      var seed = Math.round(ux * 10) * 100003 + Math.round(uy * 10);
+      var x = ux + (c === 1 ? j(seed) * 14 : j(seed) * 7);
+      var y = uy + (border ? j(seed + 5) * 7 : j(seed + 5) * 14);
+      return { x: x, y: y, id: seed };
     }
     var P00 = P(0, 0), P01 = P(0, 1), P02 = P(0, 2), P10 = P(1, 0), P11 = P(1, 1), P12 = P(1, 2), P20 = P(2, 0), P21 = P(2, 1), P22 = P(2, 2), P30 = P(3, 0), P31 = P(3, 1), P32 = P(3, 2);
     var cells = [
@@ -2772,7 +2777,8 @@ var KG = (function () {
     var t = provinceTiles(pv);
     for (var i = 0; i < t.tiles.length; i++) tiles.push(t.tiles[i]);
     var f = FR[pv];
-    provinces.push({ id: pv, name: PROV_NAME[pv], roman: ROMAN[pv], label: { x: Math.round((f.x0 + f.x1) / 2), y: f.y0 + 22 }, frame: f, outline: t.outline });
+    var lb = { 1: { x: f.x0 + 14, y: f.y1 - 18, a: 'start' }, 2: { x: f.x0 + 14, y: f.y0 + 30, a: 'start' }, 3: { x: f.x1 - 14, y: f.y1 - 18, a: 'end' }, 4: { x: f.x1 - 14, y: f.y0 + 30, a: 'end' } }[pv];
+    provinces.push({ id: pv, name: PROV_NAME[pv], roman: ROMAN[pv], label: lb, frame: f, outline: t.outline, biome: BIOME[pv] });
   });
   var adj = {};
   for (var ai = 0; ai < 20; ai++) adj[ai] = [];
@@ -2916,13 +2922,39 @@ var _wtape = (typeof ensureSeason === 'function') ? weatherSeasonWeek() : { sn: 
 var _wIcons = '';
 for (var wi = 0; wi < BOSSES.length; wi++) {
 var _ww = weatherOf(BOSSES[wi].prov, _wtape.sn, _wtape.wk);
-_wIcons += '<text class="km-wi km-wi-' + _ww.id + '" x="' + (60 + wi * 66) + '" y="52" text-anchor="middle">' + _ww.icon + '<title>Очередь ' + (wi + 1) + ' · ' + _ww.name + (weatherNorth(BOSSES[wi].prov) && _ww.id === 'blizzard' ? ' — содержание ×2' : _ww.id === 'drought' && weatherSouth(BOSSES[wi].prov) ? ' — налог ×0.75' : '') + '</title></text>';
+_wIcons += '<text class="km-wi km-wi-' + _ww.id + '" x="' + (60 + wi * 66) + '" y="80" text-anchor="middle">' + _ww.icon + '<title>Очередь ' + (wi + 1) + ' · ' + _ww.name + (weatherNorth(BOSSES[wi].prov) && _ww.id === 'blizzard' ? ' — содержание ×2' : _ww.id === 'drought' && weatherSouth(BOSSES[wi].prov) ? ' — налог ×0.75' : '') + '</title></text>';
 }
 html += '<g class="km-weather" pointer-events="all">' + _wIcons + '</g>';
 }
-html += '<g class="km-cartouche"><line x1="279" y1="30" x2="343" y2="30"/><text class="km-dia" x="273" y="40" text-anchor="middle">◆</text><text x="' + Math.round(W / 2) + '" y="42" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="437" y1="30" x2="501" y2="30"/><text class="km-dia" x="507" y="40" text-anchor="middle">◆</text></g>';
-html += '<g class="km-compass" transform="translate(52,' + (H - 64) + ') scale(2)" pointer-events="none"><circle r="15" class="km-compass-ring"/><path class="km-star" d="M0 -13 L2.6 -2.6 L13 0 L2.6 2.6 L0 13 L-2.6 2.6 L-13 0 L-2.6 -2.6 Z"/><circle r="2" class="km-compass-hub"/><text class="km-compass-n" y="-19" text-anchor="middle">N</text></g>';
-// Г3 политический слой: заливки территорий (сталь captured / штриховка front / кровь+fog locked) — не интерактивно
+html += '<g class="km-cartouche"><line x1="249" y1="30" x2="313" y2="30"/><text class="km-dia" x="243" y="40" text-anchor="middle">◆</text><text x="360" y="42" text-anchor="middle">ПУТЬ УГАСАНИЯ</text><line x1="407" y1="30" x2="471" y2="30"/><text class="km-dia" x="477" y="40" text-anchor="middle">◆</text></g>';
+html += '<g class="km-compass" transform="translate(390,1048) scale(1.6)" pointer-events="none"><circle r="15" class="km-compass-ring"/><path class="km-star" d="M0 -13 L2.6 -2.6 L13 0 L2.6 2.6 L0 13 L-2.6 2.6 L-13 0 L-2.6 -2.6 Z"/><circle r="2" class="km-compass-hub"/><text class="km-compass-n" y="-19" text-anchor="middle">N</text></g>';
+// Г3.5 биомная подложка: земля живая ПОД политикой (souls-like: no flat colors — washes+слои)
+for (var pb = 0; pb < KG.provinces.length; pb++) {
+var bp = KG.provinces[pb], bf = bp.frame;
+html += '<path class="km-biome" d="' + bp.outline + '" fill="' + bp.biome + '"/>';
+html += '<ellipse cx="' + Math.round((bf.x0 + bf.x1) / 2) + '" cy="' + Math.round((bf.y0 + bf.y1) / 2) + '" rx="' + Math.round((bf.x1 - bf.x0) * 0.55) + '" ry="' + Math.round((bf.y1 - bf.y0) * 0.34) + '" fill="' + bp.biome + '" fill-opacity="0.5"/>';
+}
+// воды: река с хребтов II через мост в топи I (старица-пруд), эстуарий III к морю
+html += '<g class="km-decor">' +
+'<path class="km-river" d="M142 22 C154 90 118 140 150 200 C182 262 138 320 170 380 C202 442 158 502 199 548 L201 560 C224 622 182 662 192 722 C202 792 246 830 268 900 C288 940 300 955 300 975"/>' +
+'<ellipse class="km-pond" cx="300" cy="982" rx="46" ry="17"/>' +
+'<path class="km-river km-estuary" d="M706 1096 C712 1070 694 1052 704 1030 C710 1016 700 1004 706 992"/>' +
+'<g class="km-bridge" transform="translate(201,560)"><line x1="-10" y1="-8" x2="-10" y2="8"/><line x1="10" y1="-8" x2="10" y2="8"/><line x1="-16" y1="0" x2="16" y2="0"/><line x1="-16" y1="-4" x2="16" y2="-4"/><line x1="-16" y1="4" x2="16" y2="4"/></g>';
+// плотный рельеф: 96 объектов по биомам (хребты II/IV, лес+топь I, дюны+прибой III)
+for (var dv = 0; dv < 96; dv++) {
+var dpv = (dv % 4) + 1, fr = KG.provinces[dpv - 1].frame;
+var dpx = Math.round(fr.x0 + 26 + prand(dv * 31 + 11) * (fr.x1 - fr.x0 - 52)), dpy = Math.round(fr.y0 + 40 + prand(dv * 17 + 3) * (fr.y1 - fr.y0 - 80));
+var near = false;
+for (var dn = 0; dn < KG.tiles.length; dn++) { var cp = KG.center(dn); var ddx = dpx - cp.x, ddy = dpy - cp.y; if (ddx * ddx + ddy * ddy < 54 * 54) { near = true; break; } }
+if (near) continue;
+if (dpv === 2 || dpv === 4) html += '<path class="km-deco km-ridge' + (dpv === 4 ? ' km-ember' : '') + '" transform="translate(' + dpx + ',' + dpy + ') scale(' + (0.8 + prand(dv * 7) * 0.7).toFixed(2) + ')" d="M0 0 L14 -20 L28 0 M10 0 L18 -12 L26 0"/>';
+else if (dpv === 1) { if (prand(dv * 5 + 7) < 0.55) html += '<g class="km-deco km-trees" transform="translate(' + dpx + ',' + dpy + ')"><circle cx="-6" cy="0" r="8"/><circle cx="5" cy="-4" r="9"/><circle cx="14" cy="1" r="7"/></g>';
+else html += '<g class="km-deco km-marsh" transform="translate(' + dpx + ',' + dpy + ')"><path d="M-10 2 Q-6 -6 -2 2 M0 4 Q4 -6 8 4 M10 1 Q13 -5 16 1"/><circle cx="18" cy="4" r="2"/></g>'; }
+else { if (prand(dv * 5 + 7) < 0.5) html += '<g class="km-deco km-dune" transform="translate(' + dpx + ',' + dpy + ')"><path d="M-12 0 Q0 -8 12 0"/><path d="M-8 5 Q2 -1 10 5"/></g>';
+else html += '<path class="km-deco km-coastwave" transform="translate(' + dpx + ',' + dpy + ')" d="M-12 0 q6 -6 12 0 q6 6 12 0"/>'; }
+}
+html += '</g>';
+// Г3 политический слой ПОВЕРХ рельефа: сталь/штриховка/кровь просвечивают биом
 var terr = '<g class="km-terr-layer">';
 for (var t = 0; t < KG.tiles.length; t++) {
 var tt = KG.tiles[t], tcap = strongholds[t].captured;
@@ -2935,31 +2967,21 @@ html += terr;
 for (var pi = 0; pi < KG.provinces.length; pi++) {
 var pv = KG.provinces[pi];
 html += '<path class="km-prov-out" d="' + pv.outline + '"/>';
-html += '<text class="km-zone" x="' + pv.label.x + '" y="' + pv.label.y + '" text-anchor="middle">ПРОВИНЦИЯ ' + pv.roman + ' · ' + pv.name + '</text>';
+html += '<text class="km-zone" x="' + pv.label.x + '" y="' + pv.label.y + '" text-anchor="' + pv.label.a + '">' + pv.roman + '</text>';
+html += '<text class="km-zone km-zone-sub" x="' + pv.label.x + '" y="' + (pv.label.y + 20) + '" text-anchor="' + pv.label.a + '">' + pv.name + '</text>';
 }
-// декор: река I/II с мостом, горы II/IV, лес I, пашни III/IV — статично
-var c4 = KG.center(4), c5 = KG.center(5), rbx = Math.round((c4.x + c5.x) / 2);
-html += '<g class="km-decor">' +
-'<path class="km-river" d="M30 560 Q90 546 150 562 T270 558 T368 560"/>' +
-'<g class="km-bridge" transform="translate(' + rbx + ',559)"><line x1="-9" y1="-7" x2="-9" y2="7"/><line x1="9" y1="-7" x2="9" y2="7"/><line x1="-14" y1="0" x2="14" y2="0"/></g>';
-for (var dv = 0; dv < 60; dv++) {
-var dpv = (dv % 4) + 1, fr = KG.provinces[dpv - 1].frame;
-var dpx = Math.round(fr.x0 + 22 + prand(dv * 31 + 11) * (fr.x1 - fr.x0 - 44)), dpy = Math.round(fr.y0 + 48 + prand(dv * 17 + 3) * (fr.y1 - fr.y0 - 96));
-var near = false;
-for (var dn = 0; dn < KG.tiles.length; dn++) { var cp = KG.center(dn); var ddx = dpx - cp.x, ddy = dpy - cp.y; if (ddx * ddx + ddy * ddy < 58 * 58) { near = true; break; } }
-if (near) continue;
-if (dpv === 2 || dpv === 4) html += '<path class="km-deco" transform="translate(' + dpx + ',' + dpy + ')" d="M0 0 L12 -18 L24 0 M9 0 L16 -11 L22 0"/>';
-else if (dpv === 1) html += '<g class="km-deco km-trees" transform="translate(' + dpx + ',' + dpy + ')"><circle cx="-6" cy="0" r="8"/><circle cx="5" cy="-4" r="9"/><circle cx="14" cy="1" r="7"/></g>';
-else html += '<g class="km-deco km-furrow" transform="translate(' + dpx + ',' + dpy + ')"><line x1="-14" y1="-5" x2="14" y2="-5"/><line x1="-14" y1="3" x2="14" y2="3"/></g>';
-}
-html += '</g>';
-// дороги: пунктир по смежности фронта, захваченное — золотое полотно с kmMarch (eco/reduced-гейты)
+html += '<g class="km-cross" transform="translate(390,560)"><rect x="-7" y="-7" width="14" height="14" transform="rotate(45)"/></g>';
+// дороги: коридоры через межпровинциальные врата (мост I-II, перекрёсток, восточный проход) — не сквозь стены
 var segs = '<g class="km-roads">';
+var WAY = { 5: [201, 560], 10: [390, 560], 15: [650, 560] };
 for (var i = 1; i < STRONGHOLDS.length; i++) {
 var a = KG.center(i - 1), b2 = KG.center(i);
-var dpath = 'M' + a.x + ' ' + a.y + ' Q' + Math.round((a.x + b2.x) / 2) + ' ' + Math.round((a.y + b2.y) / 2) + ' ' + b2.x + ' ' + b2.y;
+var parts = [a];
+if (WAY[i]) parts.push({ x: WAY[i][0], y: WAY[i][1] });
+parts.push(b2);
+var dpath = 'M' + a.x + ' ' + a.y;
+for (var pw = 1; pw < parts.length; pw++) dpath += ' Q' + Math.round((parts[pw - 1].x + parts[pw].x) / 2) + ' ' + Math.round((parts[pw - 1].y + parts[pw].y) / 2) + ' ' + parts[pw].x + ' ' + parts[pw].y;
 segs += '<path class="km-road-case" d="' + dpath + '"/>';
-if (strongholds[i].captured) segs += '<path class="km-road-glow" d="' + dpath + '"/>';
 segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') + '" d="' + dpath + '"/>';
 }
 segs += '</g>';
@@ -2986,9 +3008,11 @@ node += '<g class="km-town" transform="translate(' + p.x + ',' + p.y + ')" filte
 (state === 'km-siege' ? '<g class="km-badge" transform="translate(-26,-26)"><circle r="18"/><text y="7" text-anchor="middle">⚔</text></g>' : '') +
 (state === 'km-locked' ? '<text class="km-lockglyph" x="-24" y="16" text-anchor="middle">🔒</text>' : '') +
 '</g>';
-node += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + (p.x - 75) + '" y="' + (p.y + 16) + '" width="150" height="28" rx="5"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (p.y + 35) + '" text-anchor="middle">' + d.name + '</text></g>';
-if (bossHere) node += '<text class="km-boss-crown" x="' + p.x + '" y="' + (p.y - 38) + '" text-anchor="middle">⚜</text>';
-if (n === front && ds <= 7) node += '<text class="km-count' + (ds === 0 ? ' now' : '') + '" x="' + p.x + '" y="' + (p.y + 66) + '" text-anchor="middle">' + (ds === 0 ? '⚔ ОСАДА СЕГОДНЯ' : '🛡 осада через ' + ds + ' дн.') + '</text>';
+var pw2 = Math.max(110, Math.round(d.name.length * 12 + 28));
+var py2 = (n % 2 === 0) ? (p.y + 24) : (p.y - 54); // чередование: чёт — снизу, нечёт — сверху (имена не липнут к стенам)
+node += '<g class="km-plaque' + (state === 'km-locked' ? ' dim' : '') + '"><rect x="' + (p.x - Math.round(pw2 / 2)) + '" y="' + py2 + '" width="' + pw2 + '" height="28" rx="5"/><text class="km-name' + (state === 'km-locked' ? ' dim' : '') + '" x="' + p.x + '" y="' + (py2 + 19) + '" text-anchor="middle">' + d.name + '</text></g>';
+if (bossHere) node += '<text class="km-boss-crown" x="' + p.x + '" y="' + (p.y - 70) + '" text-anchor="middle">⚜</text>';
+if (n === front && ds <= 7) node += '<text class="km-count' + (ds === 0 ? ' now' : '') + '" x="' + p.x + '" y="' + (p.y + 74) + '" text-anchor="middle">' + (ds === 0 ? '⚔ ОСАДА СЕГОДНЯ' : '🛡 осада через ' + ds + ' дн.') + '</text>';
 node += '</g>';
 g += node;
 }

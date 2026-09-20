@@ -1410,11 +1410,25 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 /* Г3: море/река/декор */
 .km-sea { fill: rgba(20, 42, 62, 0.4); stroke: rgba(96, 140, 170, 0.3); stroke-width: 1.5; }
 .km-wave { fill: none; stroke: rgba(150, 190, 220, 0.22); stroke-width: 2.5; stroke-linecap: round; }
-.km-river { fill: none; stroke: rgba(96, 140, 170, 0.45); stroke-width: 7; stroke-linecap: round; }
-.km-bridge line { stroke: rgba(146, 120, 74, 0.8); stroke-width: 3.5; stroke-linecap: round; }
+/* Г3.5: биомная подложка + рельеф (стиль souls-like: no flat colors) */
+.km-biome { stroke: rgba(212, 165, 116, 0.2); stroke-width: 2; }
+.km-ridge { fill: none; stroke: rgba(200, 175, 130, 0.3); stroke-width: 3; }
+.km-ridge.km-ember { stroke: rgba(255, 130, 60, 0.4); }
+.km-trees circle { fill: rgba(96, 112, 62, 0.3); }
+.km-marsh path { fill: none; stroke: rgba(110, 130, 80, 0.4); stroke-width: 2.5; }
+.km-marsh circle { fill: rgba(140, 150, 90, 0.3); }
+.km-dune path { fill: none; stroke: rgba(210, 180, 120, 0.3); stroke-width: 2.5; }
+.km-coastwave { fill: none; stroke: rgba(140, 170, 190, 0.3); stroke-width: 2.5; }
+/* Г3.5: воды */
+.km-river { fill: none; stroke: rgba(96, 140, 170, 0.5); stroke-width: 8; stroke-linecap: round; }
+.km-pond { fill: rgba(96, 140, 170, 0.35); stroke: rgba(150, 190, 220, 0.25); stroke-width: 1.5; }
+.km-river.km-estuary { stroke-width: 14; }
+.km-bridge line { stroke: rgba(146, 120, 74, 0.9); stroke-width: 4; stroke-linecap: round; }
 .km-deco { stroke: rgba(180, 150, 100, 0.34); stroke-width: 2.5; fill: none; }
 .km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.26); stroke: none; }
-.km-deco.km-furrow line { stroke: rgba(180, 150, 100, 0.26); stroke-width: 3; }
+.km-cross rect { fill: rgba(212, 165, 116, 0.85); stroke: rgba(0, 0, 0, 0.5); stroke-width: 1.5; }
+.km-zone { fill: rgba(212, 165, 116, 0.85); font-size: 44px; letter-spacing: 10px; font-family: Georgia, serif; }
+.km-zone-sub { fill: rgba(212, 165, 116, 0.5); font-size: 22px; letter-spacing: 8px; }
 /* дороги: тёмный корпус + золотое полотно (захвачено) / пунктир (заперто) */
 .km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 8; stroke-linecap: round; }
 .km-road-glow { fill: none; stroke: rgba(251, 191, 36, 0.16); stroke-width: 9; stroke-linecap: round; }
