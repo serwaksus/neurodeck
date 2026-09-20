@@ -161,6 +161,8 @@ case 'treasury-info': showTreasuryBreakdown(); break;
 case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
 case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
 case 'counter-siege': requestCounterSiege(); break;
+case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
+case 'km-edict': requestEdict(parseInt(el.dataset.idx), String(el.dataset.edict || '')); break; // Г4: эдикт провинции
 case 'sh-scout': requestScout(parseInt(el.dataset.idx)); break; // Г2-3
 case 'storm-pay': stormPay(); break; // Г1-5
 case 'totem-choose': requestTotem(el.dataset.id); break; // Ф2
@@ -2227,7 +2229,7 @@ if (!s.captured && strongholds.indexOf(s) !== 0) return; // Сендер-Хут�
 Object.keys(s.buildings).forEach(function(id) {
 var b = s.buildings[id], d = BUILDINGS[id];
 if (!b || !b.built || !d || !d.grow) return;
-pool[d.tier] += Math.round(d.grow * stageMult(b.corruptionStage) * wind);
+pool[d.tier] += Math.round(d.grow * stageMult(b.corruptionStage) * wind * edictLevyMult(STRONGHOLDS[strongholds.indexOf(s)].prov)); // Г4: Чрезвычайный набор +50% в провинции эдикта (индекс каталога из s)
 });
 });
 hirePool = pool;
@@ -2241,21 +2243,24 @@ var taxes = 0, econ = 0, market = 0, upkeep = 0, paid = true;
 var gold = HERO.gold || 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return; // стартовый лагерь sh01 до захвата освобождён от содержания и коррапшна (решение совета)
-taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk)); // Г1-3: 3+ эконом-построек → местный налог ×1.15; Г2-1: артефакт провинции +5%; Г2-2: засуха юга ×0.75
-builtList(i).forEach(function(id) {
-var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
-if (d.gold) econ += d.gold * m;
-if (d.market) market += d.market * m;
-});
-});
-var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
-var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
-taxes = Math.round(taxes * (1 + tBonus));
-taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
-taxes = Math.round(taxes * totemGoldMult()); // Ф2: тотем Волк +5% золота тика
-var _hol = holidayBonus(); if (_hol && _hol.tickMult) taxes = Math.round(taxes * _hol.tickMult); // #8: Новый год — казначейский кэшбэк ×1.5
-var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
-income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% ВСЁ золото (и тик казны)
+    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov)); // Г1-3/Г2-1/Г2-2; Г4: эдикт провинции
+        builtList(i).forEach(function(id) {
+            var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
+            if (d.gold) econ += d.gold * m;
+            if (d.market) market += d.market * m;
+        });
+    });
+    var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
+    var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
+    taxes = Math.round(taxes * (1 + tBonus));
+    taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
+    taxes = Math.round(taxes * totemGoldMult()); // Ф2: тотем Волк +5% золота тика
+    var _hol = holidayBonus(); if (_hol && _hol.tickMult) taxes = Math.round(taxes * _hol.tickMult); // #8: Новый год — казначейский кэшбэк ×1.5
+    var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
+    income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% ВСЁ золото (и тик казны)
+    var _rm = 0, _pc = 0;
+    [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rm += provResourceMult(p); _pc++; } });
+    if (_pc > 0) income = Math.round(income * (_rm / _pc)); // Г4: ресурсы провинций +2%/ед (среднее по захваченным провинциям)
 gold += income;
 dqProgress('gold', income);
 checkDailyGoldGoal(); // #71: тик тоже двигает цель дня
@@ -2268,7 +2273,7 @@ Object.keys(s.buildings).forEach(function(bid) {
 var bb = s.buildings[bid];
 if (bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000) imm[bid] = true;
 });
-var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: stepOpt, immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) }); // Г1-2: устав −20%; Г2-2: метель севера ×2
+var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: stepOpt, immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() }); // Г1-2: устав −20%; Г2-2: метель севера ×2; Г4: стойка недели
 gold = res.gold;
 upkeep += res.upkeep;
 if (!res.paid) paid = false;
@@ -2308,7 +2313,11 @@ var def = STRONGHOLDS[t];
     garDef = Math.round(garDef * totemDefMult()); // Ф2: тотем Медведь +2% обороны
     garDef = Math.round(garDef * doctrineFortMult()); // Г1-2: доктрина крепостей +10%
     garDef = Math.round(garDef * synergyDefMult(t)); // Г1-3: df-четвёрка в твердыне +5% обороны
+    garDef = Math.round(garDef * stanceDefMult()); // Г4: стойка недели (Оборона +20% / Экономия −10%)
 var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult()); // Г2-5: враги +25% силы за круг вознесения
+var _rmW = 0, _pcW = 0;
+[1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rmW += provResourceMult(p); _pcW++; } });
+if (_pcW > 0) power = Math.round(power / (_rmW / _pcW)); // Г4: склады снабжения — удар врага слабее на 2%/ед ресурса (среднее по провинциям)
 if (garDef >= power) {
 strongholds[t].garrison = applyStackLoss(strongholds[t].garrison, 0.15);
 addXpReward(100 * def.prov);
@@ -2450,8 +2459,9 @@ if (ok) doAssault(idx, f);
 function doAssault(idx, f, tactic) {
 var _tc = TACTICS[tactic] ? tactic : 'normal'; // Г1-4: дефолт «Штурм» (ESC/пропуск)
 siege.assaultDay = getMSKDayKey();
+var _stA = stanceAtkMult(); // Г4: стойка недели — Штурм +15% / Экономия −10%
 dqProgress('assault');
-var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc)), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) * bossArtifactMult('attrition', STRONGHOLDS[idx].prov) }); // Г1-2: veteran ×0.7 · Г1-4: тактика · Г2-1: артефакт −10% потерь (пров.)
+var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc) * _stA), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) * bossArtifactMult('attrition', STRONGHOLDS[idx].prov) }); // Г1-2: veteran ×0.7 · Г1-4: тактика · Г2-1: артефакт −10% потерь (пров.) · Г4: стойка
 var lostTotal = 0;
 SM.TIER_KEYS.forEach(function(t) {
 var n = army.units[t] || 0;
@@ -2610,19 +2620,22 @@ var _sw = weatherSeasonWeek();
 var taxes = 0, econ = 0, market = 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return;
-taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk)); // Г1-3: 3+ эконом-построек → местный налог ×1.15; Г2-1: артефакт провинции +5%; Г2-2: засуха юга ×0.75
-builtList(i).forEach(function(id) {
-var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
-if (d.gold) econ += d.gold * m;
-if (d.market) market += d.market * m;
-});
-});
-var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
-taxes = Math.round(taxes * (1 + (SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0)));
-taxes = Math.round(taxes * taxMultiplier()); // parity с тиком
-var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
-income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% — parity с тиком (поймано контроль-тестом)
-return income;
+    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov)); // Г1-3/Г2-1/Г2-2; Г4: эдикт — parity с тиком
+        builtList(i).forEach(function(id) {
+            var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
+            if (d.gold) econ += d.gold * m;
+            if (d.market) market += d.market * m;
+        });
+    });
+    var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
+    taxes = Math.round(taxes * (1 + (SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0)));
+    taxes = Math.round(taxes * taxMultiplier()); // parity с тиком
+    var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
+    income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% — parity с тиком (поймано контроль-тестом)
+    var _rm2 = 0, _pc2 = 0;
+    [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rm2 += provResourceMult(p); _pc2++; } });
+    if (_pc2 > 0) income = Math.round(income * (_rm2 / _pc2)); // Г4: ресурсы — parity с тиком
+    return income;
 }
 function shUpkeepPerDay() {
 ensureStrongholdState();
@@ -2630,7 +2643,7 @@ var _sw = weatherSeasonWeek();
 var u = 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return;
-var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk); // Г2-2: метель севера ×2
+    var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult(); // Г2-2: метель севера ×2; Г4: стойка недели — parity с тиком
 Object.keys(s.buildings).forEach(function(id) {
 var b = s.buildings[id];
 if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDINGS[id].upkeep * _wm;
@@ -2669,6 +2682,154 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 }
 function daysToSiegeNow() { return (7 - ((new Date(Date.now() + 3 * 3600000).getUTCDay() + 1) % 7)); }
 function siegeWrathNow() { return Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)); }
+/* ===================== Г4 «Total War: управление провинциями» — ядро (чистые функции) ===================== */
+function ensureSeasonFields(k) { var s = ensureSeason(); if (k) { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; } return s; } // Г4: материализуем ТОЛЬКО записываемый контейнер — байт-стабильный раундтрип сейвов
+function provKey(p) { return String(p); }
+function provCapturedCount(p) { var n = 0; for (var i = 0; i < STRONGHOLDS.length; i++) if (STRONGHOLDS[i].prov === p && strongholds[i] && strongholds[i].captured) n++; return n; }
+function provTotalCount(p) { var n = 0; for (var i = 0; i < STRONGHOLDS.length; i++) if (STRONGHOLDS[i].prov === p) n++; return n; }
+function provEdict(p) { var s = ensureSeason(); var e = s.edicts || {}; return e[provKey(p)] || null; }
+function provOrder(p) { var s = ensureSeason(); var o = s.order || {}; var v = o[provKey(p)]; return (typeof v === 'number') ? v : 75; }
+function provResource(p) { var s = ensureSeason(); var r = s.resource || {}; var v = r[provKey(p)]; return (typeof v === 'number') ? v : 0; }
+function provLastRevoltDay(p) { var s = ensureSeason(); var l = s.lastRevoltDay || {}; return l[provKey(p)] || null; }
+function setProvEdict(p, edictId) { var s = ensureSeasonFields('edicts'); var k = provKey(p); var cur = s.edicts[k] || null; var curCost = cur ? EDICTS[cur].cost : 0; if (edictId === null) { delete s.edicts[k]; return 0; } var ed = EDICTS[edictId]; if (!ed) return -1; var cost = Math.max(0, ed.cost - curCost); if ((HERO.gold || 0) < cost) return -1; HERO.gold -= cost; s.edicts[k] = edictId; return cost; }
+function provOrderBonus(p) { var o = provOrder(p); return o >= 85 ? 0.10 : (o >= 65 ? 0 : (o >= 40 ? -0.05 : -0.15)); }
+function provResourceMult(p) { return 1 + 0.02 * provResource(p); }
+var STANCES = {
+  assault: { icon: '⚔', name: 'Штурм', desc: '+15% атака армии, содержание ×1.25', atk: 1.15, upkeep: 1.25 },
+  defend:  { icon: '🛡', name: 'Оборона', desc: '+20% оборона твердынь, содержание ×1.25', def: 1.20, upkeep: 1.25 },
+  scout:   { icon: '🌙', name: 'Разведка', desc: 'осада в тумане видна, содержание ×1.1', fogPierce: true, upkeep: 1.1 },
+  economy: { icon: '💰', name: 'Экономия', desc: 'содержание ×0.75, −10% атака и оборона', atk: 0.90, def: 0.90, upkeep: 0.75 }
+};
+function weekStance() { return siege.stance || 'normal'; }
+function stanceUpkeepMult() { var st = STANCES[weekStance()]; return st && st.upkeep ? st.upkeep : 1; }
+function stanceAtkMult() { var st = STANCES[weekStance()]; return st && st.atk ? st.atk : 1; }
+function stanceDefMult() { var st = STANCES[weekStance()]; return st && st.def ? st.def : 1; }
+function stanceFogPierce() { var st = STANCES[weekStance()]; return !!(st && st.fogPierce); }
+function requestStance(stanceId) {
+  if (!STANCES[stanceId]) return;
+  if (weekStance() === stanceId) return;
+  siege.stance = stanceId;
+  showToast('🎚 Стойка недели: ' + STANCES[stanceId].name, STANCES[stanceId].desc, 'save');
+  haptic('light'); saveSoon(); renderStrongholds();
+}
+var EDICTS = {
+  tax:   { icon: '💰', name: 'Военный налог',   desc: 'налоги провинции ×1.25, порядок −2/день',      cost: 150, taxMult: 1.25, orderPerDay: -2 },
+  levy:  { icon: '🎖', name: 'Чрезвычайный набор', desc: '+50% к набору в провинции, порядок −3/день', cost: 100, levyMult: 1.5, orderPerDay: -3 },
+  order: { icon: '⚖', name: 'Указ о порядке',    desc: 'порядок +1/день, налоги провинции ×0.9',      cost: 80,  taxMult: 0.9, orderPerDay: 1 }
+};
+function edictTaxMult(p) { var e = provEdict(p); return (e && EDICTS[e] && EDICTS[e].taxMult) ? EDICTS[e].taxMult : 1; }
+function edictOrderPerDay(p) { var e = provEdict(p); return (e && EDICTS[e] && EDICTS[e].orderPerDay) ? EDICTS[e].orderPerDay : 0; }
+function edictLevyMult(p) { var e = provEdict(p); return (e && EDICTS[e] && EDICTS[e].levyMult) ? EDICTS[e].levyMult : 1; }
+function revoltRisk(p) {
+  if (provCapturedCount(p) === 0) return 0;
+  if (provCapturedCount(p) < provTotalCount(p)) return 0;
+  var o = provOrder(p);
+  if (o >= 70) return 0;
+  var r = (70 - o) * 0.01;
+  return Math.min(0.30, r);
+}
+function resolveProvinceOrder() {
+  var touched = 0;
+  [1, 2, 3, 4].forEach(function(p) {
+    if (provCapturedCount(p) === 0) return;
+    var s = ensureSeasonFields('order'), k = provKey(p);
+    var delta = 1 + edictOrderPerDay(p);
+    var o = provOrder(p) + delta;
+    s.order[k] = Math.max(0, Math.min(100, o));
+    touched++;
+  });
+  return touched;
+}
+function checkRevolts(todayKey) {
+  var fired = null;
+  [1, 2, 3, 4].forEach(function(p) {
+    if (provLastRevoltDay(p) === todayKey) return;
+    var risk = revoltRisk(p);
+    if (risk <= 0) return;
+    var roll = Math.random();
+    if (roll < risk) {
+      var s = ensureSeasonFields('lastRevoltDay');
+      s.lastRevoltDay[provKey(p)] = todayKey;
+      var first = -1;
+      for (var i = 0; i < STRONGHOLDS.length; i++) { if (STRONGHOLDS[i].prov === p && strongholds[i].captured && i !== 0) { first = i; break; } }
+      if (first < 0) return;
+      strongholds[first].captured = false;
+      strongholds[first].garrison = [];
+      ruinAllBuildings(first);
+      if (siege.assaultDay && siege.assaultDay === frontIdxOld()) { /* no-op: штурм дня сбросится сам */ }
+      siege.week = 1;
+      fired = { prov: p, idx: first };
+      showToast('🔥 Восстание!', STRONGHOLDS[first].name + ' пала: ' + EDICTS_LABEL_PROV(p) + ' отвергла власть. Порядок был ' + provOrder(p) + '.', 'blood');
+      sfxFail(); haptic('error');
+    }
+  });
+  return fired;
+}
+function EDICTS_LABEL_PROV(p) { var names = { 1: 'Низовья', 2: 'Нагорье', 3: 'Приморье', 4: 'Пепельный Чертог' }; return names[p] || ('Провинция ' + p); }
+function frontIdxOld() { for (var i = 0; i < strongholds.length; i++) if (!strongholds[i].captured) return i; return -1; }
+function grantRevoltTask(p) {
+  var name = '🔥 Восстание: подавить мятеж в ' + EDICTS_LABEL_PROV(p);
+  for (var i = 0; i < TASKS.length; i++) if (TASKS[i].name === name && TASKS[i].status === 'active') return; // без дублей
+  TASKS.unshift({ id: taskIdCounter++, name: name, tier: 'normal', deadline: null, status: 'active', createdAt: Date.now(), doneAt: null, ghostSince: null });
+}
+function tryResolveRevoltTask(t) {
+  if (t.name.indexOf('🔥 Восстание:') !== 0) return false;
+  var prov = null;
+  [1, 2, 3, 4].forEach(function(p) { if (t.name.indexOf(EDICTS_LABEL_PROV(p)) >= 0) prov = p; });
+  if (prov === null) return false;
+  var done = false;
+  for (var i = 0; i < STRONGHOLDS.length; i++) {
+    if (STRONGHOLDS[i].prov !== prov) continue;
+    if (!strongholds[i].captured) continue;
+    if (builtList(i).length >= 2) { done = true; break; } // ≥2 построек восстановлены — порядок удержан
+  }
+  if (!done) return false;
+  t.status = 'chest_open'; t.doneAt = Date.now(); // терминальный статус: награды нет — снятие штрафа и есть награда
+  var s = ensureSeasonFields('order');
+  [1, 2, 3, 4].forEach(function(p) { s.order[provKey(p)] = Math.max(40, Math.min(100, provOrder(p))); });
+  showToast('⚖ Мятеж подавлен', 'Порядок в ' + EDICTS_LABEL_PROV(prov) + ' восстановлен. Штраф снят.', 'save');
+  return true;
+}
+function revoltResolvable(t) { // Г4: можно ли закрыть revolt-задачу (без мутаций — для гварда completeTask)
+  if (t.name.indexOf('🔥 Восстание:') !== 0) return false;
+  var prov = null;
+  [1, 2, 3, 4].forEach(function(p) { if (t.name.indexOf(EDICTS_LABEL_PROV(p)) >= 0) prov = p; });
+  if (prov === null) return false;
+  for (var i = 0; i < STRONGHOLDS.length; i++) {
+    if (STRONGHOLDS[i].prov !== prov) continue;
+    if (!strongholds[i].captured) continue;
+    if (builtList(i).length >= 2) return true;
+  }
+  return false;
+}
+function requestEdict(idx, edictId) {
+  ensureStrongholdState();
+  if (!STRONGHOLDS[idx] || !strongholds[idx].captured) return;
+  var p = STRONGHOLDS[idx].prov;
+  var next = (provEdict(p) === edictId) ? null : (edictId || null); // повторный тап по активному = отмена
+  var cost = setProvEdict(p, next);
+  if (cost < 0) { showToast('💰 Мало золота', 'Эдикт провинции стоит дороже.', 'blood'); sfxError(); return; }
+  showToast(next ? '📜 Эдикт издан: ' + EDICTS[next].name : '📜 Эдикт отменён', next ? EDICTS[next].desc + (cost > 0 ? ' · −' + cost + ' 💰' : '') : 'Возврат не предусмотрен — казна потратилась.', 'save');
+  haptic('light'); saveSoon();
+  renderStrongholdPanel(idx);
+}
+function edictBlockHtml(idx) {
+  var d = STRONGHOLDS[idx];
+  if (!d || !strongholds[idx] || !strongholds[idx].captured) return '';
+  var p = d.prov;
+  var cur = provEdict(p);
+  var o = provOrder(p), risk = revoltRisk(p);
+  var html = '<div class="km-edict-block"><div class="sh-sec-title">📜 Эдикт · порядок ' + o + '/100 · риск ' + Math.round(risk * 100) + '% · 📦 ресурс ' + provResource(p) + '</div>';
+  if (risk > 0) html += '<div class="km-edict-warn">⚠ Восстание может вспыхнуть ночью (' + Math.round(risk * 100) + '%). Указ о порядке или ≥2 постройки в каждой твердыне снижают угрозу.</div>';
+  html += '<div class="km-edict-row">' + Object.keys(EDICTS).map(function(eid) {
+    var ed = EDICTS[eid], act = cur === eid;
+    return '<button class="km-edict' + (act ? ' active' : '') + '" data-action="km-edict" data-idx="' + idx + '" data-edict="' + eid + '"' + (act ? '' : '') + '><span class="km-edict-ico">' + ed.icon + '</span><span class="km-edict-body"><b>' + ed.name + (act ? ' ✓' : '') + '</b><i>' + ed.desc + '</i></span><span class="km-edict-cost">' + (act ? 'активен' : ed.cost + ' 💰') + '</span></button>';
+  }).join('') + '</div>';
+  var cl = cur ? '<button class="sh-mini" data-action="km-edict" data-idx="' + idx + '" data-edict="' + cur + '">Отменить эдикт</button>' : '';
+  if (cl) html += '<div style="text-align:right">' + cl + '</div>';
+  html += '</div>';
+  return html;
+}
 function siegeAlarmVerdict(ratio) { // Ф1: вербальный совет по соотношению сил
     if (!Number.isFinite(ratio) || ratio <= 0) return 'Обороны нет — вложись в казармы';
     if (ratio < 0.9) return 'Гарнизон тонкий — вложись в казармы';
@@ -2685,7 +2846,7 @@ function siegeAlarmPreview() { // Ф1: превью сил следующей о
     def = Math.round(def);
     var _sw = weatherSeasonWeek();
     var _known = scoutFresh(HERO.scouts, getMSKDayKey()) === 'fresh' && HERO.scouts.idx === t; // Г2-3: свежая тень прокалывает туман
-    if (weatherFog(STRONGHOLDS[t].prov, _sw.sn, _sw.wk) && !_known) return { power: '🌫 ?', def: def, ratio: null, advice: 'Туман: точная сила скрыта — отправь тень (50💰)' }; // Г2-2: туман прячет силу
+    if (weatherFog(STRONGHOLDS[t].prov, _sw.sn, _sw.wk) && !_known && !stanceFogPierce()) return { power: '🌫 ?', def: def, ratio: null, advice: 'Туман: точная сила скрыта — отправь тень (50💰) или стойка Разведка' }; // Г2-2: туман; Г4: Разведка прокалывает
     return { power: power, def: def, ratio: def / power, advice: siegeAlarmVerdict(def / power) };
 }
 function checkSiegeAlarmToast() { // Ф1: тост+haptic в день N-2 и день N, однократно/день
@@ -2969,6 +3130,12 @@ var pv = KG.provinces[pi];
 html += '<path class="km-prov-out" d="' + pv.outline + '"/>';
 html += '<text class="km-zone" x="' + pv.label.x + '" y="' + pv.label.y + '" text-anchor="' + pv.label.a + '">' + pv.roman + '</text>';
 html += '<text class="km-zone km-zone-sub" x="' + pv.label.x + '" y="' + (pv.label.y + 20) + '" text-anchor="' + pv.label.a + '">' + pv.name + '</text>';
+if (provCapturedCount(pv.id) > 0) { // Г4: чипы состояния провинции под лейблом
+  var _ed = provEdict(pv.id), _o = provOrder(pv.id);
+  var _chip = '⚙' + provResource(pv.id) + ' · ⚖' + _o;
+  if (_ed) _chip += ' · ' + EDICTS[_ed].icon;
+  html += '<text class="km-prov-chip' + (provOrder(pv.id) < 70 ? ' hot' : '') + '" x="' + pv.label.x + '" y="' + (pv.label.y + 42) + '" text-anchor="' + pv.label.a + '">' + _chip + '</text>';
+}
 }
 html += '<g class="km-cross" transform="translate(390,560)"><rect x="-7" y="-7" width="14" height="14" transform="rotate(45)"/></g>';
 // дороги: коридоры через межпровинциальные врата (мост I-II, перекрёсток, восточный проход) — не сквозь стены
@@ -3044,6 +3211,10 @@ var html = '<div class="sh-treasury">' +
 var fi = frontIdx();
 var daysToSiege = daysToSiegeNow();
 html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
+html += '<div class="km-stance-row">' + Object.keys(STANCES).map(function(sid) {
+  var st = STANCES[sid], act = weekStance() === sid;
+  return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-stance" data-stance="' + sid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + st.icon + '</span><span class="km-stance-name">' + st.name + '</span><span class="km-stance-desc">' + st.desc + '</span></button>';
+}).join('') + '</div>';
 // ФАЗА E: карта королевства заменяет ленту провинций (панели твердыни не тронуты)
 html += kingdomMapHtml(daysToSiege);
 // Фронт: штурмовая карточка под картой (штурм остаётся доступным из обзорного состояния)
@@ -3130,6 +3301,7 @@ var html = '<button class="sh-back" data-action="sh-back">← Все тверд�
 html += bossCardHtml(idx); // Г2-1: карточка босса провинции сверху панели
 html += '<div class="sh-panel-head"><div class="sh-panel-title">' + d.icon + ' ' + d.name + '</div>' +
 '<div class="sh-panel-sub">Налог +' + d.tax + ' 💰/день · слоты ' + builtList(idx).length + '/' + d.slots + ' · ' + PROVINCES[d.prov] + '</div></div>';
+html += edictBlockHtml(idx); // Г4: эдикты провинции + порядок + ресурс
 if (idx === 19 && typeof throne !== 'undefined') {
 html += '<div class="sh-sec-title">👑 Вечный трон — ' + throne + '/5 · налоги +' + throne + '%</div>';
 if (throne >= 5) html += '<div class="empty-state">Трон возведён полностью: +5% налогов навсегда.</div>' + (HERO.ascension ? '<div class="empty-state">✨ Круг Вознесения ' + HERO.ascension + ': враги +25%, артефакты ×0.5.</div>' : '') + '<button class="sh-buy ascend-btn" data-action="ascend">✨ Вознестись</button>';
@@ -3252,6 +3424,10 @@ showToast('📋 Задача поставлена', TASK_TIERS[selectedTaskTier]
 function completeTask(id) {
 var t = findTask(id);
 if (!t || t.status !== 'active') return;
+if (t.name.indexOf('🔥 Восстание:') === 0) {
+  var _ok = revoltResolvable(t);
+  if (!_ok) { showToast('🔥 Мятеж ещё бушует', 'Восстанови ≥2 постройки в мятежной провинции — тогда штраф снимут.', 'blood'); sfxError(); return; }
+}
 t.status = 'done'; t.doneAt = Date.now();
 HERO.lastActiveDay = getMSKDayKey(); // #19: активность дня
 sfxGoalComplete(); haptic('success');
@@ -3263,6 +3439,7 @@ renderTasks(); renderDashboard(); saveGameState();
 function claimTaskChest(id, choice) {
 var t = findTask(id);
 if (!t || t.status !== 'done') return;
+if (tryResolveRevoltTask(t)) { renderTasks(); renderDashboard(); saveGameState(); return; } // Г4: revolt-задача без сундука — снятие штрафа и есть награда
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
 if (choice === 'gold') {
 goldGain(tier.gold, 'chest');
@@ -4139,6 +4316,9 @@ upkeepTotal += tr.upkeep;
 if (!tr.paid) unpaid++;
 }
 dailyEvent = ev; // последний (сегодняшний) тик — под событием дня
+resolveProvinceOrder(); // Г4: эдикты двигают порядок, базовый дрейф +1/день
+var _revolt = checkRevolts(todayKey); // Г4: риск восстания (order<70 → до 30%); пин-безопасно: только выше >0.7
+if (_revolt) { grantRevoltTask(_revolt.prov); renderTasks(); renderDashboard(); }
 if (revenue > 0) {
 showToast('💰 Тьма копила для тебя', '+' + revenue + ' 💰 за ' + gapDays + ' ' + pluralDays(gapDays) + ' отсутствия. Твои твердыни ждали.', 'save');
 sfxEquip(); haptic('success');

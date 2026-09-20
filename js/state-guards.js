@@ -402,7 +402,10 @@
         var assaultDay = (typeof src.assaultDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(src.assaultDay)) ? src.assaultDay : null;
         var wkSkips = Math.round(clampNumber(src.wkSkips, 0, 1000, 0));
         var wkTaskFails = Math.round(clampNumber(src.wkTaskFails, 0, 1000, 0));
-        return { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails, retriedThisWeek: src.retriedThisWeek === true };
+        var stance = ['assault', 'defend', 'scout', 'economy'].indexOf(src.stance) >= 0 ? src.stance : null; // Г4: стойка недели
+        var out = { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails, retriedThisWeek: src.retriedThisWeek === true };
+        if (src.stance !== undefined) out.stance = stance; // Г4: лениво — байт-стабильный раундтрип сейвов без стойки
+        return out;
     }
 
     function sanitizeSeason(input, todayKey) {
@@ -418,7 +421,28 @@
             completions: Math.round(clampNumber(snap.completions, 0, 1e9, 0)),
             level: Math.round(clampNumber(snap.level, 1, 1000, 1))
         };
-        return { num: num, start: start, crownBonus: crownBonus, snapshot: snapshot };
+        var EDICTS = ['tax', 'levy', 'order'];
+        function provObj(srcObj, valFn) { // Г4: ключи '1'..'4', ≤4 записей
+            var out = {};
+            var s = (srcObj && typeof srcObj === 'object' && !Array.isArray(srcObj)) ? srcObj : {};
+            Object.keys(s).slice(0, 4).forEach(function(k) {
+                if (['1', '2', '3', '4'].indexOf(k) >= 0) {
+                    var v = valFn(s[k]);
+                    if (v !== null && v !== undefined) out[k] = v;
+                }
+            });
+            return out;
+        }
+        var edicts = provObj(src.edicts, function(v) { return EDICTS.indexOf(v) >= 0 ? v : null; });
+        var order = provObj(src.order, function(v) { return Math.round(clampNumber(v, 0, 100, 75)); });
+        var lastRevoltDay = provObj(src.lastRevoltDay, function(v) { return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : null; });
+        var resource = provObj(src.resource, function(v) { return Math.round(clampNumber(v, 0, 999, 0)); });
+        var out = { num: num, start: start, crownBonus: crownBonus, snapshot: snapshot };
+        if (src.edicts !== undefined) out.edicts = edicts; // Г4: ленивые поля — только если были во входе (байт-стабильный раундтрип старых сейвов)
+        if (src.order !== undefined) out.order = order;
+        if (src.lastRevoltDay !== undefined) out.lastRevoltDay = lastRevoltDay;
+        if (src.resource !== undefined) out.resource = resource;
+        return out;
     }
 
     return {

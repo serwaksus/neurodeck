@@ -34,9 +34,17 @@ function kmCamSource() {
   return app.slice(start, end);
 }
 
+function g4Source() { // Г4-ядро: чистые функции провинций (карта зовёт provCapturedCount/provEdict/provOrder/provResource/EDICTS)
+  const marker = app.indexOf('Г4 «Total War: управление провинциями»');
+  const start = app.lastIndexOf('/*', marker); // от маркера назад к открывашку комментария — иначе сырой текст = SyntaxError
+  const end = app.indexOf('function requestEdict');
+  assert.ok(marker > -1 && end > start, 'Г4-ядро найдено в app.js');
+  return app.slice(start, end);
+}
+
 function withState(capturedN, front, siegeToday, stageOf) {
   const strongholds = STRONGHOLDS.map((_, i) => ({ captured: i < capturedN }));
-  const body = kgSource() + '\n' + kmCamSource() + '\n' + extractFn('weatherOf') + '\n' + extractFn('weatherNorth') + '\n' + extractFn('weatherSouth') + '\n' + extractFn('weatherSeasonWeek') + '\n' + extractFn('kmStatusLabel') + '\n' + extractFn('kingdomMapHtml') + '\nreturn kingdomMapHtml;';
+  const body = kgSource() + '\n' + kmCamSource() + '\n' + g4Source() + '\n' + extractFn('weatherOf') + '\n' + extractFn('weatherNorth') + '\n' + extractFn('weatherSouth') + '\n' + extractFn('weatherSeasonWeek') + '\n' + extractFn('kmStatusLabel') + '\n' + extractFn('kingdomMapHtml') + '\nreturn kingdomMapHtml;';
   const fn = new Function('STRONGHOLDS', 'strongholds', 'frontIdx', 'daysToSiegeNow', 'shWorstStage', 'bossActiveFor', 'BOSSES', 'ensureSeason', 'siege', body);
   return fn(STRONGHOLDS, strongholds, () => front, () => (siegeToday ? 0 : 3), stageOf || (() => 'ok'), () => null, BOSSES, () => ({ num: 1, start: '2026-09-01' }), { week: 1 }).bind(null, siegeToday); // Г2-1: боссы в карту не мешают контрактам; Г2-2: погода сезона 1 недели 1 (пин-окно)
 }

@@ -219,6 +219,9 @@ test('sanitizeArmy: дефолты, clamp 0..1e6, неделя 0..520, мусо�
 
 test('sanitizeSiege: week 1..520, lastResult — только плоские примитивы', () => {
     assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false });
+    assert.equal(SG.sanitizeSiege({ stance: 'defend' }).stance, 'defend', 'Г4: валидная стойка проходит');
+    assert.equal(SG.sanitizeSiege({ stance: 'hack' }).stance, null, 'Г4: мусорная стойка → null');
+    assert.equal(SG.sanitizeSiege({}).stance, undefined, 'Г4: без стойки поле лениво (байт-стабильный раундтрип)');
     assert.equal(SG.sanitizeSiege({ week: 0 }).week, 1, 'минимум 1');
     assert.equal(SG.sanitizeSiege({ week: 1e9 }).week, 520);
     const kept = SG.sanitizeSiege({ lastResult: { week: 3, lost: 2, held: 1, evil: { nested: true } } });

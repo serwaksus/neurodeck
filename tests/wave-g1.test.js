@@ -294,7 +294,7 @@ test('Г1-4: requestTactic — 3 кнопки на confirmOverlay, свой ESC 
 test('Г1-4: doAssault — atk и attrition умножаются на тактику, мусорная тактика = норма', () => {
     const da = extractFn('doAssault');
     assert.ok(da.indexOf("TACTICS[tactic] ? tactic : 'normal'") !== -1, 'дефолт «Штурм» на мусоре');
-    assert.ok(da.indexOf('Math.round(f.atk * tacticAtkMult(_tc))') !== -1, 'atk × тактика');
+    assert.ok(da.indexOf('Math.round(f.atk * tacticAtkMult(_tc) * _stA)') !== -1, 'atk × тактика × стойка недели (Г4)');
     assert.ok(da.indexOf('doctrineAttritionMult() * tacticAttrMult(_tc)') !== -1, 'attrition × доктрина × тактика');
 });
 
