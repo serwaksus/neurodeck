@@ -2708,6 +2708,80 @@ if (s.captured) return 'Захвачена';
 if (i === frontIdx()) return (daysToSiegeNow() === 0) ? 'Осада сегодня' : 'Следующая цель';
 return 'Заперта';
 }
+/* Г3: политическая карта Total War — геометрия «Путь Угасания» (детерминированная, watertight) */
+var KG = (function () {
+  var WORLD = { w: 780, h: 1120 };
+  function j(seed) { return (Math.abs(Math.sin(seed * 127.1 + 311.7) * 43758.5453) % 1) * 2 - 1; }
+  var FR = { 1: { x0: 25, y0: 590, x1: 370, y1: 1090 }, 2: { x0: 25, y0: 70, x1: 370, y1: 530 }, 3: { x0: 410, y0: 590, x1: 730, y1: 1090 }, 4: { x0: 410, y0: 70, x1: 730, y1: 530 } };
+  var SEA = { x0: 738, y0: 60, x1: 776, y1: 1090 };
+  var PROV_NAME = { 1: 'НИЗОВЬЯ', 2: 'НАГОРЬЕ', 3: 'ПРИМОРЬЕ', 4: 'ПЕПЕЛЬНЫЙ ЧЕРТОГ' };
+  var ROMAN = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+  var _emid = {};
+  function edgeMids(a, b) {
+    var lo = Math.min(a.id, b.id), hi = Math.max(a.id, b.id), key = lo + '_' + hi;
+    if (!_emid[key]) {
+      var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
+      var px = -dy / len, py = dx / len, mids = [];
+      for (var k = 1; k <= 2; k++) {
+        var t = k / 3 + j(key * 7 + k) * 0.14, off = j(key * 13 + k) * 9;
+        mids.push({ x: a.x + dx * t + px * off, y: a.y + dy * t + py * off });
+      }
+      _emid[key] = mids;
+    }
+    return (a.id < b.id) ? _emid[key] : [_emid[key][1], _emid[key][0]];
+  }
+  function cellPath(cor) {
+    var pts = [];
+    for (var i = 0; i < cor.length; i++) {
+      var a = cor[i], b = cor[(i + 1) % cor.length], m = edgeMids(a, b);
+      pts.push(m[0], m[1], b);
+    }
+    var d = 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+    for (var q = 1; q < pts.length; q++) d += ' L' + pts[q].x.toFixed(1) + ' ' + pts[q].y.toFixed(1);
+    return d + ' Z';
+  }
+  function centroid(cor) {
+    var x = 0, y = 0;
+    for (var i = 0; i < cor.length; i++) { x += cor[i].x; y += cor[i].y; }
+    return { x: Math.round(x / cor.length), y: Math.round(y / cor.length) };
+  }
+  function provinceTiles(prov) {
+    var f = FR[prov], base = prov * 1000;
+    var cx0 = f.x0 + (f.x1 - f.x0) * 0.52, ry1 = f.y0 + (f.y1 - f.y0) / 3, ry2 = f.y0 + (f.y1 - f.y0) * 2 / 3;
+    function P(r, c) {
+      var border = (r === 0 || r === 3 || c === 0 || c === 2);
+      var x = (c === 0 ? f.x0 : (c === 1 ? cx0 : f.x1)) + (c === 1 ? j(base + r * 10 + c) * 14 : j(base + r * 10 + c) * 7);
+      var y = (r === 0 ? f.y0 : (r === 3 ? f.y1 : (r === 1 ? ry1 : ry2))) + (border ? j(base + r * 10 + c + 5) * 7 : j(base + r * 10 + c + 5) * 14);
+      return { x: x, y: y, id: base + r * 10 + c };
+    }
+    var P00 = P(0, 0), P01 = P(0, 1), P02 = P(0, 2), P10 = P(1, 0), P11 = P(1, 1), P12 = P(1, 2), P20 = P(2, 0), P21 = P(2, 1), P22 = P(2, 2), P30 = P(3, 0), P31 = P(3, 1), P32 = P(3, 2);
+    var cells = [
+      { cor: [P20, P21, P11, P10] },
+      { cor: [P21, P22, P12, P11] },
+      { cor: [P12, P22, P21, P11] },
+      { cor: [P11, P21, P20, P10] },
+      { cor: [P00, P02, P12, P11, P10] }
+    ];
+    var out = [];
+    for (var i = 0; i < cells.length; i++) {
+      var cor = cells[i].cor;
+      out.push({ idx: (prov - 1) * 5 + i, prov: prov, poly: cellPath(cor), center: centroid(cor) });
+    }
+    return out;
+  }
+  var tiles = [], provinces = [];
+  [1, 2, 3, 4].forEach(function (pv) {
+    var t = provinceTiles(pv);
+    for (var i = 0; i < t.length; i++) tiles.push(t[i]);
+    var f = FR[pv];
+    provinces.push({ id: pv, name: PROV_NAME[pv], roman: ROMAN[pv], label: { x: Math.round((f.x0 + f.x1) / 2), y: f.y0 + 22 }, frame: f });
+  });
+  var adj = {};
+  for (var ai = 0; ai < 20; ai++) adj[ai] = [];
+  for (var aj = 0; aj < 19; aj++) { adj[aj].push(aj + 1); adj[aj + 1].push(aj); }
+  return { WORLD: WORLD, SEA: SEA, tiles: tiles, provinces: provinces, adj: adj, center: function (i) { return tiles[i].center; } };
+})();
+
 function kingdomMapHtml(siegeToday) { // ФАЗА E+: премиум-карта «Путь Угасания»: пергамент/дороги/гексы-щиты/таблички; контракты фазы E (классы, aria, mapNodePos) сохранены
 var ds = (typeof siegeToday === 'number') ? siegeToday : (siegeToday ? 0 : 99);
 var rows = Math.ceil(STRONGHOLDS.length / 2);
