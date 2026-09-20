@@ -2793,13 +2793,14 @@ function kmCamInit() {
   if (KM_CAM.bound) return;
   if (typeof document === 'undefined' || !document.addEventListener) return;
   KM_CAM.bound = true;
-  var pts = {}, pinch = null, lastTap = 0, lastTapXY = null, downXY = null;
+  var pts = {}, pinch = null, lastTap = 0, lastTapXY = null, downXY = null, downTarget = null, downTime = 0;
   function ptList() { return Object.keys(pts).map(function (k) { return pts[k]; }); }
-  function vpOf(e) { var t = e.target && e.target.closest ? e.target.closest('.km-viewport') : null; return t || null; }
+  function vpOfEl(t) { return (t && t.closest) ? t.closest('.km-viewport') : null; }
+  function vpOf(e) { return vpOfEl(e.target); }
   document.addEventListener('pointerdown', function (e) {
     if (!vpOf(e)) return;
     pts[e.pointerId] = { x: e.clientX, y: e.clientY };
-    if (Object.keys(pts).length === 1) { downXY = { x: e.clientX, y: e.clientY }; KM_CAM.dragged = false; }
+    if (Object.keys(pts).length === 1) { downXY = { x: e.clientX, y: e.clientY }; downTarget = e.target; downTime = Date.now(); KM_CAM.dragged = false; }
     if (Object.keys(pts).length === 2) {
       var a = ptList();
       pinch = { d0: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1, scale0: KM_CAM.scale, cx: (a[0].x + a[1].x) / 2, cy: (a[0].y + a[1].y) / 2 };
@@ -2840,7 +2841,29 @@ function kmCamInit() {
         var once = function (ce) { ce.stopPropagation(); ce.preventDefault(); document.removeEventListener('click', once, true); };
         document.addEventListener('click', once, true);
       }
-      downXY = null;
+      // Г3-B1: даблтап на pointerup — не зависит от синтеза click в WebView (touch-action:none его глушит);
+      // тайл-тап остаётся каноном панели (первый тап открывает панель, dbltap живёт на мор/дорогах/границах)
+      var vp2 = vpOfEl(downTarget);
+      if (!KM_CAM.dragged && vp2 && downTarget && !downTarget.closest('.km-cam-reset')) {
+        var now = Date.now();
+        if (lastTap && now - lastTap < 300 && lastTapXY && Math.hypot(e.clientX - lastTapXY.x, e.clientY - lastTapXY.y) < 24) {
+          lastTap = 0;
+          var svg2 = vp2.querySelector('svg');
+          if (svg2) {
+            var rect = svg2.getBoundingClientRect();
+            if (rect.width && rect.height) {
+              var ax = e.clientX - rect.left, ay = e.clientY - rect.top;
+              var wx = KM_CAM.x + ax / rect.width * KM_CAM.w, wy = KM_CAM.y + ay / rect.height * KM_CAM.h;
+              KM_CAM.scale = (KM_CAM.scale >= 3) ? 1 : Math.min(3, KM_CAM.scale * 2);
+              kmCamClamp();
+              if (KM_CAM.scale === 1) { KM_CAM.x = 0; KM_CAM.y = 0; }
+              else { KM_CAM.x = wx - ax / rect.width * KM_CAM.w; KM_CAM.y = wy - ay / rect.height * KM_CAM.h; kmCamClamp(); }
+              kmCamApply(svg2);
+            }
+          }
+        } else { lastTap = now; lastTapXY = { x: e.clientX, y: e.clientY }; }
+      }
+      downXY = null; downTarget = null;
     }
   }
   document.addEventListener('pointerup', up);
@@ -2849,24 +2872,7 @@ function kmCamInit() {
     if (e.target && e.target.closest && e.target.closest('.km-cam-reset')) {
       var vp = e.target.closest('.km-viewport');
       kmCamReset(vp && vp.querySelector('svg'));
-      return;
     }
-    if (KM_CAM.dragged) return;
-    var vp2 = vpOf(e); if (!vp2) return;
-    if (e.target.closest('.km-node')) return; // тап по тайлу = канон-контракт панели, зум только по местности
-    var now = Date.now();
-    if (lastTap && now - lastTap < 300 && lastTapXY && Math.hypot(e.clientX - lastTapXY.x, e.clientY - lastTapXY.y) < 24) {
-      lastTap = 0;
-      var svg2 = vp2.querySelector('svg'); if (!svg2) return;
-      var rect = svg2.getBoundingClientRect(); if (!rect.width || !rect.height) return;
-      var ax = e.clientX - rect.left, ay = e.clientY - rect.top;
-      var wx = KM_CAM.x + ax / rect.width * KM_CAM.w, wy = KM_CAM.y + ay / rect.height * KM_CAM.h;
-      KM_CAM.scale = (KM_CAM.scale >= 3) ? 1 : Math.min(3, KM_CAM.scale * 2);
-      kmCamClamp();
-      if (KM_CAM.scale === 1) { KM_CAM.x = 0; KM_CAM.y = 0; }
-      else { KM_CAM.x = wx - ax / rect.width * KM_CAM.w; KM_CAM.y = wy - ay / rect.height * KM_CAM.h; kmCamClamp(); }
-      kmCamApply(svg2);
-    } else { lastTap = now; lastTapXY = { x: e.clientX, y: e.clientY }; }
   });
 }
 
