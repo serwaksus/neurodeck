@@ -29,7 +29,11 @@ const MATH_WITH = (rand) => { // статик-методы Math не enumerable 
 };
 
 function core(picks) {
-  const body = g4Core() + '\nreturn [' + picks.join(',') + '];';
+  const body = g4Core() + '\nvar hasTech = (typeof hasTech === "function") ? hasTech : function() { return false; };' +
+    '\nvar techOrderDrift = (typeof techOrderDrift === "function") ? techOrderDrift : function() { return 1; };' +
+    '\nvar techOrderFloor = (typeof techOrderFloor === "function") ? techOrderFloor : function() { return 0; };' +
+    '\nvar techRevoltMult = (typeof techRevoltMult === "function") ? techRevoltMult : function() { return 1; };' + // Г5-Т-стабы: нейтральные дефолты
+    '\nreturn [' + picks.join(',') + '];';
   const fn = new Function('STRONGHOLDS', 'strongholds', 'ensureSeason', 'HERO', 'EDICTS_LABEL_PROV', 'TASKS', 'taskIdCounter', 'builtList', 'ruinAllBuildings', 'showToast', 'sfxFail', 'haptic', 'saveSoon', 'siege', 'Math', 'document', 'addChronicle', body);
   return fn;
 }

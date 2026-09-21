@@ -1513,6 +1513,19 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .km-chron-ico { font-size: 17px; flex: 0 0 24px; text-align: center; }
 .km-chron-text { flex: 1; font-size: 13px; color: var(--text); }
 .km-chron-day { font-size: 11px; color: var(--text-dim); white-space: nowrap; font-family: Georgia, serif; }
+/* Г5-Т: технологии провинций */
+.km-tech-note { font-size: 12px; color: var(--text-dim); margin: 0 0 10px; }
+.km-tech-row { display: flex; flex-direction: column; gap: 6px; }
+.km-tech { display: flex; align-items: center; gap: 10px; background: rgba(12, 10, 8, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; color: var(--text); text-align: left; }
+.km-tech.owned { border-color: var(--gold); background: rgba(212, 165, 116, 0.12); }
+.km-tech.can { border-color: rgba(52, 211, 153, 0.5); }
+.km-tech.locked { opacity: 0.45; }
+.km-tech:disabled { cursor: default; }
+.km-tech-br { font-size: 16px; width: 20px; text-align: center; color: var(--gold-bright); }
+.km-tech-body { flex: 1; display: flex; flex-direction: column; }
+.km-tech-body b { font-size: 13px; color: var(--gold-bright); }
+.km-tech-body i { font-size: 11px; color: var(--text-dim); font-style: normal; }
+.km-tech-cost { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
   .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, .km-connector.owned { animation: none !important; }
 }

@@ -247,6 +247,7 @@ test('wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, по
                 SM: { armyPower: () => 10, assaultOutcome: () => outcome },
                 doctrineAtkMult: () => 1, // Г1-2: стаб (по умолчанию доктрин нет — ×1)
                 synergyAtkMult: () => 1, // Г1-3: стаб (Кузня-Собор пары нет — ×1)
+                techAtkMult: () => 1, // Г5-Т: стаб (технологий нет — ×1)
                 STATS: { str: { value: 0 }, agi: { value: 0 } },
                 hasSpecialOk: () => false,
                 towerEnemyPower: () => 5,
@@ -276,15 +277,15 @@ test('wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, по
 });
 
 // ----------------------------------------------------------------
-// Ф3: контракты интеграции + кэш v73
+// Ф3: контракты интеграции + кэш v74
 // ----------------------------------------------------------------
-test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html ?v=73 ×8', () => {
+test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html ?v=74 ×8', () => {
     assert.ok(extractFn('renderStrongholds').includes('renderTowerCard(cap)'), 'renderStrongholds зовёт карточку башни');
     assert.ok(app.includes("case 'tower-climb': requestTowerClimb()"), 'data-action-паттерн tower-climb');
     assert.ok(app.includes('TOWER_MAX_FLOOR = 50'), 'кап этажа 50');
     assert.ok(cssSource().includes('.tower-card'), 'style.css: класс .tower-card существует');
     const html = htmlSource();
-    assert.equal((html.match(/v=73/g) || []).length, 8, 'index.html: 8 вхождений ?v=73');
+    assert.equal((html.match(/v=74/g) || []).length, 8, 'index.html: 8 вхождений ?v=74');
     assert.ok(!html.includes('?v=65'), 'v65 не остался');
     console.log('verified: css/style.css index.html PASS (wave3 contracts)');
 });
@@ -292,7 +293,7 @@ test('package.json: check:ui-скрипт верификации UI-ассето
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
-    assert.ok(htmlSource().includes('id="totemCard"') && (htmlSource().match(/v=73/g) || []).length === 8, 'index.html: PASS (totemCard + v73×8)');
+    assert.ok(htmlSource().includes('id="totemCard"') && (htmlSource().match(/v=74/g) || []).length === 8, 'index.html: PASS (totemCard + v74×8)');
     assert.ok(cssSource().includes('.tower-card') && cssSource().includes('.siege-alarm'), 'css/style.css: PASS (tower-card + siege-alarm)');
     console.log('index.html: PASS');
     console.log('css/style.css: PASS');
