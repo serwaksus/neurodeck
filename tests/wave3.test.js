@@ -68,6 +68,8 @@ test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гар�
             lastCapturedIdx: () => 0,
             HERO: { scouts: null },
             ascEnemyMult: () => 1,
+            hasTech: () => false, // Г5-Т2: технологий нет в стабе — ×1 (гнев кап 10)
+            TECH_IDEA: null, // Г5-Т2: идея не выбрана
             ensureSeason: () => ({ num: 1 }),
             getMSKDayKey: () => '2026-01-01'
         },
@@ -247,7 +249,10 @@ test('wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, по
                 SM: { armyPower: () => 10, assaultOutcome: () => outcome },
                 doctrineAtkMult: () => 1, // Г1-2: стаб (по умолчанию доктрин нет — ×1)
                 synergyAtkMult: () => 1, // Г1-3: стаб (Кузня-Собор пары нет — ×1)
+                hasTech: () => false, // Г5-Т2: технологий нет в стабе — ×1
+                TECH_IDEA: null, // Г5-Т2: идея не выбрана
                 techAtkMult: () => 1, // Г5-Т: стаб (технологий нет — ×1)
+                techArmyMult: () => 1, // Г5-Т2: стаб (Легионов нет — ×1)
                 STATS: { str: { value: 0 }, agi: { value: 0 } },
                 hasSpecialOk: () => false,
                 towerEnemyPower: () => 5,

@@ -33,6 +33,7 @@ function core(picks) {
     '\nvar techOrderDrift = (typeof techOrderDrift === "function") ? techOrderDrift : function() { return 1; };' +
     '\nvar techOrderFloor = (typeof techOrderFloor === "function") ? techOrderFloor : function() { return 0; };' +
     '\nvar techRevoltMult = (typeof techRevoltMult === "function") ? techRevoltMult : function() { return 1; };' + // Г5-Т-стабы: нейтральные дефолты
+    '\nvar TECH_IDEA = (typeof TECH_IDEA !== "undefined") ? TECH_IDEA : null;' + // Г5-Т2: идея не выбрана в стабах
     '\nreturn [' + picks.join(',') + '];';
   const fn = new Function('STRONGHOLDS', 'strongholds', 'ensureSeason', 'HERO', 'EDICTS_LABEL_PROV', 'TASKS', 'taskIdCounter', 'builtList', 'ruinAllBuildings', 'showToast', 'sfxFail', 'haptic', 'saveSoon', 'siege', 'Math', 'document', 'addChronicle', body);
   return fn;

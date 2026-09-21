@@ -168,6 +168,7 @@ case 'km-chronicle-close': closeChronicle(); break; // Г5-Ф
 case 'km-techs-open': showTechs(); break; // Г5-Т: технологии
 case 'km-techs-close': closeTechs(); break; // Г5-Т
 case 'km-tech-buy': { var _terr = buyTech(String(el.dataset.tech || '')); if (_terr) { showToast('🔬 Отказано', _terr, 'blood'); sfxError(); } showTechs(); break; } // Г5-Т
+case 'km-idea-buy': { var _ierr = buyTechIdea(String(el.dataset.idea || '')); if (_ierr) { showToast('⚜ Отказано', _ierr, 'blood'); sfxError(); } showTechs(); break; } // Г5-Т2: капстоун
 case 'sh-scout': requestScout(parseInt(el.dataset.idx)); break; // Г2-3
 case 'storm-pay': stormPay(); break; // Г1-5
 case 'totem-choose': requestTotem(el.dataset.id); break; // Ф2
@@ -436,7 +437,7 @@ function requestTowerClimb() { // Ф3: подъём — 1 попытка/ден�
     if (t.lastFloorDay === getMSKDayKey()) { showToast('🗼 Попытка израсходована', 'Вернись завтра — башня ждёт', 'blood'); return; }
     if (!SM || SM.armyPower(army.units) <= 0) { showToast('⚔ Армии нет', 'Найми существ в твердыне', 'blood'); sfxError(); return; }
     t.lastFloorDay = getMSKDayKey(); // попытка сгорает в ОБОИХ исходах
-    var atk = Math.round(SM.armyPower(army.units) * (1 + 0.02 * STATS.str.value) * doctrineAtkMult() * synergyAtkMult() * techAtkMult()); // Г5-Т: Осадный парк +10% / Знамёна +5% (UI-прогноз)
+    var atk = Math.round(SM.armyPower(army.units) * techArmyMult() * (1 + 0.02 * STATS.str.value) * doctrineAtkMult() * synergyAtkMult() * techAtkMult()); // Г5-Т: Осадный парк +10% / Знамёна +5% (UI-прогноз); Г5-Т2: Легионы +10%
     var out = SM.assaultOutcome(atk, towerEnemyPower(t.floor), { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random });
     if (out.win) {
         t.floor += 1;
@@ -680,7 +681,7 @@ const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
 const comboMult = getComboMultiplier();
 const prestigeMult = getPrestigeXPBonus(card.stat);
-const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult() * totemXpMult() * doctrineXpMult() * bossArtifactMult('xp') * (HERO.comboDayXp || 1); // #8/#41: праздник +10%, луна ×2; Ф2: сова +10% XP; Г1-2: growth +25%; Г2-1: артефакт +10% XP; Г2-4: Вихрь +10% XP дня
+const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult() * totemXpMult() * doctrineXpMult() * bossArtifactMult('xp') * techIdeaXpMult() * (HERO.comboDayXp || 1); // #8/#41: праздник +10%, луна ×2; Ф2: сова +10% XP; Г1-2: growth +25%; Г2-1: артефакт +10% XP; Г2-4: Вихрь +10% XP дня; Г5-Т2: Путь Могущества +15%
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
@@ -1965,17 +1966,33 @@ var TECH_TREE = {
   c1: { br: '⚖', tier: 1, icon: '📋', name: 'Перепись населения',    desc: 'дрейф порядка +2/день',          res: 8,  pts: 2 },
   c2: { br: '⚖', tier: 2, icon: '🖋', name: 'Школы писцов',          desc: 'эдикты дешевле на 25%',          res: 16, pts: 4 },
   c3: { br: '⚖', tier: 3, icon: '🔨', name: 'Реформа судов',         desc: 'риск восстания −25%',            res: 28, pts: 6 },
-  c4: { br: '⚖', tier: 4, icon: '🕊', name: 'Гармония провинций',    desc: 'порядок не падает ниже 50',      res: 44, pts: 9 }
+  c4: { br: '⚖', tier: 4, icon: '🕊', name: 'Гармония провинций',    desc: 'порядок не падает ниже 50',      res: 44, pts: 9 },
+  w5: { br: '⚔', tier: 5, icon: '🛡', name: 'Легионы Угасания',      desc: 'сила армии +10%',                res: 70, pts: 14 },
+  w6: { br: '⚔', tier: 6, icon: '🗼', name: 'Железный Закон',        desc: 'гнев недели капится на 7',       res: 100, pts: 18 },
+  e5: { br: '💰', tier: 5, icon: '🏦', name: 'Имперский Банк',       desc: 'налоги +10%',                    res: 70, pts: 14 },
+  e6: { br: '💰', tier: 6, icon: '👑', name: 'Имперская Монета',     desc: 'налоги ещё +12%',                res: 100, pts: 18 },
+  c5: { br: '⚖', tier: 5, icon: '🏛', name: 'Кодекс Угасания',       desc: 'эдикты ещё −15%',                res: 70, pts: 14 },
+  c6: { br: '⚖', tier: 6, icon: '🌟', name: 'Золотой Век',           desc: 'порядок не падает ниже 70',      res: 100, pts: 18 }
 };
+var TECH_IDEAS = { // капстоуны: взаимно исключающие, тир 6 ветви открывает
+  idea_might: { icon: '🐺', name: 'Путь Могущества', desc: 'весь опыт +15%',                        res: 150, pts: 25, opens: 'w6' },
+  idea_wealth: { icon: '🐉', name: 'Путь Богатства', desc: 'всё золото тика +15%',                  res: 150, pts: 25, opens: 'e6' },
+  idea_order: { icon: '⚜', name: 'Путь Порядка',    desc: 'порядок всех провинций +5/день',        res: 150, pts: 25, opens: 'c6' }
+};
+var TECH_IDEA = null; // выбранная идея (id) — навсегда
+function techIdeaOpen(id) { var i = TECH_IDEAS[id]; return !!(i && hasTech(i.opens)); } // Г5-Т2: идея открыта тиром 6 своей ветви
+function techIdeaMult() { return TECH_IDEA === 'idea_wealth' ? 1.15 : 1; }
+function techIdeaXpMult() { return TECH_IDEA === 'idea_might' ? 1.15 : 1; }
 function hasTech(id) { return TECHS[id] === true; }
-function techTaxMult() { return (hasTech('e1') ? 1.05 : 1) * (hasTech('e4') ? 1.07 : 1); }
+function techTaxMult() { return (hasTech('e1') ? 1.05 : 1) * (hasTech('e4') ? 1.07 : 1) * (hasTech('e5') ? 1.10 : 1) * (hasTech('e6') ? 1.12 : 1); } // Г5-Т2: стек до ×1.365
 function techAtkMult() { return (hasTech('w3') ? 1.10 : 1) * (hasTech('w4') ? 1.05 : 1); } // штурм: f.atk
 function techAttrMult() { return hasTech('w2') ? 0.9 : 1; }
 function techDefMult() { return hasTech('w1') ? 1.10 : 1; }
-function techEdictCostMult() { return hasTech('c2') ? 0.75 : 1; }
+function techArmyMult() { return hasTech('w5') ? 1.10 : 1; } // Г5-Т2: Легионы — SM.armyPower
+function techEdictCostMult() { return (hasTech('c2') ? 0.75 : 1) * (hasTech('c5') ? 0.85 : 1); } // Г5-Т2: стек ×0.6375
 function techRevoltMult() { return hasTech('c3') ? 0.75 : 1; }
 function techOrderDrift() { return hasTech('c1') ? 2 : 1; }
-function techOrderFloor() { return hasTech('c4') ? 50 : 0; }
+function techOrderFloor() { return hasTech('c6') ? 70 : (hasTech('c4') ? 50 : 0); } // Г5-Т2: Золотой Век приоритетнее Гармонии
 function resPool() { var n = 0; [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) n += provResource(p); }); return n; }
 function spendRes(total) { // слив с захваченных провинций, старшие провинции первыми
   var left = total;
@@ -1989,11 +2006,26 @@ function spendRes(total) { // слив с захваченных провинц�
 }
 function techPrevOwned(id) { var t = TECH_TREE[id]; if (t.tier === 1) return true; var prevId = t.br.toLowerCase().replace('💰', 'e').replace('⚔', 'w').replace('⚖', 'c') + (t.tier - 1); return hasTech(prevId); }
 function techBranchLetter(br) { return br === '⚔' ? 'w' : (br === '💰' ? 'e' : 'c'); }
-function techPrevOwnedStrict(id) { var t = TECH_TREE[id]; if (t.tier === 1) return true; return hasTech(techBranchLetter(t.br) + (t.tier - 1)); }
+function techPrevOwnedStrict(id) {
+  var t = TECH_TREE[id];
+  if (t.tier === 1) return true;
+  var own = hasTech(techBranchLetter(t.br) + (t.tier - 1));
+  if (t.tier <= 4) return own; // тиры 1–4: линейная цепь
+  // Г5-Т2: кросс-требование — тир 5 требует тир 3+ в ДВУХ других ветвях, тир 6 — тир 4+ в двух других
+  var need = (t.tier === 5) ? 3 : 4;
+  var others = ['w', 'e', 'c'].filter(function(L) { return L !== techBranchLetter(t.br); });
+  var okCount = 0;
+  for (var oi = 0; oi < others.length; oi++) {
+    var s = 0;
+    for (var i = 1; i <= 6; i++) if (hasTech(others[oi] + i)) s += i;
+    if (s >= need) okCount++;
+  }
+  return own && okCount >= 2;
+}
 function buyTech(id) {
   var t = TECH_TREE[id];
   if (!t || hasTech(id)) return 'Уже изучено.';
-  if (!techPrevOwnedStrict(id)) return 'Сначала предыдущий тир ветви.';
+  if (!techPrevOwnedStrict(id)) return 'Сначала предыдущий тир ветви (тиры 5–6 требуют развития в двух ветвях).';
   if (TECH_PTS < t.pts) return 'Не хватает очков технологий (' + TECH_PTS + '/' + t.pts + ').';
   if (resPool() < t.res) return 'Не хватает ресурсов (' + resPool() + '/' + t.res + ').';
   TECH_PTS -= t.pts;
@@ -2001,6 +2033,20 @@ function buyTech(id) {
   TECHS[id] = true;
   showToast('🔬 Технология изучена: ' + t.name, t.desc, 'save');
   sfxForge(); haptic('medium'); saveSoon();
+  return null;
+}
+function buyTechIdea(id) { // Г5-Т2: капстоун — одна навсегда
+  var i = TECH_IDEAS[id];
+  if (!i) return 'Неизвестная идея.';
+  if (TECH_IDEA) return 'Путь уже выбран: ' + TECH_IDEAS[TECH_IDEA].name + ' (навсегда).';
+  if (!techIdeaOpen(id)) return 'Открывает тир 6 ветви ' + i.opens.toUpperCase() + '.';
+  if (TECH_PTS < i.pts) return 'Не хватает очков технологий (' + TECH_PTS + '/' + i.pts + ').';
+  if (resPool() < i.res) return 'Не хватает ресурсов (' + resPool() + '/' + i.res + ').';
+  TECH_PTS -= i.pts;
+  spendRes(i.res);
+  TECH_IDEA = id;
+  showToast('⚜ Путь выбран: ' + i.name, i.desc + ' — навсегда.', 'crit');
+  sfxForge(); haptic('heavy'); saveSoon();
   return null;
 }
 function techDailyTick(todayKey) { // из checkDailyReset: рост ресурсов + очки за элитный порядок
@@ -2022,11 +2068,18 @@ function techPanelHtml() {
     var t = TECH_TREE[id], owned = hasTech(id), prev = techPrevOwnedStrict(id);
     var can = !owned && prev && TECH_PTS >= t.pts && resPool() >= t.res;
     var state = owned ? ' owned' : (can ? ' can' : (prev ? '' : ' locked'));
-    return '<button class="km-tech' + state + '" data-action="km-tech-buy" data-tech="' + id + '"' + (owned ? ' disabled' : '') + '>' +
+    return '<button class="km-tech' + state + '" data-action="km-tech-buy" data-tech="' + id + '"' + (owned ? ' disabled' : '') + ' data-tier="' + t.tier + '" data-br="' + techBranchLetter(t.br) + '">' +
       '<span class="km-tech-br">' + t.br + '</span><span class="km-tech-body"><b>' + t.icon + ' ' + t.name + (owned ? ' ✓' : '') + '</b><i>' + t.desc + '</i></span>' +
       '<span class="km-tech-cost">' + (owned ? 'изучено' : '📦' + t.res + ' · 🔬' + t.pts) + '</span></button>';
   }).join('');
-  return '<div class="km-tech-note">🔬 ' + TECH_PTS + ' очков · 📦 ' + resPool() + ' ресурсов (порядок ≥85 даёт очки, ≥70 — ресурсы +2/день)</div><div class="km-tech-row">' + rows + '</div>';
+  var ideas = '<div class="sh-sec-title">⚜ Идеи эпохи — один Путь навсегда' + (TECH_IDEA ? ' · выбран: ' + TECH_IDEAS[TECH_IDEA].name : '') + '</div><div class="km-tech-row">' + Object.keys(TECH_IDEAS).map(function(id) {
+    var i = TECH_IDEAS[id], owned = TECH_IDEA === id, open = techIdeaOpen(id);
+    var state = owned ? ' owned' : (open ? ' can' : ' locked');
+    return '<button class="km-tech' + state + '" data-action="km-idea-buy" data-idea="' + id + '"' + (owned || TECH_IDEA ? ' disabled' : '') + '>' +
+      '<span class="km-tech-br">' + i.icon + '</span><span class="km-tech-body"><b>' + i.name + (owned ? ' ✓' : '') + '</b><i>' + i.desc + (i.opens && !open ? ' · открывает тир 6 ветви ' + i.opens.toUpperCase() : '') + '</i></span>' +
+      '<span class="km-tech-cost">' + (owned ? 'избрано' : '📦' + i.res + ' · 🔬' + i.pts) + '</span></button>';
+  }).join('') + '</div>';
+  return '<div class="km-tech-note">🔬 ' + TECH_PTS + ' очков · 📦 ' + resPool() + ' ресурсов (порядок ≥85 даёт очки; ≥70 + Указ о порядке — ресурсы +2/день)</div><div class="km-tech-row">' + rows + '</div>' + ideas;
 }
 function showTechs() { var m = document.getElementById('techModal'); if (!m) return; document.getElementById('techBody').innerHTML = techPanelHtml(); m.classList.add('show'); }
 function closeTechs() { var m = document.getElementById('techModal'); if (m) m.classList.remove('show'); }
@@ -2351,7 +2404,7 @@ if (!s.captured) return; // стартовый лагерь sh01 до захва
     income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% ВСЁ золото (и тик казны)
     var _rm = 0, _pc = 0;
     [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rm += provResourceMult(p); _pc++; } });
-    if (_pc > 0) income = Math.round(income * (_rm / _pc)); // Г4: ресурсы провинций +2%/ед (среднее по захваченным провинциям)
+    if (_pc > 0) income = Math.round(income * (_rm / _pc) * techIdeaMult()); // Г4: ресурсы +2%/ед; Г5-Т2: Путь Богатства ×1.15
 gold += income;
 dqProgress('gold', income);
 checkDailyGoldGoal(); // #71: тик тоже двигает цель дня
@@ -2538,7 +2591,7 @@ document.addEventListener('keydown', onKey);
 });
 }
 function assaultForecast(idx) {
-    var atk = Math.round(SM.armyPower(army.units) * (1 + 0.02 * STATS.str.value) * doctrineAtkMult() * synergyAtkMult() * techAtkMult()); // Г1-2 atk-доктрина (пропуск закрыт) + Г1-3 Кузня-Собор +5% + Г5-Т Осадный парк/Знамёна
+    var atk = Math.round(SM.armyPower(army.units) * techArmyMult() * (1 + 0.02 * STATS.str.value) * doctrineAtkMult() * synergyAtkMult() * techAtkMult()); // Г1-2 atk-доктрина (пропуск закрыт) + Г1-3 Кузня-Собор +5% + Г5-Т Осадный парк/Знамёна + Г5-Т2 Легионы
 var defN = STRONGHOLDS[idx].total;
 if (hasSpecialOk('sp1')) return { atk: atk, defN: defN, line: '⚔ ' + atk + ' против 🛡 ' + defN + (atk > defN ? ' · превосходство' : ' · сил мало') };
 return { atk: atk, defN: defN, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + Math.round(atk * 1.25) + ' против 🛡 ' + defN + ' (Гильдия Разведчиков даст точные числа)' };
@@ -2783,7 +2836,7 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 }).join('');
 }
 function daysToSiegeNow() { return (7 - ((new Date(Date.now() + 3 * 3600000).getUTCDay() + 1) % 7)); }
-function siegeWrathNow() { return Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)); }
+function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)); } // Г5-Т2: Железный Закон — кап гнева 7
 /* ===================== Г4 «Total War: управление провинциями» — ядро (чистые функции) ===================== */
 function ensureSeasonFields(k) { var s = ensureSeason(); if (k) { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; } return s; } // Г4: материализуем ТОЛЬКО записываемый контейнер — байт-стабильный раундтрип сейвов
 function provKey(p) { return String(p); }
@@ -2843,7 +2896,7 @@ function resolveProvinceOrder() {
   [1, 2, 3, 4].forEach(function(p) {
     if (provCapturedCount(p) === 0) return;
     var s = ensureSeasonFields('order'), k = provKey(p);
-    var delta = techOrderDrift() + edictOrderPerDay(p); // Г5-Т: Перепись — дрейф +2/день
+    var delta = techOrderDrift() + edictOrderPerDay(p) + (TECH_IDEA === 'idea_order' ? 5 : 0); // Г5-Т: Перепись; Г5-Т2: Путь Порядка +5/день
     var o = provOrder(p) + delta;
     s.order[k] = Math.max(techOrderFloor(), Math.min(100, o)); // Г5-Т: Гармония — пол 50
     touched++;

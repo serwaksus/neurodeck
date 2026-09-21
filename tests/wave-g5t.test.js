@@ -21,7 +21,7 @@ function build(picks, state) {
     'var hasTech = function(id) { return !!(state.TECHS[id]); };' +
     'var provOrder = function(p) { var v = state.order[String(p)]; return (typeof v === "number") ? v : 75; };' +
     'var provEdict = function(p) { return state.edicts && state.edicts[String(p)] || null; };'; // Г5-Т: рост ресурса требует активного Указа о порядке (канон-пины)
-  const body = stubs + '\n' + techCore() + '\nTECHS = state.TECHS; TECH_PTS = state.pts;\nreturn [' + picks.join(',') + '];'; // реассайн ПОСЛЕ var-деклараций ядра (var перезаписывает параметр — зонд доказал 0/2)
+  const body = stubs + '\n' + techCore() + '\nTECHS = state.TECHS; TECH_PTS = state.pts; TECH_IDEA = (state.TECH_IDEA !== undefined) ? state.TECH_IDEA : null;\nreturn [' + picks.join(',') + '];'; // реассайн ПОСЛЕ var-деклараций ядра (var перезаписывает параметр — зонд доказал 0/2)
   const fn = new Function('state', 'provCapturedCount', 'provResource', 'ensureSeasonFields', 'provKey', 'TECHS', 'TECH_PTS', 'showToast', 'sfxForge', 'haptic', 'saveSoon', body);
   const resObj = state.resObj || {};
   return fn(
@@ -36,9 +36,9 @@ function build(picks, state) {
   );
 }
 
-test('Г5-Т: каталог 12 технологий, 3 ветви × 4 тира, цены валидны', () => {
+test('Г5-Т: каталог 18 технологий (3×6) + 3 идеи-капстоуна, цены валидны', () => {
   const TREE = new Function(techCore() + '\nreturn TECH_TREE;')();
-  assert.equal(Object.keys(TREE).length, 12, '12 нод дерева');
+  assert.equal(Object.keys(TREE).length, 18, '18 нод дерева (Г5-Т2: тиры 5–6)');
   const branches = {};
   for (const [id, t] of Object.entries(TREE)) {
     branches[t.br] = branches[t.br] || [];
@@ -46,10 +46,18 @@ test('Г5-Т: каталог 12 технологий, 3 ветви × 4 тира
     assert.ok(t.res > 0 && t.pts > 0, t.name + ': цены положительны');
     assert.ok(t.desc.length > 5, t.name + ': описан');
   }
-  assert.deepEqual(Object.keys(branches).length, 3, '3 ветви');
-  for (const b of Object.values(branches)) assert.deepEqual(b.sort().join(''), '1234', '4 тира в ветви');
+  assert.equal(Object.keys(branches).length, 3, '3 ветви');
+  for (const b of Object.values(branches)) assert.deepEqual(b.sort().join(''), '123456', '6 тиров в ветви');
   assert.equal(TREE.w1.res, 8, 'тир 1 = 8 ресурсов');
   assert.equal(TREE.w4.pts, 9, 'тир 4 = 9 очков');
+  assert.equal(TREE.w6.res, 100, 'тир 6 = 100 ресурсов');
+  const IDEAS = new Function(techCore() + '\nreturn TECH_IDEAS;')();
+  assert.equal(Object.keys(IDEAS).length, 3, '3 идеи-капстоуна');
+  for (const i of Object.values(IDEAS)) {
+    assert.ok(TREE[i.opens], 'идея открывается существующим тиром 6: ' + i.opens);
+    assert.equal(i.res, 150, 'идея: 150 ресурсов');
+    assert.equal(i.pts, 25, 'идея: 25 очков');
+  }
 });
 
 test('Г5-Т: buyTech — гейты (тир-цепь, очки, ресурсы) и списание', () => {
@@ -97,4 +105,38 @@ test('Г5-Т: techDailyTick — ресурсы +2 (+1 за e3) ТОЛЬКО по
   assert.equal(resObj[2], 13, '10+3 (e3) — эдикт есть');
   assert.equal(resObj[3], 0, 'порядок 60 — не растёт');
   assert.equal(resObj[4], 500, 'порядок 75 без эдикта — нейтрал не растёт (канон-пины)');
+});
+
+test('Г5-Т2: тиры 5–6 — кросс-требование (5 ← тир 3 в двух других, 6 ← тир 4 в двух других), стеки', () => {
+  // w4 куплен (своя цепь), в e/c — по тиру 3 → тир 5 доступен
+  const s5 = { TECHS: { w1: true, w2: true, w3: true, w4: true, e1: true, e2: true, e3: true, c1: true, c2: true, c3: true }, pts: 99, res: 200 };
+  const b5 = build(['techPrevOwnedStrict', 'techTaxMult', 'techArmyMult', 'techEdictCostMult', 'techOrderFloor'], s5);
+  assert.equal(b5[0]('w5'), true, 'w5: своя цепь до 4 + тир 3 в e и c — кросс выполнен');
+  const s5b = { TECHS: { w1: true, w2: true, w3: true, w4: true, e1: true, e2: true, c1: true }, pts: 99, res: 200 };
+  const b5b = build(['techPrevOwnedStrict'], s5b);
+  assert.equal(b5b[0]('w5'), false, 'w5 без тир 3 в двух других — закрыт');
+  const s6 = { TECHS: { w1: true, w2: true, w3: true, w4: true, w5: true, w6: true, e1: true, e2: true, e3: true, e4: true, e5: true, e6: true, c1: true, c2: true, c3: true, c4: true, c5: true, c6: true }, pts: 99, res: 300 };
+  const b6 = build(['techPrevOwnedStrict', 'techTaxMult', 'techArmyMult', 'techEdictCostMult', 'techOrderFloor'], s6);
+  assert.equal(b6[0]('w6'), true, 'w6: своя цепь до 5 + тир 4 в e и c');
+  assert.equal(b6[1](), 1.05 * 1.07 * 1.10 * 1.12, 'стек налогов ×1.365 (снежный ком, полный набор e1-e6)');
+  assert.equal(b6[2](), 1.10, 'Легионы армия ×1.10');
+  assert.equal(b6[3](), 0.75 * 0.85, 'стек эдиктов ×0.6375');
+  assert.equal(b6[4](), 70, 'Золотой Век — пол 70');
+});
+
+test('Г5-Т2: идеи-капстоуны — открытие тиром 6, исключительность навсегда, мультипликаторы', () => {
+  const opened = { TECHS: { w6: true }, TECH_IDEA: null, pts: 25, res: 150, resObj: { 1: 150 } };
+  const b1 = build(['techIdeaOpen', 'buyTechIdea', 'techIdeaMult', 'techIdeaXpMult'], opened);
+  assert.equal(b1[0]('idea_might'), true, 'w6 открывает Путь Могущества');
+  assert.equal(b1[0]('idea_wealth'), false, 'e6 не куплен — Богатство закрыто');
+  assert.equal(b1[1]('idea_might'), null, 'идея выбрана');
+  assert.equal(b1[3](), 1.15, 'TECH_IDEA установлен в замыкании: XP ×1.15 (не через значение — примитив захвачен до вызова)');
+  const after = build(['buyTechIdea', 'techIdeaMult', 'techIdeaXpMult'], { TECHS: { w6: true }, TECH_IDEA: 'idea_might', pts: 99, res: 999 });
+  assert.ok(String(after[0]('idea_wealth')).includes('навсегда'), 'вторая идея запрещена навсегда');
+  assert.equal(after[1](), 1, 'Богатство не активно');
+  assert.equal(after[2](), 1.15, 'Могущество: XP ×1.15');
+  const wealth = build(['techIdeaMult'], { TECHS: { e6: true }, TECH_IDEA: 'idea_wealth' });
+  assert.equal(wealth[0](), 1.15, 'Богатство: золото ×1.15');
+  const closed = build(['techIdeaOpen'], { TECHS: {} });
+  assert.equal(closed[0]('idea_order'), false, 'без тир 6 идеи закрыты');
 });
