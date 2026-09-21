@@ -21,11 +21,12 @@ function build(picks, state) {
     'var hasTech = function(id) { return !!(state.TECHS[id]); };' +
     'var provOrder = function(p) { var v = state.order[String(p)]; return (typeof v === "number") ? v : 75; };' +
     'var provEdict = function(p) { return state.edicts && state.edicts[String(p)] || null; };'; // Г5-Т: рост ресурса требует активного Указа о порядке (канон-пины)
-  const body = stubs + '\n' + techCore() + '\nTECHS = state.TECHS; TECH_PTS = state.pts; TECH_IDEA = (state.TECH_IDEA !== undefined) ? state.TECH_IDEA : null;\nreturn [' + picks.join(',') + '];'; // реассайн ПОСЛЕ var-деклараций ядра (var перезаписывает параметр — зонд доказал 0/2)
-  const fn = new Function('state', 'provCapturedCount', 'provResource', 'ensureSeasonFields', 'provKey', 'TECHS', 'TECH_PTS', 'showToast', 'sfxForge', 'haptic', 'saveSoon', body);
+  const body = stubs + '\n' + techCore() + '\nTECHS = { owned: state.TECHS, lvl: state.LVL || {} }; TECH_PTS = state.pts; TECH_IDEA = (state.TECH_IDEA !== undefined) ? state.TECH_IDEA : null;\nreturn [' + picks.join(',') + '];'; // Г5-Т3 схема {owned,lvl}: стабOwned → owned; реассайн ПОСЛЕ var-деклараций ядра (var перезаписывает параметр — зонд доказал 0/2)
+  const fn = new Function('state', 'capturedCount', 'provCapturedCount', 'provResource', 'ensureSeasonFields', 'provKey', 'TECHS', 'TECH_PTS', 'showToast', 'sfxForge', 'haptic', 'saveSoon', body);
   const resObj = state.resObj || {};
   return fn(
     state,
+    state.cap || (() => 20), // Г5-Т3: эпохи открыты по умолчанию (нейтральный дефолт харнесса)
     state.pc || (() => 5),
     (p) => resObj[String(p)] || 0, // читает ТОТ ЖЕ resObj, куда spendRes списывает (state.res — расщепление, зонд 100≠12)
     (k) => { if (k === 'resource') return { resource: resObj }; return {}; },
@@ -36,9 +37,9 @@ function build(picks, state) {
   );
 }
 
-test('Г5-Т: каталог 18 технологий (3×6) + 3 идеи-капстоуна, цены валидны', () => {
+test('Г5-Т3: каталог 48 технологий (6 ветвей × 8 тиров) + 3 идеи-капстоуна, цены валидны', () => {
   const TREE = new Function(techCore() + '\nreturn TECH_TREE;')();
-  assert.equal(Object.keys(TREE).length, 18, '18 нод дерева (Г5-Т2: тиры 5–6)');
+  assert.equal(Object.keys(TREE).length, 48, '48 нод дерева (Г5-Т3: 6 ветвей × 8)');
   const branches = {};
   for (const [id, t] of Object.entries(TREE)) {
     branches[t.br] = branches[t.br] || [];
@@ -46,11 +47,13 @@ test('Г5-Т: каталог 18 технологий (3×6) + 3 идеи-кап�
     assert.ok(t.res > 0 && t.pts > 0, t.name + ': цены положительны');
     assert.ok(t.desc.length > 5, t.name + ': описан');
   }
-  assert.equal(Object.keys(branches).length, 3, '3 ветви');
-  for (const b of Object.values(branches)) assert.deepEqual(b.sort().join(''), '123456', '6 тиров в ветви');
+  assert.equal(Object.keys(branches).length, 6, '6 ветвей (⚔💰⚖🕯🏗🕊)');
+  for (const b of Object.values(branches)) assert.deepEqual(b.sort().join(''), '12345678', '8 тиров в ветви');
   assert.equal(TREE.w1.res, 8, 'тир 1 = 8 ресурсов');
   assert.equal(TREE.w4.pts, 9, 'тир 4 = 9 очков');
   assert.equal(TREE.w6.res, 100, 'тир 6 = 100 ресурсов');
+  assert.equal(TREE.w8.res, 180, 'тир 8 = 180 ресурсов');
+  assert.equal(TREE.s8.pts, 30, 'тир 8 = 30 очков');
   const IDEAS = new Function(techCore() + '\nreturn TECH_IDEAS;')();
   assert.equal(Object.keys(IDEAS).length, 3, '3 идеи-капстоуна');
   for (const i of Object.values(IDEAS)) {
@@ -64,7 +67,7 @@ test('Г5-Т: buyTech — гейты (тир-цепь, очки, ресурсы)
   const s1 = { TECHS: {}, pts: 2, res: 20, resObj: { 1: 20 } };
   const b1 = build(['buyTech', 'resPool', 'TECHS', 'TECH_PTS'], s1);
   assert.equal(b1[0]('e1'), null, 'тир 1 куплен');
-  assert.equal(b1[2].e1, true, 'флаг выставлен');
+  assert.equal(b1[2].owned.e1, true, 'флаг выставлен (owned-карта Г5-Т3)');
   assert.equal(b1[1](), 12, 'списано 8 ресурсов (20−8)');
   const b2 = build(['buyTech'], { TECHS: {}, pts: 9, res: 50 });
   assert.ok(String(b2[0]('e2')).includes('предыдущий'), 'без тир-1 тир-2 не купить');

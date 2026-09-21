@@ -1526,6 +1526,21 @@ body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
 .km-tech-body b { font-size: 13px; color: var(--gold-bright); }
 .km-tech-body i { font-size: 11px; color: var(--text-dim); font-style: normal; }
 .km-tech-cost { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+/* Г5-Т3: SVG-дерево технологий */
+.km-tree-svg { width: 100%; height: auto; margin: 0 0 12px; }
+.km-tree-col { font-size: 26px; text-anchor: middle; fill: var(--gold-bright); }
+.km-tree-node circle { fill: rgba(12, 10, 8, 0.85); stroke: var(--border); stroke-width: 2; }
+.km-tree-node.can circle { stroke: rgba(52, 211, 153, 0.7); }
+.km-tree-node.owned circle { stroke: var(--gold); fill: rgba(212, 165, 116, 0.15); }
+.km-tree-node.locked circle { opacity: 0.4; }
+.km-tree-node-icon { text-anchor: middle; font-size: 22px; }
+.km-tree-node.locked .km-tree-node-icon { opacity: 0.5; }
+.km-tree-node-cost { text-anchor: middle; font-size: 11px; fill: var(--text-dim); }
+.km-tree-node-lvl { font-size: 14px; fill: var(--gold-bright); font-weight: bold; }
+.km-tree-edge { stroke: rgba(212, 165, 116, 0.2); stroke-width: 2.5; }
+.km-tree-edge.on { stroke: rgba(212, 165, 116, 0.7); }
+.km-tree-era { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1.5; stroke-dasharray: 6 6; }
+.km-tree-era-label { text-anchor: middle; font-size: 15px; fill: rgba(212, 165, 116, 0.75); letter-spacing: 3px; font-family: Georgia, serif; }
 @media (prefers-reduced-motion: reduce) {
   .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, .km-connector.owned { animation: none !important; }
 }

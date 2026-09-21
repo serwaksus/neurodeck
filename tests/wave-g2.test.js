@@ -302,7 +302,9 @@ function scoutEnv({ day = '2026-01-05', gold = 100, scouts = null, capturedN = 1
         getMSKDayKey: (ts) => (ts === undefined ? day : '2026-01-06'),
         esc: (s) => s,
         showToast: (t, b, k) => calls.toast.push({ t: t, b: b }),
-        sfxError: () => {}, haptic: () => {}, saveSoon: () => {}, renderStrongholds: () => {}
+        sfxError: () => {}, haptic: () => {}, saveSoon: () => {}, renderStrongholds: () => {},
+        techScoutCost: () => 50, // Г5-Т3: стаб (Сеть Осведомителей не куплена — канон 50💰)
+        hasTech: () => false // Г5-Т3: технологий нет
     };
     const keys = Object.keys(stubs);
     const fns = new Function(...keys, decls.join('\n') + '\nreturn { requestScout: requestScout, scoutFresh: scoutFresh, scoutAdvice: scoutAdvice };')(...keys.map((k) => stubs[k]));

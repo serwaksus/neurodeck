@@ -120,10 +120,22 @@ MIGRATIONS[10] = function(data) {
         if (!data || typeof data !== 'object') return;
         if (typeof data.throne !== 'number' || !Number.isFinite(data.throne)) data.throne = 0;
         data.throne = Math.max(0, Math.min(5, Math.round(data.throne)));
-        if (data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) { var _ct = {}; Object.keys(data.TECHS).slice(0, 21).forEach(function(k) { if (data.TECHS[k] === true) _ct[k] = true; }); data.TECHS = _ct; } // Г5-Т/Г5-Т2: 12 нод + 6 тиров + 3 идеи = 21
+        if (data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) {
+          var _ct;
+          if (data.TECHS.owned && typeof data.TECHS.owned === 'object') { // Г5-Т3 схема {owned, lvl}
+            _ct = { owned: {}, lvl: {} };
+            Object.keys(data.TECHS.owned).slice(0, 21).forEach(function(k) { if (data.TECHS.owned[k] === true) _ct.owned[k] = true; });
+            if (data.TECHS.lvl && typeof data.TECHS.lvl === 'object') Object.keys(data.TECHS.lvl).slice(0, 21).forEach(function(k) { var v = Math.round(Number(data.TECHS.lvl[k])); if (v >= 1 && v <= 5) _ct.lvl[k] = v; });
+          } else { // Г5-Т/Г5-Т2 легаси: плоская карта → owned
+            _ct = { owned: {}, lvl: {} };
+            Object.keys(data.TECHS).slice(0, 21).forEach(function(k) { if (data.TECHS[k] === true) _ct.owned[k] = true; });
+          }
+          data.TECHS = _ct;
+        }
         if (typeof data.TECH_PTS !== 'number' || !Number.isFinite(data.TECH_PTS)) data.TECH_PTS = 0;
         data.TECH_PTS = Math.max(0, Math.min(999, Math.round(data.TECH_PTS))); // Г5-Т
         if (typeof data.TECH_IDEA !== 'undefined' && data.TECH_IDEA !== null && (typeof data.TECH_IDEA !== 'string' || ['idea_might', 'idea_wealth', 'idea_order'].indexOf(data.TECH_IDEA) < 0)) data.TECH_IDEA = null; // Г5-Т2
+        if (data.TECH_ACTIVES && typeof data.TECH_ACTIVES === 'object' && !Array.isArray(data.TECH_ACTIVES)) { var _ca = {}; Object.keys(data.TECH_ACTIVES).slice(0, 4).forEach(function(k) { if (typeof data.TECH_ACTIVES[k] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.TECH_ACTIVES[k])) _ca[k] = data.TECH_ACTIVES[k]; }); data.TECH_ACTIVES = _ca; } // Г5-Т3 Ф2
         if (data.season && typeof data.season === 'object') {
             if (typeof data.season.crownBonus !== 'number' || !Number.isFinite(data.season.crownBonus)) data.season.crownBonus = 0;
             data.season.crownBonus = Math.max(0, Math.min(5, Math.round(data.season.crownBonus)));
@@ -216,7 +228,7 @@ lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, hirePool, savedAt: Date.now()
 };
-try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; snapshot.TECHS = (typeof TECHS !== 'undefined') ? TECHS : {}; snapshot.TECH_PTS = (typeof TECH_PTS !== 'undefined') ? TECH_PTS : 0; snapshot.TECH_IDEA = (typeof TECH_IDEA !== 'undefined') ? TECH_IDEA : null; } catch(e) {}
+try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; snapshot.TECHS = (typeof TECHS !== 'undefined') ? TECHS : {}; snapshot.TECH_PTS = (typeof TECH_PTS !== 'undefined') ? TECH_PTS : 0; snapshot.TECH_IDEA = (typeof TECH_IDEA !== 'undefined') ? TECH_IDEA : null; snapshot.TECH_ACTIVES = (typeof TECH_ACTIVES !== 'undefined') ? TECH_ACTIVES : {}; } catch(e) {}
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 if (FORGED.length > 0) { try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {} } // ever_saved = «игрок с карточками»: пустой сейв не должен блокировать старт-колоду (O-10)
@@ -586,6 +598,7 @@ throne: (typeof throne !== 'undefined') ? throne : 0,
 TECHS: (typeof TECHS !== 'undefined') ? TECHS : {},
 TECH_PTS: (typeof TECH_PTS !== 'undefined') ? TECH_PTS : 0,
 TECH_IDEA: (typeof TECH_IDEA !== 'undefined') ? TECH_IDEA : null,
+TECH_ACTIVES: (typeof TECH_ACTIVES !== 'undefined') ? TECH_ACTIVES : {},
 dailyEvent: (typeof dailyEvent !== 'undefined') ? dailyEvent : null
 };
 try {
@@ -870,9 +883,21 @@ if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
 if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEvent === 'object' && data.dailyEvent.id) dailyEvent = data.dailyEvent;
 if (typeof season !== 'undefined' && data.season && typeof data.season === 'object') { season = STATE_GUARDS.sanitizeSeason(data.season, (typeof getMSKDayKey === 'function') ? getMSKDayKey() : null); }
 if (typeof throne !== 'undefined' && typeof data.throne === 'number' && Number.isFinite(data.throne)) throne = Math.max(0, Math.min(5, Math.round(data.throne)));
-if (typeof TECHS !== 'undefined' && data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) { var _ct = {}; Object.keys(data.TECHS).slice(0, 21).forEach(function(k) { if (data.TECHS[k] === true) _ct[k] = true; }); TECHS = _ct; } // Г5-Т/Г5-Т2: 21 ключ
+if (typeof TECHS !== 'undefined' && data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) {
+  var _ct;
+  if (data.TECHS.owned && typeof data.TECHS.owned === 'object') { // Г5-Т3 схема
+    _ct = { owned: {}, lvl: {} };
+    Object.keys(data.TECHS.owned).slice(0, 21).forEach(function(k) { if (data.TECHS.owned[k] === true) _ct.owned[k] = true; });
+    if (data.TECHS.lvl && typeof data.TECHS.lvl === 'object') Object.keys(data.TECHS.lvl).slice(0, 21).forEach(function(k) { var v = Math.round(Number(data.TECHS.lvl[k])); if (v >= 1 && v <= 5) _ct.lvl[k] = v; });
+  } else { // легаси
+    _ct = { owned: {}, lvl: {} };
+    Object.keys(data.TECHS).slice(0, 21).forEach(function(k) { if (data.TECHS[k] === true) _ct.owned[k] = true; });
+  }
+  TECHS = _ct;
+}
 if (typeof TECH_PTS !== 'undefined' && typeof data.TECH_PTS === 'number' && Number.isFinite(data.TECH_PTS)) TECH_PTS = Math.max(0, Math.min(999, Math.round(data.TECH_PTS))); // Г5-Т
 if (typeof TECH_IDEA !== 'undefined' && data.TECH_IDEA !== undefined) { if (data.TECH_IDEA === null || ['idea_might', 'idea_wealth', 'idea_order'].indexOf(data.TECH_IDEA) >= 0) TECH_IDEA = data.TECH_IDEA; } // Г5-Т2
+if (typeof TECH_ACTIVES !== 'undefined' && data.TECH_ACTIVES && typeof data.TECH_ACTIVES === 'object' && !Array.isArray(data.TECH_ACTIVES)) { var _caa = {}; Object.keys(data.TECH_ACTIVES).slice(0, 4).forEach(function(k) { if (typeof data.TECH_ACTIVES[k] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.TECH_ACTIVES[k])) _caa[k] = data.TECH_ACTIVES[k]; }); TECH_ACTIVES = _caa; } // Г5-Т3 Ф2
 if (Array.isArray(data.tasks)) {
 TASKS = data.tasks.filter(function(t) {
 return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&
