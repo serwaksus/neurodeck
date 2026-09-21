@@ -53,7 +53,7 @@ test('каталог: 7 тиров — пин найма/силы/прирост
     const want = {
         t1: { cost: 1, power: 2, growth: 14 }, t2: { cost: 5, power: 6, growth: 12 },
         t3: { cost: 15, power: 16, growth: 10 }, t4: { cost: 50, power: 45, growth: 8 },
-        t5: { cost: 160, power: 140, growth: 6 }, t6: { cost: 800, power: 450, growth: 6 },
+        t5: { cost: 160, power: 140, growth: 6 }, t6: { cost: 525, power: 450, growth: 6 }, // круг 10: 800→525 — монотонная эффективность (0.857 между Т5 0.875 и Т7 0.778)
         t7: { cost: 1800, power: 1400, growth: 4 }
     };
     for (const t of Object.keys(want)) {
