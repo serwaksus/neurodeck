@@ -90,7 +90,7 @@ animation: flicker 3s infinite ease-in-out;
 #dustCanvas { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity 2s; }
 .shake-wrap { position: relative; z-index: 5; width: 100%; height: 100%; }
 .app { position: relative; z-index: 10; width: 100%; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 14px 20px; gap: 10px; }
-.header { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; position: relative; overflow: hidden; gap: 12px; flex-wrap: wrap; }
+.header { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; position: relative; overflow: visible; gap: 10px 12px; flex-wrap: wrap; }
 .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: 0.6; }
 .logo { font-size: 18px; letter-spacing: 3px; color: var(--gold-bright); text-shadow: 0 0 12px rgba(212, 165, 116, 0.4); }
 .logo span { color: var(--text-dim); font-size: var(--fs-secondary); letter-spacing: 2px; margin-left: 8px; }
@@ -1649,4 +1649,89 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 :root.perf-eco .gold-chip.gain, :root.perf-eco .siege-pill { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .view.slide-next, .view.slide-prev, .cards .card, .modal-overlay.show .modal > *, .gold-chip.gain, .siege-pill { animation: none; }
+}
+
+/* ===================================================================== */
+/* ============ Dark Steel 2.0 — часть 2: экраны (волна V2) ============ */
+/* ===================================================================== */
+
+/* --- Ранговые орнаменты карточек --- */
+.card-orn { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); pointer-events: none; opacity: 0.45; color: var(--rk, var(--text-dim)); z-index: 1; }
+.card.rank-C { --rk: #9ca3af; } .card.rank-CC { --rk: #9ca3af; } .card.rank-CCC { --rk: #9ca3af; }
+.card.rank-B, .card.rank-BBB { --rk: #60a5fa; }
+.card.rank-A, .card.rank-AAA { --rk: #c084fc; }
+.card.rank-S, .card.rank-SS, .card.rank-SSS { --rk: #fbbf24; }
+.card.rank-B .card-orn { opacity: 0.55; }
+.card.rank-A .card-orn { opacity: 0.65; }
+.card.rank-S .card-orn, .card.rank-SS .card-orn, .card.rank-SSS .card-orn { opacity: 0.85; }
+.card-rank { font-size: 16px !important; letter-spacing: 2.5px; text-shadow: 0 0 10px var(--rk, transparent); margin-bottom: 2px; }
+
+/* --- Аватар-чемпион --- */
+.champion { width: 100%; height: 100%; display: block; }
+:root.perf-eco .champion { animation: none; }
+.champion-breathe { animation: champBreath 4.2s ease-in-out infinite; transform-origin: 50% 80%; }
+@keyframes champBreath { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
+@media (prefers-reduced-motion: reduce) { .champion-breathe { animation: none; } }
+.hero-path { font-size: 11px !important; display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; background: rgba(10, 10, 15, 0.78); border: 1px solid var(--hairline); border-radius: 12px; letter-spacing: 1px; top: auto !important; bottom: 6px !important; transform: translateX(-50%) !important; }
+.hero-path .icn { width: 13px; height: 13px; color: var(--gold-bright); }
+
+/* --- Квесты: карточки задач --- */
+.task-card { border-left: 3px solid var(--tier-color, var(--gold)); border-radius: 6px; padding: 12px 12px 12px 14px; background: linear-gradient(135deg, rgba(0,0,0,0.35), rgba(0,0,0,0.18)); transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.task-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-card); }
+.task-card .task-tier { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--tier-color, var(--gold)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tier-color, var(--gold)) 45%, transparent); font-size: 16px; }
+.task-card.done { border-color: var(--gold); box-shadow: inset 0 0 18px rgba(212,165,116,0.08), 0 0 10px rgba(212,165,116,0.1); }
+.task-card.ghost { border-left-color: var(--text-dim); opacity: 0.75; background: linear-gradient(135deg, rgba(30,30,40,0.4), rgba(10,10,15,0.3)); box-shadow: inset 0 0 24px rgba(0,0,0,0.5); }
+.task-card .task-btn .icn { width: 15px; height: 15px; }
+.task-meta .icn { width: 12px; height: 12px; opacity: 0.8; }
+.task-deadline-soon { color: var(--gold-bright); font-weight: bold; }
+
+/* --- Статистика: KPI-плитки, SVG-график, медали --- */
+.st-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.st-kpi { background: linear-gradient(160deg, rgba(0,0,0,0.42), rgba(0,0,0,0.22)); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; text-align: center; position: relative; overflow: hidden; }
+.st-kpi::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--hairline), transparent); }
+.st-kpi-label { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.st-kpi-val { font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.st-panel { background: linear-gradient(160deg, rgba(0,0,0,0.42), rgba(0,0,0,0.22)); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 16px; margin-bottom: 20px; }
+.st-panel-title { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
+.st-chart .st-bar { fill: url(#stBarGrad); }
+.st-chart .st-bar-label { font-size: 9px; fill: var(--text-dim); }
+.st-chart .st-bar-val { font-size: 9px; fill: var(--gold-bright); }
+.st-chart .st-gridline { stroke: rgba(212,165,116,0.12); stroke-width: 1; }
+.ach-icon { display: flex; align-items: center; justify-content: center; }
+.ach-icon .icn { width: 30px; height: 30px; color: var(--text-dim); opacity: 0.55; }
+.ach-card.unlocked .ach-icon .icn { color: var(--gold-bright); opacity: 1; filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.5)); }
+.ach-card.unlocked { border-color: rgba(251, 191, 36, 0.4); }
+.st-rank-chip { background: var(--rc-bg); border: 1px solid var(--rc-border); padding: 6px 12px; border-radius: 6px; font-size: 12px; }
+.st-rank-chip b { color: var(--rc-color); }
+
+/* --- Осада: SVG-сцена --- */
+.ss-scene { width: min(78vw, 340px); height: auto; display: block; margin: 0 auto 8px; }
+.ss-scene .ss-flame { animation: ssFlame 0.9s ease-in-out infinite alternate; transform-origin: center bottom; }
+.ss-scene .ss-flame.f2 { animation-delay: 0.35s; }
+.ss-scene .ss-flame.f3 { animation-delay: 0.6s; }
+@keyframes ssFlame { from { transform: scaleY(0.85); opacity: 0.8; } to { transform: scaleY(1.12); opacity: 1; } }
+:root.perf-eco .ss-scene .ss-flame { animation: none; }
+@media (prefers-reduced-motion: reduce) { .ss-scene .ss-flame { animation: none; } }
+
+/* --- Инвентарь: манекен --- */
+.paperdoll-silhouette { display: none; }
+.mannequin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 130px; height: 325px; opacity: 0.9; z-index: 1; pointer-events: none; }
+
+/* --- Карта: SVG-глifы вместо эмодзи --- */
+.km-emoji use { color: var(--gold); opacity: 0.9; }
+.km-wi use { color: rgba(232, 228, 220, 0.75); }
+.km-lockglyph { fill: rgba(232, 228, 220, 0.5); }
+
+/* --- DS2.0: хедер — гарантированный перенос (поздние слои могли перебить) --- */
+.header { flex-wrap: wrap !important; overflow: visible; }
+.siege-pill { order: 99; flex-shrink: 0; }
+.gold-chip { flex-shrink: 0; }
+.hero-path { bottom: 14px !important; }
+
+/* --- DS2.0: хедер на узких экранах --- */
+@media (max-width: 480px) {
+.gold-chip { padding: 4px 9px; }
+.siege-pill { padding: 4px 9px; font-size: 11px; }
+.header { padding: 8px 12px; }
+.hero-mini-info { min-width: 96px; }
 }

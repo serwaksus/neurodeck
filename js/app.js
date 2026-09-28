@@ -576,7 +576,14 @@ const nextRankText = getNextRank(card.rank) || 'MAX';
 var oathBadge = (bloodOath && bloodOath.status === 'active' && bloodOath.cardId === card.id)
 ? '<div class="blood-oath-badge">🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
 var dayBadge = _dailyPairIds[card.id] ? '<div class="day-card-badge" title="Карта дня: XP и золото ×2">✨</div>' : '';
+var _orn = '<svg class="card-orn" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+'<path d="M2 20 L2 6 Q2 2 6 2 L20 2" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
+'<path d="M80 2 L94 2 Q98 2 98 6 L98 20" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
+'<path d="M98 80 L98 94 Q98 98 94 98 L80 98" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
+'<path d="M20 98 L6 98 Q2 98 2 94 L2 80" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
+'</svg>';
 el.innerHTML =
+_orn +
 dayBadge +
 oathBadge +
 '<div class="card-corner-actions">' +
@@ -996,10 +1003,12 @@ if (_gchip) {
 }
 var pav = document.getElementById('heroAvatar');
 if (pav) { // #55: портрет героя по высшему стату
+    updateHeroAvatarSprites(); // DS2.0: чемпион при каждом обновлении (идемпотентно)
     var pp = pav.querySelector('.hero-path');
     if (!pp) { pp = document.createElement('div'); pp.className = 'hero-path'; pav.appendChild(pp); }
     var pi = heroPathInfo();
-    pp.textContent = pi.icon;
+    var _picn = { '⚔': '#i-str', '🛡': '#i-end', '🏹': '#i-agi' }[pi.icon] || '#i-star';
+    pp.innerHTML = '<svg class="icn" aria-hidden="true"><use href="' + _picn + '"/></svg><span>' + esc(pi.name) + '</span>';
     pp.title = 'Путь: ' + pi.name;
 }
 renderTotemCard(); // Ф2: карточка тотема в Hero-вкладке
@@ -2567,17 +2576,41 @@ function heroTierKey() {
     if (lvl <= 25) return 't5';
     return 't6';
 }
+function championSvg(tier) { // DS2.0 (волна V2): слоёный SVG-чемпион вместо пиксельного спрайта
+    var aura = { t1: '#9ca3af', t2: '#60a5fa', t3: '#c084fc', t4: '#fbbf24', t5: '#f4c896', t6: '#ff6b6b' }[tier] || '#9ca3af';
+    var uid = 'chg' + tier;
+    return '<svg class="champion" viewBox="0 0 120 120" aria-hidden="true">' +
+        '<defs><radialGradient id="' + uid + '" cx="50%" cy="42%" r="62%">' +
+        '<stop offset="0%" stop-color="' + aura + '" stop-opacity="0.42"/>' +
+        '<stop offset="62%" stop-color="' + aura + '" stop-opacity="0.10"/>' +
+        '<stop offset="100%" stop-color="' + aura + '" stop-opacity="0"/></radialGradient></defs>' +
+        '<circle cx="60" cy="52" r="52" fill="url(#' + uid + ')"/>' +
+        '<g class="champion-breathe">' +
+        '<path d="M34 100 C32 74 40 58 60 52 C80 58 88 74 86 100 Z" fill="#2b2138" stroke="' + aura + '" stroke-opacity="0.9" stroke-width="2"/>' + // плащ
+        '<path d="M46 60 L42 100 L54 100 L57 66 Z" fill="#3a2f4a"/>' + // складка плаща
+        '<path d="M48 54 L44 78 L52 74 L50 56 Z M72 54 L76 78 L68 74 L70 56 Z" fill="#251d33" stroke="' + aura + '" stroke-opacity="0.5" stroke-width="1.2"/>' + // наплечники
+        '<rect x="52" y="42" width="16" height="30" rx="6" fill="#382c4a" stroke="' + aura + '" stroke-opacity="0.7" stroke-width="1.6"/>' + // торс
+        '<path d="M50 40 Q50 26 60 26 Q70 26 70 40 L70 46 L50 46 Z" fill="#443655" stroke="' + aura + '" stroke-width="2"/>' + // шлем
+        '<path d="M60 30 L60 45" stroke="#0a0a0f" stroke-width="3"/>' + // визор T
+        '<path d="M60 26 L60 18" stroke="' + aura + '" stroke-width="2.4" stroke-linecap="round"/>' + // плюмаж-штырь
+        '<circle cx="60" cy="17" r="2.6" fill="' + aura + '"/>' +
+        '</g></svg>';
+}
 function updateHeroAvatarSprites() {
     var tier = heroTierKey();
-    var path = 'img/units/tier' + tier.slice(1) + '.png';
     var av = document.getElementById('heroAvatar');
     if (av) {
-        var img = av.querySelector('.hero-avatar-img');
-        if (!img) { img = document.createElement('img'); img.className = 'hero-avatar-img'; av.insertBefore(img, av.firstChild); }
-        if (!img.src.includes(path)) img.src = path;
+        var old = av.querySelector('.hero-avatar-img');
+        if (old) old.remove(); // DS2.0: пиксельный спрайт больше не лицом игры (в найме остаётся)
+        var svg = av.querySelector('.champion');
+        if (!svg) {
+            av.insertAdjacentHTML('afterbegin', championSvg(tier));
+        } else if (!svg.innerHTML.includes('url(#chg' + tier + ')')) {
+            svg.outerHTML = championSvg(tier);
+        }
     }
     var mini = document.getElementById('heroAvatarMini');
-    if (mini) { mini.textContent = '⚔'; }
+    if (mini && !mini.querySelector('.icn')) { mini.innerHTML = '<svg class="icn" aria-hidden="true" style="width:18px;height:18px"><use href="#i-hero"/></svg>'; }
 }
 function capturedCount() { ensureStrongholdState(); return strongholds.filter(function(s) { return s.captured; }).length; }
 function strongholdTaxPerDay() { ensureStrongholdState(); var t = 0; strongholds.forEach(function(s, i) { if (s.captured) t += STRONGHOLDS[i].tax; }); return t; }
@@ -2790,9 +2823,8 @@ var anyHeld = rows.some(function(r) { return r.held; });
 var anyFell = rows.some(function(r) { return !r.held && !r.refuge; });
 var spect = document.createElement('div');
 spect.className = 'siege-spectacle';
-var mainIcon = anyFell ? '💀' : '🛡';
 var mainText = anyFell ? 'Твердыня пала...' : 'Оборона держит!';
-spect.innerHTML = '<div class="ss-icon">' + mainIcon + '</div><div class="ss-text">' + mainText + '</div>';
+spect.innerHTML = siegeSceneSvg(anyFell) + '<div class="ss-text">' + mainText + '</div>';
 document.body.appendChild(spect);
 setTimeout(function() { spect.remove(); }, 3600);
 modal.classList.add('show');
@@ -3507,7 +3539,7 @@ var _wtape = (typeof ensureSeason === 'function') ? weatherSeasonWeek() : { sn: 
 var _wIcons = '';
 for (var wi = 0; wi < BOSSES.length; wi++) {
 var _ww = weatherOf(BOSSES[wi].prov, _wtape.sn, _wtape.wk);
-_wIcons += '<text class="km-wi km-wi-' + _ww.id + '" x="' + (60 + wi * 66) + '" y="80" text-anchor="middle">' + _ww.icon + '<title>Очередь ' + (wi + 1) + ' · ' + _ww.name + (weatherNorth(BOSSES[wi].prov) && _ww.id === 'blizzard' ? ' — содержание ×2' : _ww.id === 'drought' && weatherSouth(BOSSES[wi].prov) ? ' — налог ×0.75' : '') + '</title></text>';
+_wIcons += '<g class="km-wi km-wi-' + _ww.id + '"><use href="#i-w-' + (_ww.id === 'blizzard' ? 'blizzard' : _ww.id === 'drought' ? 'drought' : _ww.id === 'fog' ? 'fog' : 'clear') + '" x="' + (60 + wi * 66 - 11) + '" y="69" width="22" height="22"/><title>Очередь ' + (wi + 1) + ' · ' + _ww.name + (weatherNorth(BOSSES[wi].prov) && _ww.id === 'blizzard' ? ' — содержание ×2' : _ww.id === 'drought' && weatherSouth(BOSSES[wi].prov) ? ' — налог ×0.75' : '') + '</title></g>';
 }
 html += '<g class="km-weather" pointer-events="all">' + _wIcons + '</g>';
 }
@@ -3593,11 +3625,11 @@ node += '<path class="km-hit" d="' + KG.tiles[n].poly + '"/>';
 node += '<g class="km-town" transform="translate(' + p.x + ',' + p.y + ')" filter="url(#kmShadow)">' +
 '<path class="km-tower" d="M-13 18 L-13 -7 L-8 -7 L-8 -13 L-4 -13 L-4 -7 L4 -7 L4 -13 L8 -13 L8 -7 L13 -7 L13 18 Z"/>' +
 '<line class="km-pole" x1="13" y1="-7" x2="13" y2="-32"/><path class="km-flag" d="M13 -32 L30 -25.5 L13 -19 Z"/>' +
-'<g class="km-emoji"><circle cx="27" cy="9" r="14"/><text x="27" y="15" text-anchor="middle">' + d.icon + '</text></g>' +
+'<g class="km-emoji"><circle cx="27" cy="9" r="14"/><use href="#i-strongholds" x="19" y="1" width="16" height="16"/></g>' +
 (frac > 0 ? '<circle class="km-corrupt" r="30" pathLength="100" stroke-dasharray="' + (frac * 100) + ' 100"/>' : '') +
 '<circle class="km-ring" r="30"/>' +
 (state === 'km-siege' ? '<g class="km-badge" transform="translate(-26,-26)"><circle r="18"/><text y="7" text-anchor="middle">⚔</text></g>' : '') +
-(state === 'km-locked' ? '<text class="km-lockglyph" x="-24" y="16" text-anchor="middle">🔒</text>' : '') +
+(state === 'km-locked' ? '<use class="km-lockglyph" href="#i-lock" x="-36" y="4" width="16" height="16"/>' : '') +
 '</g>';
 var pw2 = Math.max(110, Math.round(d.name.length * 12 + 28));
 var pl = p.x - Math.round(pw2 / 2);
@@ -3925,6 +3957,34 @@ showToast('👻 Призраки ночью', '−' + p + ' 💰 (' + ghostNight
 if (changed || newGhosts > 0 || ghostNights > 0) { renderTasks(); renderDashboard(); updateHeroUI(); saveSoon(); }
 return { ghostNights: ghostNights, free: false };
 }
+function siegeSceneSvg(anyFell) { // DS2.0 (волна V2): SVG-сцена осады вместо эмодзи
+    var sky1 = anyFell ? '#2a0a10' : '#1a1408', sky2 = anyFell ? '#0d0508' : '#0a0a0f';
+    var glow = anyFell ? '#c73e4d' : '#d4a574';
+    return '<svg class="ss-scene" viewBox="0 0 340 190" aria-hidden="true">' +
+    '<defs><linearGradient id="ssSky" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="' + sky1 + '"/><stop offset="1" stop-color="' + sky2 + '"/></linearGradient>' +
+    '<radialGradient id="ssGlow" cx="50%" cy="86%" r="70%">' +
+    '<stop offset="0%" stop-color="' + glow + '" stop-opacity="0.5"/><stop offset="100%" stop-color="' + glow + '" stop-opacity="0"/></radialGradient></defs>' +
+    '<rect width="340" height="190" fill="url(#ssSky)"/>' +
+    '<ellipse cx="170" cy="170" rx="200" ry="80" fill="url(#ssGlow)"/>' +
+    '<g fill="#0c0a12">' +
+    '<path d="M20 190 L20 120 L35 120 L35 96 L48 110 L48 96 L61 110 L61 96 L74 120 L84 120 L84 190 Z"/>' + // левая башня+стена
+    '<path d="M150 190 L150 84 L170 62 L190 84 L190 190 Z"/>' + // цитадель
+    '<path d="M256 190 L256 120 L266 120 L266 96 L279 82 L292 96 L292 120 L302 120 L302 190 L266 190 Z"/>' + // правая башня
+    '</g>' +
+    '<g fill="#171320" stroke="' + glow + '" stroke-opacity="0.35">' +
+    '<rect x="40" y="130" width="34" height="26" rx="2"/><rect x="150" y="100" width="40" height="30" rx="2"/><rect x="266" y="130" height="26" width="26" rx="2"/>' +
+    '</g>' +
+    '<g fill="' + (anyFell ? '#c73e4d' : '#f4c896') + '">' +
+    '<path class="ss-flame" d="M52 156 q4 -12 8 0 q3 8 -4 10 q-7 -2 -4 -10z"/>' +
+    '<path class="ss-flame f2" d="M165 130 q4 -13 8 0 q3 9 -4 11 q-7 -2 -4 -11z"/>' +
+    '<path class="ss-flame f3" d="M275 156 q4 -12 8 0 q3 8 -4 10 q-7 -2 -4 -10z"/>' +
+    '</g>' +
+    (anyFell
+        ? '<path d="M150 62 L170 84 L190 62" fill="none" stroke="#c73e4d" stroke-width="3" stroke-linecap="round"/>' // сломанный шпиль
+        : '<path d="M170 62 L170 40" stroke="' + glow + '" stroke-width="3" stroke-linecap="round"/><path d="M170 40 L196 47 L170 54 Z" fill="' + glow + '"/>') + // флаг цел / шпиль сломан
+    '</svg>';
+}
 function taskCard(t) {
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
 var todayKey = getMSKDayKey();
@@ -3933,21 +3993,22 @@ var dl = t.deadline ? new Date(t.deadline).toLocaleString('ru', { day: 'numeric'
 var cls = t.status === 'ghost' ? 'ghost' : t.status === 'done' ? 'done' : overdue ? 'overdue' : '';
 var actions;
 if (t.status === 'active') {
-actions = '<button class="task-btn primary" data-action="complete-task" data-id="' + t.id + '">✓</button>' +
-'<button class="task-btn del" data-action="delete-task" data-id="' + t.id + '">🗑</button>';
+actions = '<button class="task-btn primary" data-action="complete-task" data-id="' + t.id + '" title="Выполнено">✓</button>' +
+'<button class="task-btn del" data-action="delete-task" data-id="' + t.id + '" title="Удалить"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></button>';
 } else if (t.status === 'done') {
 actions = '<button class="task-btn gold" data-action="claim-task-gold" data-id="' + t.id + '">💰 +' + tier.gold + '</button>' +
 '<button class="task-btn xp" data-action="claim-task-xp" data-id="' + t.id + '">✨ +' + tier.xp + '</button>' +
-'<button class="task-btn del" data-action="delete-task" data-id="' + t.id + '">🗑</button>';
+'<button class="task-btn del" data-action="delete-task" data-id="' + t.id + '" title="Удалить"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></button>';
 } else {
 var left = Math.max(0, tier.ghostDays - daysBetween(getMSKDayKey(t.ghostSince), todayKey));
 actions = '<span class="task-ghost-info">ещё ' + left + ' ' + pluralDays(left) + '</span>' +
 '<button class="task-btn del" data-action="delete-task" data-id="' + t.id + '">✕</button>';
 }
+var _soon = t.status === 'active' && t.deadline && !overdue && (t.deadline - Date.now()) < 6 * 3600000;
 return '<div class="task-card ' + cls + '" style="--tier-color:' + tier.color + '">' +
 '<div class="task-tier">' + tier.icon + '</div>' +
 '<div class="task-body"><div class="task-name">' + esc(t.name) + '</div>' +
-'<div class="task-meta">⏰ ' + dl + ' · 💰' + tier.gold + ' / ✨' + tier.xp + (overdue ? ' · <b style="color:var(--blood-bright)">просрочена!</b>' : '') + '</div></div>' +
+'<div class="task-meta"><svg class="icn" aria-hidden="true"><use href="#i-timer"/></svg> ' + dl + ' · 💰' + tier.gold + ' / ✨' + tier.xp + (overdue ? ' · <b style="color:var(--blood-bright)">просрочена!</b>' : (_soon ? ' · <span class="task-deadline-soon">срок скоро</span>' : '')) + '</div></div>' +
 '<div class="task-actions">' + actions + '</div>' +
 '</div>';
 }
@@ -3958,7 +4019,7 @@ if (!activeEl) return;
 var active = TASKS.filter(function(t) { return t.status === 'active' || t.status === 'done'; });
 var ghosts = TASKS.filter(function(t) { return t.status === 'ghost'; });
 activeEl.innerHTML = active.length === 0 ? '<div class="empty-state">Задач нет. Жми «📋 Задача».</div>' : active.map(taskCard).join('');
-goneEl.innerHTML = ghosts.length === 0 ? '' : '<div class="ghosts-title">👻 Призраки просроченных (−1 💰 за ночь, пока не изгонишь делом или ✕)</div>' + ghosts.map(taskCard).join('');
+goneEl.innerHTML = ghosts.length === 0 ? '' : '<div class="ghosts-title"><svg class="icn" aria-hidden="true"><use href="#i-ghost"/></svg> Призраки просроченных (−1 💰 за ночь, пока не изгонишь делом или ✕)</div>' + ghosts.map(taskCard).join('');
 }
 function getMSKDayKey(ts) {
 const d = getMSKDate(ts);
@@ -3986,54 +4047,57 @@ var streakHeatmap = buildStreakHeatmap();
 
 var achievements = buildAchievements();
 container.innerHTML =
-'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">' +
-'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
-'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">Всего XP</div>' +
-'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + HERO.totalXp.toLocaleString() + '</div></div>' +
-'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
-'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">XP за 7 дней</div>' +
-'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + totalXp7.toLocaleString() + '</div></div>' +
-'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
-'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">Среднее XP/день</div>' +
-'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + avgDaily.toLocaleString() + '</div></div>' +
-'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 14px; text-align: center;">' +
-'<div style="font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;">Выполнений</div>' +
-'<div style="font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px;">' + totalCompletions + '</div></div>' +
+'<div class="st-kpi-grid">' +
+'<div class="st-kpi"><div class="st-kpi-label">Всего XP</div><div class="st-kpi-val">' + HERO.totalXp.toLocaleString() + '</div></div>' +
+'<div class="st-kpi"><div class="st-kpi-label">XP за 7 дней</div><div class="st-kpi-val">' + totalXp7.toLocaleString() + '</div></div>' +
+'<div class="st-kpi"><div class="st-kpi-label">Среднее XP/день</div><div class="st-kpi-val">' + avgDaily.toLocaleString() + '</div></div>' +
+'<div class="st-kpi"><div class="st-kpi-label">Выполнений</div><div class="st-kpi-val">' + totalCompletions + '</div></div>' +
 '</div>' +
-'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 16px; margin-bottom: 20px;">' +
-'<div style="font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;">XP за последние 7 дней</div>' +
-'<div style="display: flex; align-items: flex-end; gap: 6px; height: 160px;">' +
-last7.map(function(d) {
-var h = Math.max(2, (d.xp / maxXp) * 140);
-var dayLabel = d.date !== '—' ? d.date.slice(8) : '—';
-return '<div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">' +
-'<div style="font-size: 10px; color: var(--gold-bright);">' + d.xp + '</div>' +
-'<div style="width: 100%; height: ' + h + 'px; background: linear-gradient(to top, var(--gold), var(--gold-bright)); border-radius: 3px 3px 0 0; min-height: 2px;"></div>' +
-'<div style="font-size: 10px; color: var(--text-dim);">' + dayLabel + '</div>' +
-'</div>';
-}).join('') +
-'</div></div>' +
-'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 16px; margin-bottom: 20px;">' +
-'<div style="font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;">🔥 Тепловая карта стриков (последние 8 недель)</div>' +
+'<div class="st-panel">' +
+'<div class="st-panel-title">XP за последние 7 дней</div>' +
+stAreaChart(last7, maxXp) +
+'</div>' +
+'<div class="st-panel">' +
+'<div class="st-panel-title">Тепловая карта стриков (последние 8 недель)</div>' +
 streakHeatmap +
 '</div>' +
 
 achievements +
-'<div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 16px;">' +
-'<div style="font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;">Карточки по рангам</div>' +
+'<div class="st-panel">' +
+'<div class="st-panel-title">Карточки по рангам</div>' +
 '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' +
 RANK_PROGRESSION.map(function(r) {
 var count = FORGED.filter(function(c) { return c.rank === r; }).length;
 if (count === 0) return '';
 var rc = getRankColorInfo(r);
-return '<div style="background: ' + rc.bg + '; border: 1px solid ' + rc.color + '40; padding: 6px 12px; border-radius: 4px; font-size: 12px;">' +
-'<span style="color:' + rc.color + '; font-weight: bold;">' + r + '</span> × ' + count +
-'</div>';
+return '<div class="st-rank-chip" style="--rc-bg:' + rc.bg + '; --rc-border:' + rc.color + '40; --rc-color:' + rc.color + '"><b>' + r + '</b> × ' + count + '</div>';
 }).join('') +
 (FORGED.length === 0 ? '<div style="color: var(--text-dim); font-size: 12px;">Пока нет карточек</div>' : '') +
 '</div></div>' +
 renderCardHeatmap() +
 renderInsights();
+}
+function stAreaChart(days, maxXp) { // DS2.0 (волна V2): SVG-столбчатый график XP с сеткой и рамкой
+    var W = 340, H = 170, padB = 22, padT = 18, n = days.length;
+    var innerH = H - padB - padT;
+    var bw = W / n;
+    var grid = '';
+    for (var gi = 1; gi <= 3; gi++) {
+        var gy = padT + innerH - (innerH * gi / 3);
+        grid += '<line class="st-gridline" x1="0" y1="' + gy + '" x2="' + W + '" y2="' + gy + '"/>';
+    }
+    var bars = days.map(function(d, i) {
+        var h = Math.max(2, (d.xp / maxXp) * innerH);
+        var x = i * bw + bw * 0.18, w = bw * 0.64, y = padT + innerH - h;
+        var dayLabel = d.date !== '—' ? d.date.slice(8) : '—';
+        return '<rect class="st-bar" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="3"><title>' + (d.date !== '—' ? d.date : '') + ': ' + d.xp + ' XP</title></rect>' +
+        (d.xp > 0 ? '<text class="st-bar-val" x="' + (i * bw + bw / 2) + '" y="' + (y - 4) + '" text-anchor="middle">' + d.xp + '</text>' : '') +
+        '<text class="st-bar-label" x="' + (i * bw + bw / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + dayLabel + '</text>';
+    }).join('');
+    return '<svg class="st-chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="auto" style="display:block" role="img" aria-label="XP за 7 дней">' +
+    '<defs><linearGradient id="stBarGrad" x1="0" y1="1" x2="0" y2="0">' +
+    '<stop offset="0" stop-color="#8a6d1f"/><stop offset="1" stop-color="#f4c896"/></linearGradient></defs>' +
+    grid + bars + '</svg>';
 }
 function buildStreakHeatmap() {
 var days = [];
@@ -4102,7 +4166,7 @@ all.forEach(function(a) {
 var done = a.cur >= a.max;
 var pct = Math.min(100, Math.round(a.cur / a.max * 100));
 html += '<div class="ach-card' + (done ? ' unlocked' : '') + '">' +
-'<div class="ach-icon">' + a.icon + '</div>' +
+'<div class="ach-icon"><svg class="icn" aria-hidden="true"><use href="#i-medal"/></svg></div>' +
 '<div class="ach-name">' + a.name + '</div>' +
 '<div class="ach-desc">' + a.desc + '</div>' +
 (a.max > 1
