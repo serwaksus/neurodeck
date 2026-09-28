@@ -1758,3 +1758,88 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 /* --- DS2.0: детерминизм харнессов — без входных анимаций в webdriver-контекстах --- */
 :root.nd-webdriver .cards .card, :root.nd-webdriver .modal-overlay.show .modal > *,
 :root.nd-webdriver .view.slide-next, :root.nd-webdriver .view.slide-prev { animation: none !important; }
+
+/* ===================================================================== */
+/* ====== DS2.0 часть 3: «Реликвии» — дорогой инвентарь (2026-09-28) ==== */
+/* ===================================================================== */
+
+/* --- Заголовки секций инвентаря: гравировка с росчерками --- */
+.paperdoll-title, .backpack-title { display: flex; align-items: center; gap: 10px; }
+.paperdoll-title::before, .paperdoll-title::after,
+.backpack-title::before { content: ''; height: 1px; flex: 1; background: linear-gradient(90deg, transparent, var(--hairline)); }
+.paperdoll-title::after { background: linear-gradient(90deg, var(--hairline), transparent); }
+
+/* --- Слоты: кованая рамка с заклёпками --- */
+.slot { border: none; border-radius: 9px; color: rgba(212, 165, 116, 0.4); font-size: 17px;
+  background:
+    radial-gradient(120% 85% at 50% 28%, rgba(212, 165, 116, 0.07), transparent 62%),
+    linear-gradient(165deg, #1c1510 0%, #0e0b08 72%);
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 165, 116, 0.30),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.55),
+    inset 0 7px 14px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(244, 200, 150, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9), 0 0 9px rgba(212, 165, 116, 0.18);
+  transition: transform 0.16s ease, box-shadow 0.25s ease;
+}
+.slot::before { content: ''; position: absolute; inset: 2px; border-radius: 7px; pointer-events: none;
+  background:
+    radial-gradient(circle 1.6px at 4px 4px, rgba(244, 200, 150, 0.5) 0 1.4px, transparent 1.6px),
+    radial-gradient(circle 1.6px at calc(100% - 4px) 4px, rgba(244, 200, 150, 0.5) 0 1.4px, transparent 1.6px),
+    radial-gradient(circle 1.6px at 4px calc(100% - 4px), rgba(244, 200, 150, 0.5) 0 1.4px, transparent 1.6px),
+    radial-gradient(circle 1.6px at calc(100% - 4px) calc(100% - 4px), rgba(244, 200, 150, 0.5) 0 1.4px, transparent 1.6px);
+}
+.slot:hover { transform: translateY(-2px);
+  box-shadow: inset 0 0 0 1px rgba(244, 200, 150, 0.55), inset 0 0 0 3px rgba(0, 0, 0, 0.55), inset 0 7px 14px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 12px rgba(212, 165, 116, 0.15); }
+.slot.filled { box-shadow:
+    inset 0 0 0 1px var(--slot-color, var(--gold)),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.5),
+    inset 0 7px 14px rgba(0, 0, 0, 0.5),
+    inset 0 0 16px var(--slot-glow, transparent),
+    0 0 12px var(--slot-glow, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.55); }
+.slot.filled .slot-icon { font-size: 25px; text-shadow: 0 0 12px var(--slot-glow, transparent), 0 1px 2px rgba(0,0,0,0.9); }
+.slot.filled { background:
+    radial-gradient(120% 85% at 50% 28%, var(--slot-bg, rgba(212,165,116,0.1)), transparent 64%),
+    linear-gradient(165deg, #1c1510 0%, #0e0b08 72%); }
+.slot-rank-badge { border: 1px solid rgba(0, 0, 0, 0.55); border-radius: 3px; font-size: 8px; padding: 0 3px; line-height: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+
+/* --- Манекен-стойка: доспех, постамент, тёплый свет --- */
+.mannequin { width: 148px; height: 340px; filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.65)); }
+:root.perf-eco .mannequin { filter: none; }
+
+/* --- Карточка реликвии (превью предмета) --- */
+.item-panel { background: linear-gradient(172deg, rgba(30, 22, 15, 0.95), rgba(13, 10, 7, 0.97)); border: 1px solid rgba(212, 165, 116, 0.35); border-radius: var(--radius-modal);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(244, 200, 150, 0.10), 0 0 30px var(--panel-glow, transparent); position: relative; }
+.item-panel::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: linear-gradient(90deg, transparent, rgba(244, 200, 150, 0.55), transparent); }
+.item-preview { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 34px;
+  background: radial-gradient(circle at 50% 32%, var(--item-bg, rgba(212,165,116,0.15)), transparent 72%), linear-gradient(165deg, #1c1510, #0e0b08);
+  box-shadow: inset 0 0 0 1.5px var(--item-color, var(--gold)), inset 0 0 20px var(--item-glow, transparent), 0 0 18px var(--item-glow, transparent), 0 4px 12px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 0 14px var(--item-glow, transparent), 0 2px 3px rgba(0, 0, 0, 0.85); }
+.item-preview-rank { border: 1px solid rgba(0, 0, 0, 0.5); border-radius: 4px; font-size: 9px; padding: 1px 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
+.item-name { font-family: var(--font-display) !important; letter-spacing: 1.2px; font-size: 15px !important; text-shadow: 0 0 12px var(--item-glow, transparent); }
+.item-lore { font-family: var(--font-body) !important; font-style: italic; color: var(--text-dim) !important; border-left: 2px solid var(--hairline) !important; padding-left: 10px !important; line-height: 1.55; }
+.item-bonuses { border: 1px solid var(--border); border-radius: var(--radius-card); background: rgba(0, 0, 0, 0.28); padding: 10px 12px !important; box-shadow: inset 0 1px 0 rgba(244, 200, 150, 0.06); }
+.item-bonuses-title { letter-spacing: 2px; text-transform: uppercase; font-size: 10px !important; color: var(--gold) !important; margin-bottom: 6px; }
+.item-bonus { border-bottom: 1px dashed rgba(212, 165, 116, 0.14); }
+.item-bonus:last-child { border-bottom: none; }
+.item-bonus-val { color: var(--gold-bright) !important; font-variant-numeric: tabular-nums; font-weight: bold; }
+.item-btn { border-radius: 6px !important; }
+.item-btn:not(.danger) { background: linear-gradient(160deg, rgba(212, 165, 116, 0.22), rgba(212, 165, 116, 0.08)) !important; border: 1px solid var(--gold) !important; color: var(--gold-bright) !important; text-shadow: 0 0 8px rgba(212, 165, 116, 0.3); }
+.item-btn:not(.danger):hover { box-shadow: 0 0 14px rgba(212, 165, 116, 0.3); }
+
+/* --- Рюкзак: ячейки-оправы --- */
+.bp-cell { border-radius: 8px; background: linear-gradient(165deg, #1a1410, #0d0a08);
+  box-shadow: inset 0 0 0 1px rgba(212, 165, 116, 0.22), inset 0 5px 10px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.22s ease; }
+.bp-cell:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(244, 200, 150, 0.5), inset 0 5px 10px rgba(0, 0, 0, 0.5), 0 5px 12px rgba(0, 0, 0, 0.55), 0 0 10px rgba(212, 165, 116, 0.12); }
+
+/* --- Сводная полоса бонусов --- */
+.total-bonuses { border: 1px solid var(--border); border-radius: var(--radius-card); background: linear-gradient(170deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.18)); box-shadow: inset 0 1px 0 rgba(244, 200, 150, 0.05); }
+
+/* --- Титул вкладки: «Реликвии Героя» с гербом --- */
+.inv-title-orn { display: flex; align-items: center; gap: 8px; }
+.slot.filled { color: var(--text); }
+.slot.filled .slot-icon { color: #fff; }
+.slot .slot-icon { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); line-height: 1; }
