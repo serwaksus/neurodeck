@@ -3607,6 +3607,8 @@ html += '<defs>' +
 '<radialGradient id="kmVin" cx="0.5" cy="0.42" r="0.78"><stop offset="0.55" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(0,0,0,0.5)"/></radialGradient>' +
 '<pattern id="kmHatch" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="rgba(139,26,53,0.32)"/><rect width="6" height="14" fill="rgba(70,130,180,0.40)"/></pattern>' +
 '<filter id="kmShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#000000" flood-opacity="0.55"/></filter>' +
+'<radialGradient id="kmMist" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="rgba(210,220,235,0.15)"/><stop offset="1" stop-color="rgba(210,220,235,0)"/></radialGradient>' +
+'<radialGradient id="kmCloud" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="rgba(235,240,250,0.085)"/><stop offset="1" stop-color="rgba(235,240,250,0)"/></radialGradient>' +
 '</defs>';
 html += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#kmSky)"/>';
 for (var b = 0; b < 12; b++) {
@@ -3698,6 +3700,36 @@ segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') 
 }
 segs += '</g>';
 html += segs;
+// DS2.0×G1: погода на карте — провинция показывает своё небо (снег метели, дымка тумана, жар засухи)
+if (typeof weatherOf === 'function' && typeof weatherSeasonWeek === 'function') {
+var _swm = weatherSeasonWeek();
+var _wx = '';
+for (var wp2 = 1; wp2 <= 4; wp2++) {
+var _ww2 = weatherOf(wp2, _swm.sn, _swm.wk);
+var _wfr = KG.provinces[wp2 - 1].frame, _wout = KG.provinces[wp2 - 1].outline;
+if (_ww2.id === 'blizzard' && weatherNorth(wp2)) {
+_wx += '<path class="km-wx-tint" d="' + _wout + '" fill="rgba(150,190,255,0.055)"/>';
+_wx += '<g class="km-snow">';
+for (var sn2 = 0; sn2 < 22; sn2++) {
+var sx2 = Math.round(_wfr.x0 + 14 + prand(wp2 * 41 + sn2) * (_wfr.x1 - _wfr.x0 - 28));
+var sy2 = Math.round(_wfr.y0 + 20 + prand(wp2 * 57 + sn2 * 3) * (_wfr.y1 - _wfr.y0 - 60));
+_wx += '<circle cx="' + sx2 + '" cy="' + sy2 + '" r="' + (1.4 + prand(sn2 * 13 + wp2) * 1.4).toFixed(1) + '" style="animation-delay:' + (prand(sn2 * 7 + wp2 * 3) * 4).toFixed(2) + 's"/>';
+}
+_wx += '</g>';
+} else if (_ww2.id === 'drought' && weatherSouth(wp2)) {
+_wx += '<path class="km-wx-tint" d="' + _wout + '" fill="rgba(255,140,60,0.05)"/>';
+} else if (_ww2.id === 'fog') {
+_wx += '<g class="km-mist">';
+for (var fm = 0; fm < 3; fm++) {
+var mx2 = Math.round(_wfr.x0 + 60 + prand(wp2 * 23 + fm * 11) * (_wfr.x1 - _wfr.x0 - 120));
+var my2 = Math.round(_wfr.y0 + 60 + prand(wp2 * 31 + fm * 7) * (_wfr.y1 - _wfr.y0 - 140));
+_wx += '<ellipse cx="' + mx2 + '" cy="' + my2 + '" rx="70" ry="20" fill="url(#kmMist)" style="animation-delay:' + (fm * 2.4).toFixed(1) + 's"/>';
+}
+_wx += '</g>';
+}
+}
+if (_wx) html += '<g class="km-wx-layer" pointer-events="none">' + _wx + '</g>';
+}
 // интерактивные тайлы: hit-полигон + городок с флагом + табличка (контракт km-node фазы E)
 var g = '';
 for (var n = 0; n < STRONGHOLDS.length; n++) {
@@ -3719,6 +3751,7 @@ node += '<g class="km-town" transform="translate(' + p.x + ',' + p.y + ')" filte
 '<circle class="km-ring" r="30"/>' +
 (state === 'km-siege' ? '<g class="km-badge" transform="translate(-26,-26)"><circle r="18"/><text y="7" text-anchor="middle">⚔</text></g>' : '') +
 (state === 'km-locked' ? '<use class="km-lockglyph" href="#i-lock" x="-36" y="4" width="16" height="16"/>' : '') +
+(state === 'km-captured' ? '<circle class="km-fire" cx="-6" cy="6" r="1.6"/><circle class="km-fire km-f2" cx="6" cy="8" r="1.2"/>' : '') +
 '</g>';
 var pw2 = Math.max(110, Math.round(d.name.length * 12 + 28));
 var pl = p.x - Math.round(pw2 / 2);
@@ -3733,6 +3766,20 @@ node += '</g>';
 g += node;
 }
 html += g;
+html += '<g class="km-clouds" pointer-events="none">' +
+'<ellipse class="km-cloud" cx="180" cy="240" rx="90" ry="26" fill="url(#kmCloud)"/>' +
+'<ellipse class="km-cloud km-c2" cx="520" cy="620" rx="110" ry="30" fill="url(#kmCloud)"/>' +
+'<ellipse class="km-cloud km-c3" cx="330" cy="930" rx="80" ry="22" fill="url(#kmCloud)"/>' +
+'</g>';
+var _seaMidX = Math.round((KG.SEA.x0 + KG.SEA.x1) / 2);
+html += '<g class="km-ship" transform="translate(' + _seaMidX + ',' + (KG.SEA.y0 + 90) + ')" pointer-events="none">' +
+'<g class="km-ship-bob">' +
+'<path class="km-ship-wake" d="M-20 10 q10 5 20 0 q10 -5 20 0" fill="none"/>' +
+'<path class="km-ship-hull" d="M-16 8 Q0 16 16 8 L11 0 L-11 0 Z"/>' +
+'<line class="km-ship-mast" x1="0" y1="0" x2="0" y2="-22"/>' +
+'<path class="km-ship-sail" d="M0 -21 L13 -4 L0 -4 Z"/>' +
+'<path class="km-ship-sail km-s2" d="M-2 -19 L-11 -5 L-2 -5 Z"/>' +
+'</g></g>';
 html += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#kmVin)" pointer-events="none"/>';
 html += '</svg><button class="km-cam-reset" type="button" aria-label="Сбросить масштаб карты" title="Сбросить масштаб">⤢</button></div></div>';
 return html;
