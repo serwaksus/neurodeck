@@ -23,7 +23,6 @@ test('perf.js exposes UMD module via module.exports', () => {
     assert.equal(typeof P.getMode, 'function');
     assert.equal(typeof P.isEco, 'function');
     assert.equal(typeof P.onEcoModeChange, 'function');
-    assert.equal(typeof P.applyToCanvasRenderer, 'function');
 });
 
 test('isEco covers low/effects-off union (compat semantics)', () => {
@@ -121,28 +120,8 @@ test('localStorage round-trip: set eco, require fresh, getMode reflects storage'
     }
 });
 
-test('applyToCanvasRenderer is a no-op for null renderer', () => {
-    const P = require('../js/perf.js');
-    P._resetForTests();
-    // Should not throw and should not return anything weird.
-    P.applyToCanvasRenderer(null);
-    P.applyToCanvasRenderer(undefined);
-    P.applyToCanvasRenderer({});
-});
-
-test('applyToCanvasRenderer downgrades resolution when eco is on', () => {
-    const P = require('../js/perf.js');
-    P._resetForTests();
-    P.setMode('eco');
-    var fakeRenderer = { resolution: 2 };
-    P.applyToCanvasRenderer(fakeRenderer);
-    assert.equal(fakeRenderer.resolution, 1, 'eco should force resolution=1');
-    P.setMode('performance');
-    P.applyToCanvasRenderer(fakeRenderer);
-    // devicePixelRatio in headless node is typically 1, so target becomes min(2, 1) = 1
-    // but we don't care about the perf-mode target value — only that it isn't undefined.
-    assert.equal(typeof fakeRenderer.resolution, 'number');
-});
+// applyToCanvasRenderer tests removed 2026-09-22: PixiJS вырезан из проекта,
+// функция удалена из perf.js/perf-compat.js (осознанное изменение, не регресс).
 
 // ===================== index.html / html wiring =====================
 
@@ -158,14 +137,19 @@ test('index.html loads perf-compat right after perf.js, both before state-guards
     assert.ok(sg < st, 'state-guards must load before storage');
 });
 
-test('index.html cache-bust v75 is uniform across all JS files', () => {
+test('index.html cache-bust is uniform across all JS files (single version, no literal)', () => {
+    var versions = {};
     ['js/state-guards.js', 'js/perf.js', 'js/storage.js', 'js/stronghold-model.js', 'js/app.js']
         .forEach(function(rel) {
             var re = new RegExp(rel.replace(/\./g, '\\.') + '\\?v=(\\d+)');
             var m = html.match(re);
             assert.ok(m, 'expected entry for ' + rel);
-            assert.equal(m[1], '75', 'cache-bust for ' + rel + ' should be v75, got ' + m[1]);
+            versions[rel] = m[1];
         });
+    var uniq = Object.keys(versions).map(function(k) { return versions[k]; });
+    assert.equal(new Set(uniq).size, 1, 'все ?v= должны совпадать, факт: ' + JSON.stringify(versions));
+    var cssV = (html.match(/style\.css\?v=(\d+)/) || [])[1];
+    assert.equal(uniq[0], cssV, 'css и js пины совпадают');
     assert.equal(html.indexOf('combat-pixi'), -1, 'combat-pixi must not be referenced in index.html');
 });
 

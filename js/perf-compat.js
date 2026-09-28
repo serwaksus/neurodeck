@@ -24,14 +24,6 @@
     if (typeof fn === 'function') _legacy.push(fn);
   };
 
-  P.applyToCanvasRenderer = function (renderer) {
-    if (!renderer) return;
-    try {
-      var target = computeEco() ? 1 : Math.min(2, root.devicePixelRatio || 1);
-      if (typeof renderer.resolution === 'number') renderer.resolution = target;
-    } catch (e) {}
-  };
-
   var _nativeReset = P._resetForTests;
   P._resetForTests = function () {
     _nativeReset();

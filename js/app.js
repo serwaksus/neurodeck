@@ -132,6 +132,7 @@ case 'share-link': shareLinkNative(); break;
 case 'download-sync-file': downloadSyncFile(); break;
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
+case 'export-metrics': exportMetrics(); break; // A2
 case 'reset-all-data': resetAllData(); break;
 case 'set-reminder-freq':
 if (typeof showReminderFreqToast === 'function') showReminderFreqToast(el.dataset.mode);
@@ -648,6 +649,53 @@ el.style.color = color;
 document.body.appendChild(el);
 setTimeout(() => el.remove(), 1500);
 }
+function cardXpLedger(card, dayMult, bloodMult, streakMult, heroIntBonus, comboMult, prestigeMult) { // B: состав и порядок множителей XP заморожен — tests/mult-ledger.test.js
+    return [
+        { id: 'streak', m: streakMult, round: false },
+        { id: 'heroInt', m: heroIntBonus, round: false },
+        { id: 'combo', m: comboMult, round: false },
+        { id: 'prestige', m: prestigeMult, round: true },
+        { id: 'dayPair', m: dayMult, round: false }, // #29: карта дня ×2
+        { id: 'bloodmoon', m: bloodMult, round: false }, // #41
+        { id: 'holiday', m: holidayRewardMult(), round: false }, // #8
+        { id: 'totem', m: totemXpMult(), round: false }, // Ф2: сова
+        { id: 'doctrine', m: doctrineXpMult(), round: false }, // Г1-2: growth
+        { id: 'bossArtifact', m: bossArtifactMult('xp'), round: false }, // Г2-1
+        { id: 'techIdea', m: techIdeaXpMult(), round: false }, // Г5-Т2
+        { id: 'tech', m: techXpMult(), round: false }, // Г5-Т3
+        { id: 'comboDay', m: HERO.comboDayXp || 1, round: false } // Г2-4
+    ];
+}
+function applyXpLedger(base, ledger) {
+    var xp = base;
+    for (var i = 0; i < ledger.length; i++) { xp *= ledger[i].m; if (ledger[i].round) xp = Math.round(xp); }
+    return xp;
+}
+var ND_METRICS_KEY = 'neurodeck_metrics';
+function metricCard(finalXp) { // A2: карточки/день, локальная метрика (кольцо 60 дней), экспорт — syncModal
+    try {
+        var m = JSON.parse(localStorage.getItem(ND_METRICS_KEY) || 'null');
+        if (!m || m.v !== 1 || typeof m.days !== 'object' || m.days === null || Array.isArray(m.days)) m = { v: 1, days: {} };
+        var tk = getMSKDayKey();
+        var d = m.days[tk] || { cards: 0, xp: 0 };
+        d.cards++; d.xp += finalXp;
+        m.days[tk] = d;
+        var ks = Object.keys(m.days);
+        if (ks.length > 60) { ks.sort(); ks.slice(0, ks.length - 60).forEach(function(k) { delete m.days[k]; }); } // ponytail: кольцо 60 дней
+        localStorage.setItem(ND_METRICS_KEY, JSON.stringify(m));
+    } catch (e) {}
+}
+function exportMetrics() {
+    var raw = '{}';
+    try { raw = localStorage.getItem(ND_METRICS_KEY) || '{}'; } catch (e) {}
+    var blob = new Blob([raw], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'neurodeck-metrics-' + getMSKDayKey() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
 function completeCard(e, id) {
 e.stopPropagation();
 const card = findCard(id);
@@ -683,9 +731,10 @@ const totalInt = STATS.int.value + gear.int;
 const heroIntBonus = 1 + (totalInt - 3) * 0.01;
 const comboMult = getComboMultiplier();
 const prestigeMult = getPrestigeXPBonus(card.stat);
-const finalXp = Math.round(baseCardXp * streakMult * heroIntBonus * comboMult * prestigeMult) * dayMult * bloodMult * holidayRewardMult() * totemXpMult() * doctrineXpMult() * bossArtifactMult('xp') * techIdeaXpMult() * techXpMult() * (HERO.comboDayXp || 1); // #8/#41: праздник +10%, луна ×2; Ф2: сова +10%; Г1-2 growth +25%; Г2-1 артефакт +10%; Г2-4 Вихрь +10%; Г5-Т2 Могущество +15%; Г5-Т3: Псалмы+Ритуалы+Трансценденция
+const finalXp = applyXpLedger(baseCardXp, cardXpLedger(card, dayMult, bloodMult, streakMult, heroIntBonus, comboMult, prestigeMult)); // B-ledger: состав см. cardXpLedger — та же математика, порядок и округление после prestige сохранены
 HERO.xp += finalXp; HERO.totalXp += finalXp;
 recordXpEvent(finalXp);
+metricCard(finalXp); // A2: локальная метрика карточек/день
 spawnFloatNumber(x, y - 20, '+' + finalXp + ' XP', '#f4c896');
 card.mastery += card.evolutionPath === 'depth' ? 1.5 : 1;
 card.totalCompletions = (card.totalCompletions || 0) + 1;
@@ -2504,7 +2553,7 @@ if (STAGE_ORDER_WORST[st] > STAGE_ORDER_WORST[worst]) worst = st;
 });
 return worst;
 }
-function hireCostOf(tier) { var base = UNIT_TIERS[tier].cost * (1 - Math.min(0.30, 0.005 * STATS.cha.value)); if (dailyEvent && dailyEvent.id === 'smith') base *= 0.75; base *= synergyHireMult(); // Г1-3: zh-линейка → найм −10%
+function hireCostOf(tier) { var base = UNIT_TIERS[tier].cost * (1 - Math.min(0.30, 0.005 * STATS.cha.value)); base *= synergyHireMult(); // Г1-3: zh-линейка → найм −10%
 return Math.ceil(base); }
 function buildCostOf(bid) { var d = BUILDINGS[bid]; return d ? Math.ceil(d.cost * doctrineEngineMult() * bossArtifactMult('cost') * techBuildingCostMult()) : 0; } // Г1-2: engine −15% · Г2-1: корона −15% · Г5-Т3: Чертёжный Дом −10%
 function recalcHirePool() {
@@ -3778,7 +3827,7 @@ renderTasks(); renderDashboard(); saveGameState();
 function expireGhostTasks(yesterdayKey) {
 var changed = false;
 var newGhosts = 0;
-var ghostFree = !!(typeof dailyEvent !== 'undefined' && dailyEvent && dailyEvent.id === 'ghostfree') || !!(holidayBonus() && holidayBonus().ghostsFree); // #8: Хэллоуин — призраки праздникуют
+var ghostFree = !!(holidayBonus() && holidayBonus().ghostsFree); // #8: Хэллоуин — призраки праздникуют (C3: событие ghostfree удалено)
 TASKS.forEach(function(t) {
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
 var dlDay = t.deadline ? getMSKDayKey(t.deadline) : yesterdayKey;
@@ -4545,22 +4594,20 @@ function weeklyDeltaHtml(week) { // #42: блок «vs прошлая недел
 }
 function closeWeeklyReportModal() { document.getElementById('weeklyReportModal').classList.remove('show'); }
 
-function buildDailyEvents() {
+function buildDailyEvents() { // C3: smith/ghostfree удалены (квази-мёртвые: no-op 99%/85%, qa-chaos/qa-economy) — пул: 3 базовых + 2 тёмных
     return [
         { id: 'caravan', icon: '🐎', name: 'Караван', text: 'Торговцы из-за гор: +' + Math.max(20, capturedCount() * 15) + ' 💰 мгновенно!' },
-        { id: 'smith', icon: '⚒', name: 'Бродячий кузнец', text: 'Наём сегодня дешевле на 25%.' },
         { id: 'market', icon: '🏪', name: 'Ярмарка', text: 'Налоги твердынь ×1.5 сегодня!' },
-        { id: 'ghostfree', icon: '👻', name: 'Духи дремлют', text: 'Призраки задач сегодня безобидны.' },
         { id: 'quiet', icon: '🌙', name: 'Тихий день', text: 'Ничего не произошло. Но золото капает.' },
         { id: 'bloodmoon', icon: '🌘', name: 'Кровавая луна', text: 'Налоги ×0.5, но опыт карточек ×2. Ночь безумия!' }, // #41: тёмная ветка — строго в конец (пины chaos-харнеса)
         { id: 'wanderer', icon: '🧙', name: 'Странник', text: 'Старец оставил дары: +1 🛡 и +30 💰.' }
     ];
 }
-function rollDailyEvent() { // #41: старые 5 — по индексам 0-4 (пины chaos-харнеса 0/0.2/0.4/0.6/0.8/0.99), тёмные — в окне (0.8, 0.985)
+function rollDailyEvent() { // #41: базовые 3 — по индексам 0-2 (пины chaos-харнеса 0/0.4/0.8/0.99), тёмные — в окне (0.8, 0.985)
     var events = buildDailyEvents();
     var r = Math.random();
-    if (r > 0.8 && r < 0.985) return r < 0.895 ? events[5] : events[6]; // ponytail: ~9% у новых против ~18% у старых — окно зажато пинами харнеса; равные веса только после переписки пинов
-    return events[Math.floor(r * 5)];
+    if (r > 0.8 && r < 0.985) return r < 0.895 ? events[3] : events[4]; // ponytail: ~9% у тёмных против ~27% у базовых — окно зажато пинами харнеса; равные веса только после переписки пинов
+    return events[Math.floor(r * 3)];
 }
 function rerollDailyEvent() { // #48: переролл события дня, 1/день, 50💰 — флаг дня в localStorage (в сейв не пишем)
     if (!dailyEvent) return;
@@ -4596,26 +4643,13 @@ if (_prevDay !== null) {
 var gapDays = Math.max(1, daysBetween(_prevDay, todayKey));
 if (gapDays > 7) gapDays = 7; // ponytail: backfill cap — пропуск >7 дней докручивается как 7 (ADR §5: кап 7 суток)
 var _isBackfill = gapDays > 1;
-        // Ежедневное событие: ролл ДО тиков дня — Кузнец/Ярмарка/Духи действуют в свой день
+        // Ежедневное событие: ролл ДО тиков дня — Ярмарка действует в свой день
         var ev = rollDailyEvent();
         dailyEvent = ev;
         if (ev.id === 'caravan' && !_isBackfill) { var bonus = Math.max(20, capturedCount() * 15); goldGain(bonus, 'caravan'); }
         if (ev.id === 'wanderer' && !_isBackfill) { HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + 1); goldGain(30, 'wanderer'); } // #41
         if (HERO.scouts && scoutFresh(HERO.scouts, todayKey) === null) { HERO.scouts = null; } // Г2-3: срок годности тени истёк (готовность + 2 дня)
         if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
-        if (ev.id === 'smith') {
-            var _pt = Object.keys(hirePool).reduce(function(a, k) { return a + (hirePool[k] || 0); }, 0);
-            if (_pt < 2) {
-                var _st = 't1';
-                strongholds.forEach(function(s) { Object.keys(s.buildings || {}).forEach(function(id) { var b = s.buildings[id], d = BUILDINGS[id]; if (b && b.built && d && d.grow) _st = d.tier; }); });
-                hirePool[_st] = (hirePool[_st] || 0) + 2; // #47: скидке кузнеца нужен кто-то в пуле
-                showToast('⚒ Кузнец снарядил найм', '+2 ' + UNIT_TIERS[_st].name + ' в пул со скидкой 25%', 'save');
-            }
-        }
-        if (ev.id === 'ghostfree' && countGhostTasks() === 0) {
-            HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + 1); // #47: «Духи дремлют» при 0 призраков не мертвеет
-            showToast('👻 Духи дремлют', 'Призраков нет: +1 щит стрика', 'save');
-        }
 var revenue = 0, upkeepTotal = 0, unpaid = 0;
 for (var gd = gapDays; gd >= 1; gd--) {
 if (gd > 1) dailyEvent = null; // события дня не действуют задним числом на пропущенные ночи
@@ -4845,19 +4879,13 @@ initNotifs();
 function initPerfMode() {
     var P = window.NeuroDeckPerf;
     if (!P) return;
-    // When perf.js flips the eco flag, push the resolution change into PixiJS.
-    P.onEcoModeChange(function(isEco, userMode) {
-        try {
-            if (window.__ndApplyEcoToPixi) window.__ndApplyEcoToPixi(isEco);
-        } catch (e) { /* pixi may not be initialised yet */ }
+    // Живое переключение эко-режима: пыль/частицы перещёлкиваются без перезагрузки.
+    P.onEcoModeChange(function(isEco) {
+        window.__ndSetEcoMode(isEco);
     });
-    // Apply current effective state immediately (covers the case where user
-    // toggled this setting in a previous session and reloaded).
+    // Текущее состояние применяется сразу (настройка из прошлой сессии).
     if (typeof window.__ndSetEcoMode === 'function') {
         window.__ndSetEcoMode(P.isEco());
-    }
-    if (typeof window.__ndApplyEcoToPixi === 'function') {
-        window.__ndApplyEcoToPixi(P.isEco());
     }
 }
 initPerfMode();

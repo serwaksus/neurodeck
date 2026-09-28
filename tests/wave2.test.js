@@ -34,18 +34,18 @@ function buildIn({ decls = [], stubs = {}, body }) {
 }
 
 // ----------------------------------------------------------------
-// #41: buildDailyEvents — 7 событий, тёмная ветка строго в конец
+// #41/C3: buildDailyEvents — 5 событий (smith/ghostfree удалены как квази-мёртвые), тёмная ветка строго в конец
 // ----------------------------------------------------------------
-test('wave2 #41: buildDailyEvents — 7 событий, порядок id стабильный', () => {
+test('wave2 #41/C3: buildDailyEvents — 5 событий, порядок id стабильный', () => {
     const build = buildIn({
         decls: [extractFn('buildDailyEvents')],
         stubs: { capturedCount: () => 0 },
         body: 'buildDailyEvents'
     });
     const ev = build();
-    assert.equal(ev.length, 7);
+    assert.equal(ev.length, 5);
     assert.deepEqual(ev.map((e) => e.id),
-        ['caravan', 'smith', 'market', 'ghostfree', 'quiet', 'bloodmoon', 'wanderer']);
+        ['caravan', 'market', 'quiet', 'bloodmoon', 'wanderer']);
 });
 
 test('wave2 #41: rollDailyEvent — детерминированные пины Math.random (старые 0-4, окно тёмных, restore)', () => {
@@ -58,8 +58,8 @@ test('wave2 #41: rollDailyEvent — детерминированные пины 
     try {
         const pin = (r) => { Math.random = () => r; };
         pin(0.0);  assert.equal(roll().id, 'caravan');
-        pin(0.5);  assert.equal(roll().id, 'market');   // floor(0.5*5)=2 — старое окно по индексу
-        pin(0.8);  assert.equal(roll().id, 'quiet');    // граница: r≤0.8 → floor(4.0)=4 (пин chaos 0.8→quiet жив)
+        pin(0.5);  assert.equal(roll().id, 'market');   // floor(0.5*3)=1 — базовое окно по индексу
+        pin(0.8);  assert.equal(roll().id, 'quiet');    // граница: r≤0.8 → floor(2.4)=2 (пин chaos 0.8→quiet жив)
         pin(0.85); assert.equal(roll().id, 'bloodmoon');
         pin(0.9);  assert.equal(roll().id, 'wanderer');
         pin(0.99); assert.equal(roll().id, 'quiet');    // пин chaos-харнеса 0.99→Тихий день сохранён
@@ -163,8 +163,8 @@ test('wave2 #95: canCounterSiege — fail+100→true; retried→false; win→fal
 // ----------------------------------------------------------------
 test('wave2 контракты: кровь в налогах/XP, праздник в XP, Хэллоуин в призраках, помодоро-ключи, reset контрштурма', () => {
     assert.ok(app.includes("bloodmoon') m *= 0.5"), 'taxMultiplier: кровавая луна ×0.5');
-    assert.ok(extractFn('completeCard').includes('bloodMult * holidayRewardMult'),
-        'completeCard: XP умножается на bloodMult и holidayRewardMult');
+    assert.ok(extractFn('cardXpLedger').includes('holidayRewardMult'),
+        'cardXpLedger: XP умножается на holidayRewardMult (bloodMult — параметром, см. dayPair/bloodmoon)');
     assert.ok(extractFn('expireGhostTasks').includes('ghostFree') &&
         extractFn('expireGhostTasks').includes('holidayBonus'),
         'expireGhostTasks: ghostfree + Хэллоуин');

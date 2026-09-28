@@ -126,12 +126,12 @@ test('hero: statRankups/statEscape заменены на «Твердынь N/20
     assert.ok(app.includes("document.getElementById('statStrongholds').textContent = capturedCount() + ' / ' + STRONGHOLDS.length"));
 });
 
-test('header: «Побег» → «Твердыни», счётчик 0/20, кэш v75 единообразно', () => {
+test('header: «Побег» → «Твердыни», счётчик 0/20, кэш-пин единообразно', () => {
     assert.ok(html.includes('<span>Твердыни</span>'), 'заголовок progress-control');
     assert.ok(/id="progressVal">0\/20/.test(html), 'счётчик 0/20');
     const vs = [...html.matchAll(/v=(\d{2,})/g)].map(m => m[1]);
-    assert.deepEqual([...new Set(vs)], ['75'], 'все ?v= = 70');
-    assert.ok(html.includes('js/stronghold-model.js?v=75'), 'модель подключена до app.js');
+    assert.equal(new Set(vs).size, 1, 'все ?v= одинаковы (факт: ' + vs.join(',') + ')');
+    assert.ok(html.includes('js/stronghold-model.js?v='), 'модель подключена до app.js');
     const modelPos = html.indexOf('stronghold-model.js');
     const appPos = html.indexOf('js/app.js?v=');
     assert.ok(modelPos > -1 && modelPos < appPos, 'stronghold-model.js загружается раньше app.js');

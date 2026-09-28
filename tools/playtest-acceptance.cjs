@@ -664,8 +664,8 @@ async function shot(pg, label) {
     if (before !== after) throw new Error(before + ' -> ' + after);
   });
 
-  // ===================== БЛОК 9. Миграция v7 → v8 (сценарий 6) =====================
-  await step('9.1 фиксстура v7 (tractState.regions=7, золото 555, задача) → миграция: ровно 7 захваченных, золото цело, армия пуста, неделя осады 1, схема 8', async () => {
+  // ===================== БЛОК 9. Миграция v7 → v11 (сценарий 6) =====================
+  await step('9.1 фиксстура v7 (tractState.regions=7, золото 555, задача) → миграция: ровно 7 захваченных, золото цело, армия пуста, неделя осады 1, схема 11', async () => {
     const v7 = {
       v: 7,
       hero: { name: 'Мигрант', level: 5, xp: 10, xpToNext: 200, totalXp: 610, gold: 555 },
@@ -694,7 +694,7 @@ async function shot(pg, label) {
       header: document.getElementById('progressVal').textContent,
       tasks: TASKS.length,
     }));
-    if (st.v !== 10) throw new Error('schemaVersion: ' + st.v);
+    if (st.v !== 11) throw new Error('schemaVersion: ' + st.v);
     if (st.captured !== 7 || !st.first7 || !st.rest) throw new Error('захвачено: ' + JSON.stringify(st));
     if (st.gold !== 555) throw new Error('золото мигранта изменилось: ' + st.gold);
     if (st.army !== 0) throw new Error('армия не пуста: ' + st.army);
@@ -707,7 +707,7 @@ async function shot(pg, label) {
     await pg.reload({ waitUntil: 'domcontentloaded' });
     await pg.waitForTimeout(1500);
     const st = await ev(() => ({ captured: strongholds.filter((s) => s.captured).length, gold: HERO.gold, v: JSON.parse(localStorage.getItem('neurodeck_full_save')).v }));
-    if (st.captured !== 7 || st.gold !== 555 || st.v !== 10) throw new Error(JSON.stringify(st));
+    if (st.captured !== 7 || st.gold !== 555 || st.v !== 11) throw new Error(JSON.stringify(st));
   });
   await shot(pg, 'b9_migrated');
 

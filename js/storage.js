@@ -34,7 +34,7 @@ var localEpoch = 0; // страж гонок: инкремент при кажд
 function hasEverSaved() {
     try { return localStorage.getItem(EVER_SAVED_KEY) === '1'; } catch(e) { return false; }
 }
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 var strongholds = null, army = null, siege = null;
 function strongholdCatalog() {
     return (typeof globalThis !== 'undefined' && globalThis.StrongholdData) || null;
@@ -120,6 +120,17 @@ MIGRATIONS[10] = function(data) {
         if (!data || typeof data !== 'object') return;
         if (typeof data.throne !== 'number' || !Number.isFinite(data.throne)) data.throne = 0;
         data.throne = Math.max(0, Math.min(5, Math.round(data.throne)));
+        if (data.season && typeof data.season === 'object') {
+            if (typeof data.season.crownBonus !== 'number' || !Number.isFinite(data.season.crownBonus)) data.season.crownBonus = 0;
+            data.season.crownBonus = Math.max(0, Math.min(5, Math.round(data.season.crownBonus)));
+        }
+    } catch(e) {}
+};
+// v10→v11 (C5): санитизация технологий Г5-Т/Т2/Т3 — своя ступень миграции, а не довесок к v10:
+// битый v не реплеит её как часть v10, а новые тех-поля получают явный дом.
+MIGRATIONS[11] = function(data) {
+    try {
+        if (!data || typeof data !== 'object') return;
         if (data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) {
           var _ct;
           if (data.TECHS.owned && typeof data.TECHS.owned === 'object') { // Г5-Т3 схема {owned, lvl}
@@ -136,10 +147,6 @@ MIGRATIONS[10] = function(data) {
         data.TECH_PTS = Math.max(0, Math.min(999, Math.round(data.TECH_PTS))); // Г5-Т
         if (typeof data.TECH_IDEA !== 'undefined' && data.TECH_IDEA !== null && (typeof data.TECH_IDEA !== 'string' || ['idea_might', 'idea_wealth', 'idea_order'].indexOf(data.TECH_IDEA) < 0)) data.TECH_IDEA = null; // Г5-Т2
         if (data.TECH_ACTIVES && typeof data.TECH_ACTIVES === 'object' && !Array.isArray(data.TECH_ACTIVES)) { var _ca = {}; Object.keys(data.TECH_ACTIVES).slice(0, 4).forEach(function(k) { if (typeof data.TECH_ACTIVES[k] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.TECH_ACTIVES[k])) _ca[k] = data.TECH_ACTIVES[k]; }); data.TECH_ACTIVES = _ca; } // Г5-Т3 Ф2
-        if (data.season && typeof data.season === 'object') {
-            if (typeof data.season.crownBonus !== 'number' || !Number.isFinite(data.season.crownBonus)) data.season.crownBonus = 0;
-            data.season.crownBonus = Math.max(0, Math.min(5, Math.round(data.season.crownBonus)));
-        }
     } catch(e) {}
 };
 function migrateSyncData(data) {

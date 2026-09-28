@@ -476,7 +476,7 @@ test('Г2-4: sanitizeHero whitelist — combosFound/dayStatCounts/combosToday/co
 test('Г2-4: интеграционные пины — completeCard/checkDailyReset/renderCards/index.html/css', () => {
     assert.ok(app.indexOf('HERO.dayStatCounts[card.stat] = (HERO.dayStatCounts[card.stat] || 0) + 1;') !== -1, 'счётчик статов дня в completeCard');
     assert.ok(app.indexOf('checkCombos(finalXp)') !== -1, 'триггер комбо в completeCard');
-    assert.ok(/finalXp = [^;]*HERO\.comboDayXp/.test(app), 'Вихрь-множитель в finalXp');
+    assert.ok(/finalXp = applyXpLedger\([^)]*cardXpLedger\(/.test(app) && app.indexOf("id: 'comboDay', m: HERO.comboDayXp || 1") !== -1, 'Вихрь-множитель в finalXp (через XP-леджер)');
     assert.ok(app.indexOf('HERO.dayStatCounts = {}; HERO.combosToday = {}; HERO.comboDayXp = null;') !== -1, 'сутки комбо сброшены в checkDailyReset');
     assert.ok(/renderOneCard\(all\[_ri\], grid\);\n    if \(_ri < all\.length\) requestAnimationFrame\(renderChunk\); else renderGrimoire\(\);/.test(app), 'чанк-рендер завершает гримуаром');
     assert.ok(app.indexOf('renderGrimoire();\nreturn;') !== -1, 'пустая колода рисует гримуар');

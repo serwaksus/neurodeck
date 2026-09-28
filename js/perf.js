@@ -9,7 +9,7 @@
  *
  *  - Performance Mode (localStorage): пользовательский переключатель.
  *    'auto'  — следуем prefers-reduced-motion + auto-detect по deviceMemory
- *    'low'   — экономия: меньше частиц, без PixiJS фильтров, mute sfx
+ *    'low'   — экономия: меньше частиц, без пост-фильтров, mute sfx
  *    'effects-off' — то же что 'low' + все bloom/grain/chromatic-aberration
  *
  * Public API (window.NeuroDeckPerf):
@@ -113,7 +113,7 @@
    *  - mode = 'low' или 'effects-off' ИЛИ
    *  - mode = 'auto' И _systemReduced = true (ОС сигналит reduce)
    *
-   * Это «исходник истины» для всех модулей: PixiJS combat, Particles, CSS, audio.
+   * Это «исходник истины» для всех модулей: Particles, CSS, audio.
    * Если true → отключаем анимации переходов, hit-stop, screenShake, particle trails,
    * bloom/grain/chromatic, fx homo. Сохраняем: damage numbers, HP bars, базовые tweens.
    */

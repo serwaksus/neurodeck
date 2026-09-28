@@ -389,9 +389,9 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
     await ev(() => { closeSyncModal(); renderStrongholds(); });
   });
 
-  // ===================== БЛОК E. Все 5 событий дня принудительно =====================
+  // ===================== БЛОК E. Все 3 базовых события дня принудительно =====================
   const EV = [
-    { pin: 0.0, id: 'caravan' }, { pin: 0.2, id: 'smith' }, { pin: 0.4, id: 'market' }, { pin: 0.6, id: 'ghostfree' }, { pin: 0.8, id: 'quiet' },
+    { pin: 0.0, id: 'caravan' }, { pin: 0.4, id: 'market' }, { pin: 0.8, id: 'quiet' },
   ];
   const evReport = [];
   for (const e of EV) {
@@ -400,9 +400,6 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
         p.strongholds[0].captured = true; p.hero.gold = 100;
         p.hero.gold = 500; // для замера цены найма
       }));
-      if (e.id === 'ghostfree') {
-        await ev(() => { TASKS.unshift({ id: taskIdCounter++, name: 'QA-просрочка', tier: 'urgent', deadline: Date.now() - 3 * 86400000, status: 'active', createdAt: Date.now() - 4 * 86400000, doneAt: null, ghostSince: null }); });
-      }
       const pre = await ev(() => ({
         cost2: hireCostOf('t2'), income: shIncomePerDay(), gold: HERO.gold, fails: siege.wkTaskFails || 0,
       }));
@@ -419,25 +416,15 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
       const row = { event: e.id, delta: r.delta, toastText: post.evObj ? post.evObj.text : '', cost2_before: pre.cost2, cost2_after: post.cost2, income_before: pre.income, income_after: post.income, taskStatus: post.taskStatus, wkTaskFails: post.fails - pre.fails };
       evReport.push(row);
       if (e.id === 'caravan' && r.delta !== 21) throw new Error('caravan: дельта ' + r.delta + ', ожидалось 21 (налог 1 + бонус 20)');
-      if (e.id === 'smith' && post.cost2 >= pre.cost2) throw new Error('smith: скидка не применилась — цена t2 ' + pre.cost2 + ' → ' + post.cost2 + ' (ожидалось ×0.75, раунд 4)');
       if (e.id === 'market' && post.income <= pre.income) throw new Error('market: налоги ×1.5 не применились — доход ' + pre.income + ' → ' + post.income + ' (раунд 4)');
-      if (e.id === 'ghostfree') {
-        if (post.taskStatus !== 'ghost') throw new Error('ghostfree: задача не стала призраком: ' + post.taskStatus);
-        if (row.wkTaskFails !== 1) throw new Error('ghostfree: Гнев должен считать нового призрака (+1), факт +' + row.wkTaskFails);
-        if (r.delta < 0) throw new Error('ghostfree: штраф применился вопреки событию, дельта ' + r.delta);
-      }
     });
   }
   await shot(pg, 'e_daily_events');
   // Вердикты по событиям — на основе собранных доказательств.
   const caravan = evReport.find((x) => x.event === 'caravan');
-  const smith = evReport.find((x) => x.event === 'smith');
   const market = evReport.find((x) => x.event === 'market');
-  const ghostfree = evReport.find((x) => x.event === 'ghostfree');
   if (caravan && caravan.delta === 21) finding('OK', 'Караван (caravan) — РАБОТАЕТ', 'казна +21 приCaptured=1 (налог 1 + бонус max(20, 1×15)=20); bonus в checkDailyReset app.js:2815');
-  if (smith && smith.cost2_after < smith.cost2_before) finding('OK', 'Кузнец (smith) — РАБОТАЕТ (раунд 4): цена найма ×0.75', 'цена t2 ' + smith.cost2_before + ' → ' + smith.cost2_after);
   if (market && market.income_after > market.income_before) finding('OK', 'Ярмарка (market) — РАБОТАЕТ (раунд 4): налоги ×1.5 в тике', 'доход твердынь ' + market.income_before + ' → ' + market.income_after);
-  if (ghostfree) finding('OK', 'Духи дремлют (ghostfree) — РАБОТАЕТ (раунд 4): ночные списания подавлены', 'дельта казны ' + ghostfree.delta + ', wkTaskFails +' + ghostfree.wkTaskFails + ' (Гнев считает переходы)');
 
   // ===================== БЛОК F. Инъекции ввода =====================
   await step('F.1 forge: пустое имя — блокируется', async () => {
