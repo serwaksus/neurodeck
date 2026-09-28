@@ -1589,3 +1589,64 @@ body.asc-2 { --gold: var(--blood-2); --gold-bright: var(--blood-3); --gold-3: #c
 body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-4: #c4b5fd; --gold-5: #ddd6fe; --atmosphere-hue: 40; --atmosphere-sat: 15; } /* круг 3 «Звёзды» */
 .ascend-btn { width: 100%; margin-top: 8px; padding: 10px; font-size: 15px; font-weight: bold; color: var(--bg-deep); background: linear-gradient(135deg, var(--gold-3), var(--gold-4)); border: 1px solid var(--gold-bright); border-radius: var(--radius-2); cursor: pointer; }
 /* Г2-5 конец */
+
+/* ===================================================================== */
+/* ============ Dark Steel 2.0 (волна V1, 2026-09-28) ================== */
+/* Единый слой полировки поверх legacy-слоёв: иконки, хедер, движение.   */
+/* Пиннутые селекторы и perf-контракты выше по файлу не тронуты.         */
+/* ===================================================================== */
+
+/* --- SVG-иконки --- */
+.icn { width: 1em; height: 1em; display: inline-block; vertical-align: -0.14em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.tab .icon .icn, .bnav-icon .icn { width: 19px; height: 19px; }
+.tab.active .icon .icn, .bnav-btn.active .icn { filter: drop-shadow(0 0 6px rgba(212, 165, 116, 0.55)); }
+.card-corner-actions .icn { width: 14px; height: 14px; }
+.stat-icon .icn { width: 22px; height: 22px; }
+
+/* --- Хедер: золото и осадная тревога --- */
+.gold-chip { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(212, 165, 116, 0.08); border: 1px solid var(--hairline); border-radius: var(--radius-btn); color: var(--gold-bright); font-size: var(--fs-secondary); letter-spacing: 0.5px; white-space: nowrap; }
+.gold-chip .icn { color: var(--gold); }
+.gold-chip b { font-variant-numeric: tabular-nums; }
+.gold-chip.gain { animation: goldGain 0.7s ease; }
+@keyframes goldGain { 0% { box-shadow: 0 0 0 rgba(244, 200, 150, 0); } 30% { box-shadow: 0 0 14px rgba(244, 200, 150, 0.5); border-color: var(--gold-bright); } 100% { box-shadow: 0 0 0 rgba(244, 200, 150, 0); } }
+.siege-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(199, 62, 77, 0.12); border: 1px solid var(--blood-bright); border-radius: var(--radius-btn); color: var(--blood-bright); font-size: var(--fs-secondary); cursor: pointer; white-space: nowrap; animation: siegePillPulse 2s ease-in-out infinite; }
+.siege-pill .icn { width: 15px; height: 15px; }
+@keyframes siegePillPulse { 0%, 100% { box-shadow: 0 0 0 rgba(199, 62, 77, 0); } 50% { box-shadow: 0 0 12px rgba(199, 62, 77, 0.45); } }
+
+/* --- Пресс-состояния: единый отклик на тап --- */
+.demo-btn:active, .action-btn:active, .tab:active, .bnav-btn:active, .stat-chip:active, .sh-tile:active { transform: scale(0.97); transition: transform 0.08s ease; }
+
+/* --- Направленные переходы вкладок --- */
+.view.slide-next { animation: viewSlideNext 0.26s cubic-bezier(0.22, 0.8, 0.36, 1) both; }
+.view.slide-prev { animation: viewSlidePrev 0.26s cubic-bezier(0.22, 0.8, 0.36, 1) both; }
+@keyframes viewSlideNext { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
+@keyframes viewSlidePrev { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+
+/* --- Стаггер карточек колоды (кап 12 × 35 мс) --- */
+.cards .card { animation: cardRise 0.32s ease backwards; }
+.cards .card:nth-child(2) { animation-delay: 0.035s; }
+.cards .card:nth-child(3) { animation-delay: 0.07s; }
+.cards .card:nth-child(4) { animation-delay: 0.105s; }
+.cards .card:nth-child(5) { animation-delay: 0.14s; }
+.cards .card:nth-child(6) { animation-delay: 0.175s; }
+.cards .card:nth-child(7) { animation-delay: 0.21s; }
+.cards .card:nth-child(8) { animation-delay: 0.245s; }
+.cards .card:nth-child(9) { animation-delay: 0.28s; }
+.cards .card:nth-child(n + 10) { animation-delay: 0.315s; }
+@keyframes cardRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* --- Вход содержимого модалок --- */
+.modal-overlay.show .modal > * { animation: dsRise 0.3s ease backwards; }
+.modal-overlay.show .modal > *:nth-child(2) { animation-delay: 0.04s; }
+.modal-overlay.show .modal > *:nth-child(3) { animation-delay: 0.08s; }
+.modal-overlay.show .modal > *:nth-child(4) { animation-delay: 0.12s; }
+.modal-overlay.show .modal > *:nth-child(n + 5) { animation-delay: 0.16s; }
+@keyframes dsRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* --- eco-гейты: всё выше выключается без перезагрузки (контракт perf.test) --- */
+:root.perf-eco .view.slide-next, :root.perf-eco .view.slide-prev,
+:root.perf-eco .cards .card, :root.perf-eco .modal-overlay.show .modal > *,
+:root.perf-eco .gold-chip.gain, :root.perf-eco .siege-pill { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .view.slide-next, .view.slide-prev, .cards .card, .modal-overlay.show .modal > *, .gold-chip.gain, .siege-pill { animation: none; }
+}

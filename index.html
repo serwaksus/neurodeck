@@ -10,12 +10,34 @@
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
     <!-- Волна 3: шрифты self-host (fonts/fonts.css) — без fonts.googleapis/gstatic -->
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=78" />
-    <link rel="stylesheet" href="css/style.css?v=78" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=79" />
+    <link rel="stylesheet" href="css/style.css?v=79" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
   <body>
+    <!-- Dark Steel 2.0 (волна V1): инлайн SVG-спрайт иконок — вместо эмодзи в хроме UI -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+      <symbol id="i-deck" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/><path d="M9 7.5h7M9 11h5"/></symbol>
+      <symbol id="i-quests" viewBox="0 0 24 24"><path d="M7 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 8.5h7M9 12h7M9 15.5h4"/><path d="M7 4a2 2 0 0 0-2 2v1h2"/></symbol>
+      <symbol id="i-hero" viewBox="0 0 24 24"><path d="M12 3l6 2v5c0 4.5-2.5 8.5-6 11-3.5-2.5-6-6.5-6-11V5z"/><path d="M12 3v18"/><path d="M6.5 9h11"/></symbol>
+      <symbol id="i-inv" viewBox="0 0 24 24"><path d="M6 9l1.2-3.5A2 2 0 0 1 9.1 4h5.8a2 2 0 0 1 1.9 1.5L18 9"/><rect x="4.5" y="9" width="15" height="11" rx="2"/><path d="M9 13h6"/></symbol>
+      <symbol id="i-strongholds" viewBox="0 0 24 24"><path d="M5 21V8l2.5-3L10 8V6l2-2.5L14 6v2l2.5-3L19 8v13"/><path d="M5 21h14"/><path d="M10 21v-5a2 2 0 0 1 4 0v5"/></symbol>
+      <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 20v-7M12 20V6M17 20v-10"/></symbol>
+      <symbol id="i-str" viewBox="0 0 24 24"><path d="M5 19L17 7"/><path d="M15 4l5 5-3 1-3-3z"/><path d="M6.5 17.5L4 20"/></symbol>
+      <symbol id="i-end" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z"/><path d="M12 3v18"/></symbol>
+      <symbol id="i-int" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M8.5 10.5c0-1.5 1.5-2.5 3.5-2.5s3.5 1 3.5 2.5-1.5 2-3.5 2-3.5.5-3.5 2 1.5 2.5 3.5 2.5 3.5-1 3.5-2.5"/></symbol>
+      <symbol id="i-cha" viewBox="0 0 24 24"><path d="M4 12c0-4 3.5-7 8-7s8 3 8 7c0 1.8-2 3-4 3H8c-2 0-4-1.2-4-3z"/><path d="M8 15c0 3 1.5 6 4 6s4-3 4-6"/><circle cx="9" cy="11" r="0.8"/><circle cx="15" cy="11" r="0.8"/></symbol>
+      <symbol id="i-wil" viewBox="0 0 24 24"><path d="M12 21c-4 0-7-3-7-7 0-5 4-8 7-11 3 3 7 6 7 11 0 4-3 7-7 7z"/><path d="M12 21c-1.8-2-2.5-4-2.5-6.5C9.5 11.5 11 9 12 7"/></symbol>
+      <symbol id="i-agi" viewBox="0 0 24 24"><path d="M13 3L6 13h5l-1 8 8-11h-5z"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2"/><path d="M7 7l1 13h8l1-13"/><path d="M10 11v5M14 11v5"/></symbol>
+      <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9.5 2.5h5"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 16.9l-5.3 2.7 1-5.8L3.5 9.7l5.9-.9z"/></symbol>
+      <symbol id="i-gold" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><path d="M12 9.5v5M10.5 11h3"/></symbol>
+      <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="10" r="6"/><path d="M8.5 15.5L7 21l5-2.5L17 21l-1.5-5.5"/><path d="M12 7l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2L9.1 9.1l2-.3z"/></symbol>
+      <symbol id="i-siege" viewBox="0 0 24 24"><path d="M3 17l9-9 9 9"/><path d="M12 8V3"/><path d="M10 3h4"/></symbol>
+    </svg>
     <div class="app-wrap">
       <div class="dungeon-bg"></div>
       <div class="light-rays"></div>
@@ -867,6 +889,12 @@
               </div>
             </div>
           </div>
+          <div class="gold-chip" id="goldChip" title="Казна королевства">
+            <svg class="icn" aria-hidden="true"><use href="#i-gold"/></svg><b id="goldChipVal">0</b>
+          </div>
+          <button class="siege-pill" id="siegePill" data-action="switch-view" data-view="strongholds" title="Осадная неделя" style="display:none">
+            <svg class="icn" aria-hidden="true"><use href="#i-siege"/></svg><span id="siegePillText"></span>
+          </button>
           <div class="progress-control">
             <span>Твердыни</span>
             <div
@@ -892,16 +920,16 @@
               data-action="switch-view"
               data-view="deck"
             >
-              <span class="icon">📖</span>Колода
+              <span class="icon"><svg class="icn" aria-hidden="true"><use href="#i-deck"/></svg></span>Колода
             </div>
-            <div class="tab" role="tab" data-action="switch-view" data-view="quests"><span class="icon">📜</span>Квесты</div>
+            <div class="tab" role="tab" data-action="switch-view" data-view="quests"><span class="icon"><svg class="icn" aria-hidden="true"><use href="#i-quests"/></svg></span>Квесты</div>
             <div
               class="tab"
               role="tab"
               data-action="switch-view"
               data-view="hero"
             >
-              <span class="icon">👤</span>Герой
+              <span class="icon"><svg class="icn" aria-hidden="true"><use href="#i-hero"/></svg></span>Герой
             </div>
             <div
               class="tab"
@@ -909,7 +937,7 @@
               data-action="switch-view"
               data-view="inv"
             >
-              <span class="icon">🎒</span>Инвентарь
+              <span class="icon"><svg class="icn" aria-hidden="true"><use href="#i-inv"/></svg></span>Инвентарь
             </div>
             <div
               class="tab"
@@ -917,7 +945,7 @@
               data-action="switch-view"
               data-view="strongholds"
             >
-              <span class="icon">🏰</span>Твердыни
+              <span class="icon"><svg class="icn" aria-hidden="true"><use href="#i-strongholds"/></svg></span>Твердыни
             </div>
             <div
               class="tab"
@@ -925,7 +953,7 @@
               data-action="switch-view"
               data-view="stats"
             >
-              <span class="icon">📊</span>Статистика
+              <span class="icon"><svg class="icn" aria-hidden="true"><use href="#i-stats"/></svg></span>Статистика
             </div>
           </nav>
           <main class="content" tabindex="0" aria-label="Основная область прокрутки">
@@ -1252,24 +1280,24 @@
             data-action="switch-view"
             data-view="deck"
           >
-            <span class="bnav-icon">📖</span>Колода
+            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-deck"/></svg></span>Колода
           </button>
-          <button class="bnav-btn" data-action="switch-view" data-view="quests"><span class="bnav-icon">📜</span>Квесты</button>
+          <button class="bnav-btn" data-action="switch-view" data-view="quests"><span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-quests"/></svg></span>Квесты</button>
           <button class="bnav-btn" data-action="switch-view" data-view="hero">
-            <span class="bnav-icon">👤</span>Герой
+            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-hero"/></svg></span>Герой
           </button>
           <button class="bnav-btn" data-action="switch-view" data-view="inv">
-            <span class="bnav-icon">🎒</span>Инв
+            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-inv"/></svg></span>Инв
           </button>
           <button
             class="bnav-btn"
             data-action="switch-view"
             data-view="strongholds"
           >
-            <span class="bnav-icon">🏰</span>Твердыни
+            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-strongholds"/></svg></span>Твердыни
           </button>
           <button class="bnav-btn" data-action="switch-view" data-view="stats">
-            <span class="bnav-icon">📊</span>Стат
+            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-stats"/></svg></span>Стат
           </button>
         </footer>
       </div>
@@ -1410,12 +1438,12 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=78" defer></script>
-    <script src="js/perf-compat.js?v=78" defer></script>
-    <script src="js/stronghold-data.js?v=78" defer></script>
-<script src="js/state-guards.js?v=78" defer></script>
-    <script src="js/storage.js?v=78" defer></script>
-    <script src="js/stronghold-model.js?v=78" defer></script>
-    <script src="js/app.js?v=78" defer></script>
+    <script src="js/perf.js?v=79" defer></script>
+    <script src="js/perf-compat.js?v=79" defer></script>
+    <script src="js/stronghold-data.js?v=79" defer></script>
+<script src="js/state-guards.js?v=79" defer></script>
+    <script src="js/storage.js?v=79" defer></script>
+    <script src="js/stronghold-model.js?v=79" defer></script>
+    <script src="js/app.js?v=79" defer></script>
   </body>
 </html>

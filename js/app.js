@@ -580,10 +580,10 @@ el.innerHTML =
 dayBadge +
 oathBadge +
 '<div class="card-corner-actions">' +
-   '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать">✎</div>' +
-   '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить">🗑</div>' +
-   '<div class="card-btn pomodoro" data-action="pomodoro-toggle" data-id="' + card.id + '" title="Помодоро 25 мин (+5 XP, 1/день)">⏱</div>' + // #65: помодоро в карточке
-   (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" style="color:var(--gold-bright)">⭐</div>' : '') +
+   '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></div>' +
+   '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></div>' +
+   '<div class="card-btn pomodoro" data-action="pomodoro-toggle" data-id="' + card.id + '" title="Помодоро 25 мин (+5 XP, 1/день)"><svg class="icn" aria-hidden="true"><use href="#i-timer"/></svg></div>' + // #65: помодоро в карточке; DS2.0: SVG-иконки
+   (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" style="color:var(--gold-bright)"><svg class="icn" aria-hidden="true"><use href="#i-star"/></svg></div>' : '') +
 '</div>' +
 '<div class="card-rank">' + card.rank + '</div>' +
 '<div class="card-name">' + esc(card.name) + '</div>' +
@@ -905,7 +905,7 @@ el.style.setProperty('--stat-glow', st.color + '60');
 let poolPct = Math.min(100, (st.attributePoints / getStatThreshold(st.value)) * 100);
 el.innerHTML =
 '<div class="stat-card-head">' +
-  '<div class="stat-icon">' + st.icon + '<div class="stat-value-big" id="statVal-' + key + '">' + st.value + '</div></div>' +
+  '<div class="stat-icon"><svg class="icn" aria-hidden="true"><use href="#i-' + key + '"/></svg><div class="stat-value-big" id="statVal-' + key + '">' + st.value + '</div></div>' +
   '<div class="stat-info"><div class="stat-name">' + st.name + '</div><div class="stat-desc">' + st.desc + '</div></div>' +
 '</div>' +
 '<div class="stat-bar"><div class="stat-bar-fill" id="statBar-' + key + '" style="width:' + pct + '%"></div></div>' +
@@ -955,6 +955,18 @@ function renderStreakCalendar() { // #19: стрик-календарь в Hero-
     }).join('');
     sc.innerHTML = '<div class="streak-title">🔥 Стрик: <b>' + (HERO.dayStreak || 0) + '</b> дн.</div><div class="streak-chips">' + chips + '</div>';
 }
+function animateNumber(el, to, dur) { // DS2.0: плавный счётчик (eco → мгновенно)
+    try {
+        var from = parseInt(String(el.textContent).replace(/[^\d-]/g, ''), 10) || 0;
+        if (typeof ecoOn === 'function' && ecoOn() || from === to) { el.textContent = (to || 0).toLocaleString('ru'); return; }
+        var t0 = performance.now();
+        (function step(t) {
+            var k = Math.min(1, (t - t0) / (dur || 500));
+            el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))).toLocaleString('ru');
+            if (k < 1) requestAnimationFrame(step);
+        })(t0);
+    } catch (e) { el.textContent = String(to); }
+}
 function updateHeroUI() {
 document.getElementById('heroMiniLvl').textContent = HERO.level;
 document.getElementById('heroMiniName').textContent = HERO.name;
@@ -973,6 +985,15 @@ document.getElementById('ringFill').setAttribute('stroke-dasharray', ringCirc);
 document.getElementById('ringFill').setAttribute('stroke-dashoffset', ringCirc * (1 - HERO.xp / HERO.xpToNext));
 var goldEl = document.getElementById('heroGoldVal');
 if (goldEl) goldEl.textContent = (HERO.gold || 0).toLocaleString('ru');
+var _gchip = document.getElementById('goldChipVal');
+if (_gchip) {
+    var _prevGold = parseInt(String(_gchip.textContent).replace(/[^\d-]/g, ''), 10) || 0;
+    animateNumber(_gchip, HERO.gold || 0, 500);
+    var _gchipBox = document.getElementById('goldChip');
+    if (_gchipBox && (HERO.gold || 0) > _prevGold) { // DS2.0: вспышка при приходе золота
+        _gchipBox.classList.remove('gain'); void _gchipBox.offsetWidth; _gchipBox.classList.add('gain');
+    }
+}
 var pav = document.getElementById('heroAvatar');
 if (pav) { // #55: портрет героя по высшему стату
     var pp = pav.querySelector('.hero-path');
@@ -1825,12 +1846,24 @@ if (_wr && _wr.classList.contains('show')) closeWeeklyReportModal();
 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 document.querySelectorAll('.tab[role="tab"]').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === view)));
 document.querySelectorAll('.bnav-btn').forEach(t => t.classList.remove('active'));
+// DS2.0: направление перехода — захватить ДО снятия .active
+var _dsFrom = -1;
+try { var _dsPrev = document.querySelector('.view.active'); if (_dsPrev) _dsFrom = VIEW_ORDER.indexOf(_dsPrev.id.replace('view-', '')); } catch (e) {}
 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
 var tabEl = document.querySelector('.tab[data-view="' + view + '"]');
 var bnavEl = document.querySelector('.bnav-btn[data-view="' + view + '"]');
 if (tabEl) tabEl.classList.add('active');
 if (bnavEl) bnavEl.classList.add('active');
-document.getElementById('view-' + view).classList.add('active');
+var _dsTarget = document.getElementById('view-' + view);
+_dsTarget.classList.add('active');
+try {
+    var _dsTo = VIEW_ORDER.indexOf(view);
+    if (_dsFrom > -1 && _dsTo !== _dsFrom) {
+        _dsTarget.classList.remove('slide-next', 'slide-prev');
+        void _dsTarget.offsetWidth;
+        _dsTarget.classList.add(_dsTo > _dsFrom ? 'slide-next' : 'slide-prev');
+    }
+} catch (e) {}
 document.querySelector('.content').scrollTop = 0; // V-7: смена вкладки всегда сверху
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'strongholds') renderStrongholds();
@@ -3041,6 +3074,15 @@ var el = document.getElementById('progressVal');
 if (el) el.textContent = n + '/' + STRONGHOLDS.length;
 var chip = document.getElementById('seasonChip');
 if (chip) { var _s = ensureSeason(); chip.textContent = '🍂 S' + _s.num + ' · ' + Math.max(0, seasonDaysTotal(_s.start) - seasonDaysDone(_s.start)) + 'д'; } // #11: сезон в шапке
+var _pill = document.getElementById('siegePill'); // DS2.0: осадная тревога в хедере
+if (_pill) {
+    var _dts = (typeof daysToSiegeNow === 'function' && n > 0) ? daysToSiegeNow() : null;
+    if (_dts !== null && _dts <= 2) {
+        _pill.style.display = '';
+        var _pillText = document.getElementById('siegePillText');
+        if (_pillText) _pillText.textContent = _dts <= 0 ? '⚔ Осада сегодня' : '🛡 Осада через ' + _dts + ' дн';
+    } else _pill.style.display = 'none';
+}
 updateProgressFill((n / STRONGHOLDS.length) * 100);
 }
 function garrisonRows(stacks, idx, action, label) {
