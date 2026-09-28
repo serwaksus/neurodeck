@@ -81,8 +81,13 @@
 Иконки предметов и слотов инвентаря: `img/gameicons/*.svg` из репозитория
 [game-icons/icons](https://github.com/game-icons/icons), **CC BY 3.0**:
 
-- **Lorc**, http://lorcblog.blogspot.com — broadsword, bordered-shield, boots, crown, visored-helm
+- **Lorc**, http://lorcblog.blogspot.com — broadsword, bordered-shield, boots, crown, visored-helm, crossed-swords, brain, drama-masks, lotus, feather, wolf-head, owl
 - **Delapouite**, http://delapouite.com — emerald-necklace, power-ring, diamond-ring, cape, chest-armor
+- **Sparker**, http://sparker-code.github.io — bear-face
+
+Дополнение 28.09 (вечер): иконки статов (6), тотемов (3) и заголовков вкладок —
+итого 18 файлов. Рендер: инлайн-SVG `<path fill="currentColor">` (карта ICON_PATHS
+в app.js, хелпер artIconHtml), эмодзи-фолбэк сохранён.
 
 Использование: силуэты через CSS-mask (`--art`), перекрашиваются ранговым цветом.
 Из оригиналов удалён чёрный фоновый прямоугольник (alpha-mask). Атрибуция по

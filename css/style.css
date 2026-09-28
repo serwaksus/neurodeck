@@ -1851,7 +1851,8 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 /* ===================================================================== */
 
 /* --- Силуэт-иконки через CSS-mask --- */
-.nd-art { display: block; -webkit-mask: var(--art) center / contain no-repeat; mask: var(--art) center / contain no-repeat; background: currentColor; }
+.nd-art { display: block; }
+.slot .nd-art.slot-icon, .slot .nd-art.empty-art { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .slot .nd-art.slot-icon { width: 26px; height: 26px; color: var(--slot-color, var(--gold)); filter: drop-shadow(0 0 7px var(--slot-glow, transparent)); }
 .slot .nd-art.empty-art { width: 21px; height: 21px; color: rgba(212, 165, 116, 0.30); filter: none; opacity: 0.9; }
 .bp-cell .nd-art.bp-icon { width: 27px; height: 27px; color: var(--item-color, var(--gold)); filter: drop-shadow(0 0 7px var(--item-glow, transparent)); }
@@ -1869,3 +1870,12 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 /* --- Манекен: контровой тёплый блик на верхних кромках --- */
 .mannequin .mnp-rim { stroke: rgba(244, 200, 150, 0.5); }
 :root.perf-eco .paperdoll-wrap::after, :root.perf-eco .item-panel::after { display: none; }
+
+/* --- DS2.0 часть 4б: иконки статов/тотемов в контекстах --- */
+.stat-icon .nd-art { width: 22px; height: 22px; color: var(--stat-color, var(--gold)); filter: drop-shadow(0 0 6px var(--stat-glow, transparent)); }
+.stat-chip .chip-art { width: 15px; height: 15px; display: inline-block; vertical-align: -3px; color: var(--gold-bright); }
+.stat-chip.selected .chip-art { color: #f6efe2; }
+.card-stat-tag .nd-art { width: 14px; height: 14px; display: inline-block; vertical-align: -2.5px; filter: brightness(1.25); }
+.totem-icon .nd-art { width: 30px; height: 30px; color: var(--gold-bright); filter: drop-shadow(0 0 6px rgba(212, 165, 116, 0.4)); }
+.totem-opt .nd-art { width: 22px; height: 22px; display: inline-block; vertical-align: -5px; color: var(--gold); }
+.view-title .icn { color: var(--gold); filter: drop-shadow(0 0 6px rgba(212, 165, 116, 0.35)); }
