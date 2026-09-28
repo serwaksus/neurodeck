@@ -1735,3 +1735,17 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .header { padding: 8px 12px; }
 .hero-mini-info { min-width: 96px; }
 }
+
+/* --- DS2.0 / G2: испытания сезона --- */
+.trials-panel { margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: var(--radius-card); background: linear-gradient(160deg, rgba(139, 92, 246, 0.07), rgba(0,0,0,0.2)); }
+.trials-head { font-size: var(--fs-secondary); letter-spacing: 1.5px; color: var(--gold-bright); margin-bottom: 8px; text-transform: uppercase; }
+.trials-count { float: right; color: var(--text-dim); text-transform: none; letter-spacing: 0.5px; }
+.trial-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--fs-secondary); }
+.trial-icon { width: 20px; text-align: center; }
+.trial-name { width: 88px; color: var(--text); }
+.trial-row.done .trial-name { color: var(--gold-bright); }
+.trial-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.4); border-radius: 3px; overflow: hidden; border: 1px solid var(--border); }
+.trial-fill { display: block; height: 100%; background: linear-gradient(90deg, #8b5cf6, #c084fc); transition: width 0.4s ease; }
+.trial-row.done .trial-fill { background: linear-gradient(90deg, #8a6d1f, #f4c896); }
+.trial-num { width: 64px; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 11px; }
+:root.perf-eco .trial-fill { transition: none; }

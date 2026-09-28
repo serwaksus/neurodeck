@@ -150,7 +150,8 @@
                     activeNum: bossNum(bs.activeNum),
                     phase: Math.round(clampNumber(bs.phase, 0, 2, 0)),
                     attemptDay: safeString(bs.attemptDay, '', 10) || null,
-                    closedDay: safeString(bs.closedDay, '', 10) || null
+                    closedDay: safeString(bs.closedDay, '', 10) || null,
+                    closedCount: Math.round(clampNumber(bs.closedCount, 0, 2, 0)) // G2 (круг 11): фаз за сегодня, 2/день
                 };
             })(hero.bosses),
             scouts: (function(sc) { // Г2-3: лазутчик — {idx 0..19, readyDayKey} иначе null

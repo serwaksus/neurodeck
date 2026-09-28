@@ -1704,6 +1704,7 @@ function completeGoal(id) {
 const goal = GOALS.find(g => g.id === id);
 if (!goal || goal.completed || goal.failed) return;
 goal.completed = true; goal.currentStep = goal.totalSteps;
+if (typeof addChronicle === 'function') addChronicle('📜', 'Обет сдержан: «' + goal.name + '»'); // G2: обеты сезона
 sfxGoalComplete(); haptic('success');
 const color = goal.type === 'short' ? '#34d399' : goal.type === 'medium' ? '#60a5fa' : '#fbbf24';
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 120, { color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
@@ -1924,6 +1925,7 @@ function ensureBossesState() {
     if (typeof HERO.bosses.activeNum !== 'number') HERO.bosses.activeNum = null;
     if (typeof HERO.bosses.attemptDay !== 'string') HERO.bosses.attemptDay = null;
     if (typeof HERO.bosses.closedDay !== 'string') HERO.bosses.closedDay = null;
+    if (typeof HERO.bosses.closedCount !== 'number') HERO.bosses.closedCount = 0; // G2
 }
 function bossOf(num) { for (var i = 0; i < BOSSES.length; i++) if (BOSSES[i].num === num) return BOSSES[i]; return null; }
 function provCaptured(prov) {
@@ -1996,7 +1998,8 @@ function bossProgressTick(st) { // aggregating хук: вызывается из
     ensureBossesState();
     var tk = getMSKDayKey();
     if (HERO.bosses.attemptDay !== tk) return; // вызов сегодня не принят — условия не считаются
-    if (HERO.bosses.closedDay === tk) return; // фаза сегодня уже закрыта — следующая завтра
+    if (HERO.bosses.closedDay === tk && (HERO.bosses.closedCount || 0) >= 2) return; // G2: 2 фазы/день (пин изменён кругом 11)
+    if (HERO.bosses.closedDay !== tk) HERO.bosses.closedCount = 0;
     if (HERO.bosses.activeNum === null) return;
     var b = bossOf(HERO.bosses.activeNum);
     if (!b) return;
@@ -2005,6 +2008,7 @@ function bossProgressTick(st) { // aggregating хук: вызывается из
     st = st || bossTodayStats();
     if (!bossPhaseCheck(ph, st, bossEscalation(b.num))) return;
     HERO.bosses.phase += 1;
+    HERO.bosses.closedCount = (HERO.bosses.closedDay === tk ? (HERO.bosses.closedCount || 0) : 0) + 1;
     HERO.bosses.closedDay = tk;
     if (HERO.bosses.phase >= 3) {
         HERO.bosses.defeated.push(b.num);
@@ -2013,7 +2017,8 @@ function bossProgressTick(st) { // aggregating хук: вызывается из
         showToast('🏆 Поверенный повержен: ' + b.name, 'Артефакт твой: ' + b.artifact.name + ' — ' + b.artifact.desc, 'save');
         if (typeof addChronicle === 'function') addChronicle('🏆', 'Поверенный ' + b.name + ' повержен — артефакт «' + b.artifact.name + '»'); // G1: хроника живёт
     } else {
-        showToast('⚔ Фаза ' + HERO.bosses.phase + '/3 пройдена', '«' + b.name + '»: следующая фаза — завтра', 'crit');
+        var _moreToday = HERO.bosses.closedCount < 2;
+        showToast('⚔ Фаза ' + HERO.bosses.phase + '/3 пройдена', '«' + b.name + '»: ' + (_moreToday ? 'можно пройти ещё одну фазу сегодня' : 'следующая фаза — завтра'), 'crit');
     }
     sfxGoalComplete(); haptic('success');
     if (currentShIdx !== null && STRONGHOLDS[currentShIdx] && STRONGHOLDS[currentShIdx].prov === b.prov) renderStrongholdPanel(currentShIdx);
@@ -2370,6 +2375,33 @@ function seasonEndDate(startKey) {
 }
 function seasonDaysTotal(startKey) { return Math.max(1, daysBetween(startKey, seasonEndDate(startKey))); }
 function seasonDaysDone(startKey) { return Math.max(0, Math.min(seasonDaysTotal(startKey), daysBetween(startKey, getMSKDayKey()))); }
+function seasonTrials() { // G2 (круг 11): испытания сезона — прогресс выводится из снапшота, без новых полей схемы
+    var sn = (typeof ensureSeason === 'function') ? (ensureSeason() || { num: 1, snapshot: {} }) : { num: 1, snapshot: {} };
+    var num = sn.num || 1;
+    var snap = sn.snapshot || {};
+    var comps = FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0);
+    var defs = [
+        { id: 'expansion', icon: '🏰', name: 'Экспансия', goal: 2 + Math.min(4, num - 1), cur: Math.max(0, capturedCount() - (snap.captured || 0)), unit: 'твердынь' },
+        { id: 'discipline', icon: '📖', name: 'Дисциплина', goal: Math.min(60, 30 + 10 * (num - 1)), cur: Math.max(0, comps - (snap.completions || 0)), unit: 'выполнений' },
+        { id: 'path', icon: '🧠', name: 'Путь силы', goal: 400 * num, cur: Math.max(0, (HERO.totalXp || 0) - (snap.totalXp || 0)), unit: 'XP' }
+    ];
+    defs.forEach(function(t) { t.done = t.cur >= t.goal; t.pct = Math.min(100, Math.round(t.cur / t.goal * 100)); });
+    return defs;
+}
+function seasonTrialsDone() { return seasonTrials().filter(function(t) { return t.done; }).length; }
+function seasonTrialsHtml() { // G2: панель испытаний во вкладке Твердынь
+    var trials = seasonTrials();
+    var doneN = trials.filter(function(t) { return t.done; }).length;
+    var html = '<div class="trials-panel"><div class="trials-head">🎖 Испытания сезона <span class="trials-count">' + doneN + '/3 · награда за все: +1 👑 венец</span></div>';
+    trials.forEach(function(t) {
+        html += '<div class="trial-row' + (t.done ? ' done' : '') + '"><span class="trial-icon">' + t.icon + '</span>' +
+        '<span class="trial-name">' + t.name + '</span>' +
+        '<span class="trial-bar"><span class="trial-fill" style="width:' + t.pct + '%"></span></span>' +
+        '<span class="trial-num">' + Math.min(t.cur, t.goal) + '/' + t.goal + '</span></div>';
+    });
+    html += '</div>';
+    return html;
+}
 function finishSeason() {
   addChronicle('🍂', 'Сезон ' + season.num + ' («' + seasonName(season.num) + '») завершён: ' + capturedCount() + '/20 твердынь'); // Г5-Ф
   if ((season.crownBonus || 0) > 0) addChronicle('👑', 'Венец сезона: +' + (season.crownBonus * 2) + '% к налогам навсегда'); // G1: хроника живёт
@@ -2383,7 +2415,8 @@ function finishSeason() {
         levels: Math.max(0, (HERO.level || 1) - (season.snapshot.level || 1))
     };
     var earnedCrown = (d.captured > 0 || d.completions >= 10); // венец за живой сезон
-    var newCrownBonus = Math.min(5, (season.crownBonus || 0) + (earnedCrown ? 1 : 0));
+    var _trialsAll = seasonTrialsDone() === 3; // G2 (круг 11): все испытания сезона — ещё +1 венец (не моделируется симом; ограничение: общий кап +10% такс-множителя сохраняется)
+    var newCrownBonus = Math.min(5, (season.crownBonus || 0) + (earnedCrown ? 1 : 0) + (_trialsAll ? 1 : 0));
     showSeasonReport(season.num, d, earnedCrown, newCrownBonus);
     if (HERO.totem) HERO.totem.rechoose = true; // Ф2: смена сезона разрешает выбрать тотем заново (id сохраняется)
     HERO.warlordAhead = d.captured > warlordTempo(); // Г1-6: обгон воеводы на конец сезона
@@ -3739,7 +3772,16 @@ var _wt = warlordTempo(), _wm = seasonCapturedDelta(); // Г1-6: тень вое
 html += '<div class="sh-warlord">⚔ Глорх, Погибель Урядов: <b>' + _wt + '</b> · ты: <b>' + _wm + '</b><div class="sh-season-bar" title="Прогресс до обгона воеводы"><div class="sh-season-fill' + (_wm >= _wt ? ' warlord-ahead' : '') + '" style="width:' + Math.min(100, Math.round(_wm / (_wt + 1) * 100)) + '%;"></div></div></div>';
 html += '<div class="sh-wrath">😮 Гнев: <b>' + siegeWrathNow() + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
 var _alarm = (daysToSiege <= 2) ? siegeAlarmPreview() : null; // Ф1: осадная тревога за 2 дня и в день осады
-if (_alarm) html += '<div class="siege-alarm">⚠ <b>Осадная тревога</b> · враг ~<b>' + _alarm.power + '</b> · оборона <b>' + _alarm.def + '</b>' + (_alarm.ratio === null ? '' : ' (' + Math.round(_alarm.ratio * 100) + '%)') + ' — ' + _alarm.advice + '</div>';
+html += seasonTrialsHtml(); // G2: испытания сезона
+if (_alarm) {
+    var _agenda = []; // G2: повестка осадной недели — конкретные шаги
+    if (_alarm.ratio !== null && _alarm.ratio < 1) _agenda.push('найм/постройки обороны до штурма');
+    if ((siegeWrathNow() || 0) >= 4) _agenda.push('закрыть призраки и задачи — гнев ' + siegeWrathNow() + '/10');
+    var _stW = weatherSeasonWeek();
+    var _frontProv = STRONGHOLDS[frontIdx()].prov;
+    if (weatherOf(_frontProv, _stW.sn, _stW.wk).id === 'blizzard' && weatherNorth(_frontProv)) _agenda.push('метель: содержание ×2 — не нанимай лишнего');
+    html += '<div class="siege-alarm">⚠ <b>Осадная тревога</b> · враг ~<b>' + _alarm.power + '</b> · оборона <b>' + _alarm.def + '</b>' + (_alarm.ratio === null ? '' : ' (' + Math.round(_alarm.ratio * 100) + '%)') + ' — ' + _alarm.advice + (_agenda.length ? '<br><span style="color:var(--text-dim)">Повестка: ' + _agenda.join(' · ') + '</span>' : '') + '</div>';
+}
 html += renderTowerCard(cap); // Ф3: башня-марафон (только при 20/20)
 checkSiegeAlarmToast();
 // Квест-доска (3 ротационных дневных задания)

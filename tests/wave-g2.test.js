@@ -151,23 +151,22 @@ test('Г2-1: победа над боссом I (cards→streak→gold×2 по �
     e.fns.requestBossChallenge(1);
     e.fns.bossProgressTick({ cards: 3, questsAll: false, gold: 0, streakAlive: true });
     assert.equal(e.HERO.bosses.phase, 1);
-    e.fns.bossProgressTick({ cards: 99, streakAlive: true }); // closedDay D1: вторая фаза в тот же день закрыться не может
-    assert.equal(e.HERO.bosses.phase, 1, 'closedDay — одна фаза в день');
-    const e2 = bossEnv({ day: 'D2', capturedN: 20, hero: e.HERO });
+    e.fns.bossProgressTick({ cards: 99, streakAlive: true }); // круг 11: 2 фазы/день — вторая (стрик) закрывается в тот же день
+    assert.equal(e.HERO.bosses.phase, 2, 'closedCount < 2 — вторая фаза сегодня возможна');
+    e.fns.bossProgressTick({ cards: 99, streakAlive: true });
+    assert.equal(e.HERO.bosses.phase, 2, 'третья фаза за день запрещена (кап 2/день)');
+    // D2: осталась финальная фаза (золото 2×50=100)
+    const e2 = bossEnv({ day: 'D2', capturedN: 20, hero: e.HERO, goldGoal: 50 });
     e2.fns.requestBossChallenge(1);
-    e2.fns.bossProgressTick({ cards: 5, streakAlive: true });
-    assert.equal(e2.HERO.bosses.phase, 2);
-    const e3 = bossEnv({ day: 'D3', capturedN: 20, hero: e2.HERO, goldGoal: 50 });
-    e3.fns.requestBossChallenge(1);
-    e3.fns.bossProgressTick({ cards: 0, gold: 99 }); // цель 2×50×1=100 — провал дня
-    assert.equal(e3.HERO.bosses.phase, 2, 'провал дня не трогает фазу');
-    e3.fns.bossProgressTick({ cards: 0, gold: 100 });
-    assert.deepEqual(e3.HERO.bosses.defeated, [1], 'босс I повержен');
-    assert.equal(e3.HERO.bosses.activeNum, null);
-    assert.equal(e3.HERO.bosses.phase, 0);
-    assert.ok(e3.calls.toast.some((x) => x.t.indexOf('повержен') !== -1 && x.b.indexOf('Пастуший Посох') !== -1), 'тост победы с артефактом');
+    e2.fns.bossProgressTick({ cards: 0, gold: 99 }); // цель 100 — провал дня
+    assert.equal(e2.HERO.bosses.phase, 2, 'провал дня не трогает фазу');
+    e2.fns.bossProgressTick({ cards: 0, gold: 100 });
+    assert.deepEqual(e2.HERO.bosses.defeated, [1], 'босс I повержен (D1: 2 фазы, D2: финал)');
+    assert.equal(e2.HERO.bosses.activeNum, null);
+    assert.equal(e2.HERO.bosses.phase, 0);
+    assert.ok(e2.calls.toast.some((x) => x.t.indexOf('повержен') !== -1 && x.b.indexOf('Пастуший Посох') !== -1), 'тост победы с артефактом');
     // без попытки дня тик не работает
-    const e4 = bossEnv({ day: 'D9', capturedN: 20, hero: e3.HERO });
+    const e4 = bossEnv({ day: 'D9', capturedN: 20, hero: e2.HERO });
     e4.fns.bossProgressTick({ cards: 9, gold: 999 });
     assert.deepEqual(e4.HERO.bosses.defeated, [1], 'attemptDay ≠ сегодня — тишина');
 });
@@ -212,8 +211,9 @@ test('Г2-1: sanitizeHero whitelist bosses — мусор → безопасна
     assert.equal(out.bosses.activeNum, 5);
     assert.equal(out.bosses.phase, 2, 'кламп 0..2');
     assert.equal(out.bosses.attemptDay, '2026-09-19');
+    assert.equal(out.bosses.closedCount, 0, 'круг 11: closedCount в whitelist');
     const junk = SG.sanitizeHero({ bosses: 'garbage' });
-    assert.deepEqual(junk.bosses, { defeated: [], activeNum: null, phase: 0, attemptDay: null, closedDay: null });
+    assert.deepEqual(junk.bosses, { defeated: [], activeNum: null, phase: 0, attemptDay: null, closedDay: null, closedCount: 0 });
     const none = SG.sanitizeHero({});
     assert.deepEqual(none.bosses.defeated, []);
 });
