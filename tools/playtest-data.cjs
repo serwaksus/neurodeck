@@ -726,7 +726,7 @@ async function nodePhase() {
       saveGameState(); // эпоха E1
       const oldSnap = buildSyncData(); // «облако»: устаревший снапшот с 1 карточкой
       oldSnap.forged = [FORGED[0]];
-      window.Telegram = { WebApp: { CloudStorage: {
+      window.Telegram = { WebApp: { platform: 'android', CloudStorage: { // platform: волна 1 — честный getCloudStorage требует не-'unknown'
         getItem: function(k, cb) { setTimeout(function() {
           if (String(k).indexOf('meta') !== -1) cb(null, JSON.stringify({ n: 1, t: Date.now() + 60000 }));
           else cb(null, JSON.stringify(oldSnap));
