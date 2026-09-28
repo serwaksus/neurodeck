@@ -109,7 +109,7 @@ test('handleMessage /start: подписка сохраняется + ответ
     writeChats({});
     bot.setApiForTests(mockApi());
     await bot.handleMessage({ chat: { id: 42 }, text: ' /start ' });
-    assert.equal(readChats()['42'], true);
+    assert.equal(readChats()['42'].mode, 'daily', 'v2: /start включает daily (легаси true читается на лету)');
     assert.equal(calls[0].method, 'sendMessage');
     assert.ok(calls[0].body.text.includes('/stop'), 'в ответе есть команда отписки');
 });
@@ -118,7 +118,7 @@ test('handleMessage /stop: отписка сохраняется, /status отр
     writeChats({ '42': true });
     bot.setApiForTests(mockApi());
     await bot.handleMessage({ chat: { id: 42 }, text: '/stop' });
-    assert.equal(readChats()['42'], false);
+    assert.equal(readChats()['42'].mode, 'off', 'v2: off вместо легаси false');
     await bot.handleMessage({ chat: { id: 42 }, text: '/status' });
     assert.ok(calls[1].body.text.includes('ВЫКЛ'));
     await bot.handleMessage({ chat: { id: 42 }, text: '/start' });

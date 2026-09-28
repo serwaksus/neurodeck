@@ -1255,15 +1255,8 @@ body::before {
 .sh-season-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #c084fc); }
 
 /* ===================== Round 2 QA fixes (Fix-B, 2026-09-17) ===================== */
-/* QA1-M1: Telegram light-тема через themeParams → body.tg-light (--tg-bg/--tg-text ставит app.js); тёмная — дефолт */
-body.tg-light { background: var(--tg-bg, var(--bg-deep)); color: var(--tg-text, var(--text)); }
-body.tg-light .header,
-body.tg-light .content,
-body.tg-light .tabs { background: var(--tg-bg, var(--surface)); color: var(--tg-text, var(--text)); }
-body.tg-light .bottom-nav { background: var(--tg-bg, rgba(10, 10, 15, 0.95)); border-top-color: rgba(0, 0, 0, 0.25); }
-body.tg-light .view-title,
-body.tg-light .view-subtitle,
-body.tg-light .bnav-btn { color: var(--tg-text, var(--text)); }
+/* Волна 2 (2026-09-28): light-ветка body.tg-light удалена (форс-дарк) — покрывала
+   лишь 7 селекторов и выглядела сломанной; шапка TG теперь всегда #0a0a0f. */
 /* QA5-M4: заголовок опасной зоны в syncModal */
 .sync-danger-title { margin-top: 14px; padding: 6px 8px; border: 1px dashed var(--blood); border-radius: 2px; color: var(--blood-bright); font-size: 12px; letter-spacing: 1px; text-align: center; }
 /* QA1-M5: переполнение нижней навигации скроллится по горизонтали (zoom 200/300%) */

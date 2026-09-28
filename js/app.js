@@ -1827,6 +1827,8 @@ if (view === 'inv') { renderBackpack(); renderSlots(); updateTotalBonuses(); }
 if (view === 'deck') renderCards();
 if (view === 'stats') renderStatsView();
 if (typeof window.__ndSetCombatActive === 'function') window.__ndSetCombatActive(view === 'boss');
+if (typeof updateBackButton === 'function') updateBackButton(); // волна 2: вне «Колоды» BackButton ведёт домой
+if (typeof updateMainButton === 'function') updateMainButton(); // волна 2: CTA штурма только во вкладке Твердынь
 var vh = VIEW_HINTS[view];
 if (vh) hintOnce('view_' + view, vh);
 haptic('light'); // QA5-M1: тактильный отклик на смену вкладки (как complete-card)
@@ -2813,6 +2815,7 @@ if (ok) doAssault(idx, f);
 function doAssault(idx, f, tactic) {
 var _tc = TACTICS[tactic] ? tactic : 'normal'; // Г1-4: дефолт «Штурм» (ESC/пропуск)
 siege.assaultDay = getMSKDayKey();
+if (typeof updateMainButton === 'function') updateMainButton(); // штурм использован — CTA прячется до завтра
 var _stA = stanceAtkMult(); // Г4: стойка недели — Штурм +15% / Экономия −10%
 dqProgress('assault');
 var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc) * _stA), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) * bossArtifactMult('attrition', STRONGHOLDS[idx].prov) * techAttrMult() }); // Г1-2: veteran ×0.7 · Г1-4: тактика · Г2-1: артефакт −10% потерь (пров.) · Г4: стойка · Г5-Т: свитки ×0.9
@@ -4927,11 +4930,11 @@ function showChronicle() {
 }
 function closeChronicle() { var m = document.getElementById('chronicleModal'); if (m) m.classList.remove('show'); }
 function enqueueModal(fn) {
-    if (document.querySelectorAll('.modal-overlay.show').length === 0) fn();
+    if (document.querySelectorAll('.modal-overlay.show').length === 0) { haptic('light'); fn(); } // волна 2: тактильный отклик на открытие модалки
     else _pendingModal = fn; // QA1-M2: returnModal и weeklyReport показываются ПО ОДНОЙ
 }
 function dequeuePendingModal() {
-    if (_pendingModal && document.querySelectorAll('.modal-overlay.show').length === 0) { var fn = _pendingModal; _pendingModal = null; fn(); }
+    if (_pendingModal && document.querySelectorAll('.modal-overlay.show').length === 0) { var fn = _pendingModal; _pendingModal = null; haptic('light'); fn(); }
 }
 var _prevShown = 0;
 function updateModalChrome() {
@@ -4950,24 +4953,57 @@ function updateModalChrome() {
     if (shown.length === 0 && _prevShown > 0) dequeuePendingModal();
     _prevShown = shown.length;
     updateBackButton(shown);
+    updateMainButton(); // модалки открываются/закрываются — CTA штурма прячется/возвращается
 }
-function updateBackButton(shown) { // QA1-M7: BackButton = «закрыть верхнюю модалку»
+function activeViewName() {
+    var el = document.querySelector('.view.active');
+    return el ? el.id.replace('view-', '') : 'deck';
+}
+function updateBackButton(shown) { // QA1-M7 + волна 2: модалка → закрыть верхнюю; иначе вкладка → «домой»; иначе скрыть
     try {
-        var tg = window.Telegram && Telegram.WebApp;
+        var tg = window.Telegram && window.Telegram.WebApp;
         if (!tg || !tg.BackButton) return;
         var vis = shown || document.querySelectorAll('.modal-overlay.show');
         var onlyConfirm = vis.length === 1 && vis[0].id === 'confirmOverlay';
-        if (vis.length > 0 && !onlyConfirm) {
+        var needBack = vis.length > 0 ? !onlyConfirm : (activeViewName() !== 'deck');
+        if (needBack) {
             tg.BackButton.show();
             if (!tg.BackButton._ndBound) {
                 tg.BackButton._ndBound = true;
                 tg.BackButton.onClick(function() {
                     var list = document.querySelectorAll('.modal-overlay.show');
-                    var t = list[list.length - 1];
-                    if (t && t.id !== 'confirmOverlay') closeOverlayEl(t);
+                    if (list.length > 0) {
+                        var t = list[list.length - 1];
+                        if (t && t.id !== 'confirmOverlay') closeOverlayEl(t); // конфирм закрывается только своими кнопками
+                        return;
+                    }
+                    // Android «назад» из вкладки больше не убивает приложение — ведём на «Колоду»
+                    if (activeViewName() !== 'deck' && typeof switchView === 'function') switchView('deck');
                 });
             }
         } else tg.BackButton.hide();
+    } catch (e) {}
+}
+function updateMainButton() { // волна 2: нативная CTA «⚔ Штурмовать» (главное боевое действие всегда под пальцем)
+    try {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg || !tg.MainButton || !tg.MainButton.setText) return;
+        if (document.querySelectorAll('.modal-overlay.show').length > 0) { tg.MainButton.hide(); return; } // не спорит с модалками/конфирмом тактики
+        var ok = activeViewName() === 'strongholds' && typeof requestAssault === 'function' && typeof capturedCount === 'function' &&
+                 typeof getMSKDayKey === 'function' && typeof SM !== 'undefined' && SM &&
+                 siege && siege.assaultDay !== getMSKDayKey() && SM.armyPower(army.units) > 0 && capturedCount() < 20;
+        if (ok) {
+            if (tg.MainButton._ndAssaultBound !== true) {
+                tg.MainButton._ndAssaultBound = true;
+                tg.MainButton.onClick(function() {
+                    var front = (typeof capturedCount === 'function') ? capturedCount() : 0;
+                    if (typeof requestAssault === 'function') requestAssault(Math.min(front, 19));
+                });
+            }
+            tg.MainButton.setText('⚔ Штурмовать твердыню');
+            if (tg.MainButton.setParams) tg.MainButton.setParams({ color: '#c73e4d', text_color: '#ffffff' });
+            tg.MainButton.show();
+        } else tg.MainButton.hide();
     } catch (e) {}
 }
 document.addEventListener('keydown', function(e) {
@@ -5209,11 +5245,22 @@ burstParticles(window.innerWidth / 2, window.innerHeight / 2, 30, { color: '#d4a
 document.body.appendChild(overlay);
 setTimeout(function() { overlay.classList.add('show'); }, 50);
 }
-function showReminderFreqToast(mode) {
-var msgs = { daily: '📅 Ежедневные напоминания включены', sunday: '🛡 Только воскресные осады', off: '🔕 Напоминания выключены' };
-showToast('🔔 Напоминания', msgs[mode] || mode, 'save');
-// TODO: отправить на бэкенд когда будет API
+var ND_BOT_USERNAME = 'NeuroDeckBot'; // бот-компаньон (bot/polling.js): /start <режим> применяет настройку
+function openBotSettings(mode) { // волна 2: честная связка app↔бот вместо заглушки с TODO
+    var url = 'https://t.me/' + ND_BOT_USERNAME + '?start=' + mode;
+    try {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (tg && tg.openTelegramLink) tg.openTelegramLink(url);
+        else window.open(url, '_blank');
+    } catch (e) { window.open(url, '_blank'); }
+    var msgs = {
+        daily: 'Откроется бот — нажми «Старт», и напоминание придёт каждый день в 21:30 МСК',
+        sunday: 'Откроется бот — нажми «Старт», и будешь получать только воскресные осады',
+        off: 'Откроется бот — нажми «Старт», и напоминания выключатся'
+    };
+    showToast('🔔 Напоминания', msgs[mode] || 'Настройка применяется в боте — подтверди «Старт»');
 }
+function showReminderFreqToast(mode) { openBotSettings(mode); } // легаси-алиас кнопок синхры
 function fullWipeAll() {
 dungeonConfirm('💀 ПОЛНЫЙ СБРОС', 'Удалить ВСЁ: карточки, уровень, золото, твердыни, армию, квесты?<br><b style="color:var(--blood-bright)">Это полный вайп. Необратимо.</b>').then(function(ok) {
 if (!ok) return;
@@ -5285,16 +5332,21 @@ renderCards();
 renderDashboard();
 sweepExpiredPomodoros();
 importFromHash();
-window.__tgReady = function(){ try{ var tg=window.Telegram&&Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); applyTelegramTheme(tg); } }catch(e){} };
-function applyTelegramTheme(tg) { // QA1-M1: themeParams → CSS-переменные (только light; тёмная схема — дефолт)
+(function initStartParam() { // deep link: t.me/<bot>/<app>?startapp=strongholds → сразу нужная вкладка
     try {
-        if (!tg || tg.colorScheme !== 'light') return;
-        var p = tg.themeParams || {};
-        if (p.bg_color) document.body.style.setProperty('--tg-bg', p.bg_color);
-        if (p.text_color) document.body.style.setProperty('--tg-text', p.text_color);
-        if (p.bg_color || p.text_color) document.body.classList.add('tg-light');
+        var tg = window.Telegram && window.Telegram.WebApp;
+        var sp = tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+        if (!sp) return;
+        var map = { strongholds: 'strongholds', siege: 'strongholds', deck: 'deck', quests: 'quests', hero: 'hero', inv: 'inv', inventory: 'inv', stats: 'stats' };
+        var view = map[String(sp).trim().toLowerCase()];
+        if (view && typeof switchView === 'function') setTimeout(function() { switchView(view); }, 300);
     } catch (e) {}
-}
+})();
+window.__tgReady = function(){ try{ var tg=window.Telegram&&window.Telegram.WebApp; if(tg){ tg.ready&&tg.ready(); tg.expand&&tg.expand(); tg.setHeaderColor&&tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor&&tg.setBackgroundColor('#0a0a0f'); tg.disableVerticalSwipes&&tg.disableVerticalSwipes(); applyTelegramTheme(tg); } }catch(e){} };
+// Форс-дарк (аудит 2026-09-28): прежняя light-ветка (body.tg-light) покрывала 7 селекторов
+// и выглядела сломанной — тёмные карточки на светлом фоне + рассинхрон шапки. Держим
+// фирменную тьму в любой теме клиента; шапка/фон TG всегда #0a0a0f (см. __tgReady выше).
+function applyTelegramTheme(tg) { try { document.body.classList.remove('tg-light'); } catch (e) {} }
 window.__tgReady();
 window.addEventListener('load', function(){ window.__tgReady(); });
 if (FORGED.length === 0) {

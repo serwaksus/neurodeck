@@ -34,6 +34,17 @@ var localEpoch = 0; // страж гонок: инкремент при кажд
 function hasEverSaved() {
     try { return localStorage.getItem(EVER_SAVED_KEY) === '1'; } catch(e) { return false; }
 }
+function ndSyncHaptic() { // волна 2: тактильное подтверждение успешной синхронизации
+    try { if (typeof haptic === 'function') haptic('success'); } catch(e) {}
+}
+function ndClosingGuard(on) { // волна 2: на время облачного пуша TG спрашивает подтверждение закрытия
+    try {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg) return;
+        if (on && tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+        else if (!on && tg.disableClosingConfirmation) tg.disableClosingConfirmation();
+    } catch(e) {}
+}
 const SCHEMA_VERSION = 11;
 var strongholds = null, army = null, siege = null;
 function strongholdCatalog() {
@@ -296,10 +307,12 @@ function autoCloudSave(json, force, bypassConflictCheck) {
 }
 function pushCloudChunks(cs, json, onDone) {
     var settled = false;
+    ndClosingGuard(true); // пуш в облаке — не даём свайп-закрытию оборвать его молча
     var hangTimer = setTimeout(function() { settle(); }, 15000);
     function settle() {
         if (settled) return;
         settled = true;
+        ndClosingGuard(false);
         clearTimeout(hangTimer);
         if (typeof onDone === 'function') onDone();
     }
@@ -381,6 +394,7 @@ function smartCloudSync() {
                     if (ok) {
                         applySyncData(data);
                         saveGameState();
+                        ndSyncHaptic();
                         showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
                         spiritSay('«Облако поделилось воспоминаниями...»');
                         screenShake(6, 400);
@@ -393,6 +407,7 @@ function smartCloudSync() {
                 if (typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return;
                 applySyncData(data);
                 saveGameState();
+                ndSyncHaptic();
                 showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
             }
         }, 15000);
@@ -499,6 +514,7 @@ if (!ok) { try { localStorage.setItem('neurodeck_cloud_declined_t', String(cloud
 applySyncData(data, true);
 saveGameState();
 if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
+ndSyncHaptic();
 showToast('☁ Прогресс восстановлен!', 'Из облака: ' + savedDate);
 spiritSay('«Облако сохранило твой путь...»');
 screenShake(6, 400);
@@ -676,6 +692,7 @@ el.textContent = '☁ Облако доступно. Нет сохранений
 function saveToCloud() {
 var cs = getCloudStorage();
 if (!cs) { showToast('⚠ Недоступно', 'Откройте в Telegram', 'blood'); return; }
+ndClosingGuard(true);
 var el = document.getElementById('cloudStatus');
 if (el) el.textContent = '☁ Сохраняю...';
 var json = JSON.stringify(buildSyncData());
@@ -683,11 +700,11 @@ var savedAt = Date.now();
 try { savedAt = JSON.parse(json).savedAt || savedAt; } catch(e) {}
 var chunks = [];
 for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
-        { if (chunks.length >= 200) { finished = true; if (el) el.textContent = '⚠ Слишком много данных'; showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); return; } } }
+        { if (chunks.length >= 200) { finished = true; ndClosingGuard(false); if (el) el.textContent = '⚠ Слишком много данных'; showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); return; } } }
 var finished = false;
 setTimeout(function() {
 if (!finished) {
-finished = true;
+finished = true; ndClosingGuard(false);
 if (el) el.textContent = '⚠ Таймаут облака — используйте файл';
 showToast('⚠ Таймаут', 'Облако не ответило. Скачайте файл.', 'blood');
 }
@@ -697,10 +714,11 @@ function saveMeta() {
     if (finished) return;  // belt-and-suspenders, никогда не nullаем ненулевой finished
 cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt}), function(err) {
 if (finished) return;
-finished = true;
+finished = true; ndClosingGuard(false);
 if (!err) {
 clearSurplusChunks(chunks.length);
 updateCloudStatus();
+ndSyncHaptic();
 showToast('☁ Сохранено в облако', 'Доступно на всех устройствах');
 spiritSay('«Облако запомнило твой путь.»');
 } else {
@@ -714,7 +732,7 @@ chunks.forEach(function(chunk, idx) {
 cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err) {
 if (finished) return;
 if (err) {
-finished = true;
+finished = true; ndClosingGuard(false);
 updateSyncBadge('offline');
 if (el) el.textContent = '⚠ Ошибка записи в облако';
 showToast('⚠ Ошибка облака', String(err), 'blood');
@@ -724,7 +742,7 @@ doneCount++;
 if (doneCount === chunks.length) saveMeta();
 });
 });
-if (chunks.length === 0) { finished = true; if (el) el.textContent = '⚠ Нет данных'; }
+if (chunks.length === 0) { finished = true; ndClosingGuard(false); if (el) el.textContent = '⚠ Нет данных'; }
 }
 function loadFromCloud() {
 var cs = getCloudStorage();
@@ -757,6 +775,7 @@ return;
                 if (chunkErr || !data) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); return; }
                 try {
                     applySyncData(data);
+                    ndSyncHaptic();
                     showToast('☁ Загружено', new Date(data.t).toLocaleString('ru'));
                     spiritSay('«Облако поделилось воспоминаниями...»');
                     screenShake(6, 400);

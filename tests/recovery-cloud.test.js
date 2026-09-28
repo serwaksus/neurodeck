@@ -38,8 +38,8 @@ test('pushCloudChunks: nd_meta.t = savedAt снапшота, а не момен�
     const writes = [];
     const cs = { setItem(key, val, cb) { writes.push([key, val]); cb(null); } };
     const json = '{"savedAt":1727500000000,"hero":{"level":3},"forged":[1,2,3]}';
-    const run = new Function('cs', 'json', 'onDone', 'CLOUD_MAX_CHUNK', 'CLOUD_META_KEY', 'CLOUD_DATA_PREFIX', 'updateSyncBadge', 'showToast', 'getCloudStorage', 'clearSurplusChunks',
-        extractStorageFn('pushCloudChunks') + '; return pushCloudChunks;')(cs, json, () => {}, 4096, 'nd_meta', 'nd_', () => {}, () => {}, () => null);
+    const run = new Function('cs', 'json', 'onDone', 'CLOUD_MAX_CHUNK', 'CLOUD_META_KEY', 'CLOUD_DATA_PREFIX', 'updateSyncBadge', 'showToast', 'getCloudStorage', 'clearSurplusChunks', 'ndClosingGuard',
+        extractStorageFn('pushCloudChunks') + '; return pushCloudChunks;')(cs, json, () => {}, 4096, 'nd_meta', 'nd_', () => {}, () => {}, () => null, () => {}, () => {});
     run(cs, json, () => {});
     await new Promise((r) => setTimeout(r, 10));
     const metaWrite = writes.find(([k]) => k === 'nd_meta');
@@ -73,12 +73,12 @@ test('tryCloudRecovery: работает после ITP-чистки (без eve
     const localStorageStub = { getItem: () => null, setItem: (k, v) => calls.set.push([k, v]) };
     const cs = { getItem: (key, cb) => cb(null, JSON.stringify({ n: 1, t: 1700000000000 })) };
     const decls = [extractStorageFn('tryCloudRecovery')];
-    const stubNames = ['window', 'FORGED', 'getCloudStorage', 'localStorage', 'loadCloudChunks', 'dungeonConfirm', 'applySyncData', 'saveGameState', 'showToast', 'spiritSay', 'screenShake', 'location', 'CLOUD_META_KEY'];
+    const stubNames = ['window', 'FORGED', 'getCloudStorage', 'localStorage', 'loadCloudChunks', 'dungeonConfirm', 'applySyncData', 'saveGameState', 'showToast', 'spiritSay', 'screenShake', 'location', 'CLOUD_META_KEY', 'ndSyncHaptic'];
     const mkRun = (confirmOk) => new Function(...stubNames, decls.join('\n') + '; return tryCloudRecovery;')(
         {}, [], () => cs, localStorageStub,
         (meta, onDone) => onDone(null, { forged: [{ id: 1 }], hero: { level: 4 } }),
         () => { calls.confirm = true; return Promise.resolve(confirmOk); },
-        () => { calls.applied++; }, () => {}, () => {}, () => {}, () => {}, { reload: () => { calls.reloads++; } }, 'nd_meta');
+        () => { calls.applied++; }, () => {}, () => {}, () => {}, () => {}, { reload: () => { calls.reloads++; } }, 'nd_meta', () => {});
     mkRun(false)();
     await new Promise((r) => setTimeout(r, 10));
     assert.deepEqual(calls.set, [['neurodeck_cloud_declined_t', '1700000000000']], 'отказ запомнен по метке облака');

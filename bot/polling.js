@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
-// NeuroDeck polling bot: /start подписка, /stop отписка, напоминание 21:30 МСК.
-// Без зависимостей: node >= 18 (global fetch). Токен — в переменной окружения.
+// NeuroDeck polling bot v2: подписка, режимы (daily/sunday/off), время напоминания,
+// персист lastFire в chats.json (без дублей при рестарте), догоняющая отправка после
+// простоя (≤2 ч). Без зависимостей: node >= 18 (global fetch). Токен — в env.
 
 const fs = require('fs');
 const path = require('path');
@@ -15,19 +16,51 @@ const PROXY = process.env.TELEGRAM_PROXY || 'socks5h://127.0.0.1:1080'; // xray 
 const SOCKS_PORT = parseInt((process.env.TELEGRAM_PROXY || 'socks5h://127.0.0.1:1080').split(':')[2], 10) || 1080;
 const DATA_DIR = process.env.ND_BOT_DATA_DIR || path.join(__dirname, 'data'); // QA-6: песочница для юнит-тестов (контракт draft-теста)
 const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
+const WEBAPP_URL = process.env.NEURODECK_WEBAPP_URL || 'https://serwaksus.github.io/neurodeck/';
+// Прямая ссылка на Mini App после BotFather /newapp (https://t.me/<bot>/<app>):
+// тогда напоминание получает вторую кнопку с контекстом (startapp=strongholds).
+const TG_LINK = process.env.NEURODECK_TG_LINK || '';
+const REMIND_HOUR = 21, REMIND_MIN = 30; // дефолт, МСК
+const FIRE_WINDOW_MIN = 5;    // штатное окно срабатывания
+const CATCHUP_MIN = 120;      // бот молчал ≤2 ч — догоняем пропущенное
+
+if (!TOKEN) {
+  console.error('[bot] TELEGRAM_BOT_TOKEN не задан. Запуск: TELEGRAM_BOT_TOKEN=xxx node polling.js');
+  process.exit(1);
+}
+
+// --- chats.json v2: { "<chatId>": { mode, hour, minute, lastFire } } ---
+// Легаси v1 читается на лету: true → daily 21:30, false → off.
 function loadChats() {
   try { return JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8')); } catch (e) { return {}; }
 }
 function saveChats(db) {
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(CHATS_FILE, JSON.stringify(db)); } catch (e) { console.error('[bot] saveChats:', e.message); }
 }
-const WEBAPP_URL = process.env.NEURODECK_WEBAPP_URL || 'https://serwaksus.github.io/neurodeck/';
-const REMIND_HOUR = 21, REMIND_MIN = 30; // МСК
-
-if (!TOKEN) {
-  console.error('[bot] TELEGRAM_BOT_TOKEN не задан. Запуск: TELEGRAM_BOT_TOKEN=xxx node polling.js');
-  process.exit(1);
+function clampInt(v, lo, hi, dflt) {
+  const n = Math.round(Number(v));
+  return (Number.isFinite(n) && n >= lo && n <= hi) ? n : dflt;
 }
+function normEntry(v) {
+  if (v && typeof v === 'object') {
+    return {
+      mode: ['daily', 'sunday', 'off'].indexOf(v.mode) >= 0 ? v.mode : 'daily',
+      hour: clampInt(v.hour, 0, 23, REMIND_HOUR),
+      minute: clampInt(v.minute, 0, 59, REMIND_MIN),
+      lastFire: typeof v.lastFire === 'string' ? v.lastFire : ''
+    };
+  }
+  if (v === true) return { mode: 'daily', hour: REMIND_HOUR, minute: REMIND_MIN, lastFire: '' };
+  return { mode: 'off', hour: REMIND_HOUR, minute: REMIND_MIN, lastFire: '' };
+}
+function parseHHMM(s) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '').trim());
+  if (!m) return null;
+  const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return { h, m: min };
+}
+function hhmm(e) { return String(e.hour).padStart(2, '0') + ':' + String(e.minute).padStart(2, '0'); }
 
 // --- Минимальный SOCKS5 CONNECT без зависимостей (socks5h: DNS на стороне прокси) ---
 function socks5Connect(targetHost, targetPort, timeoutMs) {
@@ -92,58 +125,119 @@ function mskParts(ts) {
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
   }).formatToParts(new Date(ts || Date.now()));
   const g = (t) => parseInt(p.find((x) => x.type === t).value, 10);
-  return { key: `${g('year')}-${g('month')}-${g('day')}`, hour: g('hour'), minute: g('minute') };
+  const wd = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Moscow', weekday: 'short' }).format(new Date(ts || Date.now()));
+  return { key: `${g('year')}-${g('month')}-${g('day')}`, hour: g('hour'), minute: g('minute'), dow: wd };
 }
 
 const REMINDER_TEXT = '🏰 NeuroDeck\nТвои твердыни накопили налоги за день. Заходи забрать золото и закрыть день с достоинством.\nТвой фронт ждёт, Владыка.';
+const SIEGE_TEXT = '🛡 NeuroDeck: воскресная осада!\nНейтралы идут на твердыни. Проверь гарнизон и стойку недели — фронт держит тот, кто в строю.';
 
-async function sendReminder(chatId) {
+function webAppButton() {
+  return { text: '⚔ Открыть NeuroDeck', web_app: { url: WEBAPP_URL } };
+}
+function keyboard(ctx) {
+  const rows = [[webAppButton()]];
+  // Контекстная кнопка появляется, только если задана прямая ссылка на Mini App
+  // (BotFather /newapp, env NEURODECK_TG_LINK) — иначе startapp не работает.
+  if (TG_LINK && ctx) rows.push([{ text: ctx.label, url: TG_LINK + (TG_LINK.indexOf('?') >= 0 ? '&' : '?') + 'startapp=' + ctx.startapp }]);
+  return { inline_keyboard: rows };
+}
+
+async function sendReminder(chatId, mode) {
+  const siege = mode === 'sunday';
   await api('sendMessage', {
     chat_id: chatId,
-    text: REMINDER_TEXT,
-    reply_markup: { inline_keyboard: [[{ text: '⚔ Открыть NeuroDeck', web_app: { url: WEBAPP_URL } }]] }
+    text: siege ? SIEGE_TEXT : REMINDER_TEXT,
+    reply_markup: keyboard(siege ? { label: '🏰 К твердыням', startapp: 'strongholds' } : null)
   });
 }
 
-let lastFireKey = '';
-function _resetForTests() { lastFireKey = ''; }
+function _resetForTests() { /* lastFire теперь персистится в chats.json — сброс через фикстуру */ }
+
 async function schedulerTick(now = Date.now()) {
   const p = mskParts(now);
-  if (p.hour === REMIND_HOUR && p.minute >= REMIND_MIN && p.minute < REMIND_MIN + 5 && lastFireKey !== p.key) {
-    lastFireKey = p.key;
-    const db = loadChats();
-    let sent = 0;
-    for (const id of Object.keys(db)) {
-      if (db[id] === false) continue;
-      try { await sendReminder(id); sent++; }
-      catch (e) { console.error('[bot] reminder ->', id, e.message); }
-    }
-    console.log('[bot] reminder', p.key, 'sent:', sent);
+  const minutesNow = p.hour * 60 + p.minute;
+  const db = loadChats();
+  let dirty = false, sent = 0;
+  for (const id of Object.keys(db)) {
+    const e = normEntry(db[id]);
+    if (e.mode === 'off') continue;
+    if (e.mode === 'sunday' && p.dow !== 'Sun') continue;
+    const target = e.hour * 60 + e.minute;
+    const inWindow = minutesNow >= target && minutesNow < target + FIRE_WINDOW_MIN;
+    const catchup = minutesNow >= target + FIRE_WINDOW_MIN && minutesNow < target + CATCHUP_MIN; // бот был мёртв в окне
+    if ((!inWindow && !catchup) || e.lastFire === p.key) continue;
+    try {
+      await sendReminder(id, e.mode);
+      e.lastFire = p.key; // персист: рестарт в окне не дублирует, простой не теряет
+      db[id] = e;
+      dirty = true;
+      sent++;
+    } catch (err) { console.error('[bot] reminder ->', id, err.message); }
   }
+  if (dirty) saveChats(db);
+  if (sent > 0) console.log('[bot] reminder', p.key, 'sent:', sent);
 }
+
+const HELP_TEXT = [
+  '🏰 NeuroDeck — напоминания.',
+  '/start — напоминание каждый день в 21:30 МСК',
+  '/start daily | sunday | off — режим: каждый день / только воскресные осады / выключить',
+  '/start ЧЧ:ММ — время напоминания в МСК, например /start 20:00',
+  '/stop — выключить, /status — текущие настройки, /help — это меню'
+].join('\n');
 
 async function handleMessage(msg) {
   const chatId = String(msg.chat.id);
   const text = (msg.text || '').trim();
-  if (text.startsWith('/start')) {
+  const kb = { inline_keyboard: [[webAppButton()]] };
+  if (text === '/start' || text.startsWith('/start ')) {
     const db = loadChats();
-    db[chatId] = true;
+    const cur = normEntry(db[chatId]);
+    const arg = text.slice(6).trim();
+    if (arg === 'daily' || arg === 'sunday' || arg === 'off') {
+      cur.mode = arg;
+      cur.lastFire = ''; // смена режима — разрешаем немедленное подтверждение доставки по новому режиму
+      db[chatId] = cur;
+      saveChats(db);
+      const says = {
+        daily: '🔔 Напоминание каждый день в ' + hhmm(cur) + ' МСК включено.',
+        sunday: '🛡 Буду писать только по воскресеньям — к осаде, в ' + hhmm(cur) + ' МСК.',
+        off: '🔕 Напоминания выключены. /start — включить обратно.'
+      };
+      await api('sendMessage', { chat_id: chatId, text: says[arg], reply_markup: kb });
+    } else if (parseHHMM(arg)) {
+      const t = parseHHMM(arg);
+      cur.hour = t.h;
+      cur.minute = t.m;
+      if (cur.mode === 'off') cur.mode = 'daily';
+      cur.lastFire = '';
+      db[chatId] = cur;
+      saveChats(db);
+      await api('sendMessage', { chat_id: chatId, text: '⏰ Время напоминания: ' + hhmm(cur) + ' МСК (режим: ' + (cur.mode === 'sunday' ? 'воскресные осады' : 'каждый день') + ').', reply_markup: kb });
+    } else {
+      cur.mode = 'daily';
+      cur.lastFire = '';
+      db[chatId] = cur;
+      saveChats(db);
+      await api('sendMessage', { chat_id: chatId, text: '🔔 Подписка включена: напоминание каждый день в ' + hhmm(cur) + ' МСК.\n\n' + HELP_TEXT, reply_markup: kb });
+    }
+  } else if (text === '/stop') {
+    const db = loadChats();
+    const cur = normEntry(db[chatId]);
+    cur.mode = 'off';
+    db[chatId] = cur;
     saveChats(db);
-    await api('sendMessage', {
-      chat_id: chatId,
-      text: 'Подписка на ежедневное напоминание (21:30 МСК) включена.\n/stop — отписаться.',
-      reply_markup: { inline_keyboard: [[{ text: '⚔ Открыть NeuroDeck', web_app: { url: WEBAPP_URL } }]] }
-    });
-  } else if (text.startsWith('/stop')) {
+    await api('sendMessage', { chat_id: chatId, text: '🔕 Напоминания выключены. /start — включить обратно.', reply_markup: kb });
+  } else if (text === '/status') {
     const db = loadChats();
-    db[chatId] = false;
-    saveChats(db);
-    await api('sendMessage', { chat_id: chatId, text: 'Напоминания выключены. /start — включить обратно.' });
-  } else if (text.startsWith('/status')) {
-    const db = loadChats();
-    const on = db[chatId] === true;
-    await api('sendMessage', { chat_id: chatId, text: on ? '🔔 Напоминания: ВКЛ (21:30 МСК)' : '🔕 Напоминания: ВЫКЛ' });
+    const cur = normEntry(db[chatId]);
+    const state = cur.mode === 'off' ? '🔕 ВЫКЛ' : '🔔 ВКЛ (' + (cur.mode === 'sunday' ? 'воскресные осады' : 'каждый день') + ', ' + hhmm(cur) + ' МСК)';
+    await api('sendMessage', { chat_id: chatId, text: 'Напоминания: ' + state + '. /help — все команды.', reply_markup: kb });
+  } else if (text === '/help') {
+    await api('sendMessage', { chat_id: chatId, text: HELP_TEXT, reply_markup: kb });
   }
+  // прочие сообщения и неизвестные команды — молча (контракт QA-теста)
 }
 
 async function pollOnce(offset, opts) {
@@ -169,11 +263,11 @@ async function pollLoop() {
 
 async function main() {
   const me = await api('getMe');
-  console.log('[bot] запущен как @' + me.username + ' | напоминание в ' + REMIND_HOUR + ':' + String(REMIND_MIN).padStart(2, '0') + ' МСК | webapp: ' + WEBAPP_URL);
+  console.log('[bot] запущен как @' + me.username + ' | режимы: daily/sunday/off, время настраивается /start ЧЧ:МСК | webapp: ' + WEBAPP_URL + (TG_LINK ? '' : ' | hint: задай NEURODECK_TG_LINK после BotFather /newapp для контекстных кнопок'));
   setInterval(() => schedulerTick().catch((e) => console.error('[bot] tick:', e.message)), 30 * 1000);
   pollLoop();
 }
 if (require.main === module) {
   main().catch((e) => { console.error('[bot] fatal:', e.message); process.exit(1); });
 }
-module.exports = { mskParts, schedulerTick, handleMessage, pollOnce, setApiForTests, _resetForTests, REMIND_HOUR, REMIND_MIN };
+module.exports = { mskParts, schedulerTick, handleMessage, pollOnce, setApiForTests, _resetForTests, normEntry, parseHHMM, REMIND_HOUR, REMIND_MIN };
