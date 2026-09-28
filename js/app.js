@@ -143,6 +143,7 @@ case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
 case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf) { var prevPerfMode = window.NeuroDeckPerf.getMode(); if (window.NeuroDeckPerf.setMode(el.dataset.mode) && prevPerfMode !== el.dataset.mode) { renderPerfStatus(); showToast('⚡ Режим изменён', { 'auto': 'Авто — эффекты зависят от системных настроек', 'eco': 'Эко — минимальная графика', 'performance': 'Все эффекты включены', 'low': 'Экономный режим — меньше анимаций', 'effects-off': 'Анимации отключены' }[el.dataset.mode] || el.dataset.mode); } } break;
 case 'close-return-modal': closeReturnModal(); break;
+case 'return-go-deck': closeReturnModal(); switchView('deck'); showToast('⚔ Одна карточка', 'Выполни первую попавшуюся — остальное догонит', 'save'); break; // G1: comeback-план
 case 'select-evolution': (function(sel) { document.querySelectorAll('#editEvolutionChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c === sel); }); pendingEvolutionPath = sel.dataset.path || null; })(el); break;
 case 'prestige-card': prestigeCard(parseInt(el.dataset.id)); break;
 case 'close-weekly-report': closeWeeklyReportModal(); break;
@@ -2010,6 +2011,7 @@ function bossProgressTick(st) { // aggregating хук: вызывается из
         HERO.bosses.activeNum = null;
         HERO.bosses.phase = 0;
         showToast('🏆 Поверенный повержен: ' + b.name, 'Артефакт твой: ' + b.artifact.name + ' — ' + b.artifact.desc, 'save');
+        if (typeof addChronicle === 'function') addChronicle('🏆', 'Поверенный ' + b.name + ' повержен — артефакт «' + b.artifact.name + '»'); // G1: хроника живёт
     } else {
         showToast('⚔ Фаза ' + HERO.bosses.phase + '/3 пройдена', '«' + b.name + '»: следующая фаза — завтра', 'crit');
     }
@@ -2370,6 +2372,7 @@ function seasonDaysTotal(startKey) { return Math.max(1, daysBetween(startKey, se
 function seasonDaysDone(startKey) { return Math.max(0, Math.min(seasonDaysTotal(startKey), daysBetween(startKey, getMSKDayKey()))); }
 function finishSeason() {
   addChronicle('🍂', 'Сезон ' + season.num + ' («' + seasonName(season.num) + '») завершён: ' + capturedCount() + '/20 твердынь'); // Г5-Ф
+  if ((season.crownBonus || 0) > 0) addChronicle('👑', 'Венец сезона: +' + (season.crownBonus * 2) + '% к налогам навсегда'); // G1: хроника живёт
     ensureSeason();
     var completions = FORGED.reduce(function(a, c) { return a + (c.totalCompletions || 0); }, 0);
     var d = {
@@ -2398,6 +2401,7 @@ var _sh = strongholds[_st.regionIdx];
 if (_sh && _sh.captured) Object.keys(_sh.buildings).forEach(function(id) { var b = _sh.buildings[id]; if (b && b.built && b.corruptionStage !== 'ruin') b.corruptionStage = (b.corruptionStage === 'ok') ? 'worn' : 'ruin'; }); // ok→worn→ruin, на 1 стадию
 _st.paid = true; // буря разрешена просрочкой; восстановление стадий — штатное (ремонт/пересборка)
 showToast('🌩 Буря разразилась', STRONGHOLDS[_st.regionIdx].name + ': постройки ветшают на стадию — дань не уплачена', 'blood');
+if (typeof addChronicle === 'function') addChronicle('🌩', 'Буря сезона обрушилась на ' + STRONGHOLDS[_st.regionIdx].name + ' — дань не уплачена'); // G1: хроника живёт
 sfxFail(); haptic('error'); saveGameState();
 return;
 }
@@ -2407,6 +2411,7 @@ strongholds.forEach(function(s, i) { if (s.captured && i > 0) _cand.push(i); });
 if (!_cand.length) return;
 var _ri = _cand[Math.floor(Math.random() * _cand.length)];
 HERO.storm = { num: season.num, regionIdx: _ri, dueDayKey: getMSKDayKey(Date.now() + 7 * 86400000), paid: false };
+if (typeof addChronicle === 'function') addChronicle('🌩', 'Буря сезона идёт на ' + STRONGHOLDS[_ri].name + ' — дань ' + (50 * capturedCount()) + '💰 до ' + HERO.storm.dueDayKey); // G1: хроника живёт
 showToast('🌩 Буря над ' + STRONGHOLDS[_ri].name, 'Постройки региона ветшают, если за 7 дней не заплатить дань: ' + (50 * capturedCount()) + ' 💰', 'crit');
 sfxError(); haptic('heavy'); saveGameState();
 }
@@ -3006,6 +3011,42 @@ function weatherUpkeepMult(prov, seasonNum, week) { return (weatherOf(prov, seas
 function weatherTaxMult(prov, seasonNum, week) { return (weatherOf(prov, seasonNum, week).id === 'drought' && weatherSouth(prov)) ? 0.75 : 1; } // засуха юга: налог ×0.75
 function weatherFog(prov, seasonNum, week) { return weatherOf(prov, seasonNum, week).id === 'fog'; }
 function weatherSeasonWeek() { return { sn: (ensureSeason() || {}).num || 1, wk: (siege && siege.week) || 1 }; }
+function weatherEffectText(prov, w) { // G1: человеческий эффект погоды провинции
+    if (w.id === 'blizzard' && weatherNorth(prov)) return 'содержание ×2';
+    if (w.id === 'drought' && weatherSouth(prov)) return 'налог ×0.75';
+    if (w.id === 'fog') return 'сила фронта скрыта';
+    return null;
+}
+function weatherForecastChips() { // G1: чипы погоды только там, где эффект реален
+    var sw = weatherSeasonWeek();
+    var out = '';
+    var provNames = { 1: 'Пограничье', 2: 'Чертожьи Холмы', 3: 'Срединные Пустоши', 4: 'Терновые Пределы' };
+    for (var p = 1; p <= 4; p++) {
+        var w = weatherOf(p, sw.sn, sw.wk);
+        var eff = weatherEffectText(p, w);
+        if (!eff) continue;
+        var front = (frontIdx() >= 0 && STRONGHOLDS[frontIdx()].prov === p);
+        out += '<span class="dash-chip weather-chip weather-' + w.id + '" title="Погода недели: ' + provNames[p] + '">' + w.icon + ' ' + provNames[p] + ': ' + w.name + ' — ' + eff + (front ? ' · фронт' : '') + '</span> ';
+    }
+    return out.trim();
+}
+function weatherMorningBrief() { // G1: утренний дайджест — один тост на день, только непустой
+    try {
+        var todayKey = getMSKDayKey();
+        var KEY = 'nd_weatherbrief_';
+        if (localStorage.getItem(KEY + todayKey)) return;
+        localStorage.setItem(KEY + todayKey, '1');
+        var sw = weatherSeasonWeek();
+        var lines = [];
+        var provNames = { 1: 'Пограничье', 2: 'Чертожьи Холмы', 3: 'Срединные Пустоши', 4: 'Терновые Пределы' };
+        for (var p = 1; p <= 4; p++) {
+            var w = weatherOf(p, sw.sn, sw.wk);
+            var eff = weatherEffectText(p, w);
+            if (eff) lines.push(provNames[p] + ': ' + w.name + ' (' + eff + ')');
+        }
+        if (lines.length) showToast('🌫 Погода недели', lines.join(' · '));
+    } catch (e) {}
+}
 
 // ===================== Г2-3 «Глазами ворона»: лазутчик =====================
 function scoutAdvice(ratio) {
@@ -4345,6 +4386,8 @@ function showReturnScreen() {
         (failedGoals > 0 ? '<div style="color:var(--blood-bright)">💀 Провалено целей: ' + failedGoals + '</div>' : '') +
         '<div>📈 <b>Процент выполнений за неделю:</b> ' + completionRate + '</div>' +
         '<div style="text-align:center; margin-top:12px; color:var(--text-dim); font-size:11px;">С возвращением. Подземелье ждало.</div>' +
+        '<div style="text-align:center; margin-top:14px;"><button class="demo-btn primary" data-action="return-go-deck" style="width:100%;">⚔ План на 5 минут: одна карточка</button></div>' +
+        '<div style="text-align:center; margin-top:6px; font-size:10px; color:var(--text-dim);">Потом: задачи → налоги Твердынь. Фронт ждёт.</div>' +
         '</div>';
     var modal = document.getElementById('returnModal');
     if (modal) {
@@ -4469,6 +4512,8 @@ function renderDashboard() {
     if (_tot && HERO.totem && !HERO.totem.rechoose) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(_tot.tip) + '">' + _tot.icon + ' ' + esc(_tot.name) + '</span></div>';
     var _docs = activeDoctrineList(); // Г1-2: чип активных доктрин
     if (_docs.length) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;">' + _docs.map(function(d) { return '<span class="dash-chip" title="' + esc(d.tip) + '">' + d.icon + ' ' + esc(d.name) + '</span>'; }).join(' ') + '</div>';
+    var _wf = weatherForecastChips(); // G1: погода как решение — эффект виден ДО решения
+    if (_wf) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;">' + _wf + '</div>';
     var pom = activePomodoro();
     if (pom) { // #65: помодоро — чип-обратный отсчёт
         var left = Math.max(0, Math.round((pom.end - Date.now()) / 1000));
@@ -4635,12 +4680,14 @@ function renderInsights() {
     var bestStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
     if (bestStreak >= 7) insights.push('🔥 Текущий рекорд стрика: <b>' + bestStreak + ' дней</b>');
     if (insights.length === 0) return '';
+    var _challenge = '';
+    if (bestCard && !activePomodoro()) _challenge = '<button class="demo-btn" data-action="pomodoro-toggle" data-id="' + bestCard.id + '" style="width:100%; margin-top:10px;">🍅 Вызов: 25 минут на «' + esc(bestCard.name) + '» (+5 XP)</button>'; // G1: инсайт → действие
     var html = '<div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); padding:12px; margin-bottom:16px;">' +
         '<div style="font-size:11px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:10px;">🧠 Инсайты (анализ паттернов)</div>';
     insights.forEach(function(ins) {
         html += '<div style="font-size:11px; color:var(--text-bright); padding:4px 0; border-bottom:1px dashed var(--border);">• ' + ins + '</div>';
     });
-    html += '</div>';
+    html += '</div>' + _challenge; // G1: инсайт → действие
     return html;
 }
 
@@ -4760,7 +4807,13 @@ function showTreasuryBreakdown() { // #45: та же математика, чт�
     var _synBase = 0, _synWith = 0; // Г1-3: доля налогов от ec-синергии для сводки
     strongholds.forEach(function(s, i) { if (!s.captured) return; _synBase += STRONGHOLDS[i].tax; _synWith += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i)); });
     var _synPct = _synBase > 0 ? Math.round((_synWith - _synBase) / _synBase * 100) : 0;
-    showToast('💰 Разбивка казны', 'База ' + strongholdTaxPerDay() + ' 💰/день · Пути +' + trade + '% · Венцы +' + crown + '% · Трон +' + th + '%' + (_synPct > 0 ? ' · Синергии +' + _synPct + '%' : ''), 'save');
+    var _swx = weatherSeasonWeek(), _wEffs = [];
+    for (var _wp = 1; _wp <= 4; _wp++) {
+        var _ww2 = weatherOf(_wp, _swx.sn, _swx.wk);
+        if (_ww2.id === 'drought' && weatherSouth(_wp)) _wEffs.push('засуха п' + _wp + ' −25% налога');
+        if (_ww2.id === 'blizzard' && weatherNorth(_wp)) _wEffs.push('метель п' + _wp + ' ×2 содержание');
+    }
+    showToast('💰 Разбивка казны', 'База ' + strongholdTaxPerDay() + ' 💰/день · Пути +' + trade + '% · Венцы +' + crown + '% · Трон +' + th + '%' + (_synPct > 0 ? ' · Синергии +' + _synPct + '%' : '') + (_wEffs.length ? ' · 🌫 ' + _wEffs.join(', ') : ''), 'save');
 }
 function checkDailyReset() {
 const todayKey = getMSKDayKey();
@@ -5440,6 +5493,7 @@ applyAscensionPalette(); // Г2-5: палитра круга вознесени�
 checkCapturedRecovery(); // #49: следы потерянных крепостей — сразу после загрузки
 checkDailyReset();
 checkBloodOath();
+weatherMorningBrief(); // G1: погода недели — до решений дня
 HERO.xpToNext = getXpToNext(HERO.level);
 renderStats();
 updateHeroUI();
