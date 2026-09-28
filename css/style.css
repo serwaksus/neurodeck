@@ -1754,3 +1754,7 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .progress-control { flex-wrap: nowrap !important; }
 .progress-control .progress-track { width: auto !important; flex: 1 1 auto; min-width: 36px; }
 .progress-control #seasonChip { white-space: nowrap; flex-shrink: 0; }
+
+/* --- DS2.0: детерминизм харнессов — без входных анимаций в webdriver-контекстах --- */
+:root.nd-webdriver .cards .card, :root.nd-webdriver .modal-overlay.show .modal > *,
+:root.nd-webdriver .view.slide-next, :root.nd-webdriver .view.slide-prev { animation: none !important; }

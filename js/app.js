@@ -5528,6 +5528,7 @@ localStorage.removeItem('neurodeck_onboarding_done');
 showToast('🔄 Новая игра', 'Карточки сохранены. Прогресс сброшен.', 'save');
 });
 }
+try { if (navigator.webdriver) document.documentElement.classList.add('nd-webdriver'); } catch (e) {} // DS2.0: входные анимации ломают тапы харнессов — в авто-браузерах выключаем
 ensureStrongholdState();
 if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [], progress: {} };
 loadGameState();
