@@ -1843,3 +1843,29 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .slot.filled { color: var(--text); }
 .slot.filled .slot-icon { color: #fff; }
 .slot .slot-icon { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); line-height: 1; }
+
+/* ===================================================================== */
+/* == DS2.0 часть 4: «Реликвии» арт-апгрейд — game-icons (CC BY 3.0) ==== */
+/* Свет по skill game-assets-enhancement: один источник сверху-слева,     */
+/* тёплый подтон, диапазон значений, финальный световой грейд.           */
+/* ===================================================================== */
+
+/* --- Силуэт-иконки через CSS-mask --- */
+.nd-art { display: block; -webkit-mask: var(--art) center / contain no-repeat; mask: var(--art) center / contain no-repeat; background: currentColor; }
+.slot .nd-art.slot-icon { width: 26px; height: 26px; color: var(--slot-color, var(--gold)); filter: drop-shadow(0 0 7px var(--slot-glow, transparent)); }
+.slot .nd-art.empty-art { width: 21px; height: 21px; color: rgba(212, 165, 116, 0.30); filter: none; opacity: 0.9; }
+.bp-cell .nd-art.bp-icon { width: 27px; height: 27px; color: var(--item-color, var(--gold)); filter: drop-shadow(0 0 7px var(--item-glow, transparent)); }
+.item-preview .nd-art { width: 46px; height: 46px; color: #f6efe2; filter: drop-shadow(0 0 12px var(--item-glow, transparent)); }
+
+/* --- Световой грейд панелей: тёплая промывка + виньетка --- */
+.paperdoll-wrap::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: var(--radius-card);
+  background: radial-gradient(58% 42% at 40% 26%, rgba(244, 200, 150, 0.065), transparent 72%); }
+.item-panel::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: var(--radius-modal);
+  background: radial-gradient(130% 100% at 50% 0%, transparent 52%, rgba(0, 0, 0, 0.30) 100%); }
+.item-panel > * { position: relative; z-index: 1; }
+.paperdoll-wrap > * { position: relative; z-index: 1; }
+.paperdoll-wrap > .mannequin { z-index: 0; }
+
+/* --- Манекен: контровой тёплый блик на верхних кромках --- */
+.mannequin .mnp-rim { stroke: rgba(244, 200, 150, 0.5); }
+:root.perf-eco .paperdoll-wrap::after, :root.perf-eco .item-panel::after { display: none; }

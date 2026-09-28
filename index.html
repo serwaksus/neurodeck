@@ -1126,28 +1126,44 @@
             <svg class="mannequin" viewBox="0 0 120 300" aria-hidden="true">
               <defs>
                 <radialGradient id="mnpGlow" cx="50%" cy="88%" r="55%">
-                  <stop offset="0" stop-color="rgba(212,165,116,0.16)"/><stop offset="1" stop-color="rgba(212,165,116,0)"/>
+                  <stop offset="0" stop-color="rgba(212,165,116,0.18)"/><stop offset="1" stop-color="rgba(212,165,116,0)"/>
                 </radialGradient>
                 <linearGradient id="mnpSteel" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#39424e"/><stop offset="0.5" stop-color="#232a33"/><stop offset="1" stop-color="#161b22"/>
+                  <stop offset="0" stop-color="#8a93a3"/><stop offset="0.32" stop-color="#4a5462"/><stop offset="0.68" stop-color="#232a34"/><stop offset="1" stop-color="#10151b"/>
+                </linearGradient>
+                <linearGradient id="mnpSteel2" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#5d6774"/><stop offset="0.5" stop-color="#2b323c"/><stop offset="1" stop-color="#141920"/>
                 </linearGradient>
                 <linearGradient id="mnpGold" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#f4c896"/><stop offset="1" stop-color="#8a6d1f"/>
+                  <stop offset="0" stop-color="#f4c896"/><stop offset="1" stop-color="#7a5f18"/>
+                </linearGradient>
+                <linearGradient id="mnpCloth" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#2a2118"/><stop offset="1" stop-color="#120d09"/>
                 </linearGradient>
               </defs>
-              <ellipse cx="60" cy="268" rx="56" ry="20" fill="url(#mnpGlow)"/>
-              <rect x="56" y="52" width="8" height="216" rx="3" fill="#171310"/>
-              <path d="M36 268 L84 268 L78 280 L42 280 Z" fill="#1d1610" stroke="rgba(212,165,116,0.4)" stroke-width="1"/>
-              <circle cx="60" cy="34" r="19" fill="url(#mnpSteel)" stroke="url(#mnpGold)" stroke-width="1.4"/>
-              <path d="M44 30 Q60 18 76 30" fill="none" stroke="rgba(244,200,150,0.5)" stroke-width="1.2"/>
-              <path d="M34 62 Q60 52 86 62 L90 96 L72 104 L48 104 L30 96 Z" fill="url(#mnpSteel)" stroke="url(#mnpGold)" stroke-width="1.3"/>
-              <path d="M48 104 L44 150 L60 156 L76 150 L72 104 Z" fill="url(#mnpSteel)" stroke="rgba(212,165,116,0.5)" stroke-width="1.1"/>
-              <path d="M46 150 L40 208 L52 210 L58 158 L62 158 L68 210 L80 208 L74 150 Z" fill="#1a1610" stroke="rgba(212,165,116,0.3)" stroke-width="1"/>
-              <path d="M30 64 L16 138 L28 142 L38 84 Z" fill="url(#mnpSteel)" stroke="rgba(212,165,116,0.45)" stroke-width="1"/>
-              <path d="M90 64 L104 138 L92 142 L82 84 Z" fill="url(#mnpSteel)" stroke="rgba(212,165,116,0.45)" stroke-width="1"/>
-              <line x1="46" y1="128" x2="74" y2="128" stroke="url(#mnpGold)" stroke-width="1.6"/>
+              <ellipse cx="60" cy="268" rx="58" ry="20" fill="url(#mnpGlow)"/>
+              <rect x="56.5" y="52" width="7" height="216" rx="3" fill="#14100c"/>
+              <path d="M34 268 L86 268 L79 281 L41 281 Z" fill="#1d1610" stroke="rgba(212,165,116,0.45)" stroke-width="1"/>
+              <path d="M36 270 L84 270" stroke="rgba(244,200,150,0.18)" stroke-width="0.8"/>
+              <circle cx="60" cy="33" r="19" fill="url(#mnpSteel)" stroke="url(#mnpGold)" stroke-width="1.5"/>
+              <path d="M42 28 Q60 16 78 28" fill="none" stroke="rgba(244,200,150,0.65)" stroke-width="1.4"/>
+              <path d="M46 40 Q60 50 74 40" fill="none" stroke="rgba(0,0,0,0.5)" stroke-width="1.6"/>
+              <path d="M33 61 Q60 50 87 61 L91 96 L73 105 L47 105 L29 96 Z" fill="url(#mnpSteel)" stroke="url(#mnpGold)" stroke-width="1.4"/>
+              <path d="M33 61 Q60 50 87 61" fill="none" stroke="rgba(244,200,150,0.55)" stroke-width="1.2"/>
+              <path d="M29 96 L47 105 L47 112 L29 103 Z" fill="#0e1319"/>
+              <path d="M91 96 L73 105 L73 112 L91 103 Z" fill="#0c1015"/>
+              <path d="M47 105 L43 152 L60 158 L77 152 L73 105 Z" fill="url(#mnpSteel2)" stroke="rgba(212,165,116,0.55)" stroke-width="1.2"/>
+              <path d="M47 105 Q60 112 73 105" fill="none" stroke="rgba(244,200,150,0.35)" stroke-width="1"/>
+              <ellipse cx="60" cy="110" rx="9" ry="3.4" fill="rgba(0,0,0,0.45)"/>
+              <path d="M45 152 L39 210 L52 212 L58 160 L62 160 L68 212 L81 210 L75 152 Z" fill="url(#mnpCloth)" stroke="rgba(212,165,116,0.35)" stroke-width="1"/>
+              <path d="M31 63 L15 140 L28 145 L40 86 Z" fill="url(#mnpSteel)" stroke="rgba(212,165,116,0.5)" stroke-width="1.1"/>
+              <path d="M89 63 L105 140 L92 145 L80 86 Z" fill="url(#mnpSteel)" stroke="rgba(212,165,116,0.5)" stroke-width="1.1"/>
+              <path d="M31 63 L15 140" stroke="rgba(244,200,150,0.4)" stroke-width="1"/>
+              <path d="M89 63 L105 140" stroke="rgba(0,0,0,0.55)" stroke-width="1.4"/>
+              <line x1="46" y1="128" x2="74" y2="128" stroke="url(#mnpGold)" stroke-width="1.8"/>
               <line x1="47" y1="132" x2="73" y2="132" stroke="rgba(212,165,116,0.35)" stroke-width="0.8"/>
-              <circle cx="60" cy="118" r="3.2" fill="url(#mnpGold)" stroke="#0a0a0f" stroke-width="0.8"/>
+              <circle cx="60" cy="118" r="3.4" fill="url(#mnpGold)" stroke="#0a0a0f" stroke-width="0.8"/>
+              <path d="M58 116 L58 121 L60 123 L62 121 L62 116 Z" fill="#0a0a0f"/>
             </svg>
                       <div class="paperdoll-silhouette"></div>
                       <div

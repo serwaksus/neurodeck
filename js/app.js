@@ -1230,6 +1230,17 @@ capeShadows: { id: 'capeShadows', name: 'Плащ Теней', icon: '🧣', ran
 chestVirtue: { id: 'chestVirtue', name: 'Кираса Доблести', icon: '🧥', rank: 'A', slot: 'chest', type: 'Нагрудник', category: 'armor', reqLevel: 6, lore: 'Каждая пластина — выигранная битва с собой.', bonuses: [{ stat: 'end', value: 8, label: '🛡 Стойкость' }, { stat: 'str', value: 3, label: '⚔ Сила' }], special: null },
 ringInsight: { id: 'ringInsight', name: 'Кольцо Прозрения', icon: '💎', rank: 'A', slot: 'ring2', type: 'Кольцо', category: 'accessory', reqLevel: 6, lore: 'В его грани отражаются мысли, что ты не успел забыть.', bonuses: [{ stat: 'int', value: 5, label: '🧠 Интеллект' }, { stat: 'cha', value: 2, label: '🎭 Харизма' }], special: null },
 };
+const ART_ICON = { // DS2.0 x game-icons (CC BY 3.0): настоящие иконки реликвий вместо эмодзи
+swordDiscipline: 'broadsword', shieldWill: 'bordered-shield', amuletFocus: 'emerald-necklace',
+ringCharisma: 'power-ring', ringInsight: 'diamond-ring', bootsWanderer: 'boots',
+crownArchon: 'crown', capeShadows: 'cape', chestVirtue: 'chest-armor'
+};
+const SLOT_ART = { head: 'visored-helm', amulet: 'emerald-necklace', chest: 'chest-armor', cape: 'cape', weapon: 'broadsword', shield: 'bordered-shield', ring1: 'power-ring', ring2: 'diamond-ring', boots: 'boots' };
+var ND_ART_OK = false;
+try { ND_ART_OK = (typeof CSS !== 'undefined') && (CSS.supports('mask', 'url(x.svg) center / contain no-repeat repeat') || CSS.supports('-webkit-mask', 'url(x.svg) center / contain no-repeat repeat')); } catch (e) {}
+function artIconHtml(name, cls) { // силуэт через CSS-mask: перекрашивается любым цветом
+    return '<span class="nd-art ' + (cls || '') + '" style="--art:url(../img/gameicons/' + name + '.svg)"></span>'; // путь от css/style.css
+}
 const INVENTORY = {
 backpack: [],
 equipped: { head: null, amulet: null, chest: null, cape: null, weapon: null, shield: null, ring1: null, ring2: null, boots: null },
@@ -1289,7 +1300,7 @@ cell.style.setProperty('--item-color', rc.color);
 cell.style.setProperty('--item-bg', rc.bg);
 cell.style.setProperty('--item-glow', rc.glow);
 if (selectedItemId === item.uid) cell.classList.add('selected');
-cell.innerHTML = '<span class="bp-icon">' + item.icon + '</span><span class="bp-rank">' + item.rank + '</span>';
+cell.innerHTML = ((ND_ART_OK && ART_ICON[item.id]) ? artIconHtml(ART_ICON[item.id], 'bp-icon') : '<span class="bp-icon">' + item.icon + '</span>') + '<span class="bp-rank">' + item.rank + '</span>';
 cell.addEventListener('click', () => selectItem(item.uid));
 cell.addEventListener('mouseenter', (e) => showTooltip(e, item));
 cell.addEventListener('mousemove', (e) => moveTooltip(e));
@@ -1362,7 +1373,7 @@ const slotLabels = { head: 'Голова', amulet: 'Амулет', chest: 'То�
 const isEquipped = source === 'equipped';
 document.getElementById('itemPanelContent').innerHTML =
 '<div class="item-preview rank-' + item.rank + '" style="--item-color:' + rc.color + '; --item-bg:' + rc.bg + '; --item-glow:' + rc.glow + ';">' +
-item.icon +
+((ND_ART_OK && ART_ICON[item.id]) ? artIconHtml(ART_ICON[item.id]) : item.icon) +
 '<div class="item-preview-rank" style="background:' + rc.color + '">' + item.rank + '</div>' +
 '</div>' +
 '<div class="item-name" style="color:' + rc.color + '">' + item.name + '</div>' +
@@ -1471,7 +1482,7 @@ slot.classList.add('filled', 'rank-' + item.rank);
 slot.style.setProperty('--slot-color', rc.color);
 slot.style.setProperty('--slot-bg', rc.bg);
 slot.style.setProperty('--slot-glow', rc.glow);
-slot.innerHTML = '<span class="slot-icon">' + item.icon + '</span><span class="slot-rank-badge" style="background:' + rc.color + '">' + item.rank + '</span><div class="equip-flash"></div>';
+slot.innerHTML = ((ND_ART_OK && ART_ICON[item.id]) ? artIconHtml(ART_ICON[item.id], 'slot-icon') : '<span class="slot-icon">' + item.icon + '</span>') + '<span class="slot-rank-badge" style="background:' + rc.color + '">' + item.rank + '</span><div class="equip-flash"></div>';
 slot.onclick = () => { selectedItemId = item.uid || 'eq-' + key; renderItemPanel(item, 'equipped'); renderBackpack(); };
 slot.onmouseenter = (e) => showTooltip(e, item);
 slot.onmousemove = (e) => moveTooltip(e);
@@ -1484,7 +1495,7 @@ slot.onmouseleave = hideTooltip;
         slot.style.removeProperty('--slot-color');
 slot.style.removeProperty('--slot-bg');
 slot.style.removeProperty('--slot-glow');
-slot.innerHTML = defaultIcons[key] || '?';
+slot.innerHTML = (ND_ART_OK && SLOT_ART[key]) ? artIconHtml(SLOT_ART[key], 'slot-icon empty-art') : (defaultIcons[key] || '?');
 slot.onclick = null; slot.onmouseenter = null; slot.onmousemove = null; slot.onmouseleave = null;
 }
 });

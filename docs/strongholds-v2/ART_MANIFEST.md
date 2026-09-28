@@ -75,3 +75,15 @@
 - `boss-chimera.jpg`, `boss-demon.jpg`, `boss-snake.jpg` (корень репо) — легаси-спрайты боссов вырезанной боёвки (пивот «Твердыни v2»). Нигде не ссылались, удалены в Ф1 чистки. Восстановление: git history (коммит удаления). Кандидат на «рейд-босс провинции» — только после нового арта в стиле Kenney CC0.
 
 - 2026-09-17: `img/bosses/` удалён полностью (9 jpg: boss-{chimera,demon,snake}-{1,2,3}.jpg, 0 ссылок в репо — аудит T3-M2).
+
+## Game-icons (инвентарь «Реликвии», 2026-09-28)
+
+Иконки предметов и слотов инвентаря: `img/gameicons/*.svg` из репозитория
+[game-icons/icons](https://github.com/game-icons/icons), **CC BY 3.0**:
+
+- **Lorc**, http://lorcblog.blogspot.com — broadsword, bordered-shield, boots, crown, visored-helm
+- **Delapouite**, http://delapouite.com — emerald-necklace, power-ring, diamond-ring, cape, chest-armor
+
+Использование: силуэты через CSS-mask (`--art`), перекрашиваются ранговым цветом.
+Из оригиналов удалён чёрный фоновый прямоугольник (alpha-mask). Атрибуция по
+лицензии CC BY 3.0 — этот раздел и является кредитом.
