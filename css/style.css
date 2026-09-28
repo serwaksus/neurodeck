@@ -1749,3 +1749,8 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .trial-row.done .trial-fill { background: linear-gradient(90deg, #8a6d1f, #f4c896); }
 .trial-num { width: 64px; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 11px; }
 :root.perf-eco .trial-fill { transition: none; }
+
+/* --- DS2.0: сезонный чип не переносит эмодзи за край экрана --- */
+.progress-control { flex-wrap: nowrap !important; }
+.progress-control .progress-track { width: auto !important; flex: 1 1 auto; min-width: 36px; }
+.progress-control #seasonChip { white-space: nowrap; flex-shrink: 0; }
