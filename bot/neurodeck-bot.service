@@ -9,6 +9,8 @@ User=neurodeck-bot
 Group=neurodeck-bot
 WorkingDirectory=/opt/neurodeck-bot
 EnvironmentFile=/etc/neurodeck-bot/token.conf
+# Прямая ссылка Mini App (BotFather /newapp, short name neurodeck) — включает контекстную кнопку «К твердыням» в напоминаниях (startapp=strongholds)
+Environment=NEURODECK_TG_LINK=https://t.me/NeuroDeckBot/neurodeck
 ExecStart=/usr/bin/env node /opt/neurodeck-bot/polling.js
 Restart=always
 RestartSec=5
