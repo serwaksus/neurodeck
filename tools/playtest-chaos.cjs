@@ -441,18 +441,18 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
     await shot(pg, 'f2_longname');
     await ev(() => { FORGED.shift(); renderCards(); closeForge(); saveGameState(); }); // прибираем читом
   });
-  await step('F.3 forge: имя только эмодзи — создано (нет блокировки)', async () => {
+  await step('F.3 forge: имя только эмодзи — отклонено валидацией (P3c, волна 1), без краша', async () => {
+    const before = await ev(() => FORGED.length);
     await ev(() => { openForge(); document.getElementById('forgeName').value = '🔥🩸💀⚔️🪦'; forgeCard(); });
-    const st = await ev(() => ({ name: FORGED[0] ? FORGED[0].name : null }));
-    if (!st.name) throw new Error('эмодзи-карточка не создана');
-    finding('P3', 'forge принимает имя только из эмодзи (валидация только на пустоту после trim)', 'создана карточка с именем ' + JSON.stringify(st.name));
-    await ev(() => { FORGED.shift(); renderCards(); closeForge(); });
+    const st = await ev(() => ({ n: FORGED.length, name: FORGED[0] ? FORGED[0].name : null }));
+    if (st.n !== before) throw new Error('эмодзи-имя не должно создавать карточку (validDisplayText), создалось: ' + JSON.stringify(st.name));
+    await ev(() => { closeForge(); });
   });
-  await step('F.4 задача с именем-эмодзи — создается без краша', async () => {
+  await step('F.4 задача с именем-эмодзи — отклонена валидацией (P3c, волна 1), без краша', async () => {
+    const before = await ev(() => TASKS.length);
     await ev(() => { document.getElementById('taskName').value = '🌊😄👉'; createTask(); });
-    const st = await ev(() => ({ name: TASKS[0] ? TASKS[0].name : null, status: TASKS[0] ? TASKS[0].status : null }));
-    if (st.name !== '🌊😄👉') throw new Error('задача-эмодзи: ' + JSON.stringify(st));
-    await ev(() => { TASKS = TASKS.filter((t) => t.name !== '🌊😄👉'); renderTasks(); });
+    const st = await ev(() => ({ n: TASKS.length, top: TASKS[0] ? TASKS[0].name : null }));
+    if (st.n !== before) throw new Error('задача-эмодзи не должна создаваться (validDisplayText): ' + JSON.stringify(st.top));
   });
   await step('F.5 цель с 50 шагами — создается, рендер без краша', async () => {
     await ev(() => {
