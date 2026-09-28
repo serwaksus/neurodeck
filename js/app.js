@@ -4177,7 +4177,7 @@ function stAreaChart(days, maxXp) { // DS2.0 (волна V2): SVG-столбча
         (d.xp > 0 ? '<text class="st-bar-val" x="' + (i * bw + bw / 2) + '" y="' + (y - 4) + '" text-anchor="middle">' + d.xp + '</text>' : '') +
         '<text class="st-bar-label" x="' + (i * bw + bw / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + dayLabel + '</text>';
     }).join('');
-    return '<svg class="st-chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="auto" style="display:block" role="img" aria-label="XP за 7 дней">' +
+    return '<svg class="st-chart" viewBox="0 0 ' + W + ' ' + H + '" style="display:block;width:100%;height:auto" role="img" aria-label="XP за 7 дней">' +
     '<defs><linearGradient id="stBarGrad" x1="0" y1="1" x2="0" y2="0">' +
     '<stop offset="0" stop-color="#8a6d1f"/><stop offset="1" stop-color="#f4c896"/></linearGradient></defs>' +
     grid + bars + '</svg>';
