@@ -22,8 +22,8 @@ for (const rel of process.argv.slice(2)) {
         }
     } else if (rel.endsWith('.html')) {
         const pins = (src.match(/v=\d+/g) || []);
-        fileOk = fileOk && pins.length === 8 && new Set(pins).size === 1 && !src.includes('?v=69');
-        checks.push('pins x' + pins.length + '/8 unique=' + new Set(pins).size);
+        fileOk = fileOk && pins.length === 9 && new Set(pins).size === 1 && !src.includes('?v=69'); // волна 3: +fonts.css
+        checks.push('pins x' + pins.length + '/9 unique=' + new Set(pins).size);
         const totem = src.includes('id="totemCard"');
         fileOk = fileOk && totem;
         checks.push('totemCard ' + (totem ? 'ok' : 'MISSING'));
