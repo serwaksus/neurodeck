@@ -136,8 +136,12 @@ test('Beginner dashboard mentions key numbers', () => {
 });
 
 test('Starter deck is triggered for first-run players', () => {
-    const idx = app.indexOf('showStarterDeck, 900');
-    assert.ok(idx >= 0, 'init must call setTimeout(showStarterDeck)');
+    // волна 1 (2026-09-28): старт-колода придерживается (holdStarterDeck), пока
+    // tryCloudRecovery ждёт ответ облака — восстановление важнее онбординга.
+    const idx = app.indexOf('holdStarterDeck');
+    assert.ok(idx >= 0, 'init must hold starter deck until cloud check resolves');
+    const showIdx = app.indexOf('showStarterDeck();');
+    assert.ok(showIdx > idx, 'after the wait starter deck is still shown');
 });
 
 test('CSS provides starter-card and info-btn styles', () => {

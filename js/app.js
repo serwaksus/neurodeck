@@ -1136,8 +1136,8 @@ function saveEditCard() {
 if (!editingCardId) return;
 const card = findCard(editingCardId);
 if (!card) return;
-const name = document.getElementById('editCardName').value.trim();
-if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
+const name = validDisplayText(document.getElementById('editCardName').value, 40);
+if (!name) { showToast('⚠ Ошибка', 'Название: добавь буквы или цифры (не только эмодзи)', 'blood'); return; }
 const selectedStatChip = document.querySelector('#editStatChips .stat-chip.selected');
 const newStat = selectedStatChip ? selectedStatChip.dataset.stat : card.stat;
 const newTime = document.getElementById('editCardTime').value;
@@ -1513,8 +1513,8 @@ function updateGoalTypeSelection() { document.querySelectorAll('#goalTypeSelecto
 function updateGoalStatChips() { document.querySelectorAll('#goalStatChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedGoalStat)); }
 updateGoalTypeSelection(); updateGoalStatChips();
 function createGoal() {
-    const name = document.getElementById('goalName').value.trim();
-    if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
+    const name = validDisplayText(document.getElementById('goalName').value, 60);
+    if (!name) { showToast('⚠ Ошибка', 'Название цели: добавь буквы или цифры', 'blood'); return; }
     const deadlineDate = document.getElementById('goalDeadline').value;
     const deadlineTime = document.getElementById('goalDeadlineTime').value || '23:00';
     var deadline = null;
@@ -1694,9 +1694,16 @@ function openForge() { document.getElementById('forgeModal').classList.add('show
 function closeForge() { document.getElementById('forgeModal').classList.remove('show'); document.getElementById('forgeName').value = ''; selectedStat = 'str'; updateStatChips(); }
 function updateStatChips() { document.querySelectorAll('#statChips .stat-chip').forEach(c => c.classList.toggle('selected', c.dataset.stat === selectedStat)); }
 updateStatChips();
+var _ndTextRe = null;
+try { _ndTextRe = new RegExp('[\\p{L}\\p{N}]', 'u'); } catch(e) { _ndTextRe = /[0-9A-Za-zА-Яа-яЁё]/; }
+function validDisplayText(raw, maxLen) { // P3c: пустота и «только эмодзи» — не название
+    var name = String(raw == null ? '' : raw).trim().slice(0, maxLen || 40);
+    if (!name) return null;
+    return _ndTextRe.test(name) ? name : null;
+}
 function forgeCard() {
-const name = document.getElementById('forgeName').value.trim().slice(0, 40);
-if (!name) { showToast('⚠ Ошибка', 'Введите название', 'blood'); return; }
+const name = validDisplayText(document.getElementById('forgeName').value, 40);
+if (!name) { showToast('⚠ Ошибка', 'Название: добавь буквы или цифры (не только эмодзи)', 'blood'); return; }
 const time = document.getElementById('forgeTime').value;
 const duration = parseInt(document.getElementById('forgeDuration').value) || 15;
 const rank = 'C';
@@ -3769,8 +3776,8 @@ selectedTaskTier = 'normal';
 updateTaskTierSelection();
 }
 function createTask() {
-var name = document.getElementById('taskName').value.trim();
-if (!name) { showToast('⚠ Ошибка', 'Введи название задачи', 'blood'); sfxError(); return; }
+var name = validDisplayText(document.getElementById('taskName').value, 120);
+if (!name) { showToast('⚠ Ошибка', 'Название задачи: добавь буквы или цифры', 'blood'); sfxError(); return; }
 var dateVal = document.getElementById('taskDeadline').value;
 var timeVal = document.getElementById('taskDeadlineTime').value || '19:00';
 var deadline = dateVal ? new Date(dateVal + 'T' + timeVal + ':00').getTime() : null;
@@ -4373,7 +4380,7 @@ function renderDashboardVeteran() {
     var openTasks = TASKS.filter(function(t) { return t.status === 'active'; }).length;
     var revenue = strongholdTaxPerDay();
     var nextSh = STRONGHOLDS[strongholds.filter(function(x) { return x.captured; }).length];
-    var toNext = nextSh ? ' · до «' + nextSh.name + '»: ' + Math.max(0, nextSh.cost !== undefined ? 0 : 0) + '' : ' · Твердыни покорены!';
+    var toNext = nextSh ? ' · до «' + esc(nextSh.name) + '»: сила ' + nextSh.total : ' · Твердыни покорены!';
     var oathProgress = bloodOath && bloodOath.status === 'active' ? ' · 🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays : '';
     var comboMult = getComboMultiplier();
     var comboInfo = comboMult > 1.0 ? ' · 🎯 Комбо ×' + comboMult.toFixed(2) : '';
@@ -5290,11 +5297,19 @@ function applyTelegramTheme(tg) { // QA1-M1: themeParams → CSS-перемен�
 }
 window.__tgReady();
 window.addEventListener('load', function(){ window.__tgReady(); });
-if (!hasEverSaved() && FORGED.length === 0) {
+if (FORGED.length === 0) {
+    // Пустая колода — новый игрок ИЛИ очищенное хранилище (ITP-чистка iOS после
+    // 7 дней, новое устройство). tryCloudRecovery из loadGameState уже проверяет
+    // облако; старт-колоду придерживаем до его ответа: восстановление важнее онбординга.
     try { pendingOnboarding = !localStorage.getItem('neurodeck_onboarding_done'); } catch(e) { pendingOnboarding = false; }
-    setTimeout(showStarterDeck, 900);
+    if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }
+    setTimeout(function holdStarterDeck(attempt) {
+        attempt = attempt || 0;
+        if (window.__ndCloudCheckPending && attempt < 14) { setTimeout(function() { holdStarterDeck(attempt + 1); }, 250); return; } // ждём облако ≤3.5 c
+        if (FORGED.length > 0) return; // восстановились из облака — старт-колода не нужна
+        showStarterDeck();
+    }, 900);
 } else {
-if (FORGED.length === 0) { setTimeout(deepRecovery, 1000); }
 if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }
 else { setTimeout(function() { updateSyncBadge('syncing'); smartCloudSync(); }, 2500); }
 if (HERO.lastSessionAt && Date.now() - HERO.lastSessionAt > 86400000 && FORGED.length > 0) {

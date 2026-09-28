@@ -258,7 +258,12 @@ function autoCloudSave(json, force, bypassConflictCheck) {
     var cs = getCloudStorage();
     if (!cs) return;
     if (FORGED.length === 0) return;
-    if (_pushInFlight) return;
+    if (_pushInFlight) {
+        // форс-пуш (pagehide/ручной) во время летящего пуша: ставим в очередь,
+        // а не роняем — и не допускаем два параллельных пуша (перепутанные чанки)
+        if (force) window._pendingCloudForce = { json: json, bypass: !!bypassConflictCheck };
+        return;
+    }
     if (!force && Date.now() - (window._lastCloudSave || 0) < 30000) return;
     window._lastCloudSave = Date.now();
     var savedAt = 0;
@@ -277,9 +282,16 @@ function autoCloudSave(json, force, bypassConflictCheck) {
                 }
             } catch(e) {}
         }
-        if (_pushInFlight) return;
+        if (_pushInFlight) {
+            if (force) window._pendingCloudForce = { json: json, bypass: !!bypassConflictCheck };
+            return;
+        }
         _pushInFlight = true;
-        pushCloudChunks(cs, json, function() { _pushInFlight = false; });
+        pushCloudChunks(cs, json, function() {
+            _pushInFlight = false;
+            var pending = window._pendingCloudForce;
+            if (pending) { window._pendingCloudForce = null; autoCloudSave(pending.json, true, pending.bypass); }
+        });
     });
 }
 function pushCloudChunks(cs, json, onDone) {
@@ -292,6 +304,8 @@ function pushCloudChunks(cs, json, onDone) {
         if (typeof onDone === 'function') onDone();
     }
     try {
+        var savedAt = Date.now(); // метка времени снапшота, а не завершения пуша:
+        try { savedAt = JSON.parse(json).savedAt || savedAt; } catch(e) {} // иначе поздний старый пуш выглядит «новее» локального удаления (анти-воскрешение)
         var chunks = [];
         for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
         { if (chunks.length >= 200) { updateSyncBadge('offline'); if (typeof showToast === 'function') showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); settle(); return; } } }
@@ -309,7 +323,7 @@ function pushCloudChunks(cs, json, onDone) {
                 doneCount++;
                 if (err) { failChunk(err); return; }
                 if (!aborted && doneCount === chunks.length) {
-                    cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), function(err2) {
+                    cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt}), function(err2) {
                         if (err2 || aborted) { updateSyncBadge('offline'); settle(); return; }
                         clearSurplusChunks(chunks.length);
                         updateSyncBadge('synced');
@@ -331,6 +345,7 @@ function forceCloudSave(bypassConflictCheck) {
 function smartCloudSync() {
     var cs = getCloudStorage();
     if (!cs) return;
+    if (FORGED.length === 0) return; // пустое устройство обслуживает tryCloudRecovery — без второго диалога поверх
     var myEpoch = localEpoch; // страж гонки: локальные изменения во время полёта делают ответ устаревшим
     cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
         if (err || !metaStr) return;
@@ -437,7 +452,6 @@ return;
 }
 tryCloudRecovery();
 loadFromIDB(function(result) {
-    if (!hasEverSaved() && FORGED.length === 0) return;
     if (result && result.data && result.data.forged && result.data.forged.length > 0 && FORGED.length === 0) {
         dungeonConfirm('♻ Найдено в IndexedDB',
             'Обнаружено сохранение с <b>' + result.data.forged.length + '</b> карточками.<br>' +
@@ -456,18 +470,32 @@ loadFromIDB(function(result) {
 });
 }
 function tryCloudRecovery() {
-if (!hasEverSaved() && FORGED.length === 0) return;
+// Пустая колода — это не только новый игрок: после ITP-чистки iOS (7 дней) localStorage
+// пустеет целиком вместе с флагом «когда-либо сохранялся», а облако живо. Раньше этот
+// случай молча отключал восстановление — прогресс терялся. Теперь: предлагаем восстановление
+// всегда, когда колода пуста, а в облаке есть карточки; отказ запоминаем по метке сейва.
+if (FORGED.length > 0) return;
 var cs = getCloudStorage();
 if (!cs) return;
+window.__ndCloudCheckPending = true; // boot придерживает старт-колоду, пока идёт проверка
+var pendingDone = function() { window.__ndCloudCheckPending = false; };
+var failSafe = setTimeout(pendingDone, 5000); // облако молчит — не блокируем онбординг дольше 5 c
 cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
-if (err || !metaStr) return;
+if (err || !metaStr) { clearTimeout(failSafe); pendingDone(); return; }
 var meta;
-try { meta = JSON.parse(metaStr); } catch(e) { return; }
+try { meta = JSON.parse(metaStr); } catch(e) { clearTimeout(failSafe); pendingDone(); return; }
+var cloudT = (meta && meta.t) || 0;
+if (!(cloudT > 0)) { clearTimeout(failSafe); pendingDone(); return; }
+try { if (localStorage.getItem('neurodeck_cloud_declined_t') === String(cloudT)) { clearTimeout(failSafe); pendingDone(); return; } } catch(e) {} // от этого сейва уже отказывались
 loadCloudChunks(meta, function(chunkErr, data) {
+clearTimeout(failSafe);
+pendingDone();
 if (chunkErr || !data) return;
-var savedDate = new Date((meta && meta.t) || Date.now()).toLocaleString('ru');
-dungeonConfirm('☁ Найдено облачное сохранение!', 'Данные от <b>' + savedDate + '</b>.<br>Герой: <b>ур.' + (data.hero ? data.hero.level : '?') + '</b>, карточек: <b>' + (data.forged ? data.forged.length : 0) + '</b>.<br><br><span style="color:var(--gold-bright)">Восстановить?</span>').then(function(ok) {
-if (!ok) return;
+var cardCount = (data.forged && data.forged.length) || 0;
+if (cardCount === 0) return; // пустое облако не должно блокировать старт-колоду (O-10)
+var savedDate = new Date(cloudT).toLocaleString('ru');
+dungeonConfirm('☁ Найдено облачное сохранение!', 'Данные от <b>' + savedDate + '</b>.<br>Герой: <b>ур.' + (data.hero ? data.hero.level : '?') + '</b>, карточек: <b>' + cardCount + '</b>.<br><br><span style="color:var(--gold-bright)">Восстановить?</span>').then(function(ok) {
+if (!ok) { try { localStorage.setItem('neurodeck_cloud_declined_t', String(cloudT)); } catch(e) {} return; }
 applySyncData(data, true);
 saveGameState();
 if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
@@ -480,8 +508,8 @@ location.reload();
 });
 }
 function deepRecovery() {
-var everSaved = hasEverSaved();
-if (!everSaved && FORGED.length === 0) return;
+// Ручная кнопка «♻ Восстановить» — явное намерение игрока: сканируем все слои
+// независимо от флага ever_saved (тот может быть стёрт ITP-чисткой iOS).
 var found = [];
 var bestData = null;
 var bestTs = 0;
@@ -549,7 +577,14 @@ const CLOUD_MAX_CHUNK = 4096;
 const CLOUD_META_KEY = 'nd_meta';
 const CLOUD_DATA_PREFIX = 'nd_';
 function getCloudStorage() {
-    try { return window.Telegram && Telegram.WebApp && Telegram.WebApp.CloudStorage ? Telegram.WebApp.CloudStorage : null; } catch(e) { return null; }
+    try {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg || !tg.CloudStorage) return null;
+        // В обычном браузере telegram-web-app.js создаёт WebApp-заглушку с CloudStorage,
+        // чьи колбэки не приходят никогда (platform='unknown') — не считаем это облаком.
+        if (!tg.platform || tg.platform === 'unknown') return null;
+        return tg.CloudStorage;
+    } catch(e) { return null; }
 }
 function loadCloudChunks(meta, onDone, timeoutMs) {
     var cs = getCloudStorage();
@@ -644,6 +679,8 @@ if (!cs) { showToast('⚠ Недоступно', 'Откройте в Telegram',
 var el = document.getElementById('cloudStatus');
 if (el) el.textContent = '☁ Сохраняю...';
 var json = JSON.stringify(buildSyncData());
+var savedAt = Date.now();
+try { savedAt = JSON.parse(json).savedAt || savedAt; } catch(e) {}
 var chunks = [];
 for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
         { if (chunks.length >= 200) { finished = true; if (el) el.textContent = '⚠ Слишком много данных'; showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); return; } } }
@@ -658,7 +695,7 @@ showToast('⚠ Таймаут', 'Облако не ответило. Скача�
 var doneCount = 0;
 function saveMeta() {
     if (finished) return;  // belt-and-suspenders, никогда не nullаем ненулевой finished
-cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: Date.now()}), function(err) {
+cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt}), function(err) {
 if (finished) return;
 finished = true;
 if (!err) {

@@ -122,8 +122,8 @@ animation: flicker 3s infinite ease-in-out;
 .totem-icon { font-size: 28px; }
 .day-card-badge {
     position: absolute;
-    top: 8px;
-    right: 12px;
+    bottom: 8px;
+    left: 12px;
     background: linear-gradient(135deg, #fbbf24, #d97706);
     color: #1a120b;
     border-radius: 50%;
@@ -966,6 +966,12 @@ textarea:focus-visible {
 .card-skip-row { display: flex; justify-content: flex-end; padding: 0 4px 4px; }
 .card-skip-row .card-btn.fail { min-width: 44px; min-height: 28px; font-size: 11px; color: var(--text-dim); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 2px 8px; }
 .card-skip-row .card-btn.fail:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+/* Тач: 26px угловые кнопки карточки — мисстап «удалить» вместо «редактировать» (H1);
+   правило стоит ПОСЛЕ .card-corner-actions, чтобы победить его специфичность */
+@media (hover: none) and (pointer: coarse) {
+.card-corner-actions { gap: 6px; }
+.card-corner-actions .card-btn { width: 44px; height: 44px; font-size: 16px; }
+}
 :root.perf-eco .card-complete-btn { transition: none; }
 
 /* ================================================================== */
