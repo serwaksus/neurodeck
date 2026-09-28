@@ -672,20 +672,32 @@ function applyXpLedger(base, ledger) {
     return xp;
 }
 var ND_METRICS_KEY = 'neurodeck_metrics';
+var _ndMetricsCache = null;
+var _ndMetricsFlushTimer = null;
+function ndMetricsLoad() { // волна 3: кэш в памяти — серия тапов = одна запись localStorage
+    if (_ndMetricsCache) return _ndMetricsCache;
+    try { _ndMetricsCache = JSON.parse(localStorage.getItem(ND_METRICS_KEY) || 'null'); } catch (e) { _ndMetricsCache = null; }
+    if (!_ndMetricsCache || _ndMetricsCache.v !== 1 || typeof _ndMetricsCache.days !== 'object' || _ndMetricsCache.days === null || Array.isArray(_ndMetricsCache.days)) _ndMetricsCache = { v: 1, days: {} };
+    return _ndMetricsCache;
+}
+function ndMetricsFlush() {
+    _ndMetricsFlushTimer = null;
+    try { if (_ndMetricsCache) localStorage.setItem(ND_METRICS_KEY, JSON.stringify(_ndMetricsCache)); } catch (e) {}
+}
 function metricCard(finalXp) { // A2: карточки/день, локальная метрика (кольцо 60 дней), экспорт — syncModal
     try {
-        var m = JSON.parse(localStorage.getItem(ND_METRICS_KEY) || 'null');
-        if (!m || m.v !== 1 || typeof m.days !== 'object' || m.days === null || Array.isArray(m.days)) m = { v: 1, days: {} };
+        var m = ndMetricsLoad();
         var tk = getMSKDayKey();
         var d = m.days[tk] || { cards: 0, xp: 0 };
         d.cards++; d.xp += finalXp;
         m.days[tk] = d;
         var ks = Object.keys(m.days);
         if (ks.length > 60) { ks.sort(); ks.slice(0, ks.length - 60).forEach(function(k) { delete m.days[k]; }); } // ponytail: кольцо 60 дней
-        localStorage.setItem(ND_METRICS_KEY, JSON.stringify(m));
+        if (!_ndMetricsFlushTimer) _ndMetricsFlushTimer = setTimeout(ndMetricsFlush, 2000);
     } catch (e) {}
 }
 function exportMetrics() {
+    if (_ndMetricsFlushTimer) { clearTimeout(_ndMetricsFlushTimer); ndMetricsFlush(); } // экспорт свежих данных
     var raw = '{}';
     try { raw = localStorage.getItem(ND_METRICS_KEY) || '{}'; } catch (e) {}
     var blob = new Blob([raw], { type: 'application/json' });
@@ -696,6 +708,7 @@ function exportMetrics() {
     a.click();
     a.remove();
 }
+window.addEventListener('pagehide', function() { if (_ndMetricsFlushTimer) { clearTimeout(_ndMetricsFlushTimer); ndMetricsFlush(); } }); // свайп-килл не теряет хвост метрики
 function completeCard(e, id) {
 e.stopPropagation();
 const card = findCard(id);
@@ -3641,7 +3654,7 @@ var html = '<div class="kingdom-banner">' +
 '</div>';
 root.innerHTML = html;
 }
-function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" onerror="this.outerHTML=\'' + emoji + '\'">'; }
+function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" loading="lazy" decoding="async" onerror="this.outerHTML=\'' + emoji + '\'">'; } // волна 3: спрайты вне критического пути
 function catClass(bd) { // ФАЗА F: категорийная рамка тайла постройки
 return 'cat-' + (bd.cat === 'house' ? 'zh' : bd.cat === 'econ' ? 'ec' : bd.cat === 'defense' ? 'df' : 'sp');
 }

@@ -1,0 +1,16 @@
+{
+  "name": "NeuroDeck — Выкуй себя. Вырвись из тьмы.",
+  "short_name": "NeuroDeck",
+  "description": "Игра-трекер привычек: выковывай карточки-практики, копи золото и захвати 20 твердынь тёмного королевства.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
