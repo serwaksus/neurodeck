@@ -284,16 +284,16 @@ test('wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, по
 // ----------------------------------------------------------------
 // Ф3: контракты интеграции + единый кэш-пин
 // ----------------------------------------------------------------
-test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html: единый ?v= ×8', () => {
+test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html: единый ?v= ×10', () => {
     assert.ok(extractFn('renderStrongholds').includes('renderTowerCard(cap)'), 'renderStrongholds зовёт карточку башни');
     assert.ok(app.includes("case 'tower-climb': requestTowerClimb()"), 'data-action-паттерн tower-climb');
     assert.ok(app.includes('TOWER_MAX_FLOOR = 50'), 'кап этажа 50');
     assert.ok(cssSource().includes('.tower-card'), 'style.css: класс .tower-card существует');
     const html = htmlSource();
     const pins = (html.match(/v=(\d+)/g) || []);
-    assert.equal(pins.length, 9, 'index.html: 9 вхождений ?v= (волна 3: +fonts.css)');
+    assert.equal(pins.length, 10, 'index.html: 10 вхождений ?v= (фаза 0 «Trust»: +telemetry.js)');
     assert.equal(new Set(pins).size, 1, 'все ?v= одинаковы (факт: ' + pins.join(',') + ')');
-    assert.ok(!html.includes('?v=65'), 'v65 не остался');
+    assert.ok(!html.includes('?v=79'), 'v79 не остался');
     console.log('verified: css/style.css index.html PASS (wave3 contracts)');
 });
 test('package.json: check:ui-скрипт верификации UI-ассетов подключён, JSON валиден', () => {
@@ -301,7 +301,7 @@ test('package.json: check:ui-скрипт верификации UI-ассето
     assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
     const _pins = htmlSource().match(/v=\d+/g) || [];
-    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 9 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×9, волна 3: +fonts.css)');
+    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 10 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×10, фаза 0: +telemetry.js)');
     assert.ok(cssSource().includes('.tower-card') && cssSource().includes('.siege-alarm'), 'css/style.css: PASS (tower-card + siege-alarm)');
     console.log('index.html: PASS');
     console.log('css/style.css: PASS');

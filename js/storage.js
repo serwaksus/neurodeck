@@ -45,6 +45,27 @@ function ndClosingGuard(on) { // волна 2: на время облачног�
         else if (!on && tg.disableClosingConfirmation) tg.disableClosingConfirmation();
     } catch(e) {}
 }
+// Фаза 0 «Trust»: диагностические события (js/telemetry.js). typeof-гварды обязательны:
+// тестовые харнессы вытаскивают функции storage.js поодиночке, где NDTelemetry/ndTel не определены.
+function ndTel(name, data) {
+    try { if (typeof NDTelemetry !== 'undefined' && NDTelemetry && typeof NDTelemetry.event === 'function') NDTelemetry.event(name, data); } catch(e) {}
+}
+function ndTelErr(code, message, detail) {
+    try { if (typeof NDTelemetry !== 'undefined' && NDTelemetry && typeof NDTelemetry.error === 'function') NDTelemetry.error(code, message, detail); } catch(e) {}
+}
+// Канонический отпечаток снапшота: 2×FNV-1a 32-bit → 64-bit hex. Детерминирован между
+// устройствами (charCodeAt по UTF-16). Вызывается typeof-гвардом из pushCloudChunks /
+// loadCloudChunks / saveToCloud (в вырезанных тестовых харнессах функции нет — проверка
+// мягко пропускается). Держать синхронно с ожиданием в tests/cloud-envelope.test.js.
+function ndSnapshotChecksum(s) {
+    var a = 0x811c9dc5, b = 0x811c9dc5;
+    for (var i = 0; i < s.length; i++) {
+        var ch = s.charCodeAt(i);
+        a = Math.imul(a ^ ch, 16777619) >>> 0;
+        b = Math.imul(b ^ (ch + i), 16777619) >>> 0;
+    }
+    return ('0000000' + a.toString(16)).slice(-8) + ('0000000' + b.toString(16)).slice(-8);
+}
 const SCHEMA_VERSION = 11;
 var strongholds = null, army = null, siege = null;
 function strongholdCatalog() {
@@ -167,10 +188,12 @@ function migrateSyncData(data) {
     // Нет валидного числа → считаем сейв текущей схемы; признаки v10
     // (strongholds/season/throne) тем более исключают откат.
     var v = (typeof data.v === 'number' && Number.isFinite(data.v) && data.v > 0) ? data.v : SCHEMA_VERSION;
+    var v0 = v;
     while (v < SCHEMA_VERSION) {
         v++;
         if (typeof MIGRATIONS[v] === 'function') MIGRATIONS[v](data);
     }
+    if (v0 < SCHEMA_VERSION && typeof ndTel === 'function') ndTel('migration_applied', { from: v0, to: SCHEMA_VERSION });
     data.v = SCHEMA_VERSION;
     return data;
 }
@@ -259,8 +282,10 @@ saveToIDB(snapshot); // IDB/cloud/backup до full_save: квота localStorage
 saveGoals();
 try { autoCloudSave(json); } catch(e) {}
 localStorage.setItem('neurodeck_full_save', json);
+if (typeof ndTel === 'function') ndTel('save_ok', { gen: stateGen, sz: json.length });
 } catch (e) {
 console.warn('Save failed:', e);
+if (typeof ndTelErr === 'function') ndTelErr('STORAGE_WRITE_FAILED', String(e), { gen: stateGen });
 showToast('⚠ Ошибка сохранения', 'Хранилище переполнено — экспортируйте данные!', 'blood');
 }
 }
@@ -287,6 +312,7 @@ function autoCloudSave(json, force, bypassConflictCheck) {
                     if (force) { updateSyncBadge('offline'); return; }
                     if (!window._cloudNewerToastShown) {
                         window._cloudNewerToastShown = true;
+                        if (typeof ndTel === 'function') ndTel('cloud_push_deferred', { cloudT: meta.t, savedAt: savedAt });
                         showToast('☁ Синхронизация', 'Облако новее — синхронизация отложена');
                     }
                     return;
@@ -307,6 +333,8 @@ function autoCloudSave(json, force, bypassConflictCheck) {
 }
 function pushCloudChunks(cs, json, onDone) {
     var settled = false;
+    var pushOk = false;
+    var t0 = Date.now();
     ndClosingGuard(true); // пуш в облаке — не даём свайп-закрытию оборвать его молча
     var hangTimer = setTimeout(function() { settle(); }, 15000);
     function settle() {
@@ -314,6 +342,7 @@ function pushCloudChunks(cs, json, onDone) {
         settled = true;
         ndClosingGuard(false);
         clearTimeout(hangTimer);
+        if (!pushOk && typeof ndTel === 'function') ndTel('cloud_push_interrupted', { ms: Date.now() - t0 }); // meta не перезаписан — старое поколение живо
         if (typeof onDone === 'function') onDone();
     }
     try {
@@ -322,6 +351,12 @@ function pushCloudChunks(cs, json, onDone) {
         var chunks = [];
         for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
         { if (chunks.length >= 200) { updateSyncBadge('offline'); if (typeof showToast === 'function') showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); settle(); return; } } }
+        // Envelope v2 («Trust»): чанки пишутся первыми, nd_meta — ПОСЛЕДНИМ как commit-pointer
+        // с отпечатком c, id поколения и размером. Обрыв прошлого пуша, поверх старых данных,
+        // больше не читается как валидный сейв — контрольная сумма его отсекает.
+        var saveId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        var checksum = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(json) : '';
+        if (typeof ndTel === 'function') ndTel('cloud_push_started', { n: chunks.length, sz: json.length });
         var doneCount = 0;
         var aborted = false;
         function failChunk(err) {
@@ -329,6 +364,7 @@ function pushCloudChunks(cs, json, onDone) {
             aborted = true;
             updateSyncBadge('offline');
             if (typeof showToast === 'function') showToast('⚠ Ошибка облака', 'Часть данных не сохранена: ' + String(err), 'blood');
+            if (typeof ndTelErr === 'function') ndTelErr('CLOUD_PUSH_FAILED', String(err), { n: chunks.length });
             settle();
         }
         chunks.forEach(function(chunk, idx) {
@@ -336,16 +372,18 @@ function pushCloudChunks(cs, json, onDone) {
                 doneCount++;
                 if (err) { failChunk(err); return; }
                 if (!aborted && doneCount === chunks.length) {
-                    cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt}), function(err2) {
+                    cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt, c: checksum, id: saveId, sz: json.length}), function(err2) {
                         if (err2 || aborted) { updateSyncBadge('offline'); settle(); return; }
+                        pushOk = true;
                         clearSurplusChunks(chunks.length);
                         updateSyncBadge('synced');
+                        if (typeof ndTel === 'function') ndTel('cloud_push_ok', { n: chunks.length, ms: Date.now() - t0 });
                         settle();
                     });
                 }
             });
         });
-    } catch(e) { settle(); }
+    } catch(e) { if (typeof ndTelErr === 'function') ndTelErr('CLOUD_PUSH_FAILED', String(e), {}); settle(); }
 }
 function forceCloudSave(bypassConflictCheck) {
     var cs = getCloudStorage();
@@ -370,7 +408,7 @@ function smartCloudSync() {
         var localTime = 0;
         var localRaw = localStorage.getItem('neurodeck_full_save') || localStorage.getItem('neurodeck_backup');
         if (localRaw) { try { localTime = JSON.parse(localRaw).savedAt || 0; } catch(e) {} }
-        if (localTime > cloudTime + 5000) { forceCloudSave(true); return; }
+        if (localTime > cloudTime + 5000) { if (typeof ndTel === 'function') ndTel('sync_local_newer_push', { cloudT: cloudTime, localT: localTime }); forceCloudSave(true); return; }
         if (!(cloudTime > localTime + 10000)) return;
         loadCloudChunks(meta, function(chunkErr, data) {
             if (chunkErr || !data) { updateSyncBadge('offline'); return; }
@@ -452,7 +490,7 @@ return;
 applySyncData(data, true);
 return;
 }
-} catch (e) { console.warn('Load failed:', e); }
+} catch (e) { console.warn('Load failed:', e); if (typeof ndTelErr === 'function') ndTelErr('LOAD_FAILED', String(e), {}); }
 var emergFinal = null;
 try { emergFinal = localStorage.getItem('neurodeck_cards_backup'); } catch(e) {}
 if (emergFinal) {
@@ -508,9 +546,11 @@ pendingDone();
 if (chunkErr || !data) return;
 var cardCount = (data.forged && data.forged.length) || 0;
 if (cardCount === 0) return; // пустое облако не должно блокировать старт-колоду (O-10)
+if (typeof ndTel === 'function') ndTel('recovery_offered', { cards: cardCount, t: cloudT });
 var savedDate = new Date(cloudT).toLocaleString('ru');
 dungeonConfirm('☁ Найдено облачное сохранение!', 'Данные от <b>' + savedDate + '</b>.<br>Герой: <b>ур.' + (data.hero ? data.hero.level : '?') + '</b>, карточек: <b>' + cardCount + '</b>.<br><br><span style="color:var(--gold-bright)">Восстановить?</span>').then(function(ok) {
-if (!ok) { try { localStorage.setItem('neurodeck_cloud_declined_t', String(cloudT)); } catch(e) {} return; }
+if (!ok) { if (typeof ndTel === 'function') ndTel('recovery_declined', { t: cloudT }); try { localStorage.setItem('neurodeck_cloud_declined_t', String(cloudT)); } catch(e) {} return; }
+if (typeof ndTel === 'function') ndTel('recovery_accepted', { cards: cardCount, t: cloudT });
 applySyncData(data, true);
 saveGameState();
 if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
@@ -615,13 +655,27 @@ function loadCloudChunks(meta, onDone, timeoutMs) {
         if (timer !== null) { clearTimeout(timer); timer = null; }
         onDone(err, data);
     }
-    if (timeoutMs) timer = setTimeout(function() { settle(new Error('таймаут загрузки из облака'), null); }, timeoutMs);
+    if (timeoutMs) timer = setTimeout(function() { if (typeof ndTelErr === 'function') ndTelErr('CLOUD_LOAD_TIMEOUT', String(timeoutMs), {}); settle(new Error('таймаут загрузки из облака'), null); }, timeoutMs);
     function check() {
         if (loaded < meta.n) return;
         for (var i = 0; i < meta.n; i++) {
-            if (typeof parts[i] !== 'string') { settle(new Error('чанк ' + i + '/' + meta.n + ' отсутствует'), null); return; }
+            if (typeof parts[i] !== 'string') {
+                if (typeof ndTelErr === 'function') ndTelErr('CLOUD_CHUNK_MISSING', String(i), { n: meta.n });
+                settle(new Error('чанк ' + i + '/' + meta.n + ' отсутствует'), null); return;
+            }
         }
-        try { settle(null, JSON.parse(parts.join(''))); }
+        var joined = parts.join('');
+        // Envelope v2 («Trust»): если в meta есть отпечаток c — сверяем его со склеенными
+        // чанками. Несовпадение = смешанное поколение (обрыв пуша поверх старых данных)
+        // или повреждение: такой сейв не отдаём, работают recovery-потоки.
+        if (meta.c) {
+            var got = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(joined) : '';
+            if (got && got !== meta.c) {
+                if (typeof ndTelErr === 'function') ndTelErr('CLOUD_CHECKSUM_MISMATCH', got, { id: String(meta.id || ''), n: meta.n });
+                settle(new Error('контрольная сумма облака не совпала'), null); return;
+            }
+        }
+        try { settle(null, JSON.parse(joined)); }
         catch(e) { settle(e, null); }
     }
     for (var i = 0; i < meta.n; i++) {
@@ -698,6 +752,8 @@ if (el) el.textContent = '☁ Сохраняю...';
 var json = JSON.stringify(buildSyncData());
 var savedAt = Date.now();
 try { savedAt = JSON.parse(json).savedAt || savedAt; } catch(e) {}
+var checksum = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(json) : ''; // envelope v2, как в pushCloudChunks
+var saveId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 var chunks = [];
 for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
         { if (chunks.length >= 200) { finished = true; ndClosingGuard(false); if (el) el.textContent = '⚠ Слишком много данных'; showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); return; } } }
@@ -712,7 +768,7 @@ showToast('⚠ Таймаут', 'Облако не ответило. Скача�
 var doneCount = 0;
 function saveMeta() {
     if (finished) return;  // belt-and-suspenders, никогда не nullаем ненулевой finished
-cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt}), function(err) {
+cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt, c: checksum, id: saveId, sz: json.length}), function(err) {
 if (finished) return;
 finished = true; ndClosingGuard(false);
 if (!err) {
@@ -889,6 +945,7 @@ function applySyncData(data, skipRender) {
 if (!data || typeof data !== 'object') return;
 if (typeof data.v === 'number' && data.v > SCHEMA_VERSION) {
 if (typeof showToast === 'function') showToast('⚠ Слишком новая версия', 'Данные из более новой версии игры — обновите приложение', 'blood');
+if (typeof ndTelErr === 'function') ndTelErr('SAVE_FROM_FUTURE', String(data.v), { current: SCHEMA_VERSION });
 return;
 }
 if (typeof data.gen === 'number' && Number.isFinite(data.gen) && data.gen > stateGen) stateGen = Math.floor(data.gen);
