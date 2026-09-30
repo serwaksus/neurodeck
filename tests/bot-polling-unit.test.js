@@ -1,18 +1,17 @@
 // ============================================================
-// ЮНИТ-ЧЕРНОВИКИ bot/polling.js — QA-6 (п.62)
-// Проблема: polling.js — монолит без экспортов, при require запускает IIFE
-// и process.exit(1) без токена. Тестируемые чистые функции недоступны.
+// Юнит-тесты bot/polling.js — QA-6 (п.62). Аудит скипов P3 (2026-10-01):
+// рефакторинг из бывшего draft-патча ПРИМЕНЁН коммитом fdd9a94 — polling.js
+// экспортирует mskParts/schedulerTick/handleMessage/pollOnce/setApiForTests,
+// бутстрап укрыт require.main-guard, DATA_DIR читается из ND_BOT_DATA_DIR.
+// Оба прежних скип-маркера (ND_BOT_PATH, «pollOnce не выделен») устарели и
+// удалены: они регистрировали фантомные скипы, хотя функционал на месте.
+// ND_BOT_PATH остался как ОПЦИОНАЛЬНОЕ переопределение тестируемой копии.
 //
-// МИНИМАЛЬНЫЙ РЕФАКТОРИНГ (draft, применять фикс-батчу; полный дифф в
-// polling-refactor.draft.patch):
-//   1. `const api = ...` → `let api = ...` + `function setApiForTests(fn) { api = fn; }`
-//   2. IIFE-бутстрап → `async function main() {...}` + `if (require.main === module) main()...`
-//   3. DATA_DIR: `path.join(process.env.ND_BOT_DATA_DIR || DATA_DIR_DEFAULT, 'data')`
-//   4. `module.exports = { mskParts, schedulerTick, handleMessage, setApiForTests, loadChats, saveChats, REMIND_HOUR, REMIND_MIN };`
-//   5. lastFireKey: экспортировать `_resetForTests()` (schedulerTick — stateful)
-//
-// Этот тестовый файл: ND_BOT_PATH (путь к refactor-копии polling.js) и
-// ND_BOT_DATA_DIR (песочница chats.json) берутся из env — репо не трогается.
+// Страховка от регресса в монолит: до require статически проверяем
+// экспорт-контракт (module.exports + require.main-guard). Непатченный файл
+// при require запускает бутстрап и умирает по process.exit(1), убивая
+// файл-процесс раннера — вместо тихой смерти: документированный скип
+// функциональных тестов + красный контракт-тест ниже.
 // ============================================================
 
 const test = require('node:test');
@@ -22,18 +21,32 @@ const path = require('node:path');
 const os = require('node:os');
 
 const BOT_PATH = process.env.ND_BOT_PATH || path.join(__dirname, '..', 'bot', 'polling.js');
-// Песочница по умолчанию — tmpdir: после применения патча require репо-файла
-// безопасен, а chats.json не должен мусорить в bot/data внутри репозитория.
+// Песочница по умолчанию — tmpdir: require патченного файла безопасен, а chats.json
+// не должен мусорить в bot/data внутри репозитория.
 const DATA_DIR = process.env.ND_BOT_DATA_DIR || path.join(os.tmpdir(), 'neurodeck-bot-unit-' + process.pid);
 // Контракт патча: бот-модуль берёт DATA_DIR из env — синхронизируем ДО require,
 // иначе тест пишет в песочницу, а бот читает дефолт bot/data (рассылка видит {}).
 process.env.ND_BOT_DATA_DIR = DATA_DIR;
-
-// Патч обязателен для запуска: без него require выйдет по process.exit(1)
-test.skip(!process.env.ND_BOT_PATH, 'требуется ND_BOT_PATH на refactor-копию (draft-патч)');
+// Токен тоже до require: бутстрап непатченной копии без токена делает process.exit(1).
 process.env.TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'test-token-for-unit';
 
-const bot = require(BOT_PATH);
+// Экспорт-контракт рефакторинга fdd9a94, статически и ДО require (см. шапку).
+const REFACTOR_OK = (() => {
+    try {
+        const src = fs.readFileSync(BOT_PATH, 'utf8');
+        return /module\.exports\s*=/.test(src) && /require\.main\s*===\s*module/.test(src);
+    } catch (e) {
+        return false;
+    }
+})();
+const SKIP_MONOLITH = REFACTOR_OK ? false
+    : 'polling.js без экспорт-контракта fdd9a94 (регресс в монолит?): require запустит бутстрап и убьёт раннер — чинить продукт, не тест';
+
+test('polling.js: экспорт-контракт на месте (module.exports + require.main-guard)', () => {
+    assert.equal(REFACTOR_OK, true, 'polling.js регресснул в монолит без экспортов — вернуть контракт fdd9a94 (см. шапку теста)');
+});
+
+const bot = REFACTOR_OK ? require(BOT_PATH) : null;
 
 // --- фикстура chats.json в песочнице ---
 function writeChats(db) {
@@ -54,11 +67,11 @@ function mockApi(reply) {
 
 test.beforeEach(() => {
     calls.length = 0;
-    if (bot._resetForTests) bot._resetForTests();
+    if (bot && bot._resetForTests) bot._resetForTests();
 });
 
 // ---------- чистая функция: MSK-время ----------
-test('mskParts: ключ даты и MSK-часы (UTC+3)', () => {
+test('mskParts: ключ даты и MSK-часы (UTC+3)', { skip: SKIP_MONOLITH }, () => {
     const p = bot.mskParts(Date.UTC(2026, 8, 17, 18, 31, 0)); // 21:31 МСК
     // Ключ реализации НЕ паддирован ('2026-9-17': parseInt('09')=9 в шаблоне);
     // для контракта lastFireKey (де-дубль) это некритично — фиксируем фактическую форму.
@@ -71,7 +84,7 @@ test('mskParts: ключ даты и MSK-часы (UTC+3)', () => {
 });
 
 // ---------- schedulerTick: окно напоминания 21:30–21:34 МСК ----------
-test('schedulerTick: в окне 21:31 шлёт только подписанным, отписанные скипает', async () => {
+test('schedulerTick: в окне 21:31 шлёт только подписанным, отписанные скипает', { skip: SKIP_MONOLITH }, async () => {
     writeChats({ '111': true, '222': false, '333': true });
     bot.setApiForTests(mockApi());
     // 2026-09-17T18:31:00Z = 21:31 МСК — внутри окна
@@ -83,7 +96,7 @@ test('schedulerTick: в окне 21:31 шлёт только подписанн�
     assert.equal(readChats()['222'], false, 'отписка не мутируется');
 });
 
-test('schedulerTick: вне окна — тишина; повторно в тот же день — не дублирует', async () => {
+test('schedulerTick: вне окна — тишина; повторно в тот же день — не дублирует', { skip: SKIP_MONOLITH }, async () => {
     writeChats({ '111': true });
     bot.setApiForTests(mockApi());
     await bot.schedulerTick(Date.UTC(2026, 8, 17, 10, 0, 0)); // 13:00 МСК — мимо окна
@@ -93,7 +106,7 @@ test('schedulerTick: вне окна — тишина; повторно в то�
     assert.equal(calls.filter(c => c.method === 'sendMessage').length, 1, 'lastFireKey защитил от дубля');
 });
 
-test('schedulerTick: ошибка API на одном чате не валит рассылку остальных', async () => {
+test('schedulerTick: ошибка API на одном чате не валит рассылку остальных', { skip: SKIP_MONOLITH }, async () => {
     writeChats({ '111': true, '333': true });
     bot.setApiForTests(async (method, body) => {
         if (body.chat_id === '111') throw new Error('socks timeout');
@@ -105,7 +118,7 @@ test('schedulerTick: ошибка API на одном чате не валит �
 });
 
 // ---------- handleMessage: команды ----------
-test('handleMessage /start: подписка сохраняется + ответ с инструкцией', async () => {
+test('handleMessage /start: подписка сохраняется + ответ с инструкцией', { skip: SKIP_MONOLITH }, async () => {
     writeChats({});
     bot.setApiForTests(mockApi());
     await bot.handleMessage({ chat: { id: 42 }, text: ' /start ' });
@@ -114,7 +127,7 @@ test('handleMessage /start: подписка сохраняется + ответ
     assert.ok(calls[0].body.text.includes('/stop'), 'в ответе есть команда отписки');
 });
 
-test('handleMessage /stop: отписка сохраняется, /status отражает состояние', async () => {
+test('handleMessage /stop: отписка сохраняется, /status отражает состояние', { skip: SKIP_MONOLITH }, async () => {
     writeChats({ '42': true });
     bot.setApiForTests(mockApi());
     await bot.handleMessage({ chat: { id: 42 }, text: '/stop' });
@@ -126,7 +139,7 @@ test('handleMessage /stop: отписка сохраняется, /status отр
     assert.ok(calls[3].body.text.includes('ВКЛ'));
 });
 
-test('handleMessage: неизвестная команда — ничего не шлёт и не пишет', async () => {
+test('handleMessage: неизвестная команда — ничего не шлёт и не пишет', { skip: SKIP_MONOLITH }, async () => {
     writeChats({});
     bot.setApiForTests(mockApi());
     await bot.handleMessage({ chat: { id: 7 }, text: '/foo bar' });
@@ -134,17 +147,16 @@ test('handleMessage: неизвестная команда — ничего не
     assert.deepEqual(readChats(), {});
 });
 
-test('handleMessage: сообщение без текста — игнор', async () => {
+test('handleMessage: сообщение без текста — игнор', { skip: SKIP_MONOLITH }, async () => {
     writeChats({});
     bot.setApiForTests(mockApi());
     await bot.handleMessage({ chat: { id: 7 } }); // стикер/фото: msg.text undefined
     assert.equal(calls.length, 0);
 });
 
-// ---------- ретраи pollLoop (после рефакторинга: выделить pollOnce) ----------
-test.skip(!bot.pollOnce, 'pollLoop не выделен в pollOnce — добавить в патч: while(offset){ try{updates=await api()}catch{ await sleep(5000); continue } }');
-test('pollLoop: ошибка API → ретрай, offset не теряется', async () => {
-    if (!bot.pollOnce) return;
+// ---------- ретраи pollLoop: pollOnce выделен и экспортирован (fdd9a94) ----------
+test('pollLoop: ошибка API → ретрай, offset не теряется', { skip: SKIP_MONOLITH }, async () => {
+    assert.equal(typeof bot.pollOnce, 'function', 'контракт fdd9a94: pollLoop обязан быть выделен в экспортируемый pollOnce');
     writeChats({});
     let n = 0;
     bot.setApiForTests(async (method, body) => {
