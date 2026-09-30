@@ -3216,7 +3216,10 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 '<button class="sh-mini" data-action="' + action + '" data-idx="' + idx + '" data-tier="' + st.tier + '">' + label + '</button></div>';
 }).join('');
 }
-function daysToSiegeNow() { return (7 - ((new Date(Date.now() + 3 * 3600000).getUTCDay() + 1) % 7)); }
+// Дни до осады: штурм = воскресная ночь (разрешение в понедельничном ресете lastWeekReset).
+// Ревизия 30.09 (economy-sim аудит): раньше суббота давала 7, а ветка d===0 («Осада сегодня»)
+// была недостижима — тост срабатывал только по четвергам. Теперь: Вс→0, Пн→6 … Пт→2, Сб→1.
+function daysToSiegeNow(ts) { var dow = new Date((ts || Date.now()) + 3 * 3600000).getUTCDay(); return dow === 0 ? 0 : 7 - dow; }
 function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)); } // Г5-Т2: Железный Закон — кап гнева 7
 /* ===================== Г4 «Total War: управление провинциями» — ядро (чистые функции) ===================== */
 function ensureSeasonFields(k) { var s = ensureSeason(); if (k) { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; } return s; } // Г4: материализуем ТОЛЬКО записываемый контейнер — байт-стабильный раундтрип сейвов
@@ -4699,18 +4702,10 @@ function todayKingdomLine(shList, daysToSiege) {
         return ' · <span style="color:var(--blood-bright)">⚠ Долг содержания: ' + debt + ' дн.' + (worn > 0 ? ' — ветшает построек: ' + worn : '') + '</span>';
     }
     var d = (typeof daysToSiege === 'number') ? daysToSiege : -1;
-    if (d === 0) return ' · 🏰 Осадный итог — утром';
-    if (d === 1) return ' · 🏰 Осада — завтра ночью';
+    if (d === 0) return ' · 🏰 Осада — сегодня ночью';
+    if (d === 1) return ' · 🏰 Осада — завтра';
     if (d > 1) return ' · 🏰 До осады: ' + d + ' дн.';
     return '';
-}
-// Дни до осадного тика. Тик = понедельничный недельный ресет (lastWeekReset → runWeeklySiege),
-// поэтому считаем до ближайшего понедельника МСК, а не через daysToSiegeNow():
-// у той формула даёт субботу→7 и недостижимую ветку d===0 (тост «Осада сегодня») — расхождение
-// помечено для ревизии в экономико-симуляции, тихо менять пиннутое поведение не рискнули.
-function daysToSiegeMonday(ts) {
-    var dow = new Date((ts || Date.now()) + 3 * 3600000).getUTCDay();
-    return dow === 0 ? 1 : (dow === 1 ? 0 : 8 - dow);
 }
 function renderTodayPriority() {
     try {
@@ -4734,7 +4729,7 @@ function renderTodayPriority() {
             (atRisk ? ' <span title="Стрик сгорит при пропуске" style="color:#f59e0b; font-size:11px;">🔥 ' + c.streak + ' дн. — под угрозой</span>' : '') + '</div>';
         html += '<button class="card-complete-btn" data-action="complete-card" data-id="' + c.id + '">⚔ Выполнить</button>';
         html += '</div>';
-        html += '<div style="font-size:10px; color:var(--text-dim); margin-top:4px;">📖 ' + pick.doneToday + '/' + pick.total + ' сегодня · ' + reward + todayKingdomLine(strongholds, (typeof daysToSiegeMonday === 'function') ? daysToSiegeMonday() : -1) + '</div>';
+        html += '<div style="font-size:10px; color:var(--text-dim); margin-top:4px;">📖 ' + pick.doneToday + '/' + pick.total + ' сегодня · ' + reward + todayKingdomLine(strongholds, (typeof daysToSiegeNow === 'function') ? daysToSiegeNow() : -1) + '</div>';
         html += '</div>';
         return html;
     } catch (e) { return ''; } // панель не должна ронять дашборд

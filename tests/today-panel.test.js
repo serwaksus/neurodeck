@@ -70,21 +70,22 @@ test('todayKingdomLine: долг содержания важнее осадно�
     assert.match(line, /Долг содержания: 3/);
     assert.match(line, /ветшает построек: 1/);
     assert.ok(!line.includes('Осада'), 'при долге осадный календарь не показывается');
-    assert.equal(fn([{ corruption: { stage: 'ok', debtDays: 0 } }], 0).includes('Осадный итог'), true);
-    assert.equal(fn([], 1).includes('завтра ночью'), true);
+    assert.equal(fn([{ corruption: { stage: 'ok', debtDays: 0 } }], 0).includes('Осада — сегодня ночью'), true);
+    assert.equal(fn([], 1).includes('Осада — завтра'), true);
     assert.equal(fn([], 5).includes('До осады: 5'), true);
     assert.equal(fn([], -1), '');
 });
 
 test('renderTodayPriority: кнопка переиспользует complete-card, контекст королевства присутствует', () => {
-    const harness = new Function('FORGED', 'getMSKDayKey', 'STATS', 'esc', 'strongholds',
-        [extractFn('pickTodayCard'), extractFn('todayKingdomLine'), extractFn('daysToSiegeMonday'), extractFn('renderTodayPriority')].join('\n') +
+    const harness = new Function('FORGED', 'getMSKDayKey', 'STATS', 'esc', 'strongholds', 'daysToSiegeNow',
+        [extractFn('pickTodayCard'), extractFn('todayKingdomLine'), extractFn('renderTodayPriority')].join('\n') +
         '; return renderTodayPriority;')(
         [{ id: 7, name: 'Зарядка', rank: 'C', streak: 3, mastery: 2, masteryThreshold: 5, stat: 'str', lastCompletedAt: 2 }],
         () => '1',
         { str: { icon: '⚔', name: 'Сила' } },
         (s) => String(s),
-        [{ corruption: { stage: 'ok', debtDays: 0 } }]
+        [{ corruption: { stage: 'ok', debtDays: 0 } }],
+        () => 5
     );
     const html = harness();
     assert.ok(html.includes('ПРИОРИТЕТ ДНЯ'), 'заголовок панели');
@@ -100,23 +101,23 @@ test('renderTodayPriority: пустая колода и закрытый ден�
     // getMSKDayKey-стаб должен совпадать с дефолтной конверсией pickTodayCard (ts → MSK-дата):
     // renderTodayPriority зовёт pickTodayCard без третьего параметра, как в проде
     const realKey = (ts) => new Date((ts || Date.now()) + 3 * 3600000).toISOString().slice(0, 10);
-    const mk = (forged) => new Function('FORGED', 'getMSKDayKey', 'STATS', 'esc', 'strongholds',
-        [extractFn('pickTodayCard'), extractFn('todayKingdomLine'), extractFn('daysToSiegeMonday'), extractFn('renderTodayPriority')].join('\n') +
-        '; return renderTodayPriority;')(forged, realKey, {}, (s) => String(s), []);
+    const mk = (forged) => new Function('FORGED', 'getMSKDayKey', 'STATS', 'esc', 'strongholds', 'daysToSiegeNow',
+        [extractFn('pickTodayCard'), extractFn('todayKingdomLine'), extractFn('renderTodayPriority')].join('\n') +
+        '; return renderTodayPriority;')(forged, realKey, {}, (s) => String(s), [], () => -1);
     assert.ok(mk([])().includes('Колода пуста'));
     const closed = mk([{ id: 1, streak: 1, mastery: 0, masteryThreshold: 5, stat: 'str', lastCompletedAt: Date.now() }])(); // сегодня по реальному MSK-ключу
     assert.ok(closed.includes('День закрыт'), 'все выполнено — поздравление');
     assert.ok(!closed.includes('data-action="complete-card"'), 'выполнять нечего — кнопки нет');
 });
 
-test('daysToSiegeMonday: осадный тик — ближайший понедельник МСК', () => {
-    const fn = new Function(extractFn('daysToSiegeMonday') + '; return daysToSiegeMonday;')();
-    const day = (utcMs) => fn(utcMs - 3 * 3600000); // UTC-момент полудня MSK-дня → fn ждёт ts (уже +3ч внутри)
-    // 2026-09-28 — понедельник, 2026-09-27 — воскресенье, 2026-10-03 — суббота
-    assert.equal(fn(Date.UTC(2026, 8, 28, 12) - 3 * 3600000), 0, 'понедельник → итог сегодня утром');
-    assert.equal(fn(Date.UTC(2026, 8, 27, 12) - 3 * 3600000), 1, 'воскресенье → осада завтра ночью');
-    assert.equal(fn(Date.UTC(2026, 9, 3, 12) - 3 * 3600000), 2, 'суббота → 2 дня');
-    assert.equal(fn(Date.UTC(2026, 8, 29, 12) - 3 * 3600000), 6, 'вторник → 6 дней');
+test('daysToSiegeNow: штурм = воскресная ночь; Вс→0, Сб→1, Вт→5 (ревизия 30.09: суббота больше не 7)', () => {
+    const fn = new Function(extractFn('daysToSiegeNow') + '; return daysToSiegeNow;')();
+    const day = (utcNoon) => fn(utcNoon - 3 * 3600000); // ts уже внутренне +3ч → подаём UTC-полдень нужного дня
+    // 2026-09-27 — воскресенье, 2026-10-03 — суббота, 2026-09-29 — вторник
+    assert.equal(day(Date.UTC(2026, 8, 27, 12)), 0, 'воскресенье → осада сегодня ночью');
+    assert.equal(day(Date.UTC(2026, 9, 3, 12)), 1, 'суббота → осада завтра');
+    assert.equal(day(Date.UTC(2026, 8, 29, 12)), 5, 'вторник → 5 дней');
+    assert.equal(day(Date.UTC(2026, 8, 25, 12)), 2, 'пятница → 2 дня (Осадная тревога)');
 });
 
 test('renderDashboard интегрирует панель до beginner/veteran-ветвления (контракт ux-first-day не тронут)', () => {
