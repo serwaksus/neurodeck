@@ -4626,6 +4626,7 @@ function renderDashboard() {
     var goal = dailyGoldGoal();
     var gp = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
     html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="Цель дня: заработай золото любым способом">🎯 Цель дня: ' + Math.min(gp, goal) + '/' + goal + '💰</span><span style="display:inline-block; vertical-align:middle; width:70px; height:6px; background:var(--border); border-radius:3px; margin-left:6px; overflow:hidden;"><span style="display:block; height:100%; width:' + Math.min(100, Math.round(gp / goal * 100)) + '%; background:var(--gold-bright);"></span></span></div>'; // #71: дневная цель золота
+    html += renderTodayPriority(); // Today Loop 2.0: одно главное действие дня — до инфо-блоков
     html += isBeginner ? renderDashboardBeginner() : renderDashboardVeteran();
     bar.innerHTML = html;
 }
@@ -4661,6 +4662,82 @@ function renderDashboardVeteran() {
         '<div class="dashboard-row"><span>📖 ' + doneToday + '/' + FORGED.length + ' сегодня' + (remaining > 0 ? ' (осталось ' + remaining + ')' : '') + '</span>' + (openTasks > 0 ? '<span>📋 Задач в работе: <b style="color:#60a5fa">' + openTasks + '</b></span>' : '') + '<span>👻 Призраков: <b style="color:var(--blood-bright)">' + countGhostTasks() + '</b></span></div>' +
         '<div class="dashboard-row"><span>🔥 Макс. стрик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>' +
         '</div>';
+}
+
+// ===== Today Loop 2.0 (фаза 1 AAA-плана): приоритет дня =====
+// Игрок за 3–5 секунд видит: что сделать сейчас, что за это будет, что в королевстве.
+// Выбор детерминированный и чистый (без DOM) — тесты: tests/today-panel.test.js.
+// Порядок приоритета: (1) карточка с горящим стриком — сначала больший стрик,
+// (2) ближе всех к ранг-апу, (3) первая невыполненная в колоде.
+function pickTodayCard(cards, todayKey, mskKey) {
+    var list = (Array.isArray(cards) ? cards : []).filter(function(c) { return c && c.id; });
+    if (!list.length) return null;
+    var key = mskKey || function(ts) { return new Date(ts + 3 * 3600000).toISOString().slice(0, 10); };
+    var done = list.filter(function(c) { return c.lastCompletedAt && key(c.lastCompletedAt) === todayKey; });
+    if (done.length >= list.length) return { card: null, doneToday: done.length, total: list.length };
+    var pending = list.filter(function(c) { return !(c.lastCompletedAt && key(c.lastCompletedAt) === todayKey); });
+    var best = pending.slice().sort(function(a, b) {
+        var ra = (a.streak || 0) > 0 ? 1 : 0, rb = (b.streak || 0) > 0 ? 1 : 0;
+        if (ra !== rb) return rb - ra; // со стриком — вперёд (стрик под угрозой)
+        if ((b.streak || 0) !== (a.streak || 0)) return (b.streak || 0) - (a.streak || 0); // больший стрик ценнее
+        var la = Math.max(0, (a.masteryThreshold || 0) - (a.mastery || 0));
+        var lb = Math.max(0, (b.masteryThreshold || 0) - (b.mastery || 0));
+        return la - lb; // ближе к ранг-апу
+    })[0];
+    return { card: best, doneToday: done.length, total: list.length };
+}
+// Строка королевства: осадный календарь + предупреждение о долге содержания (коррупция).
+function todayKingdomLine(shList, daysToSiege) {
+    var worn = 0, debt = 0;
+    (Array.isArray(shList) ? shList : []).forEach(function(s) {
+        if (s && s.corruption) {
+            if (s.corruption.stage === 'worn' || s.corruption.stage === 'ruin') worn++;
+            debt = Math.max(debt, Math.round(Number(s.corruption.debtDays) || 0));
+        }
+    });
+    if (debt > 0) {
+        return ' · <span style="color:var(--blood-bright)">⚠ Долг содержания: ' + debt + ' дн.' + (worn > 0 ? ' — ветшает построек: ' + worn : '') + '</span>';
+    }
+    var d = (typeof daysToSiege === 'number') ? daysToSiege : -1;
+    if (d === 0) return ' · 🏰 Осадный итог — утром';
+    if (d === 1) return ' · 🏰 Осада — завтра ночью';
+    if (d > 1) return ' · 🏰 До осады: ' + d + ' дн.';
+    return '';
+}
+// Дни до осадного тика. Тик = понедельничный недельный ресет (lastWeekReset → runWeeklySiege),
+// поэтому считаем до ближайшего понедельника МСК, а не через daysToSiegeNow():
+// у той формула даёт субботу→7 и недостижимую ветку d===0 (тост «Осада сегодня») — расхождение
+// помечено для ревизии в экономико-симуляции, тихо менять пиннутое поведение не рискнули.
+function daysToSiegeMonday(ts) {
+    var dow = new Date((ts || Date.now()) + 3 * 3600000).getUTCDay();
+    return dow === 0 ? 1 : (dow === 1 ? 0 : 8 - dow);
+}
+function renderTodayPriority() {
+    try {
+        var pick = pickTodayCard(FORGED, getMSKDayKey());
+        var html = '<div style="padding:8px 10px; margin:2px 0 10px; border:1px solid var(--gold); border-radius:6px; background:rgba(212,175,55,0.06);">';
+        if (!FORGED.length) {
+            return html + '<div style="font-size:12px;">🗡 Колода пуста — выкуй первую карточку кнопкой ниже.</div></div>';
+        }
+        if (!pick || !pick.card) {
+            return html + '<div style="font-size:13px; color:var(--gold-bright);">✅ День закрыт: все ' + FORGED.length + ' карточек выполнены!</div>' +
+                '<div style="font-size:11px; color:var(--text-dim); margin-top:3px;">Загляни в Твердыни — там ждут налоги и осады.</div></div>';
+        }
+        var c = pick.card;
+        var st = STATS[c.stat] || STATS.str;
+        var masteryLeft = Math.max(0, (c.masteryThreshold || 0) - (c.mastery || 0));
+        var reward = masteryLeft <= 1 ? '⚡ следующее выполнение — ранг-ап!' : '📖 до ранг-апа: ' + masteryLeft;
+        var atRisk = (c.streak || 0) > 0;
+        html += '<div style="font-size:10px; letter-spacing:1.5px; color:var(--text-dim); margin-bottom:4px;">ПРИОРИТЕТ ДНЯ</div>';
+        html += '<div style="display:flex; align-items:center; gap:10px; justify-content:space-between; flex-wrap:wrap;">';
+        html += '<div style="font-size:13px; min-width:0;"><b style="color:var(--gold-bright)">' + esc(c.name) + '</b> <span style="color:var(--text-dim); font-size:11px;">' + (st.icon || '') + ' ' + esc(st.name || '') + ' · ' + (c.rank || 'C') + '</span>' +
+            (atRisk ? ' <span title="Стрик сгорит при пропуске" style="color:#f59e0b; font-size:11px;">🔥 ' + c.streak + ' дн. — под угрозой</span>' : '') + '</div>';
+        html += '<button class="card-complete-btn" data-action="complete-card" data-id="' + c.id + '">⚔ Выполнить</button>';
+        html += '</div>';
+        html += '<div style="font-size:10px; color:var(--text-dim); margin-top:4px;">📖 ' + pick.doneToday + '/' + pick.total + ' сегодня · ' + reward + todayKingdomLine(strongholds, (typeof daysToSiegeMonday === 'function') ? daysToSiegeMonday() : -1) + '</div>';
+        html += '</div>';
+        return html;
+    } catch (e) { return ''; } // панель не должна ронять дашборд
 }
 
 var COMBO_THRESHOLD = 3;
