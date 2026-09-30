@@ -8,6 +8,8 @@ npm-debug.log*
 # Test artifacts
 test-results/
 .godot/
+# SW-update симуляция device-matrix.test.js (создаётся/удаётся тестом)
+/sw-update-probe.js
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/

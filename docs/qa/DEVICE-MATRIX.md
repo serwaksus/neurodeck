@@ -1,6 +1,7 @@
 # Device Certification Matrix (фаза 0 «Trust»)
 
-> Статус: шаблон готов, прогоны на живых устройствах не выполнены.
+> Статус: шаблон готов; автоматизируемая часть (Playwright, desktop-эмуляция) заполнена фактами прогона — раздел 6.
+> Прогоны на живых устройствах не выполнены (правило 16: физические строки — только владелец).
 > Owner: @evgenijsimakov · Создан: 2026-09-29 · Проверять: каждый релизный деплой.
 > Дополняет ручной чек-лист: [docs/qa/MANUAL-CHECKLIST.md](../qa/MANUAL-CHECKLIST.md).
 
@@ -40,6 +41,9 @@ Headless-тесты (unit/E2E/visual/chaos) не заменяют живые у�
 
 ## 3. Метрики и целевые пороги (baseline — заполнить при первом прогоне)
 
+> Desktop-эмуляция (строка 7 матрицы) замеряется автоматически — факты в разделе 6;
+> колонки ниже — только для живых iPhone/Android (правило 16: не выдумывать).
+
 | Метрика | Инструмент | Порог (целевой) | Факт iPhone | Факт Android |
 |---------|-----------|-----------------|-------------|--------------|
 | Cold boot → интерактив | секундомер/метка `dom_ready` | ≤ 3.5 c | TBD | TBD |
@@ -71,3 +75,32 @@ JSON.stringify(NDTelemetry.dump())               // мобильный (чита
 - Любой провал P0 → фикс или откат деплоя; wave не объявляется выпущенной.
 - Baseline-прогон сделать на первом же доступном iPhone и Android, результаты
   вписать в раздел 3 и продублировать в session handoff.
+
+## 6. Автоматизируемая часть (Playwright, desktop-эмуляция — строка 7 матрицы)
+
+Прогон: `npx playwright test tests/e2e/device-matrix.test.js` (входит в `npm run ci`
+через `test:e2e`; вёрстка-гейты S7/S8 — `tests/e2e/responsive-gates.test.js`).
+Окружение фактов ниже: VPS (Linux, headless Chromium через Playwright), стенд
+`localhost:8099`, viewport 390×844, дата 2026-09-30, HEAD 964ed68 (v89).
+
+| Сценарий | Гейт (файл теста) | Факт прогона |
+|----------|-------------------|--------------|
+| S1 холодный старт офлайн (SW-кэш) | device-matrix | boot из SW-кэша 356 мс до `.app-wrap` (network-first → cache fallback); поколений кэша ровно одно (`nd-shell-v89`); canvas/интерактив живы |
+| S2 холодный старт онлайн | device-matrix | 501 мс до `.app-wrap`, метка `dom_ready` телеметрии 189 мс; цель ≤3.5 c ✓ (CI-гейт 8 c — запас на медленный раннер) |
+| S2 warm boot (кэш контекста) | device-matrix | 345 мс (холодный в том же контексте 533 мс): warm стабильно быстрее cold |
+| S7 короткий viewport (landscape <600h, 667×375) | responsive-gates | deck и strongholds: без горизонтального скролла, нав виден целиком, перекрытий нет |
+| S8 крупный шрифт 200% (textZoom×2 эмуляция) | responsive-gates | deck и strongholds: без hscroll/клипов/перекрытий при удвоенном computed font-size |
+| S9 Reduced Motion | device-matrix | boot чистый 370 мс; `NeuroDeckPerf.prefersReducedMotion()`=true, `body.reduced-motion` + `html.perf-eco` применены (режим auto → eco-эквивалент), ошибок JS нет |
+| S12 обновление SW между версиями | device-matrix | симуляция деплоя v89→v89+suffix: ровно одно поколение кэша через ~2.2 с (skipWaiting→activate чистит старое), controller переключился, офлайн-бут после обновления интерактивен |
+| safe-area/notch (часть S7) | responsive-gates | статический контракт `viewport-fit=cover` + `env(safe-area-inset-*)` в наве/шеле; runtime при нулевых инсетах — вёрстка чистая |
+
+Особенность стенда: `playwright.config.js` маппит `telegram.org` в `~NOTFOUND` —
+SW-прекэш Telegram SDK рассчитан на недоступность (best-effort try/catch), но
+висящее соединение держало SW в `installing`. Маппинг даёт мгновенный отказ —
+тот же путь кода, что и реальная недоступность SDK; page-запросы SDK и так
+перехватываются `route.abort()` до сети, прочие тесты не затронуты.
+
+Вне автоматизации (только живые устройства): S3–S6 (игровой цикл с реальным
+сохранением/облаком, ITP-чистка, обрыв сети во время пуша), S10 (реальная
+клавиатура/фокус), S11 (30-мин сессия: память, FPS, нагрев), Telegram WebView
+и PWA-инсталляция, реальные safe-area-инсеты и FPS.
