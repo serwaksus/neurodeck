@@ -113,6 +113,93 @@ test('app.js: модификаторы применены ровно в 2 мес
     const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
     assert.equal((app.match(/SM\.provinceIncomeMult\(/g) || []).length, 2, 'доход: strongholdsDailyTick + shIncomePerDay');
     assert.equal((app.match(/SM\.provinceUpkeepMult\(/g) || []).length, 2, 'содержание: strongholdsDailyTick + shUpkeepPerDay');
+    assert.equal((app.match(/SM\.provinceSiegeMult\(/g) || []).length, 2, 'P5 осада врага: runWeeklySiege + siegeAlarmPreview');
     assert.ok(/SM\.provinceIncomeMult \? SM\.provinceIncomeMult\(/.test(app), 'typeof-гвард вызова дохода');
     assert.ok(/SM\.provinceUpkeepMult \? SM\.provinceUpkeepMult\(/.test(app), 'typeof-гвард вызова содержания');
+    assert.ok(/SM\.provinceSiegeMult \? SM\.provinceSiegeMult\(/.test(app), 'P5 typeof-гвард вызова осады');
+});
+
+// P5: поведенческое равенство превью и тика — воскресный удар врага умножается правилом провинции
+// фронта в ОБОИХ местах одинаково. Экстрактор function-by-name из app.js (паттерн wave3,
+// brace counting); топ-левел app.js не исполняется, same-layer зависимости закрыты стабами.
+test('P5: provinceSiegeMult — превью осадной тревоги и тик runWeeklySiege дают одну силу удара', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+    function extractBlock(anchor) {
+        const start = app.indexOf(anchor);
+        assert.ok(start > -1, 'anchor not found: ' + anchor);
+        let depth = 0, end = -1;
+        for (let i = app.indexOf('{', start); i < app.length; i++) {
+            if (app[i] === '{') depth++;
+            else if (app[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+        }
+        assert.ok(end > -1, 'unbalanced braces after: ' + anchor);
+        return app.slice(start, end + 1);
+    }
+    const extractFn = (name) => extractBlock('function ' + name + '(');
+    function buildIn({ decls = [], stubs = {}, body }) {
+        const src = decls.join('\n') + '\nreturn (' + body + ');';
+        const keys = Object.keys(stubs);
+        return new Function(...keys, src)(...keys.map((k) => stubs[k]));
+    }
+    // Синтетика: пров 7 вне каталога, SM.provinceSiegeMult(7)=1.25 — множитель виден только если
+    // проводка реально читает его; siegePower зависит от week → ловит расхождение аргументов.
+    const mkSM = (withProv) => ({
+        siegePower: (total, week, cap, wrath) => Math.round(total * (1 + week) * (1 + 0.12 * wrath)),
+        defensePower: () => 100000, // оборона держит — первый удар, без каскада
+        armyPower: (u) => u.t1 * 2,
+        stackPower: (g) => (g && g.length) ? 10 : 0,
+        provinceSiegeMult: withProv ? ((prov) => prov === 7 ? 1.25 : 1) : undefined
+    });
+    // Тик: siege.week=4 → siegePower(…,3,…); превью: siege.week=3 → siegePower(…,3,…) — те же аргументы.
+    const runTick = (sm) => {
+        const out = {};
+        buildIn({
+            decls: [extractFn('runWeeklySiege')],
+            stubs: {
+                ensureStrongholdState: () => {}, capturedCount: () => 1, countGhostTasks: () => 0,
+                approachWrathDeltaNow: () => 0, lastCapturedIdx: () => 0,
+                STRONGHOLDS: [{ total: 200, prov: 7, name: 'Синт' }],
+                strongholds: [{ captured: true, garrison: [{ tier: 't1', count: 2 }] }],
+                STATS: { end: { value: 3 } }, defBonusOf: () => 0,
+                totemDefMult: () => 1, doctrineFortMult: () => 1, synergyDefMult: () => 1, stanceDefMult: () => 1, techDefMult: () => 1,
+                ascEnemyMult: () => 1, approachEnemyMultNow: () => 1, weeklyModsNow: () => ({ income: 1, upkeep: 1, siege: 1 }),
+                provCapturedCount: () => 0, provResourceMult: () => 0,
+                applyStackLoss: (g) => g, addXpReward: () => {}, ruinAllBuildings: () => {},
+                recalcHirePool: () => {}, chronicleSiegeRows: () => {},
+                showSiegeReport: (rows, wrath) => { out.rows = rows; out.wrath = wrath; },
+                siege: { week: 4, wkSkips: 0, wkTaskFails: 0 },
+                SM: sm
+            },
+            body: 'runWeeklySiege()'
+        });
+        return out;
+    };
+    const runPreview = (sm) => buildIn({
+        decls: [extractFn('siegeAlarmPreview')],
+        stubs: {
+            SM: sm, army: { units: { t1: 5 } },
+            strongholds: [{ captured: true, garrison: [{ tier: 't1', count: 1 }] }],
+            STRONGHOLDS: [{ total: 200, prov: 7 }],
+            siege: { week: 3, wkSkips: 0, wkTaskFails: 0 },
+            capturedCount: () => 1, lastCapturedIdx: () => 0, countGhostTasks: () => 0,
+            siegeWrathNow: () => 0, ascEnemyMult: () => 1, weeklyModsNow: () => ({ income: 1, upkeep: 1, siege: 1 }),
+            weatherSeasonWeek: () => ({ sn: 1, wk: 1 }), HERO: { scouts: null },
+            scoutFresh: () => null, getMSKDayKey: () => '2026-01-01',
+            weatherFog: () => false, stanceFogPierce: () => false, siegeAlarmVerdict: () => 'ок'
+        },
+        body: 'siegeAlarmPreview()'
+    });
+    // База: siegePower(200, 3, 1, 0) = 800; с правилом провинции ×1.25 → 1000 в ОБОИХ местах.
+    const tick = runTick(mkSM(true)), prev = runPreview(mkSM(true));
+    assert.equal(tick.rows[0].held, true, 'оборона держит — строка первого удара без каскада');
+    assert.equal(tick.rows[0].power, 1000, 'тик: round(800 × 1.25) — правило провинции применено');
+    assert.equal(prev.power, 1000, 'превью: round(800 × 1.25) — тот же множитель');
+    assert.equal(prev.power, tick.rows[0].power, 'равенство превью/тик: сила врага совпадает');
+    // Гвард: SM без provinceSiegeMult (старая модель) — нейтрально ×1, равенство сохраняется.
+    const tickOld = runTick(mkSM(false)), prevOld = runPreview(mkSM(false));
+    assert.equal(tickOld.rows[0].power, 800, 'тик без provinceSiegeMult не падает');
+    assert.equal(prevOld.power, 800, 'превью без provinceSiegeMult не падает');
+    assert.equal(prevOld.power, tickOld.rows[0].power, 'равенство сохраняется и на нейтральном SM');
 });

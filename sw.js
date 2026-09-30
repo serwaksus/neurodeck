@@ -5,25 +5,25 @@
    При новом деплое: бампни ?v= в index.html И VERSION ниже — старый кэш удалится в activate. */
 'use strict';
 
-const VERSION = 'nd-shell-v89';
+const VERSION = 'nd-shell-v90';
 const SHELL = [
   './',
   'index.html',
-  'css/style.css?v=89',
-  'fonts/fonts.css?v=89',
+  'css/style.css?v=90',
+  'fonts/fonts.css?v=90',
   'fonts/cinzel-var.woff2',
   'fonts/CrimsonText-400.woff2',
   'fonts/CrimsonText-400i.woff2',
   'fonts/CrimsonText-600.woff2',
-  'js/perf.js?v=89',
-  'js/perf-compat.js?v=89',
-  'js/event-bus.js?v=89',
-  'js/telemetry.js?v=89',
-  'js/stronghold-data.js?v=89',
-  'js/state-guards.js?v=89',
-  'js/storage.js?v=89',
-  'js/stronghold-model.js?v=89',
-  'js/app.js?v=89',
+  'js/perf.js?v=90',
+  'js/perf-compat.js?v=90',
+  'js/event-bus.js?v=90',
+  'js/telemetry.js?v=90',
+  'js/stronghold-data.js?v=90',
+  'js/state-guards.js?v=90',
+  'js/storage.js?v=90',
+  'js/stronghold-model.js?v=90',
+  'js/app.js?v=90',
   'manifest.json',
   'img/icon-192.png',
   'img/icon-512.png'

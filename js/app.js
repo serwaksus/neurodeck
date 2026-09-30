@@ -1954,7 +1954,9 @@ function provinceRuleLineHtml(prov) {
 var cat = (typeof window !== 'undefined' && window.StrongholdData) ? window.StrongholdData : null;
 var p = (cat && cat.PROVINCES) ? cat.PROVINCES[prov] : null;
 if (!p || !p.rule || typeof p.rule.text !== 'string' || !p.rule.text) return '';
-return '<div class="sh-trade">🏛 ' + p.name + ': ' + p.rule.text + (p.rule.active === false ? ' · готовится' : '') + '</div>';
+var _sm = (p.rule.mods && typeof p.rule.mods === 'object') ? Number(p.rule.mods.siegeMult) : NaN; // P5: siege-составляющая правила — та же, что множит воскресный удар (runWeeklySiege/siegeAlarmPreview)
+var _siegeNote = (isFinite(_sm) && _sm > 0 && _sm !== 1) ? ' · осада врага ×' + _sm : '';
+return '<div class="sh-trade">🏛 ' + p.name + ': ' + p.rule.text + _siegeNote + (p.rule.active === false ? ' · готовится' : '') + '</div>';
 }
 // ===================== Campaign 2.0 C6-lite: ЭНДГЕЙМ-РОТАЦИЯ — модификатор недели (CAMPAIGN-2.0.md §5) =====================
 // Каталог WEEKLY_MODS (stronghold-data.js), выбор детерминирован парой (season.num, siege.week) —
@@ -2955,7 +2957,7 @@ var def = STRONGHOLDS[t];
     garDef = Math.round(garDef * synergyDefMult(t)); // Г1-3: df-четвёрка в твердыне +5% обороны
     garDef = Math.round(garDef * stanceDefMult()); // Г4: стойка недели (Оборона +20% / Экономия −10%)
     garDef = Math.round(garDef * techDefMult()); // Г5-Т: Дисциплина гарнизонов +10%
-var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult() * approachEnemyMultNow() * weeklyModsNow().siege); // Г2-5: враги +25% силы за круг вознесения; C4: «Осада» — сила врага −20%; C6-lite: модификатор недели (эндгейм 20/20)
+var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult() * approachEnemyMultNow() * weeklyModsNow().siege * (SM.provinceSiegeMult ? SM.provinceSiegeMult(def.prov) : 1)); // Г2-5: враги +25% силы за круг вознесения; C4: «Осада» — сила врага −20%; C6-lite: модификатор недели (эндгейм 20/20); P5/C3: правило провинции множит удар — parity с siegeAlarmPreview
 var _rmW = 0, _pcW = 0;
 [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rmW += provResourceMult(p); _pcW++; } });
 if (_pcW > 0) power = Math.round(power / (_rmW / _pcW)); // Г4: склады снабжения — удар врага слабее на 2%/ед ресурса (среднее по провинциям)
@@ -3650,7 +3652,7 @@ function siegeAlarmPreview() { // Ф1: превью сил следующей о
     if (!SM || capturedCount() === 0) return null;
     var t = lastCapturedIdx();
     if (t < 0) return null;
-    var power = Math.round(SM.siegePower(STRONGHOLDS[t].total, siege.week, capturedCount(), siegeWrathNow()) * ascEnemyMult() * weeklyModsNow().siege); // Г2-5: +25% за круг; C6-lite: модификатор недели (эндгейм 20/20) — parity с runWeeklySiege
+    var power = Math.round(SM.siegePower(STRONGHOLDS[t].total, siege.week, capturedCount(), siegeWrathNow()) * ascEnemyMult() * weeklyModsNow().siege * (SM.provinceSiegeMult ? SM.provinceSiegeMult(STRONGHOLDS[t].prov) : 1)); // Г2-5: +25% за круг; C6-lite: модификатор недели (эндгейм 20/20); P5/C3: правило провинции — parity с runWeeklySiege
     var def = SM.armyPower(army.units);
     strongholds.forEach(function(s) { if (s.captured) def += SM.stackPower(s.garrison || []); });
     def = Math.round(def);

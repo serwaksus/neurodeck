@@ -40,6 +40,15 @@ const provInc = (i) => {
   const m = p && p.rule && p.rule.mods ? Number(p.rule.mods.incomeMult) : NaN;
   return (isFinite(m) && m > 0 && m <= 3) ? m : 1;
 };
+// P5 (Campaign 2.0 §2): провинциальный модификатор ОСАДНОГО УДАРА — тот же источник, что у
+// SM.provinceSiegeMult. РЕ-ПИН формул 1c-осада (авторизовано контрактом P5): продукт теперь множит
+// удар правилом провинции (runWeeklySiege/siegeAlarmPreview), эталон — data-driven по каталогу.
+// Сейчас в каталоге все siegeMult=1.0 → числа эталонов НЕ меняются, формула становится полной.
+const provSiege = (i) => {
+  const p = CAT.PROVINCES && CAT.PROVINCES[CAT.STRONGHOLDS[i].prov];
+  const m = p && p.rule && p.rule.mods ? Number(p.rule.mods.siegeMult) : NaN;
+  return (isFinite(m) && m > 0 && m <= 3) ? m : 1;
+};
 // shIncomePerDay: taxes (поштучно ×правило провинции, round — как в тике) → ×(1+tradeBonus) → round; + round(econ); → ×(1+min(0.5, market)) → round
 const manualIncome = (flags, bspec) => {
   let taxes = 0, econ = 0, market = 0;
@@ -174,8 +183,8 @@ async function main() {
       const log = await ev(`() => window.__qaSiegeLog`);
       const row = log[log.length - 1].rows[0];
       const power = row.power;
-      const exp = manualSiege(CAT.STRONGHOLDS[5].total, k, 6, 0);
-      escalation.push(l1('1c-осада', `runWeeklySiege: неделя ${k + 1} → round(190×0.6×1.15^W_eff) = ${exp}`, exp, power, row.held === false ? 'ТВЕРДЫНЯ ПАЛА' : ''));
+      const exp = R(manualSiege(CAT.STRONGHOLDS[5].total, k, 6, 0) * provSiege(5)); // P5 ре-пин: ×правило провинции (пров. 2, каталог ×1.0 — число не меняется)
+      escalation.push(l1('1c-осада', `runWeeklySiege: неделя ${k + 1} → round(190×0.6×1.15^W_eff × пров) = ${exp}`, exp, power, row.held === false ? 'ТВЕРДЫНЯ ПАЛА' : ''));
       if (prevPower != null) {
         const ratio = power / prevPower;
         const growing = Math.min(k - 1, Math.max(4, 9)) < 9 || Math.min(k, Math.max(4, 9)) < 9; // хоть одна неделя ещё не в капе
@@ -193,7 +202,7 @@ async function main() {
       return { wrath: last.wrath, power: last.rows[0].power, held: last.rows[0].held };
     }`);
     l1('1c-осада', 'Гнев: wkSkips=10 → Гнев 10 (кап) → ×(1+0.12×10)=×2.2',
-      manualSiege(CAT.STRONGHOLDS[5].total, 2, 6, 10) + '|10', wrathTest.power + '|' + wrathTest.wrath, 'SPEC §5');
+      R(manualSiege(CAT.STRONGHOLDS[5].total, 2, 6, 10) * provSiege(5)) + '|10', wrathTest.power + '|' + wrathTest.wrath, 'SPEC §5; P5 ре-пин: ×правило провинции (каталог ×1.0)');
     const capTest = await ev(`() => {
       const out = [];
       for (const w of [13, 14]) {
@@ -210,9 +219,9 @@ async function main() {
     // модификаторы, прежнее «силы равны» устарело по дизайну). Кап W=12 сверяем по чистой siegePower,
     // продукт — с round(база × модификатор недели).
     l1('1c-осада', 'кап эскалации: база siegePower(нед 13) == база(нед 14) [W кап 12]', 'равны', capTest[0].base === capTest[1].base ? 'равны' : capTest.map((x) => x.base).join('≠') + ' НЕ равны', 'C6: кап W в чистой модели, без модификатора недели');
-    l1('1c-осада', 'C6 продукт 20/20: сила(W) = round(база × weeklySiegeMult(1,W)) — нед 13|14',
-      capTest.map((x) => Math.round(x.base * x.weekly)).join('|'), capTest.map((x) => x.power).join('|'),
-      'C6: модификаторы недель ' + capTest.map((x) => x.weekly).join(' / '));
+    l1('1c-осада', 'C6 продукт 20/20: сила(W) = round(база × weeklySiegeMult × пров.правило) — нед 13|14',
+      capTest.map((x) => Math.round(x.base * x.weekly * provSiege(19))).join('|'), capTest.map((x) => x.power).join('|'),
+      'C6+P5 ре-пин: модификаторы недель ' + capTest.map((x) => x.weekly).join(' / ') + ' × пров. ' + provSiege(19) + ' (каталог нейтрален)');
 
     // --- 1d. assaultOutcome: 100 случайных пар, границы attrition ---
     const assault = await ev(`() => {
