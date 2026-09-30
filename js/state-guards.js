@@ -142,16 +142,28 @@
                 floor: Math.round(clampNumber(hero.tower.floor, 0, 50, 0)),
                 lastFloorDay: safeString(hero.tower.lastFloorDay, '', 10)
             } : null,
-            bosses: (function(bs) { // Г2-1: Поверенные Тьмы — whitelist-стиль doctrines/totem/tower
+            bosses: (function(bs) { // Г2-1: Поверенные Тьмы — whitelist-стиль doctrines/totem/tower; C5: босс-арки
                 function bossNum(v) { return (Number.isInteger(v) && v >= 1 && v <= 11) ? v : null; }
                 if (!bs || typeof bs !== 'object' || Array.isArray(bs)) bs = {};
+                var seen = (Array.isArray(bs.introSeen) ? bs.introSeen : []).map(bossNum)
+                    .filter(function(n) { return n !== null; })
+                    .filter(function(n, i, a) { return a.indexOf(n) === i; }); // C5: лор-вступления
+                var rc = {};
+                if (bs.rewardChoice && typeof bs.rewardChoice === 'object' && !Array.isArray(bs.rewardChoice)) {
+                    Object.keys(bs.rewardChoice).slice(0, 11).forEach(function(k) {
+                        if (/^\d+$/.test(k) && bossNum(parseInt(k, 10)) !== null && ['artifact', 'crown', 'ruin'].indexOf(bs.rewardChoice[k]) !== -1) rc[k] = bs.rewardChoice[k];
+                    });
+                } // C5: num → 'artifact'|'crown'|'ruin'
                 return {
                     defeated: (Array.isArray(bs.defeated) ? bs.defeated : []).map(bossNum).filter(function(n, i, a) { return n !== null && a.indexOf(n) === i; }),
                     activeNum: bossNum(bs.activeNum),
                     phase: Math.round(clampNumber(bs.phase, 0, 2, 0)),
                     attemptDay: safeString(bs.attemptDay, '', 10) || null,
                     closedDay: safeString(bs.closedDay, '', 10) || null,
-                    closedCount: Math.round(clampNumber(bs.closedCount, 0, 2, 0)) // G2 (круг 11): фаз за сегодня, 2/день
+                    closedCount: Math.round(clampNumber(bs.closedCount, 0, 2, 0)), // G2 (круг 11): фаз за сегодня, 2/день
+                    introSeen: seen,
+                    rewardChoice: rc,
+                    pendingReward: bossNum(bs.pendingReward) // C5: босс ждёт выбора награды
                 };
             })(hero.bosses),
             scouts: (function(sc) { // Г2-3: лазутчик — {idx 0..19, readyDayKey} иначе null

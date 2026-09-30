@@ -66,7 +66,7 @@ function ndSnapshotChecksum(s) {
     }
     return ('0000000' + a.toString(16)).slice(-8) + ('0000000' + b.toString(16)).slice(-8);
 }
-const SCHEMA_VERSION = 12;
+const SCHEMA_VERSION = 13;
 var strongholds = null, army = null, siege = null;
 function strongholdCatalog() {
     return (typeof globalThis !== 'undefined' && globalThis.StrongholdData) || null;
@@ -192,6 +192,25 @@ MIGRATIONS[12] = function(data) {
             var n = Math.round(Number(data.siege[k]));
             data.siege[k] = (isFinite(n) && n > 0) ? Math.min(999, n) : 0;
         });
+    } catch(e) {}
+};
+// v12→v13 (Campaign 2.0 C5): босс-арки — поля HERO.bosses:
+//   introSeen [] — номера боссов с показанным лор-вступлением;
+//   rewardChoice {} — num → 'artifact'|'crown'|'ruin' (отсутствие записи = легаси-артефакт);
+//   pendingReward null — босс, ждущий выбора награды в модалке итогов.
+MIGRATIONS[13] = function(data) {
+    try {
+        if (!data || typeof data !== 'object') return;
+        var bs = (data.hero && typeof data.hero === 'object' && data.hero.bosses && typeof data.hero.bosses === 'object' && !Array.isArray(data.hero.bosses)) ? data.hero.bosses : null;
+        if (!bs) return; // боссов не было — ensureBossesState в app.js даст дефолты лениво
+        if (!Array.isArray(bs.introSeen)) bs.introSeen = [];
+        bs.introSeen = bs.introSeen.filter(function(n) { return Number.isInteger(n) && n >= 1 && n <= 11; })
+            .filter(function(n, i, a) { return a.indexOf(n) === i; });
+        if (!bs.rewardChoice || typeof bs.rewardChoice !== 'object' || Array.isArray(bs.rewardChoice)) bs.rewardChoice = {};
+        Object.keys(bs.rewardChoice).slice(0, 11).forEach(function(k) {
+            if (!/^\d+$/.test(k) || +k < 1 || +k > 11 || ['artifact', 'crown', 'ruin'].indexOf(bs.rewardChoice[k]) === -1) delete bs.rewardChoice[k];
+        });
+        if (!Number.isInteger(bs.pendingReward) || bs.pendingReward < 1 || bs.pendingReward > 11) bs.pendingReward = null;
     } catch(e) {}
 };
 function migrateSyncData(data) {

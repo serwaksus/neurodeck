@@ -213,7 +213,7 @@ test('Г2-1: sanitizeHero whitelist bosses — мусор → безопасна
     assert.equal(out.bosses.attemptDay, '2026-09-19');
     assert.equal(out.bosses.closedCount, 0, 'круг 11: closedCount в whitelist');
     const junk = SG.sanitizeHero({ bosses: 'garbage' });
-    assert.deepEqual(junk.bosses, { defeated: [], activeNum: null, phase: 0, attemptDay: null, closedDay: null, closedCount: 0 });
+    assert.deepEqual(junk.bosses, { defeated: [], activeNum: null, phase: 0, attemptDay: null, closedDay: null, closedCount: 0, introSeen: [], rewardChoice: {}, pendingReward: null }); // C5: расширение whitelist (босс-арки)
     const none = SG.sanitizeHero({});
     assert.deepEqual(none.bosses.defeated, []);
 });

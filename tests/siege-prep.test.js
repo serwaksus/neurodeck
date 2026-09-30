@@ -89,10 +89,10 @@ test('C4 sanitizeSiege: rams/ladders — счётчики 0..999, дефолт 0
     assert.equal(SG.sanitizeSiege({ rams: '4', ladders: 2.7 }).ladders, 3);
 });
 
-test('C4 миграция v11→v12: счётчики появляются с дефолтом 0, v = 12', () => {
+test('C4 миграция v11→v12: счётчики появляются с дефолтом 0, v = 13 (C5 поверх)', () => {
     const d = { v: 11, hero: {}, forged: [], siege: { week: 3, lastResult: 'fail', wkSkips: 1 } };
     IV.migrateSyncData(d);
-    assert.equal(d.v, 12);
+    assert.equal(d.v, 13);
     assert.equal(d.siege.week, 3, 'поле недели не тронуто');
     assert.equal(d.siege.rams, 0);
     assert.equal(d.siege.ladders, 0);
@@ -121,13 +121,13 @@ test('C4 миграция v12: idempotent — повторный прогон н
     assert.equal(JSON.stringify(d.siege), snap);
 });
 
-test('C4 цепочка v7→v12: полный путь миграций доводит осадный склад до схемы 12', () => {
+test('C4→C5 цепочка v7: полный путь миграций доводит осадный склад до текущей схемы', () => {
     const d = {
         v: 7, hero: { name: 'Мигрант', level: 5, gold: 100 }, stats: {}, forged: [], goals: [],
         inventory: { backpack: [], equipped: {} }, tasks: [], tractState: { regions: 2, building: null }
     };
     IV.migrateSyncData(d);
-    assert.equal(d.v, 12);
+    assert.equal(d.v, 13);
     assert.equal(d.siege.rams, 0);
     assert.equal(d.siege.ladders, 0);
     assert.equal(d.siege.week, 1);

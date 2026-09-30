@@ -89,6 +89,12 @@
 итого 18 файлов. Рендер: инлайн-SVG `<path fill="currentColor">` (карта ICON_PATHS
 в app.js, хелпер artIconHtml), эмодзи-фолбэк сохранён.
 
+Дополнение 30.09 (Campaign 2.0 C5 — босс-арки): портреты 11 Поверенных Тьмы
+(поле `artIcon` в BOSSES, рендер в bossCardHtml с эмодзи-фолбэком) — итого 29 файлов:
+
+- **Lorc** — animal-skull (I Гнилоух), anvil (III Кузень), crystal-cluster (IV Барон Соляных Руд), masked-spider (V Вдова), reaper-scythe (VI Жнец), bull (VII Стадо), wave-crest (VIII Прилив), ringing-bell (IX Хор), frostfire (X Морозный Кенти), crowned-skull (XI Царь-Облупленный)
+- **Delapouite** — swamp (II Мгла-над-Топью)
+
 Использование: силуэты через CSS-mask (`--art`), перекрашиваются ранговым цветом.
 Из оригиналов удалён чёрный фоновый прямоугольник (alpha-mask). Атрибуция по
 лицензии CC BY 3.0 — этот раздел и является кредитом.
