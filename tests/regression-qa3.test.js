@@ -36,7 +36,7 @@ test('QA3-H1: v10-сейв без поля v — strongholds/season/throne не 
     d.season.crownBonus = 4; d.throne = 5;
     delete d.v; // битый сейв: поле версии потеряно
     IV.migrateSyncData(d);
-    assert.equal(d.v, 11, 'v выставлен в текущую схему (11)');
+    assert.equal(d.v, 12, 'v выставлен в текущую схему (C4: v12)');
     assert.equal(d.strongholds.length, 20, '20 твердынь на месте');
     const captured = d.strongholds.filter(s => s.captured);
     assert.equal(captured.length, 6, 'захваты не потеряны (6/6, старый код давал 0/20)');
@@ -50,7 +50,7 @@ test('QA3-H1: v-строка / v:0 / v:NaN — без реплея (army не п
         const d = F.validSave({ version: 10 });
         d.v = badV;
         IV.migrateSyncData(d);
-        assert.equal(d.v, 11, 'v нормализован: ' + String(badV));
+        assert.equal(d.v, 12, 'v нормализован: ' + String(badV)); // C4: v12
         assert.equal(d.army.week, 3, 'army неделим миграцией (v=' + JSON.stringify(badV) + ')');
         assert.equal(d.season.num, 1, 'season на месте');
     }
@@ -59,7 +59,7 @@ test('QA3-H1: v-строка / v:0 / v:NaN — без реплея (army не п
 test('QA3-H1: легаси v6 по-прежнему мигрирует ВВЕРХ (фикс не сломал апгрейд)', () => {
     const d = F.validSave({ version: 6 });
     IV.migrateSyncData(d);
-    assert.equal(d.v, 11);
+    assert.equal(d.v, 12); // C4: v12
     assert.ok(Array.isArray(d.strongholds) && d.strongholds.length === 20, 'MIGRATIONS[8]: strongholds построены');
     assert.equal(d.strongholds.filter(s => s.captured).length, 4, 'tractState.regions=4 → 4 захвата');
     assert.ok(!('shards' in d.hero), 'MIGRATIONS[7]: легаси-поля героя удалены');

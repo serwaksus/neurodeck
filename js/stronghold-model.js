@@ -78,11 +78,14 @@
 
     // SPEC §4: победа при ratio > 1; attrition = clamp(0.30/ratio; 0.08; 0.30) × (1 − min(0.50; 0.01×agi)) × (П2 ? 0.8 : 1);
     // поражение: потери 10 + rand(0..20)%
+    // C4: осадные ресурсы (opt-in, без опций — формула SPEC байт-в-байт): opts.ladder — лестницы,
+    // +5% к ratio (влияет и на победу, и на attrition); opts.ram — таран, attrition ×0.9 в обеих ветвях.
     function assaultOutcome(armyPowerVal, defensePowerVal, opts) {
         opts = opts || {};
         var atk = Number(armyPowerVal); if (!isFinite(atk) || atk < 0) atk = 0;
         var def = Number(defensePowerVal); if (!isFinite(def) || def < 0) def = 0;
         var ratio = def > 0 ? atk / def : Infinity;
+        if (opts.ladder === true && isFinite(ratio)) ratio = ratio * 1.05; // C4: лестницы +5% к соотношению
         var win = ratio > 1;
         var attritionPct;
         if (win) {
@@ -94,6 +97,7 @@
             var rand = typeof opts.rand === 'function' ? opts.rand : Math.random;
             attritionPct = (10 + rand() * 20) / 100;
         }
+        if (opts.ram === true) attritionPct *= 0.9; // C4: таран — осадный расходник, −10% потерь
         var am = Number(opts.attritionMult); // Г1-2: veteran attrition ×0.7 (обе ветви)
         if (isFinite(am) && am > 0 && am !== 1) attritionPct = Math.max(0.01, Math.min(3, attritionPct * am));
         return { win: win, ratio: ratio, attritionPct: attritionPct };
@@ -279,6 +283,29 @@
     function provinceUpkeepMult(prov) { return provinceMult(prov, 'upkeepMult'); }
     function provinceSiegeMult(prov) { return provinceMult(prov, 'siegeMult'); }
 
+    // Campaign 2.0 C4: подготовка осады — подход недели (CAMPAIGN-2.0.md §3). Чистые модификаторы;
+    // сам выбор живёт только в сессии (app.js) и в сейв НЕ пишется — новая неделя всегда
+    // начинается со «Штурма». assault — норма; siege («Осада») — сила врага на неделе ×0.8,
+    // но гнев +1; trick («Хитрость») — гарнизон врага ×0.9, только в провинции 3 (Гниль).
+    // Неизвестный id → нормы «Штурма» (экономика не ломается опечаткой).
+    var SIEGE_APPROACHES = {
+        assault: { icon: '⚔', name: 'Штурм', desc: 'без модификаторов — как раньше' },
+        siege:   { icon: '🏰', name: 'Осада', desc: 'сила врага на неделе −20%, гнев +1', enemyMult: 0.8, wrathDelta: 1 },
+        trick:   { icon: '🎭', name: 'Хитрость', desc: 'Гниль (пров. 3): гарнизон врага −10%' }
+    };
+    function approachMeta(id) { return SIEGE_APPROACHES[id] || SIEGE_APPROACHES.assault; }
+    function approachEnemyMult(id) {
+        var m = Number(approachMeta(id).enemyMult);
+        return (isFinite(m) && m > 0 && m <= 1) ? m : 1;
+    }
+    function approachWrathDelta(id) {
+        var w = Number(approachMeta(id).wrathDelta);
+        return (isFinite(w) && w > 0) ? Math.round(w) : 0;
+    }
+    function approachGarrisonMult(id, prov) {
+        return (id === 'trick' && Number(prov) === 3) ? 0.9 : 1;
+    }
+
     return {
         armyPower: armyPower,
         defensePower: defensePower,
@@ -294,6 +321,11 @@
         provinceIncomeMult: provinceIncomeMult,
         provinceUpkeepMult: provinceUpkeepMult,
         provinceSiegeMult: provinceSiegeMult,
+        SIEGE_APPROACHES: SIEGE_APPROACHES,
+        approachMeta: approachMeta,
+        approachEnemyMult: approachEnemyMult,
+        approachWrathDelta: approachWrathDelta,
+        approachGarrisonMult: approachGarrisonMult,
         TIER_KEYS: TIER_KEYS
     };
 });

@@ -66,7 +66,7 @@ function ndSnapshotChecksum(s) {
     }
     return ('0000000' + a.toString(16)).slice(-8) + ('0000000' + b.toString(16)).slice(-8);
 }
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 12;
 var strongholds = null, army = null, siege = null;
 function strongholdCatalog() {
     return (typeof globalThis !== 'undefined' && globalThis.StrongholdData) || null;
@@ -179,6 +179,19 @@ MIGRATIONS[11] = function(data) {
         data.TECH_PTS = Math.max(0, Math.min(999, Math.round(data.TECH_PTS))); // Г5-Т
         if (typeof data.TECH_IDEA !== 'undefined' && data.TECH_IDEA !== null && (typeof data.TECH_IDEA !== 'string' || ['idea_might', 'idea_wealth', 'idea_order'].indexOf(data.TECH_IDEA) < 0)) data.TECH_IDEA = null; // Г5-Т2
         if (data.TECH_ACTIVES && typeof data.TECH_ACTIVES === 'object' && !Array.isArray(data.TECH_ACTIVES)) { var _ca = {}; Object.keys(data.TECH_ACTIVES).slice(0, 4).forEach(function(k) { if (typeof data.TECH_ACTIVES[k] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.TECH_ACTIVES[k])) _ca[k] = data.TECH_ACTIVES[k]; }); data.TECH_ACTIVES = _ca; } // Г5-Т3 Ф2
+    } catch(e) {}
+};
+// v11→v12 (Campaign 2.0 C4): осадные ресурсы — счётчики siege.rams / siege.ladders (дефолт 0).
+// Подход недели («Штурм/Осада/Хитрость») в сейве НЕ хранится: выбор в UI применяется в тике
+// и живёт только сессию, поэтому для него полей нет (план очереди D–H, пакет F).
+MIGRATIONS[12] = function(data) {
+    try {
+        if (!data || typeof data !== 'object') return;
+        if (!data.siege || typeof data.siege !== 'object' || Array.isArray(data.siege)) data.siege = { week: 1, lastResult: null };
+        ['rams', 'ladders'].forEach(function(k) {
+            var n = Math.round(Number(data.siege[k]));
+            data.siege[k] = (isFinite(n) && n > 0) ? Math.min(999, n) : 0;
+        });
     } catch(e) {}
 };
 function migrateSyncData(data) {

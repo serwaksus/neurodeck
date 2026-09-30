@@ -99,7 +99,7 @@ function v7Fixture(regions) {
 test('миграция v7→v8: regions=5 → 5 captured, золото/карточки/задачи целы', () => {
     const d = v7Fixture(5);
     IV.migrateSyncData(d);
-    assert.equal(d.v, 11, 'цепочка миграций доводит до текущей схемы');
+    assert.equal(d.v, 12, 'цепочка миграций доводит до текущей схемы (C4: v12)');
     assert.equal(d.strongholds.length, 20);
     d.strongholds.forEach((s, i) => {
         assert.equal(s.id, DATA.STRONGHOLDS[i].id, 'порядок/ID соответствуют каталогу');
@@ -109,7 +109,7 @@ test('миграция v7→v8: regions=5 → 5 captured, золото/карт�
         assert.deepEqual(s.corruption, { stage: 'ok', debtDays: 0 });
     });
     assert.deepEqual(d.army, { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 });
-    assert.deepEqual(d.siege, { week: 1, lastResult: null });
+    assert.deepEqual(d.siege, { week: 1, lastResult: null, rams: 0, ladders: 0 }); // C4: v12 добавляет осадный склад
     assert.equal(d.hero.gold, 4321, 'золото цело (ADR §10)');
     assert.equal(d.forged.length, 1, 'карточки целы');
     assert.equal(d.tasks.length, 1);
@@ -218,7 +218,7 @@ test('sanitizeArmy: дефолты, clamp 0..1e6, неделя 0..520, мусо�
 });
 
 test('sanitizeSiege: week 1..520, lastResult — только плоские примитивы', () => {
-    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false });
+    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }); // C4: счётчики склада всегда в выходе
     assert.equal(SG.sanitizeSiege({ stance: 'defend' }).stance, 'defend', 'Г4: валидная стойка проходит');
     assert.equal(SG.sanitizeSiege({ stance: 'hack' }).stance, null, 'Г4: мусорная стойка → null');
     assert.equal(SG.sanitizeSiege({}).stance, undefined, 'Г4: без стойки поле лениво (байт-стабильный раундтрип)');

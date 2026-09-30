@@ -163,7 +163,9 @@ case 'treasury-info': showTreasuryBreakdown(); break;
 case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
 case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
 case 'counter-siege': requestCounterSiege(); break;
-case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
+	case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
+	case 'km-approach': requestApproach(String(el.dataset.approach || '')); break; // C4: подход недели (не пишется в сейв)
+	case 'sh-siege-store': buySiegeStore(String(el.dataset.store || '')); break; // C4: осадные ресурсы (схема v12)
 case 'km-edict': requestEdict(parseInt(el.dataset.idx), String(el.dataset.edict || '')); break; // Г4: эдикт провинции
 case 'km-chronicle-open': showChronicle(); break; // Г5-Ф: летопись
 case 'km-chronicle-close': closeChronicle(); break; // Г5-Ф
@@ -2544,7 +2546,7 @@ function performAscension(keepId) { // ядро сброса: сохранить
     HERO.scouts = null; // тени старого мира сгорают
     strongholds = null; ensureStrongholdState(); // твердыни/постройки/гарнизоны — заново
     army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-    siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false };
+    siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }; // C4: осадный склад обнуляется
     hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
     dailyQuests = null; dailyEvent = null; throne = 0;
     lastDayReset = null; lastWeekReset = getThisMondayKey();
@@ -2789,7 +2791,7 @@ return -1;
 function runWeeklySiege() {
 ensureStrongholdState();
 if (capturedCount() === 0) { siege.week = 1; return; }
-var wrath = Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0));
+var wrath = Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + approachWrathDeltaNow()); // C4: «Осада» — гнев +1
 var rows = [];
 var fell = false;
 var hitMult = 1;
@@ -2803,7 +2805,7 @@ var def = STRONGHOLDS[t];
     garDef = Math.round(garDef * synergyDefMult(t)); // Г1-3: df-четвёрка в твердыне +5% обороны
     garDef = Math.round(garDef * stanceDefMult()); // Г4: стойка недели (Оборона +20% / Экономия −10%)
     garDef = Math.round(garDef * techDefMult()); // Г5-Т: Дисциплина гарнизонов +10%
-var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult()); // Г2-5: враги +25% силы за круг вознесения
+var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult() * approachEnemyMultNow()); // Г2-5: враги +25% силы за круг вознесения; C4: «Осада» — сила врага −20%
 var _rmW = 0, _pcW = 0;
 [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rmW += provResourceMult(p); _pcW++; } });
 if (_pcW > 0) power = Math.round(power / (_rmW / _pcW)); // Г4: склады снабжения — удар врага слабее на 2%/ед ресурса (среднее по провинциям)
@@ -2911,7 +2913,7 @@ var overlay = document.getElementById('confirmOverlay');
 var yes = document.getElementById('confirmYes'), no = document.getElementById('confirmNo');
 var oldYes = yes.textContent, oldNo = no.textContent;
 document.getElementById('confirmTitle').textContent = 'Тактика штурма';
-document.getElementById('confirmBody').innerHTML = '⚔ «' + esc(STRONGHOLDS[idx].name) + '» · ' + f.line + '<br><span style="color:var(--text-dim)">⚔ Штурм — норма · 🪶 Ложный отход: урон −20%, потери ×0.7 · 🔥 Натиск: урон +25%, потери ×2</span><br><span style="color:var(--blood-bright)">ESC — штурмовать по-обычному.</span>';
+document.getElementById('confirmBody').innerHTML = '⚔ «' + esc(STRONGHOLDS[idx].name) + '» · ' + f.line + '<br><span style="color:var(--text-dim)">' + f.lossLine + '</span><br><span style="color:var(--text-dim)">⚔ Штурм — норма · 🪶 Ложный отход: урон −20%, потери ×0.7 · 🔥 Натиск: урон +25%, потери ×2</span><br><span style="color:var(--blood-bright)">ESC — штурмовать по-обычному.</span>';
 yes.textContent = '⚔ Штурм'; no.textContent = '🪶 Ложный отход';
 var third = document.createElement('button');
 third.className = no.className;
@@ -2935,9 +2937,15 @@ document.addEventListener('keydown', onKey);
 }
 function assaultForecast(idx) {
     var atk = Math.round(SM.armyPower(army.units) * techArmyMult() * (1 + 0.02 * STATS.str.value) * doctrineAtkMult() * synergyAtkMult() * techAtkMult()); // Г1-2 atk-доктрина (пропуск закрыт) + Г1-3 Кузня-Собор +5% + Г5-Т Осадный парк/Знамёна + Г5-Т2 Легионы
-var defN = STRONGHOLDS[idx].total;
-if (hasSpecialOk('sp1')) return { atk: atk, defN: defN, line: '⚔ ' + atk + ' против 🛡 ' + defN + (atk > defN ? ' · превосходство' : ' · сил мало') };
-return { atk: atk, defN: defN, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + Math.round(atk * 1.25) + ' против 🛡 ' + defN + ' (Гильдия Разведчиков даст точные числа)' };
+	var defN = Math.round(STRONGHOLDS[idx].total * approachGarrisonMultNow(STRONGHOLDS[idx].prov)); // C4: «Хитрость» — гарнизон врага −10% в пров. 3
+	// C4: worst-case превью — attrition-формула модели при текущем ratio + честный диапазон неудачи 10–30%
+	var _w = SM.assaultOutcome(atk, defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), ram: (siege.rams || 0) > 0, ladder: (siege.ladders || 0) > 0 });
+	var _lp = _w.win
+	    ? '📉 Потери при победе ≈' + Math.max(1, Math.round(_w.attritionPct * 100)) + '% · при неудаче 10–30%'
+	    : '📉 Соотношение ' + Math.round(_w.ratio * 100) + '% < 100% — при неудаче потери 10–30%';
+	if ((siege.rams || 0) > 0 || (siege.ladders || 0) > 0) _lp += ' · 🧰 склад будет потрачен';
+	if (hasSpecialOk('sp1')) return { atk: atk, defN: defN, lossLine: _lp, line: '⚔ ' + atk + ' против 🛡 ' + defN + (atk > defN ? ' · превосходство' : ' · сил мало') };
+	return { atk: atk, defN: defN, lossLine: _lp, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + Math.round(atk * 1.25) + ' против 🛡 ' + defN + ' (Гильдия Разведчиков даст точные числа)' };
 }
 // ===================== Campaign 2.0 C2: обход развилок фронтира (CAMPAIGN-2.0.md §1) =====================
 // Цель захвата = любой незахваченный next-узел захваченных твердынь (граф C1), не только линейный
@@ -2995,7 +3003,7 @@ if (capturedCount() >= 3) { // Г1-4: с 3-й твердыни — выбор т
 requestTactic(idx, f).then(function(t) { if (t) doAssault(idx, f, t); });
 return;
 }
-dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + '<br><span style="color:var(--blood-bright)">Поражение = отступление с потерями 10–30%.</span>').then(function(ok) {
+dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + '<br><span style="color:var(--blood-bright)">' + f.lossLine + '</span>').then(function(ok) {
 if (ok) doAssault(idx, f);
 });
 };
@@ -3008,7 +3016,9 @@ siege.assaultDay = getMSKDayKey();
 if (typeof updateMainButton === 'function') updateMainButton(); // штурм использован — CTA прячется до завтра
 var _stA = stanceAtkMult(); // Г4: стойка недели — Штурм +15% / Экономия −10%
 dqProgress('assault');
-var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc) * _stA), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) * bossArtifactMult('attrition', STRONGHOLDS[idx].prov) * techAttrMult() }); // Г1-2: veteran ×0.7 · Г1-4: тактика · Г2-1: артефакт −10% потерь (пров.) · Г4: стойка · Г5-Т: свитки ×0.9
+var _ram = (siege.rams || 0) > 0; if (_ram) siege.rams--; // C4: осадный склад тратится при штурме
+var _lad = (siege.ladders || 0) > 0; if (_lad) siege.ladders--;
+var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc) * _stA), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, ram: _ram, ladder: _lad, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) * bossArtifactMult('attrition', STRONGHOLDS[idx].prov) * techAttrMult() }); // Г1-2: veteran ×0.7 · Г1-4: тактика · Г2-1: артефакт −10% потерь (пров.) · Г4: стойка · Г5-Т: свитки ×0.9 · C4: таран/лестницы
 var lostTotal = 0;
 SM.TIER_KEYS.forEach(function(t) {
 var n = army.units[t] || 0;
@@ -3279,7 +3289,7 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 // Ревизия 30.09 (economy-sim аудит): раньше суббота давала 7, а ветка d===0 («Осада сегодня»)
 // была недостижима — тост срабатывал только по четвергам. Теперь: Вс→0, Пн→6 … Пт→2, Сб→1.
 function daysToSiegeNow(ts) { var dow = new Date((ts || Date.now()) + 3 * 3600000).getUTCDay(); return dow === 0 ? 0 : 7 - dow; }
-function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0)); } // Г5-Т2: Железный Закон — кап гнева 7
+function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + ((typeof approachWrathDeltaNow === 'function') ? approachWrathDeltaNow() : 0)); } // Г5-Т2: Железный Закон — кап гнева 7; C4: «Осада» честно показывает +1 гнев (typeof-гвард: extract-харнессы тянут функцию поодиночке)
 /* ===================== Г4 «Total War: управление провинциями» — ядро (чистые функции) ===================== */
 function ensureSeasonFields(k) { var s = ensureSeason(); if (k) { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; } return s; } // Г4: материализуем ТОЛЬКО записываемый контейнер — байт-стабильный раундтрип сейвов
 function provKey(p) { return String(p); }
@@ -3317,6 +3327,48 @@ function requestStance(stanceId) {
   siege.stance = stanceId;
   showToast('🎚 Стойка недели: ' + STANCES[stanceId].name, STANCES[stanceId].desc, 'save');
   haptic('light'); saveSoon(); renderStrongholds();
+}
+/* ===================== Campaign 2.0 C4: подготовка осады (подход недели + осадный склад) ===================== */
+// Подход НЕ пишется в сейв: выбор в UI → применение в тике (недельная осада / штурм); новая неделя
+// и перезагрузка всегда начинают со «Штурма» (норма). Модификаторы — чистые функции модели.
+var siegeApproach = 'assault';
+function weekApproach() {
+  return (SM && SM.SIEGE_APPROACHES && SM.SIEGE_APPROACHES[siegeApproach]) ? siegeApproach : 'assault';
+}
+function approachEnemyMultNow() { return (SM && typeof SM.approachEnemyMult === 'function') ? SM.approachEnemyMult(weekApproach()) : 1; }
+function approachWrathDeltaNow() { return (SM && typeof SM.approachWrathDelta === 'function') ? SM.approachWrathDelta(weekApproach()) : 0; }
+function approachGarrisonMultNow(prov) { return (SM && typeof SM.approachGarrisonMult === 'function') ? SM.approachGarrisonMult(weekApproach(), prov) : 1; }
+function requestApproach(approachId) {
+  if (!SM || !SM.SIEGE_APPROACHES || !SM.SIEGE_APPROACHES[approachId]) return;
+  if (weekApproach() === approachId) return;
+  siegeApproach = approachId;
+  var meta = SM.approachMeta(approachId);
+  showToast('🧭 Подход недели: ' + meta.name, meta.desc + ' · действует до воскресной осады', 'save');
+  haptic('light'); renderStrongholds();
+}
+function buySiegeStore(kind) { // C4: лестницы/таран — по 25💰, тратятся при следующем штурме (siege.rams/ladders, схема v12)
+  ensureStrongholdState();
+  if (kind !== 'ram' && kind !== 'ladder') return;
+  var COST = 25;
+  if ((HERO.gold || 0) < COST) { showToast('💰 Мало золота', 'Осадный ресурс стоит ' + COST + ' 💰', 'blood'); sfxError(); return; }
+  HERO.gold -= COST;
+  if (kind === 'ram') siege.rams = Math.min(999, (siege.rams || 0) + 1);
+  else siege.ladders = Math.min(999, (siege.ladders || 0) + 1);
+  showToast('🧰 Осадный склад', kind === 'ram' ? '🐏 Таран: −10% потерь при следующем штурме' : '🪜 Лестницы: +5% к соотношению при следующем штурме', 'save');
+  sfxEquip(); haptic('light');
+  renderStrongholds(); updateHeroUI(); saveGameState();
+}
+function siegePrepBlockHtml() { // C4: панель подготовки — подход недели + покупка осадных ресурсов
+  var cat = (SM && SM.SIEGE_APPROACHES) ? SM.SIEGE_APPROACHES : { assault: { icon: '⚔', name: 'Штурм', desc: 'без модификаторов' }, siege: { icon: '🏰', name: 'Осада', desc: 'сила врага −20%, гнев +1' }, trick: { icon: '🎭', name: 'Хитрость', desc: 'пров. 3: гарнизон врага −10%' } };
+  var cur = weekApproach();
+  var row = '<div class="km-stance-row">' + Object.keys(cat).map(function(aid) {
+    var a = cat[aid], act = cur === aid;
+    return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-approach" data-approach="' + aid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + a.icon + '</span><span class="km-stance-name">' + a.name + '</span><span class="km-stance-desc">' + a.desc + '</span></button>';
+  }).join('') + '</div>';
+  var ramN = siege.rams || 0, ladN = siege.ladders || 0;
+  var store = '<div class="sh-trade" style="margin:0 0 6px">🧰 Осадный склад: 🐏 таран ×' + ramN + ' (−10% потерь) · 🪜 лестницы ×' + ladN + ' (+5% к соотношению) — тратятся при штурме</div>' +
+    '<div style="margin:0 0 12px"><button class="sh-mini" data-action="sh-siege-store" data-store="ram">🐏 Таран 25💰</button> <button class="sh-mini" data-action="sh-siege-store" data-store="ladder">🪜 Лестницы 25💰</button></div>';
+  return '<div class="sh-sec-title">🧭 Подход недели — подготовка осады</div>' + row + store;
 }
 var EDICTS = {
   tax:   { icon: '💰', name: 'Военный налог',   desc: 'налоги провинции ×1.25, порядок −2/день',      cost: 150, taxMult: 1.25, orderPerDay: -2 },
@@ -3912,6 +3964,7 @@ html += '<div class="km-stance-row">' + '<button class="km-stance km-chron-btn" 
   var st = STANCES[sid], act = weekStance() === sid;
   return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-stance" data-stance="' + sid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + st.icon + '</span><span class="km-stance-name">' + st.name + '</span><span class="km-stance-desc">' + st.desc + '</span></button>';
 }).join('') + '</div>';
+html += siegePrepBlockHtml(); // C4: подготовка осады — подход недели + осадный склад
 // ФАЗА E: карта королевства заменяет ленту провинций (панели твердыни не тронуты)
 html += kingdomMapHtml(daysToSiege);
 // Фронт: штурмовая карточка под картой (штурм остаётся доступным из обзорного состояния)
@@ -5158,6 +5211,7 @@ lastWeekReset = currentMonday;
 showToast('🗓 Новая неделя', 'Путь продолжается', 'save');
 recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
 runWeeklySiege();
+siegeApproach = 'assault'; // C4: подход недели сгорает вместе с неделей — новая начинается со «Штурма»
 siege.wkSkips = 0; siege.wkTaskFails = 0;
   siege.wkSkips = Math.max(0, siege.wkSkips - techWrathWeekReduction()); siege.wkTaskFails = Math.max(0, siege.wkTaskFails - techWrathWeekReduction()); // Г5-Т3: Обряды Усмирения −1/нед к источникам гнева
   siege.retriedThisWeek = false; // #95: контрштурм доступен снова
@@ -5725,7 +5779,7 @@ TASKS = []; taskIdCounter = 1;
 GOALS = []; goalIdCounter = 1;
 strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false };
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }; // C4: осадный склад обнуляется
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();
 xpHistory = []; bloodOath = null;
@@ -5747,7 +5801,7 @@ HERO.lastSessionAt = Date.now(); HERO.dailyUniqueStats = {}; HERO.cardHistory = 
 Object.keys(STATS).forEach(function(k) { STATS[k].value = 3; STATS[k].attributePoints = 0; });
 strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false };
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }; // C4: осадный склад обнуляется
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 TASKS = []; taskIdCounter = 1;
 dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();

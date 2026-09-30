@@ -1,4 +1,4 @@
-// NeuroDeck QA: QA-Data — целостность данных (сейвы v9, миграции v7→v11, 5 слоёв защиты, экспорт/импорт, мульти-вкладка, квота, вайп).
+// NeuroDeck QA: QA-Data — целостность данных (сейвы v9, миграции v7→v12, 5 слоёв защиты, экспорт/импорт, мульти-вкладка, квота, вайп).
 // Роль: .opencode/agent/qa-data.md. Каркас — tools/playtest-acceptance.cjs (http-сервер, step/shot, ловушка ошибок консоли).
 // Продукт НЕ меняется: только чтение состояния через прод-функции (saveGameState/applySyncData/exportJson/...).
 const { chromium } = require('@playwright/test');
@@ -144,7 +144,7 @@ async function nodePhase() {
       taskIdCounter: 2, tractState: { regions: 7, building: null },
     };
     IV.migrateSyncData(d);
-    if (d.v !== 11) throw new Error('v: ' + d.v);
+    if (d.v !== 12) throw new Error('v: ' + d.v); // C4: v12
     if (!Array.isArray(d.strongholds) || d.strongholds.length !== 20) throw new Error('strongholds: ' + (d.strongholds || []).length);
     const cap = d.strongholds.filter((s) => s.captured).length;
     if (cap !== 7) throw new Error('captured: ' + cap);
@@ -171,7 +171,7 @@ async function nodePhase() {
       tasks: [], taskIdCounter: 1,
     };
     IV.migrateSyncData(d);
-    if (d.v !== 11) throw new Error('v: ' + d.v);
+    if (d.v !== 12) throw new Error('v: ' + d.v); // C4: v12
     const h = d.hero;
     if (h.shards !== undefined || h.flasks !== undefined || h.hp !== undefined || h.isHollow !== undefined || h.estus !== undefined) throw new Error('легаси-мусор в hero остался: ' + JSON.stringify(h));
     if (d.bossHp !== undefined || d.bossKills !== undefined || d.bossRagePoints !== undefined) throw new Error('легаси-мусор верхнего уровня остался');
@@ -196,7 +196,7 @@ async function nodePhase() {
       siege: { week: 2, lastResult: null },
     };
     IV.migrateSyncData(d);
-    if (d.v !== 11) throw new Error('v: ' + d.v);
+    if (d.v !== 12) throw new Error('v: ' + d.v); // C4: v12
     if (!d.season || d.season.num !== 1) throw new Error('season: ' + JSON.stringify(d.season));
     const sn = d.season.snapshot;
     const today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
@@ -326,7 +326,7 @@ async function nodePhase() {
       gold: HERO.gold, cards: FORGED.length, cap: strongholds.filter((s) => s.captured).length,
       season: season.num, quests: dailyQuests && dailyQuests.progress.q1,
     }));
-    if (!st.saved || st.v !== 11) throw new Error('сейв v11 не записан: ' + JSON.stringify(st));
+    if (!st.saved || st.v !== 12) throw new Error('сейв v12 не записан: ' + JSON.stringify(st)); // C4: v12
     if (st.gold !== 777 || st.cards !== 3 || st.cap !== 2 || st.season !== 2 || st.quests !== 2) throw new Error('состояние: ' + JSON.stringify(st));
   });
 
@@ -369,7 +369,7 @@ async function nodePhase() {
         savedNoShards: !JSON.stringify(saved).includes('"shards"'),
       };
     });
-    if (st.v !== 11) throw new Error('schemaVersion: ' + st.v);
+    if (st.v !== 12) throw new Error('schemaVersion: ' + st.v); // C4: v12
     if (st.cap !== 7) throw new Error('захвачено: ' + st.cap);
     if (st.gold !== 555) throw new Error('золото: ' + st.gold);
     if (st.shards !== undefined || st.hollow !== undefined || st.boss !== undefined) throw new Error('мусор остался: ' + JSON.stringify(st));
@@ -508,7 +508,7 @@ async function nodePhase() {
     }));
     if (st.cards !== 3) throw new Error('карточки не восстановлены: ' + st.cards);
     if (st.gold !== 777 || st.cap !== 2 || st.season !== 2) throw new Error('восстановлено неполно: ' + JSON.stringify(st));
-    if (st.savedV !== null && st.savedV !== 11) throw new Error('сейв после восстановления не v11: ' + st.savedV);
+    if (st.savedV !== null && st.savedV !== 12) throw new Error('сейв после восстановления не v12: ' + st.savedV); // C4: v12
     await shot(pg, 'b8_cards_backup_restore');
   });
 
