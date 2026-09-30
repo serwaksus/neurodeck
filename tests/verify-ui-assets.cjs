@@ -22,8 +22,8 @@ for (const rel of process.argv.slice(2)) {
         }
     } else if (rel.endsWith('.html')) {
         const pins = (src.match(/v=\d+/g) || []);
-        fileOk = fileOk && pins.length === 10 && new Set(pins).size === 1 && !src.includes('?v=79'); // фаза 0 «Trust»: +telemetry.js (9 было в волне 3)
-        checks.push('pins x' + pins.length + '/10 unique=' + new Set(pins).size);
+        fileOk = fileOk && pins.length === 11 && new Set(pins).size === 1 && !src.includes('?v=80'); // фаза 2: +event-bus.js (10 было в фазе 0)
+        checks.push('pins x' + pins.length + '/11 unique=' + new Set(pins).size);
         const totem = src.includes('id="totemCard"');
         fileOk = fileOk && totem;
         checks.push('totemCard ' + (totem ? 'ok' : 'MISSING'));

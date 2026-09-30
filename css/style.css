@@ -669,11 +669,19 @@ letter-spacing: 1px;
     font-weight: bold;
     padding: 2px 6px;
     border-radius: 3px;
-    z-index: 10;
+    z-index: 5; /* ниже угловых кнопок: бейдж не должен перекрывать edit/delete (P2 из brief) */
     box-shadow: 0 2px 8px rgba(199,62,77,0.6);
     letter-spacing: 0.5px;
     text-transform: uppercase;
     white-space: nowrap;
+    /* a11y-фикс: на узких карточках nowrap-бейдж дотягивался до .card-corner-actions
+       и глотал тапы по кнопкам редактирования. Теперь он не шире свободной зоны
+       и сам не ловит указатель — только информация. */
+    max-width: calc(100% - 160px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    box-sizing: border-box;
 }
 .dashboard-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.03); }
 .dashboard-row:last-child { border-bottom: none; }

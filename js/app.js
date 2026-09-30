@@ -5698,6 +5698,17 @@ window.__tgReady = function(){ try{ var tg=window.Telegram&&window.Telegram.WebA
 // фирменную тьму в любой теме клиента; шапка/фон TG всегда #0a0a0f (см. __tgReady выше).
 function applyTelegramTheme(tg) { try { document.body.classList.remove('tg-light'); } catch (e) {} }
 window.__tgReady();
+
+// Фаза 2 (шаг state-store №1): UI реагирует на событие состояния, а не вызывается из storage.
+// Полный состав рендеров — 1:1 с прежним прямым блоком applySyncData (никто не потерян).
+if (typeof NDDBus !== 'undefined' && NDDBus && typeof NDDBus.on === 'function') {
+    NDDBus.on('nd:state-applied', function () {
+        renderCards(); renderStats(); updateHeroUI(); renderGoals();
+        renderBackpack(); renderSlots(); updateTotalBonuses();
+        renderStrongholds(); updateStrongholdProgress();
+        renderTasks(); renderDashboard();
+    });
+}
 window.addEventListener('load', function(){ window.__tgReady(); });
 if (FORGED.length === 0) {
     // Пустая колода — новый игрок ИЛИ очищенное хранилище (ITP-чистка iOS после

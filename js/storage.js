@@ -1029,10 +1029,10 @@ return { id: (Number.isFinite(Number(t.id)) && Number(t.id) >= 1) ? Math.min(100
 TASKS = TASKS.filter(function(t, i) { return TASKS.findIndex(function(x) { return x.id === t.id; }) === i; });
 if (typeof data.taskIdCounter === 'number') taskIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.taskIdCounter, 1), TASKS.reduce(function(m, t) { return Math.max(m, t.id); }, 0) + 1);
 if (!skipRender) {
-renderCards(); renderStats(); updateHeroUI(); renderGoals();
-renderBackpack(); renderSlots(); updateTotalBonuses();
-renderStrongholds(); updateStrongholdProgress();
-renderTasks(); renderDashboard();
+// Фаза 2 (шаг state-store №1): storage больше не зовёт UI напрямую — app.js
+// подписан на 'nd:state-applied' (js/event-bus.js). typeof-гвард обязателен:
+// extract-харнессы тестов исполняют storage.js без шины.
+if (typeof NDDBus !== 'undefined' && NDDBus && typeof NDDBus.emit === 'function') NDDBus.emit('nd:state-applied', { gen: (typeof data.gen === 'number') ? data.gen : null, savedAt: data.savedAt || null });
 }
 }
 function resetAllData() {
@@ -1081,9 +1081,8 @@ if (typeof window !== 'undefined' && window.addEventListener) {
                 var data = JSON.parse(localStorage.getItem('neurodeck_full_save') || 'null');
                 if (!data || typeof applySyncData !== 'function') return;
                 applySyncData(data, true);
-                if (typeof renderCards === 'function') {
-                    renderCards(); renderDashboard(); renderStrongholds(); renderTasks(); renderStats(); renderGoals(); updateHeroUI(); updateStrongholdProgress();
-                }
+                // фаза 2: рендер через шину (storage не знает о UI-функциях)
+                if (typeof NDDBus !== 'undefined' && NDDBus && typeof NDDBus.emit === 'function') NDDBus.emit('nd:state-applied', { gen: (typeof data.gen === 'number') ? data.gen : null, savedAt: data.savedAt || null });
             } catch (err) {}
         }, 400);
     });
