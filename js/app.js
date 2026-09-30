@@ -794,8 +794,8 @@ rankUpHappened = true;
 sfxRankUp(); haptic('medium');
 updateStrongholdProgress();
 setTimeout(() => triggerRankUpEffect(card, oldRank, nextRank, x, y), 300);
-var rankUpCard = document.querySelector('[data-id="' + card.id + '"]');
-if (rankUpCard) { rankUpCard.closest('.card').classList.add('rankup-glow'); setTimeout(function() { rankUpCard.closest('.card').classList.remove('rankup-glow'); }, 1800); }
+var rankUpCard = document.querySelector('.card [data-id="' + card.id + '"]'); // scoped: первый [data-id] в DOM — кнопка «Приоритет дня» на dashboardBar, она вне .card
+if (rankUpCard) { var glowEl = rankUpCard.closest('.card'); if (glowEl) { glowEl.classList.add('rankup-glow'); setTimeout(function() { glowEl.classList.remove('rankup-glow'); }, 1800); } } // glowEl снят один раз: rankUpCard мог быть пере-рендерен к моменту таймаута
 } else {
 card.mastery = card.masteryThreshold;
 showToast('👑 МАКСИМУМ!', card.name + ' достигла SSS', 'crit');
