@@ -15,7 +15,7 @@ const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
 function makeBus() {
     const warns = [];
     const fakeConsole = { warn: (m) => warns.push(m) };
-    const fn = new Function('console', src + '; return (typeof window !== "undefined") ? window.NDBus : globalThis.NDBus;')(fakeConsole);
+    const fn = new Function('console', src + '; return (typeof window !== "undefined") ? window.NDDBus : globalThis.NDDBus;')(fakeConsole);
     return { bus: fn, warns };
 }
 

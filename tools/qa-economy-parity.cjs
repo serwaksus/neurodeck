@@ -504,5 +504,9 @@ async function main() {
   L1.filter((x) => !x.pass).forEach((x) => console.log(`  FAIL [${x.group}] ${x.name}: ожидалось ${JSON.stringify(x.expected)}, факт ${JSON.stringify(x.actual)} ${x.note}`));
   console.log(`Инварианты кампании: нарушений ${L2.violations.length}${L2.violations.length ? ': ' + L2.violations.join('; ') : ''}`);
   console.log(`PageErrors: ${report.pageErrors.length}${report.pageErrors.length ? '\n  ' + report.pageErrors.slice(0, 5).join('\n  ') : ''}`);
-  process.exit(skipInfra ? 2 : 0);
+  // Аудит 30.09 (P1): exit-код обязан блокировать FAIL — иначе CI зелёный при сломанном parity.
+  // SKIP-infra (браузер/порт недоступны) остаётся advisory exit 2, как и было.
+  const l1Fails = total - passed;
+  const l2Violations = L2.violations.length;
+  process.exit(skipInfra ? 2 : (l1Fails > 0 || l2Violations > 0 ? 1 : 0));
 })();

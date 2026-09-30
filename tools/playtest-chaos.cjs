@@ -561,5 +561,7 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
 
   fs.writeFileSync(`${OUT}/findings.json`, JSON.stringify({ findings, evReport, crashes, hangs, results }, null, 2));
   await b.close(); srv.close();
-  process.exit(crashes.length > 0 ? 1 : 0);
+  // Аудит 30.09 (P1): exit-код обязан учитывать FAIL шагов, а не только краши страницы —
+  // иначе «зелёный» прогон маскирует проваленные проверки. SKIP-infra (exit 3 выше) не тронут.
+  process.exit(crashes.length > 0 || fails > 0 ? 1 : 0);
 })().catch((e) => { console.error('FATAL:', e); process.exit(2); });

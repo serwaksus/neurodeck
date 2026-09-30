@@ -13,7 +13,7 @@
             if (typeof evt !== 'string' || !evt || typeof fn !== 'function') return function () {};
             var arr = listeners[evt] = listeners[evt] || [];
             if (arr.length >= MAX_LISTENERS_PER_EVENT) {
-                try { console.warn('[NDBus] слишком много подписчиков на ' + evt + ' (>=' + MAX_LISTENERS_PER_EVENT + ') — вероятна утечка'); } catch (e) {}
+                try { console.warn('[NDDBus] слишком много подписчиков на ' + evt + ' (>=' + MAX_LISTENERS_PER_EVENT + ') — вероятна утечка'); } catch (e) {}
             }
             arr.push(fn);
             return function off() { // отписка: возврат функцией, как в современных шинах
@@ -26,13 +26,13 @@
             if (!arr || !arr.length) return;
             arr.slice().forEach(function (fn) {
                 try { fn(payload || {}); } catch (e) {
-                    try { console.warn('[NDBus] подписчик ' + evt + ' упал:', e && e.message); } catch (e2) {}
+                    try { console.warn('[NDDBus] подписчик ' + evt + ' упал:', e && e.message); } catch (e2) {}
                 }
             });
         },
         listenerCount: function (evt) { return (listeners[evt] || []).length; },
         _events: function () { return Object.keys(listeners); } // диагностика/тесты
     };
-    if (typeof window !== 'undefined') window.NDBus = bus;
-    if (typeof globalThis !== 'undefined') globalThis.NDBus = bus;
+    if (typeof window !== 'undefined') window.NDDBus = bus;
+    if (typeof globalThis !== 'undefined') globalThis.NDDBus = bus;
 })();
