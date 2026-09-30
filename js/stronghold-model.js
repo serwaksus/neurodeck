@@ -306,6 +306,30 @@
         return (id === 'trick' && Number(prov) === 3) ? 0.9 : 1;
     }
 
+    // Campaign 2.0 C6-lite: эндгейм-ротация модификаторов недели (CAMPAIGN-2.0.md §5) — применяется
+    // ТОЛЬКО при 20/20 захватах (флаг endgame передаёт вызывающий), выбор детерминирован парой
+    // (seasonNum, week) — тот же sin-хеш, что у погоды (app.js weatherOf), с иными константами,
+    // чтобы ротации не коррелировали. Каталог WEEKLY_MODS (stronghold-data.js); нет каталога → null
+    // и нейтральные 1 — экономика не ломается. Диапазон (0; 3] — как у провинций.
+    function weeklyModifierOf(seasonNum, week) {
+        var cat = catalog();
+        var list = (cat && Array.isArray(cat.WEEKLY_MODS)) ? cat.WEEKLY_MODS : [];
+        if (!list.length) return null;
+        var s = Math.floor(Number(seasonNum)); if (!isFinite(s) || s < 0) s = 0;
+        var w = Math.floor(Number(week)); if (!isFinite(w) || w < 0) w = 0;
+        var h = Math.abs(Math.sin(s * 101 + w * 37) * 43758.5453) % 1;
+        return list[Math.floor(h * list.length) % list.length] || null;
+    }
+    function weeklyMult(seasonNum, week, key, endgame) {
+        if (endgame !== true) return 1; // вне эндгейма ротация не действует (гейт 20/20 — на вызывающем)
+        var m = weeklyModifierOf(seasonNum, week);
+        var v = (m && m.mods && typeof m.mods === 'object') ? Number(m.mods[key]) : NaN;
+        return (isFinite(v) && v > 0 && v <= 3) ? v : 1;
+    }
+    function weeklyIncomeMult(seasonNum, week, endgame) { return weeklyMult(seasonNum, week, 'incomeMult', endgame); }
+    function weeklyUpkeepMult(seasonNum, week, endgame) { return weeklyMult(seasonNum, week, 'upkeepMult', endgame); }
+    function weeklySiegeMult(seasonNum, week, endgame) { return weeklyMult(seasonNum, week, 'siegeMult', endgame); }
+
     return {
         armyPower: armyPower,
         defensePower: defensePower,
@@ -326,6 +350,10 @@
         approachEnemyMult: approachEnemyMult,
         approachWrathDelta: approachWrathDelta,
         approachGarrisonMult: approachGarrisonMult,
+        weeklyModifierOf: weeklyModifierOf,
+        weeklyIncomeMult: weeklyIncomeMult,
+        weeklyUpkeepMult: weeklyUpkeepMult,
+        weeklySiegeMult: weeklySiegeMult,
         TIER_KEYS: TIER_KEYS
     };
 });

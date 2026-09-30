@@ -125,5 +125,22 @@ var PROVINCE_CATALOG = {
 4: { id: 4, name: 'Пепел',    palette: 'лава/угль',    threat: 'жара',           arc: '«Пепельный владыка» — 3 фазы',
      rule: { text: 'Налоги +10%, содержание +10%', active: true, mods: { incomeMult: 1.1, upkeepMult: 1.1, siegeMult: 1.0 } } }
 };
-if (typeof window !== 'undefined') window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS, PROVINCES: PROVINCE_CATALOG };
-if (typeof module !== 'undefined' && module.exports) module.exports = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS, PROVINCES: PROVINCE_CATALOG };
+// ===================== Campaign 2.0 C6-lite: ЭНДГЕЙМ-РОТАЦИЯ — модификаторы недели (CAMPAIGN-2.0.md §5) =====================
+// Еженедельные модификаторы правил, применяются ТОЛЬКО в эндгейме (20/20 твердынь захвачено) —
+// поверх престиж-кругов (ascEnemyMult). Выбор детерминирован парой (season.num, siege.week)
+// (stronghold-model.weeklyModifierOf) — без бэкенда и remote-config, сейв-полей НЕ добавляет.
+// mods — те же три ключа, что у правил провинций (§2): чистые функции weeklyIncomeMult/
+// weeklyUpkeepMult/weeklySiegeMult в stronghold-model.js; siegeMult множит удар воскресной
+// осады врага (runWeeklySiege), income/upkeep — налоги/содержание всех твердынь.
+// Диапазон множителей (0; 3] — как у провинций; каждая неделя — осмысленный трейд-офф.
+var WEEKLY_MODS = [
+{ id: 'fog',       icon: '🌫', name: 'Неделя тумана',      desc: 'осадные удары врага −20%',              mods: { incomeMult: 1.0,  upkeepMult: 1.0,  siegeMult: 0.8 } },
+{ id: 'greed',     icon: '💰', name: 'Неделя жадности',    desc: 'налоги +30%, содержание +30%',          mods: { incomeMult: 1.3,  upkeepMult: 1.3,  siegeMult: 1.0 } },
+{ id: 'feast',     icon: '🍖', name: 'Неделя пира',        desc: 'содержание построек −30%',              mods: { incomeMult: 1.0,  upkeepMult: 0.7,  siegeMult: 1.0 } },
+{ id: 'storm',     icon: '⛈', name: 'Неделя гроз',        desc: 'осады врага +25%, налоги +10%',         mods: { incomeMult: 1.1,  upkeepMult: 1.0,  siegeMult: 1.25 } },
+{ id: 'lent',      icon: '🕯', name: 'Неделя воздержания', desc: 'налоги −15%, содержание −25%',          mods: { incomeMult: 0.85, upkeepMult: 0.75, siegeMult: 1.0 } },
+{ id: 'goldvein',  icon: '⛏', name: 'Неделя жилы',        desc: 'налоги +50%, осады врага +15%',         mods: { incomeMult: 1.5,  upkeepMult: 1.0,  siegeMult: 1.15 } },
+{ id: 'stillness', icon: '🕊', name: 'Неделя затишья',     desc: 'осады врага −10%, налоги −10%',         mods: { incomeMult: 0.9,  upkeepMult: 1.0,  siegeMult: 0.9 } }
+];
+if (typeof window !== 'undefined') window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS, PROVINCES: PROVINCE_CATALOG, WEEKLY_MODS: WEEKLY_MODS };
+if (typeof module !== 'undefined' && module.exports) module.exports = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS, PROVINCES: PROVINCE_CATALOG, WEEKLY_MODS: WEEKLY_MODS };

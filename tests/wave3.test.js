@@ -68,6 +68,7 @@ test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гар�
             lastCapturedIdx: () => 0,
             HERO: { scouts: null },
             ascEnemyMult: () => 1,
+            weeklyModsNow: () => ({ income: 1, upkeep: 1, siege: 1 }), // C6-lite: стаб 2/20 захватов — вне эндгейма ротация нейтральна
             hasTech: () => false, // Г5-Т2: технологий нет в стабе — ×1 (гнев кап 10)
             TECH_IDEA: null, // Г5-Т2: идея не выбрана
             ensureSeason: () => ({ num: 1 }),

@@ -139,9 +139,9 @@ async function main() {
       return { routes, bonus: SM.tradeBonus(routes), income: shIncomePerDay() };
     }`);
     l1('1b-пути', '20/20: маршрутов 19, кап бонуса +38%', '19|0.38', capBonus.routes + '|' + capBonus.bonus, 'BALANCE круг 6');
-    l1('1b-доход', '20/20: доход = round(8984×1.38) = 12398💰', 12398, capBonus.income, 'пин круг 3: Σ налогов 8352; C3 ре-пин (CAMPAIGN-2.0 §2): Пепел ×1.1 → Σ 8984 — авторизовано дизайном');
-    // Г1-2 контроль: с короной III казна = round(12398×1.10) — авторизованный ре-пин (руководитель Г1);
-    // C3: база пересчитана от нового пина 12398 (Пепел ×1.1 в налогах)
+    l1('1b-доход', '20/20: доход = round(round(8984×1.38)×1.3) = 16117💰', 16117, capBonus.income, 'пин круг 3: Σ налогов 8352; C3 ре-пин (CAMPAIGN-2.0 §2): Пепел ×1.1 → Σ 8984; C6 ре-пин (CAMPAIGN-2.0 §5): эндгейм-модификатор недели (сезон 1, неделя 1) = «Жадность» ×1.3 — авторизовано дизайном');
+    // Г1-2 контроль: с короной III казна = round(16117×1.10) — авторизованный ре-пин (руководитель Г1);
+    // C3: база пересчитана от пина круга 3 (Пепел ×1.1); C6: база ×1.3 («Жадность» недели 1 сезона 1)
     const capCrown = await ev(`() => {
       __qaReset(); for (let i = 0; i < 20; i++) strongholds[i].captured = true;
       HERO.doctrines = { t1: null, t2: null, t3: 'crown' };
@@ -149,7 +149,7 @@ async function main() {
       HERO.doctrines = { t1: null, t2: null, t3: null };
       return income;
     }`);
-    l1('1b-доход', '20/20 + корона III: доход = round(12398×1.10) = 13638💰', 13638, capCrown, 'Г1-2: доктрина crown +10% ВСЁ золото (тик и доход)');
+    l1('1b-доход', '20/20 + корона III: доход = round(16117×1.10) = 17729💰', 17729, capCrown, 'Г1-2: доктрина crown +10% ВСЁ золото (тик и доход)');
 
     // --- 1c. siegePower: сетка параметров + продуктовый runWeeklySiege ---
     for (const wk of [1, 2, 5, 12, 13, 14, 20]) for (const cap of [1, 3, 6, 10, 20]) for (const wr of [0, 5, 10, 15]) {
@@ -199,11 +199,20 @@ async function main() {
       for (const w of [13, 14]) {
         __qaReset(); for (let i = 0; i < 20; i++) strongholds[i].captured = true; // кап W_eff = 30 → работает кап календаря 12
         window.__qaSiegeLog = []; siege.week = w; runWeeklySiege();
-        out.push(window.__qaSiegeLog[window.__qaSiegeLog.length - 1].rows[0].power);
+        const sn = (ensureSeason() || {}).num || 1;
+        const weekly = (SM && SM.weeklySiegeMult) ? SM.weeklySiegeMult(sn, w, true) : 1; // C6: эндгейм-ротация при 20/20
+        const base = SM.siegePower(STRONGHOLDS[19].total, w - 1, 20, 0); // чистая модель: кап W = 12
+        out.push({ power: window.__qaSiegeLog[window.__qaSiegeLog.length - 1].rows[0].power, base: base, weekly: weekly });
       }
       return out;
     }`);
-    l1('1c-осада', 'кап эскалации: сила(нед 13) == сила(нед 14) [W кап 12]', 'равны', capTest[0] === capTest[1] ? 'равны' : capTest.join('≠') + ' НЕ равны', 'факт: ' + capTest.join(' vs '));
+    // C6 (CAMPAIGN-2.0 §5): при 20/20 недельная ротация множит удар врага (недели 13/14 — РАЗНЫЕ
+    // модификаторы, прежнее «силы равны» устарело по дизайну). Кап W=12 сверяем по чистой siegePower,
+    // продукт — с round(база × модификатор недели).
+    l1('1c-осада', 'кап эскалации: база siegePower(нед 13) == база(нед 14) [W кап 12]', 'равны', capTest[0].base === capTest[1].base ? 'равны' : capTest.map((x) => x.base).join('≠') + ' НЕ равны', 'C6: кап W в чистой модели, без модификатора недели');
+    l1('1c-осада', 'C6 продукт 20/20: сила(W) = round(база × weeklySiegeMult(1,W)) — нед 13|14',
+      capTest.map((x) => Math.round(x.base * x.weekly)).join('|'), capTest.map((x) => x.power).join('|'),
+      'C6: модификаторы недель ' + capTest.map((x) => x.weekly).join(' / '));
 
     // --- 1d. assaultOutcome: 100 случайных пар, границы attrition ---
     const assault = await ev(`() => {

@@ -1956,6 +1956,28 @@ var p = (cat && cat.PROVINCES) ? cat.PROVINCES[prov] : null;
 if (!p || !p.rule || typeof p.rule.text !== 'string' || !p.rule.text) return '';
 return '<div class="sh-trade">🏛 ' + p.name + ': ' + p.rule.text + (p.rule.active === false ? ' · готовится' : '') + '</div>';
 }
+// ===================== Campaign 2.0 C6-lite: ЭНДГЕЙМ-РОТАЦИЯ — модификатор недели (CAMPAIGN-2.0.md §5) =====================
+// Каталог WEEKLY_MODS (stronghold-data.js), выбор детерминирован парой (season.num, siege.week) —
+// без бэкенда/remote-config, сейв-полей не добавляет. Действует ТОЛЬКО в эндгейме (20/20 захвачено):
+// income/upkeep — те же чистые функции, что у правил провинций C3 (stronghold-model), siege — удар
+// воскресной осады врага. Все вызовы через typeof-гварды (extract-харнессы тянут функции поодиночке).
+function weeklyEndgame() { return capturedCount() >= STRONGHOLDS.length; } // 20/20 — гейт ротации
+function weeklyModsNow() {
+var sw = weatherSeasonWeek();
+var on = weeklyEndgame();
+return {
+    income: (SM && SM.weeklyIncomeMult) ? SM.weeklyIncomeMult(sw.sn, sw.wk, on) : 1,
+    upkeep: (SM && SM.weeklyUpkeepMult) ? SM.weeklyUpkeepMult(sw.sn, sw.wk, on) : 1,
+    siege:  (SM && SM.weeklySiegeMult) ? SM.weeklySiegeMult(sw.sn, sw.wk, on) : 1
+};
+}
+function weeklyModifierLineHtml() { // C6-lite: строка модификатора недели в панели Твердынь (только эндгейм)
+if (!weeklyEndgame() || !SM || !SM.weeklyModifierOf) return '';
+var sw = weatherSeasonWeek();
+var m = SM.weeklyModifierOf(sw.sn, sw.wk);
+if (!m || typeof m.name !== 'string' || typeof m.desc !== 'string') return '';
+return '<div class="sh-trade">' + (m.icon || '🌀') + ' <b>' + m.name + '</b>: ' + m.desc + ' <span style="color:var(--text-dim)">· эндгейм-модификатор недели</span></div>';
+}
 // ===================== Г2-1: ПОВЕРЕННЫЕ ТЬМЫ — боссы провинций (очередь I..XI по 4 провинциям каталога) =====================
 function bossEscalation(num) { return (1 + 0.05 * (num - 1)) * Math.pow(1.2, HERO.ascension || 0); } // цели фаз ×1.5 к XI · Г2-5: ×1.2^N за круг вознесения
 function ensureBossesState() {
@@ -2870,6 +2892,7 @@ var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { retu
     if (hasTech('e2')) tBonus += 0.01 * tRoutes * techTradeMult() / 1.4; // Г5-Т: гильдии (×1.4 база учтена) + Консульства
     taxes = Math.round(taxes * (1 + tBonus));
     taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
+    taxes = Math.round(taxes * weeklyModsNow().income); // C6-lite: модификатор недели (эндгейм 20/20) — parity с превью
     taxes = Math.round(taxes * totemGoldMult()); // Ф2: тотем Волк +5% золота тика
     var _hol = holidayBonus(); if (_hol && _hol.tickMult) taxes = Math.round(taxes * _hol.tickMult); // #8: Новый год — казначейский кэшбэк ×1.5
 if (techOrderActive('sac')) taxes = Math.round(taxes * 1.3); // Г5-Т3 Ф2: Великая жатва ×1.3 на неделю
@@ -2890,7 +2913,7 @@ Object.keys(s.buildings).forEach(function(bid) {
 var bb = s.buildings[bid];
 if (bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000) imm[bid] = true;
 });
-var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: Math.max(1, Math.round((stepOpt + techGraceBonus()) * techCorrSlow())), immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * techUpkeepMult(), provinceUpkeepMult: SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1 }); // Г1-2 устав; Г2-2 метель; Г4 стойка; Г5-Т3: grace +2, ветшание ×0.5, содержание −28%; C3: правило провинции (Хутора −10% / Пепел +10%)
+var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: Math.max(1, Math.round((stepOpt + techGraceBonus()) * techCorrSlow())), immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * techUpkeepMult(), provinceUpkeepMult: (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1) * weeklyModsNow().upkeep }); // Г1-2 устав; Г2-2 метель; Г4 стойка; Г5-Т3: grace +2, ветшание ×0.5, содержание −28%; C3: правило провинции (Хутора −10% / Пепел +10%); C6-lite: модификатор недели (эндгейм 20/20)
 gold = res.gold;
 upkeep += res.upkeep;
 if (!res.paid) paid = false;
@@ -2932,7 +2955,7 @@ var def = STRONGHOLDS[t];
     garDef = Math.round(garDef * synergyDefMult(t)); // Г1-3: df-четвёрка в твердыне +5% обороны
     garDef = Math.round(garDef * stanceDefMult()); // Г4: стойка недели (Оборона +20% / Экономия −10%)
     garDef = Math.round(garDef * techDefMult()); // Г5-Т: Дисциплина гарнизонов +10%
-var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult() * approachEnemyMultNow()); // Г2-5: враги +25% силы за круг вознесения; C4: «Осада» — сила врага −20%
+var power = Math.round(SM.siegePower(def.total, siege.week - 1, capturedCount(), wrath) * hitMult * ascEnemyMult() * approachEnemyMultNow() * weeklyModsNow().siege); // Г2-5: враги +25% силы за круг вознесения; C4: «Осада» — сила врага −20%; C6-lite: модификатор недели (эндгейм 20/20)
 var _rmW = 0, _pcW = 0;
 [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rmW += provResourceMult(p); _pcW++; } });
 if (_pcW > 0) power = Math.round(power / (_rmW / _pcW)); // Г4: склады снабжения — удар врага слабее на 2%/ед ресурса (среднее по провинциям)
@@ -3353,6 +3376,7 @@ if (!s.captured) return;
     var tB = (SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0) + (hasTech('e2') ? 0.01 * tRoutes : 0); // Г5-Т: parity с тиком
     taxes = Math.round(taxes * (1 + tB));
     taxes = Math.round(taxes * taxMultiplier()); // parity с тиком (восстановлено: утрачено при правке e2 — паритет контроль-теста)
+    taxes = Math.round(taxes * weeklyModsNow().income); // C6-lite: модификатор недели (эндгейм 20/20) — parity с тиком
     var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
     income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% — parity с тиком (поймано контроль-тестом)
     var _rm2 = 0, _pc2 = 0;
@@ -3366,7 +3390,7 @@ var _sw = weatherSeasonWeek();
 var u = 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return;
-    var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1); // Г2-2: метель севера ×2; Г4: стойка недели; C3: правило провинции — parity с тиком
+    var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1) * weeklyModsNow().upkeep; // Г2-2: метель севера ×2; Г4: стойка недели; C3: правило провинции — parity с тиком; C6-lite: модификатор недели (эндгейм 20/20) — parity с тиком
 Object.keys(s.buildings).forEach(function(id) {
 var b = s.buildings[id];
 if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDINGS[id].upkeep * _wm;
@@ -3626,7 +3650,7 @@ function siegeAlarmPreview() { // Ф1: превью сил следующей о
     if (!SM || capturedCount() === 0) return null;
     var t = lastCapturedIdx();
     if (t < 0) return null;
-    var power = Math.round(SM.siegePower(STRONGHOLDS[t].total, siege.week, capturedCount(), siegeWrathNow()) * ascEnemyMult()); // Г2-5: +25% за круг
+    var power = Math.round(SM.siegePower(STRONGHOLDS[t].total, siege.week, capturedCount(), siegeWrathNow()) * ascEnemyMult() * weeklyModsNow().siege); // Г2-5: +25% за круг; C6-lite: модификатор недели (эндгейм 20/20) — parity с runWeeklySiege
     var def = SM.armyPower(army.units);
     strongholds.forEach(function(s) { if (s.captured) def += SM.stackPower(s.garrison || []); });
     def = Math.round(def);
@@ -4114,6 +4138,7 @@ var _season = ensureSeason();
 var _sTotal = seasonDaysTotal(_season.start);
 var _sDone = seasonDaysDone(_season.start);
 html += '<div class="sh-season"><div class="sh-season-line">🍂 Сезон ' + _season.num + ': <b>' + seasonName(_season.num) + '</b> · осталось <b>' + Math.max(0, _sTotal - _sDone) + '</b> дн.</div><div class="sh-season-bar"><div class="sh-season-fill" style="width:' + Math.min(100, Math.round(_sDone / _sTotal * 100)) + '%;"></div></div></div>';
+html += weeklyModifierLineHtml(); // C6-lite: модификатор недели (только эндгейм 20/20 — вне эндгейма строка пустая, базлайны не задеты)
 var _wt = warlordTempo(), _wm = seasonCapturedDelta(); // Г1-6: тень воеводы
 html += '<div class="sh-warlord">⚔ Глорх, Погибель Урядов: <b>' + _wt + '</b> · ты: <b>' + _wm + '</b><div class="sh-season-bar" title="Прогресс до обгона воеводы"><div class="sh-season-fill' + (_wm >= _wt ? ' warlord-ahead' : '') + '" style="width:' + Math.min(100, Math.round(_wm / (_wt + 1) * 100)) + '%;"></div></div></div>';
 html += '<div class="sh-wrath">😮 Гнев: <b>' + siegeWrathNow() + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
