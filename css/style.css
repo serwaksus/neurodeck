@@ -89,7 +89,7 @@ animation: flicker 3s infinite ease-in-out;
 #particles { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
 #dustCanvas { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity 2s; }
 .shake-wrap { position: relative; z-index: 5; width: 100%; height: 100%; }
-.app { position: relative; z-index: 10; width: 100%; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 14px 20px; gap: 10px; }
+.app { position: relative; z-index: 10; width: 100%; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); padding: 14px 20px; gap: 10px; } /* P2: minmax(0,1fr) — без этого min-content хедера при шрифте 200% распирает единственную auto-колонку (~451px) и тянет весь .content за край экрана */
 .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 2px; position: relative; overflow: visible; gap: 10px 12px; flex-wrap: wrap; }
 .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: 0.6; }
 .logo { font-size: 18px; letter-spacing: 3px; color: var(--gold-bright); text-shadow: 0 0 12px rgba(212, 165, 116, 0.4); }
@@ -102,7 +102,7 @@ animation: flicker 3s infinite ease-in-out;
 .hero-mini-xp-wrap { display: flex; align-items: center; gap: 6px; font-size: var(--fs-secondary); color: var(--text-dim); letter-spacing: 1px; }
 .hero-mini-xp-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; min-width: 60px; }
 .hero-mini-xp-fill { height: 100%; background: linear-gradient(90deg, #d4a574, #f4c896); box-shadow: 0 0 6px rgba(244, 200, 150, 0.6); transition: width 0.6s; }
-.progress-control { display: flex; align-items: center; gap: 8px; font-size: var(--fs-secondary); letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
+.progress-control { display: flex; align-items: center; gap: 8px; font-size: var(--fs-secondary); letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; flex-wrap: wrap; min-width: 0; } /* P2: при системном шрифте 200% строка «Твердыни N/20 + сезон-чип» переносится, а не распирает хедер */
 .progress-track { width: 100%; height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg,#8a6d1f,#d4af37); transition: width .4s ease; }
 .progress-control .val { color: var(--gold-bright); font-weight: bold; }
@@ -569,7 +569,7 @@ letter-spacing: 1px;
 }
 @media (max-width: 900px) {
 .main { grid-template-columns: 1fr; }
-.app { padding: 10px; gap: 6px; }
+.app { padding: 10px; gap: 6px; padding-left: calc(10px + env(safe-area-inset-left)); padding-right: calc(10px + env(safe-area-inset-right)); } /* P2: контент не заезжает за landscape-чёлку (viewport-fit=cover уже в meta) */
 .header { padding: 8px 12px; }
 .logo { font-size: 15px; }
 .logo span { display: none; }
@@ -578,7 +578,7 @@ letter-spacing: 1px;
 .hero-mini-info { min-width: 90px; }
 .cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .stats-grid { grid-template-columns: 1fr; }
-.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(16px); border-top: 1px solid var(--border); z-index: 150; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); justify-content: space-around; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(16px); border-top: 1px solid var(--border); z-index: 150; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); padding-left: calc(4px + env(safe-area-inset-left)); padding-right: calc(4px + env(safe-area-inset-right)); justify-content: space-around; } /* P2: боковые safe-area-инсеты — кнопки не прячутся за чёлкой в landscape */
 .bottom-nav .bnav-btn { flex: 1; padding: 8px 4px; background: none; border: none; color: var(--text-dim); font-family: inherit; font-size: var(--fs-secondary); letter-spacing: 1px; text-transform: uppercase; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .bottom-nav .bnav-btn .bnav-icon { font-size: 18px; }
 .bottom-nav .bnav-btn.active { color: var(--gold-bright); }
@@ -1182,7 +1182,7 @@ body::before {
 }
 
 /* ===================== КАРТОЧКА: кнопки рядом ===================== */
-.card-btn-row { display: flex; gap: 6px; margin-top: 8px; align-items: stretch; }
+.card-btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: stretch; } /* P2: перенос кнопок карточки при крупном шрифте вместо выезда за край */
 .card-btn-row .card-complete-btn { flex: 1; min-height: 44px; margin-top: 0; }
 .card-skip-btn { width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(139,38,53,0.3); border-radius: 6px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
 .card-skip-btn:hover { color: var(--blood-bright); border-color: var(--blood-bright); background: rgba(139,38,53,0.1); }
@@ -1643,7 +1643,7 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .stat-icon .icn { width: 22px; height: 22px; }
 
 /* --- Хедер: золото и осадная тревога --- */
-.gold-chip { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(212, 165, 116, 0.08); border: 1px solid var(--hairline); border-radius: var(--radius-btn); color: var(--gold-bright); font-size: var(--fs-secondary); letter-spacing: 0.5px; white-space: nowrap; }
+.gold-chip { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(212, 165, 116, 0.08); border: 1px solid var(--hairline); border-radius: var(--radius-btn); color: var(--gold-bright); font-size: var(--fs-secondary); letter-spacing: 0.5px; white-space: nowrap; min-width: 0; max-width: 100%; overflow: hidden; } /* P2: nowrap-чип казны не должен распирать хедер при крупном шрифте */
 .gold-chip .icn { color: var(--gold); }
 .gold-chip b { font-variant-numeric: tabular-nums; }
 .gold-chip.gain { animation: goldGain 0.7s ease; }
