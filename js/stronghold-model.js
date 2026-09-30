@@ -228,6 +228,40 @@
         return n;
     }
 
+    // Campaign 2.0 C2: фронтир по ГРАФУ next[] — незахваченные узлы, в которые ведёт ребро из захваченного
+    // узла; стартовый узел 0 (единственный без предков) доступен всегда, пока не захвачен. Минимальный
+    // индекс фронтира = первая незахваченная твердыня, поэтому дефолт-обход (без выбора игрока)
+    // совпадает с прежним линейным порядком 1:1. Фоллбэки: нет каталога / нет ни одного next /
+    // пустой фронтир при незахваченных узлах (разрывный каталог) — линейная семантика, игрок не заперт.
+    function frontierTargets(capturedFlags) {
+        var arr = Array.isArray(capturedFlags) ? capturedFlags : [];
+        function linear() {
+            for (var i = 0; i < arr.length; i++) if (!arr[i]) return [i];
+            return [];
+        }
+        var cat = catalog();
+        var list = (cat && Array.isArray(cat.STRONGHOLDS)) ? cat.STRONGHOLDS : [];
+        if (!list.length) return linear();
+        var idxById = {}, hasAny = false;
+        for (var ci = 0; ci < list.length; ci++) {
+            if (list[ci] && typeof list[ci].id === 'string') idxById[list[ci].id] = ci;
+            if (list[ci] && Array.isArray(list[ci].next) && list[ci].next.length) hasAny = true;
+        }
+        if (!hasAny) return linear();
+        var targets = [];
+        for (var i = 0; i < list.length && i < arr.length; i++) {
+            if (arr[i]) continue;
+            if (i === 0) { targets.push(0); continue; } // стартовый лагерь — без входящих рёбер
+            var reach = false;
+            for (var j = 0; j < list.length && !reach; j++) {
+                if (j === i || !arr[j] || !list[j] || !Array.isArray(list[j].next)) continue;
+                for (var k = 0; k < list[j].next.length; k++) if (idxById[list[j].next[k]] === i) { reach = true; break; }
+            }
+            if (reach) targets.push(i);
+        }
+        return targets.length ? targets : linear();
+    }
+
     // Campaign 2.0 C3: правила провинций (CAMPAIGN-2.0.md §2) — чистые модификаторы из каталога PROVINCES.
     // Возвращают множитель налогов/содержания/осады для провинции; нет каталога, нет провинции или
     // кривое значение → 1 (нейтрально, экономика не ломается). Диапазон (0; 3] — защита от опечаток в данных.
@@ -255,6 +289,7 @@
         tierPower: tierPower,
         tradeRoutes: tradeRoutes,
         tradeRoutesGraph: tradeRoutesGraph,
+        frontierTargets: frontierTargets,
         tradeBonus: tradeBonus,
         provinceIncomeMult: provinceIncomeMult,
         provinceUpkeepMult: provinceUpkeepMult,

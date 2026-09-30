@@ -608,6 +608,15 @@ letter-spacing: 1px;
 .confirm-title { font-size: 16px; font-weight: bold; color: var(--gold-bright); margin-bottom: 12px; }
 .confirm-body { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+/* Campaign 2.0 C2: выбор цели штурма из фронтирных (развилка >1 цели) в confirm-оверлее */
+.confirm-target-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.confirm-target { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: rgba(12, 10, 8, 0.78); border: 1px solid var(--hairline); border-radius: 10px; color: var(--text); cursor: pointer; text-align: left; }
+.confirm-target:active { background: rgba(30, 24, 16, 0.95); }
+.confirm-target.default { border-color: var(--gold); background: rgba(251, 191, 36, 0.06); }
+.confirm-target .ct-ico { font-size: 20px; line-height: 1; }
+.confirm-target .ct-body { display: flex; flex-direction: column; gap: 2px; }
+.confirm-target .ct-body b { font-size: 13px; color: var(--text); }
+.confirm-target .ct-body i { font-style: normal; font-size: 11px; color: var(--text-dim); }
 .onboarding-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .onboarding-overlay.show { opacity: 1; pointer-events: all; }
 .onboarding-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; max-width: 320px; text-align: center; }
@@ -1409,6 +1418,10 @@ body::before {
 .km-lg-front { background: repeating-linear-gradient(45deg, rgba(70, 130, 180, 0.6) 0 3px, rgba(139, 26, 53, 0.6) 3px 6px); box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
 .km-lg-siege { background: var(--blood-3); box-shadow: 0 0 8px rgba(199, 62, 77, 0.8); }
 .km-lg-lock { background: rgba(139, 26, 53, 0.45); border: 1px solid var(--border); }
+/* Campaign 2.0 C2: типы веток развилок на карте (рёбра графа next[]) */
+.km-lg-war { background: rgba(199, 62, 77, 0.75); box-shadow: 0 0 6px rgba(199, 62, 77, 0.6); }
+.km-lg-safe { background: rgba(52, 211, 153, 0.7); box-shadow: 0 0 6px rgba(52, 211, 153, 0.55); }
+.km-lg-trade { background: rgba(251, 191, 36, 0.75); box-shadow: 0 0 6px rgba(251, 191, 36, 0.6); }
 /* картуш и зоны */
 .km-cartouche text { fill: var(--gold-bright); font-family: Georgia, serif; font-size: 22px; letter-spacing: 8px; }
 .km-cartouche line { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1.5; }
@@ -1440,6 +1453,14 @@ body::before {
 .km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 8; stroke-linecap: round; }
 .km-road-glow { fill: none; stroke: rgba(251, 191, 36, 0.16); stroke-width: 9; stroke-linecap: round; }
 .km-connector { fill: none; stroke: rgba(190, 170, 130, 0.32); stroke-width: 2.25; stroke-dasharray: 1 7; stroke-linecap: round; }
+/* Campaign 2.0 C2: ребро развилки красится типом ветки ЦЕЛИ (owned ниже — захваченный маршрут перекрашивает в золото) */
+.km-connector.km-branch-war { stroke: rgba(199, 62, 77, 0.8); stroke-width: 2.75; }
+.km-connector.km-branch-safe { stroke: rgba(52, 211, 153, 0.75); stroke-width: 2.75; }
+.km-connector.km-branch-trade { stroke: rgba(251, 191, 36, 0.8); stroke-width: 2.75; }
+.km-branch-glyph { font-size: 13px; pointer-events: none; }
+.km-branch-glyph.km-branch-war { fill: rgba(199, 62, 77, 0.95); }
+.km-branch-glyph.km-branch-safe { fill: rgba(52, 211, 153, 0.9); }
+.km-branch-glyph.km-branch-trade { fill: rgba(251, 191, 36, 0.95); }
 .km-connector.owned { stroke: url(#kmRoad); stroke-width: 3.5; stroke-dasharray: 10 6; animation: kmMarch 1.6s linear infinite; }
 @keyframes kmMarch { to { stroke-dashoffset: -16; } }
 /* щиты: внутренний бевел (свет сверху), картуш/компас/декор */

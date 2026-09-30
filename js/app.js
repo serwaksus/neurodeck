@@ -2939,10 +2939,57 @@ var defN = STRONGHOLDS[idx].total;
 if (hasSpecialOk('sp1')) return { atk: atk, defN: defN, line: '⚔ ' + atk + ' против 🛡 ' + defN + (atk > defN ? ' · превосходство' : ' · сил мало') };
 return { atk: atk, defN: defN, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + Math.round(atk * 1.25) + ' против 🛡 ' + defN + ' (Гильдия Разведчиков даст точные числа)' };
 }
+// ===================== Campaign 2.0 C2: обход развилок фронтира (CAMPAIGN-2.0.md §1) =====================
+// Цель захвата = любой незахваченный next-узел захваченных твердынь (граф C1), не только линейный
+// индекс. ДЕФОЛТ (цель одна / игрок не выбирал) = прежний линейный порядок — линейные плейтесты
+// (strongholds 5.x–6.x, acceptance) проходят без правок. Тип ветки развилки — из branch цели.
+var BRANCH_META = { safe: { icon: '🌿', name: 'безопасный путь' }, war: { icon: '⚔', name: 'военный путь' }, trade: { icon: '🪙', name: 'торговый путь' } };
+function branchMeta(b) { return BRANCH_META[b] || BRANCH_META.safe; }
+function assaultTargetChoices() { // фронтирные цели штурма по графу next[] (модель); фоллбэк — линейный фронт
+var flags = strongholds.map(function(s) { return !!s.captured; });
+var t = (SM && typeof SM.frontierTargets === 'function') ? SM.frontierTargets(flags) : null;
+if (Array.isArray(t)) t = t.filter(function(i) { return i >= 0 && i < STRONGHOLDS.length && !strongholds[i].captured; });
+else t = null;
+if (!t || !t.length) { var f = frontIdx(); return f >= 0 ? [f] : []; }
+return t;
+}
+function chooseAssaultTarget(targets, defIdx) { // C2: развилка фронта — выбор цели в подтверждении штурма (>1 цели)
+return new Promise(function(resolve) {
+var overlay = document.getElementById('confirmOverlay');
+var yes = document.getElementById('confirmYes'), no = document.getElementById('confirmNo');
+var oldYes = yes.textContent, oldNo = no.textContent;
+document.getElementById('confirmTitle').textContent = 'Цель штурма';
+var list = targets.map(function(i) {
+var d = STRONGHOLDS[i], bm = branchMeta(d.branch);
+return '<button class="confirm-target' + (i === defIdx ? ' default' : '') + '" data-target-idx="' + i + '">' +
+'<span class="ct-ico">' + d.icon + '</span><span class="ct-body"><b>' + esc(d.name) + (i === defIdx ? ' · фронт' : '') + '</b><i>' + bm.icon + ' ' + bm.name + ' · ' + frontPowerText(i) + '</i></span></button>';
+}).join('');
+document.getElementById('confirmBody').innerHTML = 'Развилка фронта — выбери твердыню для штурма:<div class="confirm-target-list">' + list + '</div>';
+yes.style.display = 'none';
+no.textContent = 'Отмена';
+overlay.classList.add('show');
+function cleanup(result) {
+overlay.classList.remove('show');
+yes.style.display = '';
+yes.textContent = oldYes; no.textContent = oldNo;
+yes.onclick = null; no.onclick = null;
+document.getElementById('confirmBody').onclick = null;
+resolve(result);
+}
+document.getElementById('confirmBody').onclick = function(e) {
+var b = (e.target && e.target.closest) ? e.target.closest('[data-target-idx]') : null;
+if (b) cleanup(parseInt(b.getAttribute('data-target-idx'), 10));
+};
+no.onclick = function() { cleanup(null); };
+});
+}
 function requestAssault(idx) {
 ensureStrongholdState();
 if (siege.assaultDay === getMSKDayKey()) { showToast('⚔ Штурм уже был', 'Один штурм в сутки — приходи завтра', 'blood'); return; }
 if (!SM || SM.armyPower(army.units) <= 0) { showToast('⚔ Армии нет', 'Найми существ в твердыне', 'blood'); sfxError(); return; }
+var targets = assaultTargetChoices(); // C2: фронтир по графу next[]; одна цель = прежний линейный поток
+if (targets.indexOf(idx) < 0) idx = targets.length ? targets[0] : idx; // штурмовать можно только фронтир
+var confirmAssault = function(idx) { // параметр idx — пин wave-g1 Г1-4 (requestTactic(idx, f)/doAssault(idx, f, t))
 var f = assaultForecast(idx);
 if (capturedCount() >= 3) { // Г1-4: с 3-й твердыни — выбор тактики
 requestTactic(idx, f).then(function(t) { if (t) doAssault(idx, f, t); });
@@ -2951,6 +2998,9 @@ return;
 dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + '<br><span style="color:var(--blood-bright)">Поражение = отступление с потерями 10–30%.</span>').then(function(ok) {
 if (ok) doAssault(idx, f);
 });
+};
+if (targets.length > 1) { chooseAssaultTarget(targets, idx).then(function(pick) { if (pick !== null && !isNaN(pick)) confirmAssault(pick); }); return; } // развилка: сперва цель, потом подтверждение/тактика
+confirmAssault(idx);
 }
 function doAssault(idx, f, tactic) {
 var _tc = TACTICS[tactic] ? tactic : 'normal'; // Г1-4: дефолт «Штурм» (ESC/пропуск)
@@ -3420,7 +3470,8 @@ function checkSiegeAlarmToast() { // Ф1: тост+haptic в день N-2 и д�
 function kmStatusLabel(i) {
 var s = strongholds[i];
 if (s.captured) return 'Захвачена';
-if (i === frontIdx()) return (daysToSiegeNow() === 0) ? 'Осада сегодня' : 'Следующая цель';
+var isFront = (i === frontIdx()) || (typeof assaultTargetChoices === 'function' && assaultTargetChoices().indexOf(i) >= 0); // C2: любая фронтирная цель
+if (isFront) return (i === frontIdx() && daysToSiegeNow() === 0) ? 'Осада сегодня' : 'Следующая цель';
 return 'Заперта';
 }
 /* Г3.5: политическая карта Total War — ЕДИНЫЙ массив суши (фреймы встык, общие углы), watertight по всему миру */
@@ -3500,7 +3551,19 @@ var KG = (function () {
   });
   var adj = {};
   for (var ai = 0; ai < 20; ai++) adj[ai] = [];
-  for (var aj = 0; aj < 19; aj++) { adj[aj].push(aj + 1); adj[aj + 1].push(aj); }
+  function adjAdd(x, y) { if (x < 0 || y < 0 || x === y) return; if (adj[x].indexOf(y) < 0) adj[x].push(y); if (adj[y].indexOf(x) < 0) adj[y].push(x); }
+  var _kgId2i = {}, _kgNxAny = false;
+  if (typeof STRONGHOLDS !== 'undefined' && Array.isArray(STRONGHOLDS)) {
+    STRONGHOLDS.forEach(function(s, i) { if (s && typeof s.id === 'string') _kgId2i[s.id] = i; });
+    _kgNxAny = STRONGHOLDS.some(function(s) { return s && Array.isArray(s.next) && s.next.length; });
+  }
+  if (_kgNxAny) { // C2: туман/смежность — по графу next[] (диагонали развилок тоже дороги)
+    STRONGHOLDS.forEach(function(s, i) {
+      (Array.isArray(s.next) ? s.next : []).forEach(function(to) { adjAdd(i, _kgId2i[to]); });
+    });
+  } else {
+    for (var aj = 0; aj < 19; aj++) adjAdd(aj, aj + 1);
+  }
   return { WORLD: WORLD, SEA: SEA, tiles: tiles, provinces: provinces, adj: adj, center: function (i) { return tiles[i].center; } };
 })();
 
@@ -3602,16 +3665,26 @@ function kmCamInit() {
 
 function kingdomMapHtml(siegeToday) { // Г3: политическая карта Total War — KG-тайлы (сталь/кровь/туман), мир 780×1120; контракты фазы E сохранены (km-node/sh-open/aria)
 var ds = (typeof siegeToday === 'number') ? siegeToday : (siegeToday ? 0 : 99);
+var escT = (typeof esc === 'function') ? esc : function(x) { return x; }; // extract-харнессы тянут карту без esc
+var branchT = (typeof branchMeta === 'function') ? branchMeta : function(b) { // …и без branchMeta (C2)
+return { safe: { icon: '🌿', name: 'безопасный путь' }, war: { icon: '⚔', name: 'военный путь' }, trade: { icon: '🪙', name: 'торговый путь' } }[b] || { icon: '🌿', name: 'безопасный путь' };
+};
 var W = KG.WORLD.w, H = KG.WORLD.h;
 function prand(i) { return Math.abs(Math.sin((i + 1) * 127.1) * 43758.5453) % 1; }
 var front = frontIdx();
+var frontTargets = (typeof assaultTargetChoices === 'function') ? assaultTargetChoices() : (front >= 0 ? [front] : []); // C2: все фронтирные цели (развилки)
 var fogD = {};
-if (front >= 0 && KG.adj[front]) { fogD[front] = 0; var _q = [front]; while (_q.length) { var _c = _q.shift(); for (var _fi = 0; _fi < KG.adj[_c].length; _fi++) { var _nb = KG.adj[_c][_fi]; if (fogD[_nb] === undefined) { fogD[_nb] = fogD[_c] + 1; _q.push(_nb); } } } }
+frontTargets.forEach(function(ft) { if (fogD[ft] === undefined) fogD[ft] = 0; });
+var _q = Object.keys(fogD).map(Number);
+while (_q.length) { var _c = _q.shift(); if (!KG.adj[_c]) continue; for (var _fi = 0; _fi < KG.adj[_c].length; _fi++) { var _nb = KG.adj[_c][_fi]; if (fogD[_nb] === undefined) { fogD[_nb] = fogD[_c] + 1; _q.push(_nb); } } }
 var html = '<div class="km-legend">' +
 '<span><i class="km-lg km-lg-cap"></i>Захвачено</span>' +
 '<span><i class="km-lg km-lg-front"></i>Следующая цель</span>' +
 '<span><i class="km-lg km-lg-siege"></i>Осада</span>' +
-'<span><i class="km-lg km-lg-lock"></i>Заперто</span></div>';
+'<span><i class="km-lg km-lg-lock"></i>Заперто</span>' +
+'<span><i class="km-lg km-lg-war"></i>⚔ Военный путь</span>' +
+'<span><i class="km-lg km-lg-safe"></i>🌿 Безопасный</span>' +
+'<span><i class="km-lg km-lg-trade"></i>🪙 Торговый</span></div>';
 html += '<div class="sh-map-wrap"><div class="km-viewport"><svg class="km-svg" viewBox="' + KM_CAM.x + ' ' + KM_CAM.y + ' ' + KM_CAM.w + ' ' + KM_CAM.h + '" width="100%" role="group" aria-label="Карта королевства: Путь Угасания">';
 html += '<defs>' +
 '<linearGradient id="kmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#191510"/><stop offset="0.5" stop-color="#131009"/><stop offset="1" stop-color="#0b0a07"/></linearGradient>' +
@@ -3678,7 +3751,7 @@ html += '</g>';
 var terr = '<g class="km-terr-layer">';
 for (var t = 0; t < KG.tiles.length; t++) {
 var tt = KG.tiles[t], tcap = strongholds[t].captured;
-var tstate = tcap ? 'km-captured' : (t === front ? (ds === 0 ? 'km-siege' : 'km-front') : 'km-locked');
+var tstate = tcap ? 'km-captured' : (frontTargets.indexOf(t) >= 0 ? (t === front && ds === 0 ? 'km-siege' : 'km-front') : 'km-locked'); // C2: весь фронтир подсвечен
 terr += '<path class="km-terr ' + tstate + '" d="' + tt.poly + '"/>';
 if (tstate === 'km-locked') { var fd = fogD[t] === undefined ? 9 : fogD[t]; terr += '<path class="km-fog" d="' + tt.poly + '" fill-opacity="' + (fd <= 1 ? 0.15 : (fd === 2 ? 0.32 : 0.5)) + '"/>'; }
 }
@@ -3697,18 +3770,38 @@ if (provCapturedCount(pv.id) > 0) { // Г4: чипы состояния пров
 }
 }
 html += '<g class="km-cross" transform="translate(390,560)"><rect x="-7" y="-7" width="14" height="14" transform="rotate(45)"/></g>';
-// дороги: коридоры через межпровинциальные врата (мост I-II, перекрёсток, восточный проход) — не сквозь стены
+// дороги: рёбра графа next[] (C1) — 21 путь: 19 сквозных + 2 диагонали развилок (C2);
+// коридоры через межпровинциальные врата сохранены (мост I-II, перекрёсток, восточный проход)
 var segs = '<g class="km-roads">';
 var WAY = { 5: [201, 560], 10: [390, 560], 15: [650, 560] };
-for (var i = 1; i < STRONGHOLDS.length; i++) {
-var a = KG.center(i - 1), b2 = KG.center(i);
+var _shIdxById = {};
+for (var si = 0; si < STRONGHOLDS.length; si++) if (STRONGHOLDS[si] && typeof STRONGHOLDS[si].id === 'string') _shIdxById[STRONGHOLDS[si].id] = si;
+var _edgeDone = {};
+for (var ri = 0; ri < STRONGHOLDS.length; ri++) {
+var rd = STRONGHOLDS[ri];
+if (!rd || !Array.isArray(rd.next)) continue;
+var rFork = rd.next.length > 1; // развилка: рёбра из неё красятся типом ветки ЦЕЛИ
+for (var rn = 0; rn < rd.next.length; rn++) {
+var toIdx = _shIdxById[rd.next[rn]];
+if (toIdx === undefined || toIdx === ri || _edgeDone[ri + '_' + toIdx]) continue;
+_edgeDone[ri + '_' + toIdx] = true;
+var a = KG.center(ri), b2 = KG.center(toIdx);
 var parts = [a];
-if (WAY[i]) parts.push({ x: WAY[i][0], y: WAY[i][1] });
+if (WAY[toIdx] && toIdx === ri + 1) parts.push({ x: WAY[toIdx][0], y: WAY[toIdx][1] });
+if (toIdx === ri + 2) parts.push({ x: Math.round((a.x + b2.x) / 2 + (b2.y - a.y) * 0.22), y: Math.round((a.y + b2.y) / 2 - (b2.x - a.x) * 0.22) }); // C2: диагональ развилки — дуга мимо линейной дороги
 parts.push(b2);
 var dpath = 'M' + a.x + ' ' + a.y;
 for (var pw = 1; pw < parts.length; pw++) dpath += ' Q' + Math.round((parts[pw - 1].x + parts[pw].x) / 2) + ' ' + Math.round((parts[pw - 1].y + parts[pw].y) / 2) + ' ' + parts[pw].x + ' ' + parts[pw].y;
-segs += '<path class="km-road-case" d="' + dpath + '"/>';
-segs += '<path class="km-connector' + (strongholds[i].captured ? ' owned' : '') + '" d="' + dpath + '"/>';
+var rBranch = rFork ? (STRONGHOLDS[toIdx].branch || 'safe') : null;
+var rCls = rBranch ? ' km-branch-edge km-branch-' + rBranch : '';
+var rOwned = (strongholds[ri].captured && strongholds[toIdx].captured) ? ' owned' : '';
+segs += '<path class="km-road-case' + rCls + '" d="' + dpath + '"/>';
+segs += '<path class="km-connector' + rCls + rOwned + '" d="' + dpath + '"><title>' + escT(STRONGHOLDS[ri].name) + ' → ' + escT(STRONGHOLDS[toIdx].name) + (rBranch ? ' · ' + branchT(rBranch).name : '') + '</title></path>';
+if (rBranch) { // глиф типа ветки на середине развилочного ребра
+var rm = parts.length > 2 ? parts[1] : { x: Math.round((a.x + b2.x) / 2), y: Math.round((a.y + b2.y) / 2) };
+segs += '<text class="km-branch-glyph km-branch-' + rBranch + '" x="' + rm.x + '" y="' + (rm.y + 4) + '" text-anchor="middle">' + branchT(rBranch).icon + '</text>';
+}
+}
 }
 segs += '</g>';
 html += segs;
@@ -3746,7 +3839,7 @@ if (_wx) html += '<g class="km-wx-layer" pointer-events="none">' + _wx + '</g>';
 var g = '';
 for (var n = 0; n < STRONGHOLDS.length; n++) {
 var d = STRONGHOLDS[n], s = strongholds[n], p = KG.center(n);
-var state = s.captured ? 'km-captured' : (n === front ? (ds === 0 ? 'km-siege' : 'km-front') : 'km-locked');
+var state = s.captured ? 'km-captured' : (frontTargets.indexOf(n) >= 0 ? (n === front && ds === 0 ? 'km-siege' : 'km-front') : 'km-locked');
 var stage = s.captured ? shWorstStage(n) : null;
 var frac = stage === 'ruin' ? 1 : (stage === 'worn' ? 0.5 : 0);
 var builtN = 0; var bl = strongholds[n].buildings || {};
@@ -3822,20 +3915,19 @@ html += '<div class="km-stance-row">' + '<button class="km-stance km-chron-btn" 
 // ФАЗА E: карта королевства заменяет ленту провинций (панели твердыни не тронуты)
 html += kingdomMapHtml(daysToSiege);
 // Фронт: штурмовая карточка под картой (штурм остаётся доступным из обзорного состояния)
-if (front > 0 && !strongholds[front].captured) {
-var fd = STRONGHOLDS[front];
-html += '<div class="sh-card front km-front-card"><div class="sh-icon">' + fd.icon + '</div>' +
-'<div class="sh-body"><div class="sh-name">' + fd.name + '</div>' +
-'<div class="sh-meta">' + frontPowerText(front) + '</div></div>' +
-'<button class="sh-assault" data-action="sh-assault" data-idx="' + front + '">⚔ Штурм</button>' + scoutButtonHtml(front) + '</div>';
-html += scoutReportHtml(front);
-} else if (front === 0 && !strongholds[0].captured) {
-html += '<div class="sh-card front km-front-card"><div class="sh-icon">' + STRONGHOLDS[0].icon + '</div>' +
-'<div class="sh-body"><div class="sh-name">' + STRONGHOLDS[0].name + ' <span class="sh-req">стартовый лагерь</span></div>' +
-'<div class="sh-meta">' + frontPowerText(0) + '</div></div>' +
-'<button class="sh-assault" data-action="sh-assault" data-idx="0">⚔ Штурм</button>' + scoutButtonHtml(0) + '</div>';
-html += scoutReportHtml(0);
-}
+// C2: целей может быть несколько (развилка пров. 2/4) — карточка на каждую фронтирную,
+// дефолт (линейный фронт) первой и подсвечена классом front
+var _frontTargets = assaultTargetChoices();
+_frontTargets.forEach(function(ti) {
+var fd = STRONGHOLDS[ti];
+var _tiLabel = (ti === 0) ? ' <span class="sh-req">стартовый лагерь</span>'
+: (_frontTargets.length > 1 ? ' <span class="sh-req">' + branchMeta(fd.branch).icon + ' ' + branchMeta(fd.branch).name + '</span>' : '');
+html += '<div class="sh-card' + (ti === front ? ' front' : '') + ' km-front-card"><div class="sh-icon">' + fd.icon + '</div>' +
+'<div class="sh-body"><div class="sh-name">' + fd.name + _tiLabel + '</div>' +
+'<div class="sh-meta">' + frontPowerText(ti) + '</div></div>' +
+'<button class="sh-assault" data-action="sh-assault" data-idx="' + ti + '">⚔ Штурм</button>' + scoutButtonHtml(ti) + '</div>';
+});
+if (front >= 0) html += scoutReportHtml(front);
 var tRoutesUI = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
 if (tRoutesUI > 0) html += '<div class="sh-trade">🛃 Торговые пути: <b>' + tRoutesUI + '</b> · налоги <b>+' + Math.round((SM.tradeBonus(tRoutesUI)) * 100) + '%</b></div>';
 var _season = ensureSeason();
