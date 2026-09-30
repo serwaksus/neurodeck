@@ -3065,7 +3065,7 @@ var overlay = document.getElementById('confirmOverlay');
 var yes = document.getElementById('confirmYes'), no = document.getElementById('confirmNo');
 var oldYes = yes.textContent, oldNo = no.textContent;
 document.getElementById('confirmTitle').textContent = 'Тактика штурма';
-document.getElementById('confirmBody').innerHTML = '⚔ «' + esc(STRONGHOLDS[idx].name) + '» · ' + f.line + '<br><span style="color:var(--text-dim)">' + f.lossLine + '</span><br><span style="color:var(--text-dim)">⚔ Штурм — норма · 🪶 Ложный отход: урон −20%, потери ×0.7 · 🔥 Натиск: урон +25%, потери ×2</span><br><span style="color:var(--blood-bright)">ESC — штурмовать по-обычному.</span>';
+document.getElementById('confirmBody').innerHTML = '⚔ «' + esc(STRONGHOLDS[idx].name) + '» · ' + f.line + assaultBreakdownHtml(idx, f) + '<br><span style="color:var(--text-dim)">' + f.lossLine + '</span><br><span style="color:var(--text-dim)">⚔ Штурм — норма · 🪶 Ложный отход: урон −20%, потери ×0.7 · 🔥 Натиск: урон +25%, потери ×2</span><br><span style="color:var(--blood-bright)">ESC — штурмовать по-обычному.</span>';
 yes.textContent = '⚔ Штурм'; no.textContent = '🪶 Ложный отход';
 var third = document.createElement('button');
 third.className = no.className;
@@ -3098,6 +3098,36 @@ function assaultForecast(idx) {
 	if ((siege.rams || 0) > 0 || (siege.ladders || 0) > 0) _lp += ' · 🧰 склад будет потрачен';
 	if (hasSpecialOk('sp1')) return { atk: atk, defN: defN, lossLine: _lp, line: '⚔ ' + atk + ' против 🛡 ' + defN + (atk > defN ? ' · превосходство' : ' · сил мало') };
 	return { atk: atk, defN: defN, lossLine: _lp, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + Math.round(atk * 1.25) + ' против 🛡 ' + defN + ' (Гильдия Разведчиков даст точные числа)' };
+}
+// P6: брейкдаун штурма — соотношение, worst-case потери по attrition-формуле модели
+// (поражение — честный верхний край: rand()=1 → 30% до тарана), эффект подхода недели
+// и осадного склада. Переиспользует SM.assaultOutcome на тех же опциях, что assaultForecast.
+// Точное соотношение — только при живой Гильдии Разведчиков (sp1), как и точный прогноз сил.
+function assaultBreakdownHtml(idx, f) {
+	if (!SM || !f) return '';
+	var _common = { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), ram: (siege.rams || 0) > 0, ladder: (siege.ladders || 0) > 0 };
+	var _o = SM.assaultOutcome(f.atk, f.defN, _common);
+	var _worst = _o.win ? _o.attritionPct : SM.assaultOutcome(f.atk, f.defN, Object.assign({ rand: function() { return 1; } }, _common)).attritionPct;
+	var armyCount = 0, worstUnits = 0;
+	SM.TIER_KEYS.forEach(function(t) {
+		var n = army.units[t] || 0;
+		if (n > 0) { armyCount += n; worstUnits += Math.min(Math.floor(n * _worst), n - 1); }
+	});
+	var rows = [];
+	rows.push(hasSpecialOk('sp1')
+		? '⚖ Соотношение: ' + Math.round(_o.ratio * 100) + '% (⚔ ' + f.atk + ' / 🛡 ' + f.defN + ')'
+		: '⚖ Соотношение скрыто — Гильдия Разведчиков даст точные числа');
+	rows.push(_o.win
+		? '📉 Победа вероятна: потери ≈' + Math.max(1, Math.round(_o.attritionPct * 100)) + '% (−' + worstUnits + ' из ' + armyCount + ' юнитов)'
+		: '📉 Сил мало: при неудаче потери 10–30%, worst-case −' + worstUnits + ' из ' + armyCount + ' юнитов (' + Math.round(_worst * 100) + '%)');
+	var appr = (typeof weekApproach === 'function') ? weekApproach() : 'assault';
+	if (appr !== 'assault' && SM.approachMeta) {
+		var m = SM.approachMeta(appr);
+		rows.push(m.icon + ' Подход «' + m.name + '»: ' + m.desc);
+	}
+	if ((siege.rams || 0) > 0) rows.push('🐏 Таран со склада: потери ×0.9 — израсходуется при штурме');
+	if ((siege.ladders || 0) > 0) rows.push('🪜 Лестницы со склада: соотношение ×1.05 — израсходуются при штурме');
+	return '<div class="assault-breakdown">' + rows.map(function(r) { return '<div>' + r + '</div>'; }).join('') + '</div>';
 }
 // ===================== Campaign 2.0 C2: обход развилок фронтира (CAMPAIGN-2.0.md §1) =====================
 // Цель захвата = любой незахваченный next-узел захваченных твердынь (граф C1), не только линейный
@@ -3155,9 +3185,9 @@ if (capturedCount() >= 3) { // Г1-4: с 3-й твердыни — выбор т
 requestTactic(idx, f).then(function(t) { if (t) doAssault(idx, f, t); });
 return;
 }
-dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + '<br><span style="color:var(--blood-bright)">' + f.lossLine + '</span>').then(function(ok) {
-if (ok) doAssault(idx, f);
-});
+	dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + assaultBreakdownHtml(idx, f) + '<br><span style="color:var(--blood-bright)">' + f.lossLine + '</span>').then(function(ok) {
+	if (ok) doAssault(idx, f);
+	});
 };
 if (targets.length > 1) { chooseAssaultTarget(targets, idx).then(function(pick) { if (pick !== null && !isNaN(pick)) confirmAssault(pick); }); return; } // развилка: сперва цель, потом подтверждение/тактика
 confirmAssault(idx);
@@ -3408,8 +3438,39 @@ if (d.def) return '+' + d.def + ' к обороне';
 if (d.scout) return 'Точные числа осад и штурмов';
 if (d.attrition) return 'Потери при штурмах ×' + d.attrition;
 if (d.step) return 'Деградация: ' + d.step + ' дня на ступень';
-if (d.growthMult) return '×' + d.growthMult + ' к приросту жилищ';
-return '';
+	if (d.growthMult) return '×' + d.growthMult + ' к приросту жилищ';
+	return '';
+}
+// ===================== P6: объяснимость экономики — брейкдауны покупки =====================
+// «Текущая → после» считается КОНТРФАКТУАЛЬНЫМ прогоном существующих превью казны
+// (shIncomePerDay/shUpkeepPerDay): постройка подставляется на два вызова, формулы не
+// дублируются, числа совпадают с дневным тиком по построению. Состояние восстанавливается
+// в finally — рендер превью не может оставить «призрачную» постройку в сейве.
+function buildingBreakdown(idx, bid) {
+	ensureStrongholdState();
+	var s = strongholds[idx];
+	if (!s || !BUILDINGS[bid]) return null;
+	var incomeBefore = shIncomePerDay(), upkeepBefore = shUpkeepPerDay();
+	var prev = s.buildings[bid];
+	s.buildings[bid] = { built: true, corruptionStage: 'ok', debtDays: 0 };
+	var incomeAfter, upkeepAfter;
+	try { incomeAfter = shIncomePerDay(); upkeepAfter = shUpkeepPerDay(); }
+	finally { if (prev) s.buildings[bid] = prev; else delete s.buildings[bid]; }
+	var cost = buildCostOf(bid);
+	var dIncome = incomeAfter - incomeBefore, dUpkeep = upkeepAfter - upkeepBefore;
+	var net = dIncome - dUpkeep;
+	return { cost: cost, incomeBefore: incomeBefore, incomeAfter: incomeAfter, upkeepBefore: upkeepBefore, upkeepAfter: upkeepAfter,
+		dIncome: dIncome, dUpkeep: dUpkeep, net: net, payback: net > 0 ? Math.ceil(cost / net) : null };
+}
+function buildingBreakdownHtml(idx, bid) {
+	var b = buildingBreakdown(idx, bid);
+	if (!b) return '';
+	var parts = [];
+	if (b.dIncome !== 0) parts.push('💰 доход ' + b.incomeBefore + '→' + b.incomeAfter + '/д');
+	if (b.dUpkeep !== 0) parts.push('🔧 содержание ' + b.upkeepBefore + '→' + b.upkeepAfter + '/д');
+	if (b.payback !== null) parts.push('⏳ ' + b.cost + '💰 окуп. ≈' + b.payback + ' дн');
+	else if (b.dUpkeep !== 0 || b.dIncome !== 0) parts.push('⏳ ' + b.cost + '💰 золотом не окупается');
+	return parts.length ? '<div class="sh-tile-break">' + parts.join(' · ') + '</div>' : '';
 }
 function updateStrongholdProgress() {
 var n = capturedCount();
@@ -4198,6 +4259,7 @@ function buyTileHtml(idx, id, bd, reqOk, can, reason) {
 return '<div class="sh-tile buy ' + catClass(bd) + (reqOk ? '' : ' locked') + '"><div class="sh-tile-icon">' + shSpriteImg('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
 '<div class="sh-tile-name">' + bd.name + (reqOk ? '' : ' <span class="sh-req">нужна: ' + BUILDINGS[bd.req].name + '</span>') + '</div>' +
 '<div class="sh-tile-meta">' + buildingEffectText(bd) + '</div>' +
+buildingBreakdownHtml(idx, id) + // P6: контрфакт-брейкдаун «до → после» через превью казны
 '<div class="sh-tile-badges"><span class="sh-tile-cost">🏗 ' + buildCostOf(id) + ' 💰</span><span class="sh-tile-upkeep">−' + bd.upkeep + '/день</span></div>' +
 (can ? '<button class="sh-buy" data-action="sh-buy" data-idx="' + idx + '" data-bid="' + id + '">Купить</button>' : '<span class="sh-stage lock">🔒 ' + reason + '</span>') +
 '</div>';

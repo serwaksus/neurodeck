@@ -285,3 +285,29 @@ test('C4: подход недели — «Осада» +1 гнев, «Хитро
   await expect(page.locator('#confirmBody')).toContainText('против 🛡 990');
   await expect(page.locator('#confirmBody')).not.toContainText('против 🛡 1100');
 });
+
+// ===================== P6: брейкдауны экономики =====================
+test('P6: брейкдауны — тайл покупки «до → после» с окупаемостью; штурм — соотношение и worst-case', async ({ page }) => {
+  // sh01+sh02 захвачены: налоги 3/день, построек нет; в рекомендациях sh02 доступна ec2 «Амбары»
+  await bootWithSave(page, makeSave({ captured: 2, gold: 500 }));
+
+  // панель sh02: тайл «Амбары» несёт контрфакт-брейкдаун казны (узел карты SVG)
+  await page.click('.km-node.km-captured[data-action="sh-open"][data-idx="1"]');
+  const barn = page.locator('.sh-tile.buy', { hasText: 'Амбары' });
+  await expect(page.locator('.sh-panel-title')).toContainText('Лаголь Земли');
+  await expect(barn.locator('.sh-tile-break')).toHaveCount(1);
+  await expect(barn).toContainText('доход 3→23/д');      // +20💰/день от Амбаров через реальную формулу
+  await expect(barn).toContainText('содержание 0→14/д'); // 15 × 0.9: правило провинции Хутора (−10%)
+  await expect(barn).toContainText('180💰 окуп. ≈30 дн'); // ceil(180 / (20 − 14))
+
+  // подтверждение штурма sh03: брейкдаун соотношения и worst-case потерь (sp1 нет — число скрыто)
+  await page.click('[data-action="sh-back"]');
+  await page.click('.sh-assault[data-idx="2"]');
+  await expect(page.locator('#confirmTitle')).toHaveText('⚔ Штурм «Лесопилка»?');
+  const body = page.locator('#confirmBody');
+  await expect(body.locator('.assault-breakdown')).toHaveCount(1);
+  await expect(body).toContainText('Соотношение скрыто — Гильдия Разведчиков');
+  await expect(body).toContainText('Победа вероятна: потери ≈8% (−7 из 100 юнитов)'); // attrition 0.08 × 0.97 (agi 3)
+  await page.click('#confirmNo'); // отмена — день штурма не потрачен
+  await expect(page.locator('#confirmOverlay')).not.toHaveClass(/show/);
+});

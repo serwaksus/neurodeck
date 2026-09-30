@@ -916,9 +916,14 @@ textarea:focus-visible {
 .sh-tile .sh-buy { width: 100%; }
 .sh-tile.locked { opacity: 0.75; }
 .sh-tile.built { border-left-color: var(--green); }
+/* P6: брейкдауны экономики — строка тайла покупки и блок подтверждения штурма (статичный текст, без анимаций) */
+.sh-tile-break { font-size: 10.5px; color: var(--text-dim); border-top: 1px dashed var(--border); padding-top: 4px; }
+.assault-breakdown { margin: 8px 0; padding: 6px 10px; background: rgba(0,0,0,0.25); border: 1px dashed var(--border); border-radius: var(--radius-1); font-size: 12px; color: var(--text-bright, #e8e4dc); text-align: left; }
+.assault-breakdown div { margin: 2px 0; }
 @media (max-width: 420px) { .sh-build-grid { grid-template-columns: 1fr; } }
 :root.perf-eco .sh-tile, :root.perf-eco .sh-tile .sh-buy { box-shadow: none; }
-@media (prefers-reduced-motion: reduce) { .sh-tile, .sh-tile .sh-buy { transition: none !important; animation: none !important; } }
+:root.perf-eco .sh-tile-break, :root.perf-eco .assault-breakdown { border: none; background: none; padding: 0; }
+@media (prefers-reduced-motion: reduce) { .sh-tile, .sh-tile .sh-buy, .sh-tile-break, .assault-breakdown { transition: none !important; animation: none !important; } }
 .sh-stage.worn { color: var(--yellow); background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.4); }
 .sh-stage.ruin { color: var(--blood-bright); background: rgba(199,62,77,0.1); border: 1px solid rgba(199,62,77,0.45); }
 .sh-stage.lock { border: 1px solid var(--border); color: var(--text-dim); background: rgba(255,255,255,0.03); }
