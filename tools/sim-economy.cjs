@@ -12,7 +12,9 @@
 //  G2 казуал без стратегии всё равно прогрессирует и не руинится рано;
 //  G3 двухнедельный отпуск разрушаем, но восстановим (comeback существует);
 //  G4 армия-без-экономики жизнеспособна (нет единственного доминирующего билда);
-//  G5 эконом-жокей не обязателен; G6 нет гиперинфляции дохода.
+//  G5 эконом-жокей не обязателен; G6 нет гиперинфляции дохода;
+//  G7 ветвление кампании (Campaign 2.0 C1): обход одной ветки развилки жизнеспособен,
+//     графовые маршруты (tradeRoutesGraph по next-рёбрам) платят за пропущенные твердыни.
 // Ревизия 2026-09-30: сюда же идёт аудит daysToSiegeNow (осадный календарь = воскресный штурм).
 // ============================================================
 const path = require('path');
@@ -37,9 +39,12 @@ function mulberry32(seed) {
 
 // ---------- игровые формулы (эталон из qa-economy-parity.cjs) ----------
 const R = (x) => Math.round(x);
-const routes = (flags) => SM.tradeRoutes(flags);
+// Campaign 2.0 C1: сценарий с useGraphRoutes считает маршруты по графу next-рёбер (tradeRoutesGraph),
+// остальные — по индексной смежности (tradeRoutes: parity с qa-economy-parity).
+const routes = (flags, sc) => (sc && sc.useGraphRoutes && typeof SM.tradeRoutesGraph === 'function')
+  ? SM.tradeRoutesGraph(flags) : SM.tradeRoutes(flags);
 const tradeB = (r) => SM.tradeBonus(r);
-function shIncome(flags, shBuildings) {
+function shIncome(flags, shBuildings, sc) {
   let taxes = 0, econ = 0, market = 0;
   flags.forEach((cap, i) => {
     if (!cap) return;
@@ -53,7 +58,7 @@ function shIncome(flags, shBuildings) {
       if (d.market) market += d.market * m;
     });
   });
-  taxes = R(taxes * (1 + tradeB(routes(flags))));
+  taxes = R(taxes * (1 + tradeB(routes(flags, sc))));
   return R((taxes + R(econ)) * (1 + Math.min(0.5, market)));
 }
 const hireCost = (tier, cha) => Math.ceil(CAT.UNIT_TIERS[tier].cost * (1 - Math.min(0.30, 0.005 * cha)));
@@ -125,9 +130,17 @@ function hire(p, tier, n) {
   p.pool -= afford;
   return afford;
 }
+// Campaign 2.0 C1: цель штурма — первая незахваченная твердыня вне обходимых веток (p.skip).
+// Для линейных сценариев (skip нет, дырок нет) эквивалентно прежнему capturedCount(p).
+function nextTarget(p) {
+  for (let i = 0; i < CAT.STRONGHOLDS.length; i++) {
+    if (!p.captured[i] && !(p.skip && p.skip[i])) return i;
+  }
+  return -1;
+}
 function tryAssault(p, rng) {
-  const idx = capturedCount(p);
-  if (idx >= CAT.STRONGHOLDS.length) return false;
+  const idx = nextTarget(p);
+  if (idx < 0) return false;
   const sh = CAT.STRONGHOLDS[idx];
   const out = SM.assaultOutcome(armyP(p), sh.total, { rand: rng });
   if (!out.win) { // поражение: 10–20% потерь, фронт не растёт
@@ -150,7 +163,7 @@ function applyAttrition(p, pct) {
 function dayTick(p, rng, sc, day, m) {
   // доход: карточки (1💰 за выполнение по attendance сценария) + налоги/экономика
   const cards = sc.cardsToday(day, rng);
-  p.gold += cards * 1 + shIncome(p.captured, p.shBuildings);
+  p.gold += cards * 1 + shIncome(p.captured, p.shBuildings, sc);
   // содержание: суммарный upkeep, оплата общим золотом (тик догоняет пропущенные дни)
   let totalUpkeep = 0;
   const perShUpkeep = p.captured.map((cap, i) => {
@@ -206,10 +219,12 @@ function runScenario(sc, seed) {
   const rng = mulberry32(seed);
   const p = freshPlayer();
   p.stats = { wil: sc.wil, cha: sc.cha };
+  if (Array.isArray(sc.skipIds)) p.skip = CAT.STRONGHOLDS.map((s) => sc.skipIds.indexOf(s.id) >= 0); // Campaign 2.0 C1: обходимые ветки
   const m = {
     firstAssaultDay: null, firstCaptureDay: null, capturesEnd: 0,
     golds: [], zeroGoldDays: 0, maxDebtDays: 0, ruins: 0, ruinByCorruption: 0, lostWeeks: 0,
     incomes: {}, choiceDays: 0, recoveryDays: null, firstRuinDay: null,
+    routesIndexEnd: null, routesGraphEnd: null,
   };
   // старт: Ж1 на Сендер-Хуторе как в онбординге (3.2 плейтеста: захват → Ж1 за 60)
   p.captured[0] = true; p.gold = Math.max(p.gold, 60); build(p, 0, 'zh1');
@@ -243,9 +258,11 @@ function runScenario(sc, seed) {
     }));
     if (day % 7 === 0) { const w = weekTick(p, rng, m); if (w.fell) m.lostWeeks++; }
     if (m.firstCaptureDay === null && capturedCount(p) > before) m.firstCaptureDay = day;
-    m.incomes[day] = shIncome(p.captured, p.shBuildings);
+    m.incomes[day] = shIncome(p.captured, p.shBuildings, sc);
   }
   m.capturesEnd = capturedCount(p);
+  m.routesIndexEnd = SM.tradeRoutes(p.captured);
+  m.routesGraphEnd = (typeof SM.tradeRoutesGraph === 'function') ? SM.tradeRoutesGraph(p.captured) : m.routesIndexEnd;
   m.golds.sort((a, b) => a - b);
   m.goldP50 = m.golds[Math.floor(m.golds.length / 2)];
   return m;
@@ -270,6 +287,28 @@ const STRATEGIES = [
       for (const t of mix) if (p.pool > 0) acts.push({ type: 'hire', tier: t, n: p.pool });
       const ratio = armyP(p) / (CAT.STRONGHOLDS[Math.min(idx, 19)].total || 1);
       if (idx < 20 && ratio >= 1.2) acts.push({ type: 'assault' });
+      return acts;
+    },
+  },
+  {
+    // Campaign 2.0 C1: дисциплина на ветвящейся карте — военные ветки развилок (sh08/sh18) обходим,
+    // маршруты считаем по графу next-рёбер: диагонали развилок (sh07→sh09, sh17→sh19) платят за обход.
+    name: 'Ветвление', wil: 40, cha: 0, garrisonShare: 0.4, useGraphRoutes: true, skipIds: ['sh08', 'sh18'],
+    cardsToday: () => 5, idle: () => false,
+    plan(p) {
+      const acts = [];
+      const idx = nextTarget(p);
+      for (const i of p.captured.map((c, j) => j).filter((j) => p.captured[j])) {
+        for (const id of ['ec1', 'ec2', 'ec3', 'zh1', 'zh2', 'df1', 'ec4', 'zh3', 'df2', 'ec5', 'zh4', 'df3', 'df4', 'zh5', 'zh6', 'zh7']) {
+          if (canBuild(p, i, id)) { acts.push({ type: 'build', i, id }); break; }
+        }
+        if (acts.length) break;
+      }
+      const mix = ['t1', 't2', 't3', 't4', 't5', 't6', 't7'];
+      for (const t of mix) if (p.pool > 0) acts.push({ type: 'hire', tier: t, n: p.pool });
+      const target = idx >= 0 ? CAT.STRONGHOLDS[idx] : null;
+      const ratio = target ? armyP(p) / (target.total || 1) : Infinity;
+      if (target && ratio >= 1.2) acts.push({ type: 'assault' });
       return acts;
     },
   },
@@ -401,6 +440,7 @@ function gate(id, cond, msg) {
   if (!cond) fail++;
 }
 const A = results['Дисциплина'].runs[1];
+const B = results['Ветвление'].runs[1];
 const C = results['Казуал'].runs[1];
 const D = results['Отпуск'].runs[1];
 const E = results['Голо-армия'].runs[1];
@@ -415,7 +455,13 @@ gate('G3', D.ruins <= 8, 'отпуск 14 дн: разрушений ≤ 8 (фа
 gate('G3', D.capturesEnd > C.capturesEnd - 3, 'отпуск: comeback не отбрасывает глубже казуала (факт: ' + D.capturesEnd + ' vs ' + C.capturesEnd + ')');
 gate('G4', E.capturesEnd >= 6, 'армия-фокус жизнеспособна: ≥ 6 твердынь (факт: ' + E.capturesEnd + ')');
 gate('G5', A.capturesEnd - E.capturesEnd <= 12, 'эконом-жокей не обязателен: разрыв ≤ 12 (факт: ' + (A.capturesEnd - E.capturesEnd) + ')');
-gate('G6', A.goldP50 <= 2000, 'сinks работают: P50 золота дисциплины не копится бесконтрольно (факт: ' + A.goldP50 + ')');
-console.log('Отчёт (не гейт): рост дохода д90/д30 ×' + inflation.toFixed(1) + '; руины по коррупции: А=' + A.ruinByCorruption + ' F=' + F.ruinByCorruption + '; P50 золота: E=' + E.goldP50);
+gate('G6', A.goldP50 <= 2000, 'sinks работают: P50 золота дисциплины не копится бесконтрольно (факт: ' + A.goldP50 + ')');
+gate('G7', B.firstAssaultDay !== null && B.firstAssaultDay <= 14, 'ветвление: первая осада ≤ 14 дней (факт: ' + B.firstAssaultDay + ')');
+gate('G7', B.capturesEnd >= 9, 'ветвление: ≥ 9 твердынь из 18 доступных (обход ш08/ш18; факт: ' + B.capturesEnd + ')');
+gate('G7', B.zeroGoldDays <= 20, 'ветвление: нулевых дней ≤ 20 (факт: ' + B.zeroGoldDays + ')');
+gate('G7', B.ruinByCorruption === 0, 'ветвление: коррупционных руин нет (факт: ' + B.ruinByCorruption + ')');
+gate('G7', B.routesGraphEnd > B.routesIndexEnd, 'ветвление: обход ш08 — граф-маршруты больше индексных, диагональ ш07→ш09 платит за обход (факт: ' + B.routesGraphEnd + ' vs ' + B.routesIndexEnd + ')');
+gate('G7', SM.tradeBonus(B.routesGraphEnd) <= 0.38, 'ветвление: кап бонуса путей +38% соблюдается (факт: ' + SM.tradeBonus(B.routesGraphEnd) + ')');
+console.log('Отчёт (не гейт): рост дохода д90/д30 ×' + inflation.toFixed(1) + '; руины по коррупции: А=' + A.ruinByCorruption + ' F=' + F.ruinByCorruption + '; P50 золота: E=' + E.goldP50 + '; маршруты ветвления: граф ' + B.routesGraphEnd + ' / индекс ' + B.routesIndexEnd);
 console.log(fail === 0 ? 'ИТОГО: гейты экономики пройдены' : 'ИТОГО: ПРОВАЛЕНО ГЕЙТОВ: ' + fail);
 process.exit(fail === 0 ? 0 : 1);

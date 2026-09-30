@@ -173,6 +173,59 @@
         return Math.min(0.38, r * 0.02);
     }
 
+    // Campaign 2.0 C1: торговые пути по ГРАФУ кампании — маршрут = ребро, оба конца которого захвачены.
+    // edges (опционально): массив пар [from, to] (числа = индексы каталога, строки = id) ИЛИ map {id: [id, ...]}.
+    // Без edges рёбра берутся из STRONGHOLDS[].next; если next не задан ни у одного узла —
+    // фоллбэк на индексную смежность (= tradeRoutes: линейный дефолт, результат 1:1).
+    // Рёбра с неизвестными id/индексами вне каталога игнорируются (robustness).
+    function tradeRoutesGraph(capturedFlags, edges) {
+        var arr = Array.isArray(capturedFlags) ? capturedFlags : [];
+        var cat = catalog();
+        var list = (cat && Array.isArray(cat.STRONGHOLDS)) ? cat.STRONGHOLDS : [];
+        var idxById = {};
+        for (var ci = 0; ci < list.length; ci++) {
+            if (list[ci] && typeof list[ci].id === 'string') idxById[list[ci].id] = ci;
+        }
+        function res(x) {
+            if (typeof x === 'number' && isFinite(x)) return Math.floor(x);
+            if (typeof x === 'string' && Object.prototype.hasOwnProperty.call(idxById, x)) return idxById[x];
+            return -1;
+        }
+        var pairs = [];
+        if (Array.isArray(edges)) {
+            edges.forEach(function(e) {
+                if (Array.isArray(e) && e.length >= 2) {
+                    var a = res(e[0]), b = res(e[1]);
+                    if (a >= 0 && b >= 0) pairs.push([a, b]);
+                }
+            });
+        } else if (edges && typeof edges === 'object') {
+            Object.keys(edges).forEach(function(from) {
+                if (!Array.isArray(edges[from])) return;
+                edges[from].forEach(function(to) {
+                    var a = res(from), b = res(to);
+                    if (a >= 0 && b >= 0) pairs.push([a, b]);
+                });
+            });
+        } else if (list.length) {
+            var hasAny = false;
+            list.forEach(function(s) { if (s && Array.isArray(s.next) && s.next.length) hasAny = true; });
+            if (!hasAny) return tradeRoutes(arr); // линейный дефолт — совместимость со старым каталогом
+            list.forEach(function(s) {
+                if (!s || !Array.isArray(s.next)) return;
+                s.next.forEach(function(to) {
+                    var a = res(s.id), b = res(to);
+                    if (a >= 0 && b >= 0) pairs.push([a, b]);
+                });
+            });
+        } else {
+            return tradeRoutes(arr); // каталога нет — старая семантика
+        }
+        var n = 0;
+        pairs.forEach(function(p) { if (arr[p[0]] && arr[p[1]]) n++; });
+        return n;
+    }
+
     return {
         armyPower: armyPower,
         defensePower: defensePower,
@@ -182,6 +235,7 @@
         stackPower: stackPower,
         tierPower: tierPower,
         tradeRoutes: tradeRoutes,
+        tradeRoutesGraph: tradeRoutesGraph,
         tradeBonus: tradeBonus,
         TIER_KEYS: TIER_KEYS
     };
