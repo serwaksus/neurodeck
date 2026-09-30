@@ -452,9 +452,9 @@ async function shot(pg, label) {
   await shot(pg, 'b3_retreat');
 
   // ===================== БЛОК 4. Коррапшн полный цикл + иммунитет (сценарии 2 и 9а) =====================
-  // Изоляция: только sh01 (налог 1💰), постройки zh1+df1+ec1 (апкип 21, доход 0) → каждый тик гарантированный
-  // дефицит (1 < 21); иммунитеты сброшены (без наследства от блока 1); lastWeekReset = текущий понедельник (осада/XP/уровни не мешают).
-  await step('4.1 фиксстура: sh01; Ж1+Частокол+Рынок; иммунитеты сброшены; wil 3 → grace 2; апкип 21, доход 1', async () => {
+  // Изоляция: только sh01 (налог 1💰), постройки zh1+df1+ec1 (апкип 19 — C3: пров. Хутора −10% от 21, доход 1) → каждый тик гарантированный
+  // дефицит (1 < 19); иммунитеты сброшены (без наследства от блока 1); lastWeekReset = текущий понедельник (осада/XP/уровни не мешают).
+  await step('4.1 фиксстура: sh01; Ж1+Частокол+Рынок; иммунитеты сброшены; wil 3 → grace 2; апкип 19 (Хутора −10%), доход 1', async () => {
     await applyFixture(v8payload((p) => {
       p.strongholds[0].captured = true;
       p.strongholds[0].buildings.zh1 = { built: true, corruptionStage: 'ok', debtDays: 0 };
@@ -467,15 +467,15 @@ async function shot(pg, label) {
       lastWeekReset = getThisMondayKey();                      // QA-чит: неделя «текущая» — воскресный блок не сработает
       STATS.wil.value = 3;                                     // grace = 2 + floor(3/20) = 2
       dailyEvent = null;                                       // событие прошлого дня (Ярмарка ×1.5) не должно множить доход фикстуры
-      window.__origRandom = Math.random; Math.random = function() { return 0.99; }; // пин события дня «Тихий день»: Караван (+20💰) рандомно оплачивал содержание 21 и ломал сценарий руины
+      window.__origRandom = Math.random; Math.random = function() { return 0.99; }; // пин события дня «Тихий день»: Караван (+20💰) рандомно оплачивал содержание 19 и ломал сценарий руины
     });
     const m = await ev(() => ({ grace: Math.min(7, 2 + Math.floor(STATS.wil.value / 20)), upkeep: shUpkeepPerDay(), income: shIncomePerDay(), fresh: Object.keys(strongholds[0].buildings).filter(function(bid) { var bb = strongholds[0].buildings[bid]; return bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000; }).length }));
     if (m.grace !== 2) throw new Error('grace: ' + m.grace);
-    if (m.upkeep !== 21) throw new Error('содержание: ' + m.upkeep);
+    if (m.upkeep !== 19) throw new Error('содержание (C3: Хутора −10%): ' + m.upkeep);
     if (m.income !== 1) throw new Error('доход: ' + m.income);
     // builtAt теперь персистится в buildings — проверка не нужна
   });
-  await step('4.2 дефицит, ночь 1: upkeep первым, казна → 0 (доход 1 < апкипа 21), все debt 1, стадия ещё Целое (grace 2)', async () => {
+  await step('4.2 дефицит, ночь 1: upkeep первым, казна → 0 (доход 1 < апкипа 19), все debt 1, стадия ещё Целое (grace 2)', async () => {
     await dayTick();
     const st = await ev(() => ({
       gold: HERO.gold,
@@ -486,7 +486,7 @@ async function shot(pg, label) {
       if (b.corruptionStage !== 'ok' || b.debtDays !== 1) throw new Error(k + ': ' + JSON.stringify(b));
     }
   });
-  await step('4.3 ИММУНИТЕТ + Обветшало: zh1 помечен «свежим» (чит) → ночи 2–3 его не трогают (debt 1), df1/ec1 → debt 3 Обветшало; пул полон (zh1 цел), формула −50% = 7; оборона +10, апкип 21', async () => {
+  await step('4.3 ИММУНИТЕТ + Обветшало: zh1 помечен «свежим» (чит) → ночи 2–3 его не трогают (debt 1), df1/ec1 → debt 3 Обветшало; пул полон (zh1 цел), формула −50% = 7; оборона +10, апкип 19', async () => {
     await ev(() => { strongholds[0].buildings.zh1.builtAt = Date.now(); }); // QA-чит: «построена только что»
     await dayTick();
     await dayTick();
@@ -506,7 +506,7 @@ async function shot(pg, label) {
     if (st.pool !== 14) throw new Error('пул: ' + st.pool + ' (zh1 иммунен-цел → полный пул 14)');
     if (st.wornPoolFormula !== 7) throw new Error('формула −50% пула: ' + st.wornPoolFormula);
     if (st.defBonus !== 10) throw new Error('бонус обороны при worn: ' + st.defBonus);
-    if (st.upkeep !== 21) throw new Error('Обветшало должно платить полный апкип: ' + st.upkeep);
+    if (st.upkeep !== 19) throw new Error('Обветшало должно платить полный апкип (C3: Хутора −10%): ' + st.upkeep);
     if (st.income !== 1) throw new Error('доход при worn (рынок 10%→5% на базе 1): ' + st.income);
   });
   await shot(pg, 'b4_worn_badges');

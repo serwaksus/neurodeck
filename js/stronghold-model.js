@@ -135,7 +135,9 @@
         });
         var upkMult = Number(opts.upkeepMult); // Г1-2: доктрина upkeep −20% (только вниз, 0<m≤1)
         if (!isFinite(upkMult) || upkMult <= 0 || upkMult > 1) upkMult = 1;
-        upkeep = Math.round(upkeep * upkMult);
+        var provMult = Number(opts.provinceUpkeepMult); // C3: правило провинции (Хутора −10% / Пепел +10%) — в отличие от доктрины может быть >1
+        if (!isFinite(provMult) || provMult <= 0 || provMult > 3) provMult = 1;
+        upkeep = Math.round(upkeep * upkMult * provMult);
         var paid = gold >= upkeep;
         var out = {};
         Object.keys(src).forEach(function(id) {
@@ -226,6 +228,23 @@
         return n;
     }
 
+    // Campaign 2.0 C3: правила провинций (CAMPAIGN-2.0.md §2) — чистые модификаторы из каталога PROVINCES.
+    // Возвращают множитель налогов/содержания/осады для провинции; нет каталога, нет провинции или
+    // кривое значение → 1 (нейтрально, экономика не ломается). Диапазон (0; 3] — защита от опечаток в данных.
+    function provinceMods(prov) {
+        var cat = catalog();
+        var p = (cat && cat.PROVINCES && typeof cat.PROVINCES === 'object') ? cat.PROVINCES[Number(prov)] : null;
+        return (p && p.rule && typeof p.rule === 'object' && p.rule.mods && typeof p.rule.mods === 'object') ? p.rule.mods : null;
+    }
+    function provinceMult(prov, key) {
+        var mods = provinceMods(prov);
+        var v = mods ? Number(mods[key]) : NaN;
+        return (isFinite(v) && v > 0 && v <= 3) ? v : 1;
+    }
+    function provinceIncomeMult(prov) { return provinceMult(prov, 'incomeMult'); }
+    function provinceUpkeepMult(prov) { return provinceMult(prov, 'upkeepMult'); }
+    function provinceSiegeMult(prov) { return provinceMult(prov, 'siegeMult'); }
+
     return {
         armyPower: armyPower,
         defensePower: defensePower,
@@ -237,6 +256,9 @@
         tradeRoutes: tradeRoutes,
         tradeRoutesGraph: tradeRoutesGraph,
         tradeBonus: tradeBonus,
+        provinceIncomeMult: provinceIncomeMult,
+        provinceUpkeepMult: provinceUpkeepMult,
+        provinceSiegeMult: provinceSiegeMult,
         TIER_KEYS: TIER_KEYS
     };
 });

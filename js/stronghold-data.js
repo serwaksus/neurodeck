@@ -106,5 +106,23 @@ var BOSS_ARTIFACTS = BOSSES.map(function(b, i) {
     return { num: b.num, prov: b.prov, kind: b.artifact.kind, name: b.artifact.name, desc: b.artifact.desc, idx: i };
 });
 var BOSS_KINDS = ['tax', 'attrition', 'def', 'xp', 'cost'];
-if (typeof window !== 'undefined') window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS };
-if (typeof module !== 'undefined' && module.exports) module.exports = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS };
+// ===================== Campaign 2.0 C3: ПРОВИНЦИИ — идентичность и региональные правила (CAMPAIGN-2.0.md §2) =====================
+// Региональное правило живёт здесь (каталог), а применяется ЧИСТЫМИ модификаторами в stronghold-model.js
+// (provinceIncomeMult/provinceUpkeepMult/provinceSiegeMult) — не раскидывается по app.js.
+// rule.mods соответствует content-schema §6 (mods: {incomeMult, upkeepMult, siegeMult}); нейтральное правило = 1.0.
+// rule.active=false — правило объявлено в дизайне, но пока НЕ применяется (не-мультивые правила:
+// слот здания / +1 день долга коррупции — интеграция шагом C4+); у неактивных правил mods обязаны быть 1.0.
+// Внутреннее имя PROVINCE_CATALOG (не PROVINCES!): app.js объявляет свой const PROVINCES (римские названия) —
+// одноимённый var из classic-script стал бы глобальной переменной и ломал бы app.js SyntaxError'ом.
+var PROVINCE_CATALOG = {
+1: { id: 1, name: 'Хутора',   palette: 'зелень/дерево', threat: 'волки-рейдеры', arc: '«Стая» — 3 волны малых фаз',
+     rule: { text: 'Содержание построек −10%', active: true, mods: { incomeMult: 1.0, upkeepMult: 0.9, siegeMult: 1.0 } } },
+2: { id: 2, name: 'Крепости', palette: 'камень/сталь',  threat: 'осадные башни',  arc: '«Инженер» — фаза ломает 1 постройку',
+     rule: { text: '+1 слот здания', active: false, slotsBonus: 1, mods: { incomeMult: 1.0, upkeepMult: 1.0, siegeMult: 1.0 } } },
+3: { id: 3, name: 'Гниль',    palette: 'болото/кость', threat: 'гниль',          arc: '«Гниль» — фазы лечат долг врага',
+     rule: { text: 'Коррупция: +1 день долга', active: false, debtDaysBonus: 1, mods: { incomeMult: 1.0, upkeepMult: 1.0, siegeMult: 1.0 } } },
+4: { id: 4, name: 'Пепел',    palette: 'лава/угль',    threat: 'жара',           arc: '«Пепельный владыка» — 3 фазы',
+     rule: { text: 'Налоги +10%, содержание +10%', active: true, mods: { incomeMult: 1.1, upkeepMult: 1.1, siegeMult: 1.0 } } }
+};
+if (typeof window !== 'undefined') window.StrongholdData = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS, PROVINCES: PROVINCE_CATALOG };
+if (typeof module !== 'undefined' && module.exports) module.exports = { STRONGHOLDS: STRONGHOLDS, BUILDINGS: BUILDINGS, UNIT_TIERS: UNIT_TIERS, BOSSES: BOSSES, BOSS_ARTIFACTS: BOSS_ARTIFACTS, PROVINCES: PROVINCE_CATALOG };

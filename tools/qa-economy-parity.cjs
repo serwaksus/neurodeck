@@ -33,12 +33,19 @@ const R = (x) => Math.round(x);
 const manualHire = (base, cha) => Math.ceil(base * (1 - Math.min(0.30, 0.005 * cha)));
 const manualRoutes = (flags) => { let n = 0; for (let i = 1; i < flags.length; i++) if (flags[i] && flags[i - 1]) n++; return n; };
 const manualTBonus = (r) => Math.min(0.38, Math.max(0, R(r)) * 0.02);
-// shIncomePerDay: taxes → ×(1+tradeBonus) → round; + round(econ); → ×(1+min(0.5, market)) → round
+// C3 (Campaign 2.0 §2): провинциальный модификатор налога из каталога PROVINCES — тот же источник,
+// что у SM.provinceIncomeMult; нейтрально при отсутствии каталога/кривом значении.
+const provInc = (i) => {
+  const p = CAT.PROVINCES && CAT.PROVINCES[CAT.STRONGHOLDS[i].prov];
+  const m = p && p.rule && p.rule.mods ? Number(p.rule.mods.incomeMult) : NaN;
+  return (isFinite(m) && m > 0 && m <= 3) ? m : 1;
+};
+// shIncomePerDay: taxes (поштучно ×правило провинции, round — как в тике) → ×(1+tradeBonus) → round; + round(econ); → ×(1+min(0.5, market)) → round
 const manualIncome = (flags, bspec) => {
   let taxes = 0, econ = 0, market = 0;
   flags.forEach((cap, i) => {
     if (!cap) return;
-    taxes += CAT.STRONGHOLDS[i].tax;
+    taxes += R(CAT.STRONGHOLDS[i].tax * provInc(i));
     (bspec || []).forEach(([idx, id, stage]) => {
       if (idx !== i) return;
       const d = CAT.BUILDINGS[id];
@@ -132,8 +139,9 @@ async function main() {
       return { routes, bonus: SM.tradeBonus(routes), income: shIncomePerDay() };
     }`);
     l1('1b-пути', '20/20: маршрутов 19, кап бонуса +38%', '19|0.38', capBonus.routes + '|' + capBonus.bonus, 'BALANCE круг 6');
-    l1('1b-доход', '20/20: доход = round(8352×1.38) = 11526💰', 11526, capBonus.income, 'пин круг 3: Σ налогов 8352');
-    // Г1-2 контроль: с короной III казна = round(11526×1.10) — авторизованный ре-пин (руководитель Г1)
+    l1('1b-доход', '20/20: доход = round(8984×1.38) = 12398💰', 12398, capBonus.income, 'пин круг 3: Σ налогов 8352; C3 ре-пин (CAMPAIGN-2.0 §2): Пепел ×1.1 → Σ 8984 — авторизовано дизайном');
+    // Г1-2 контроль: с короной III казна = round(12398×1.10) — авторизованный ре-пин (руководитель Г1);
+    // C3: база пересчитана от нового пина 12398 (Пепел ×1.1 в налогах)
     const capCrown = await ev(`() => {
       __qaReset(); for (let i = 0; i < 20; i++) strongholds[i].captured = true;
       HERO.doctrines = { t1: null, t2: null, t3: 'crown' };
@@ -141,7 +149,7 @@ async function main() {
       HERO.doctrines = { t1: null, t2: null, t3: null };
       return income;
     }`);
-    l1('1b-доход', '20/20 + корона III: доход = round(11526×1.10) = 12679💰', 12679, capCrown, 'Г1-2: доктрина crown +10% ВСЁ золото (тик и доход)');
+    l1('1b-доход', '20/20 + корона III: доход = round(12398×1.10) = 13638💰', 13638, capCrown, 'Г1-2: доктрина crown +10% ВСЁ золото (тик и доход)');
 
     // --- 1c. siegePower: сетка параметров + продуктовый runWeeklySiege ---
     for (const wk of [1, 2, 5, 12, 13, 14, 20]) for (const cap of [1, 3, 6, 10, 20]) for (const wr of [0, 5, 10, 15]) {
@@ -369,7 +377,7 @@ async function main() {
     }
     const flags6 = Array.from({ length: 20 }, (_, i) => i < 6);
     const expTaxes = R((1 + 2 + 4 + 7 + 11 + 16) * (1 + manualTBonus(manualRoutes(flags6))));
-    const expEcon = 20, expUpkeep = 3 + 10 + 15;
+    const expEcon = 20, expUpkeep = R((3 + 10 + 15) * (CAT.PROVINCES[1].rule.mods.upkeepMult)); // C3: постройки в sh01 — Хутора −10%
     const expMarketBase = expTaxes + expEcon;
     const expIncome = R(expMarketBase * 1.1); // рынок ec1 +10% — с раунда 3 платит В КАЗНУ (parity с sim.js:429)
     const expDelta = expIncome - expUpkeep;
@@ -386,13 +394,14 @@ async function main() {
       `app.js: gold += income (налоги×маршруты+экон)×(1+рынок) — parity с sim.js:429`);
     L2.days = campLog;
 
-    // Сценарий B «дефицит»: золото 0, upkeep 31 > доход 7; wil 3 → grace 2, step 2
+    // Сценарий B «дефицит»: золото 0, содержание 22 (C3: Хутора −10%; ec2→df1 — экон-доход 25 сравнялся
+    // со скидочным содержанием 25 и ломал гарантированный дефицит) > доход 3; wil 3 → grace 2, step 2
     await ev(`() => {
       __qaReset(); STATS.wil.value = 3;
       for (let i = 0; i < 2; i++) strongholds[i].captured = true; // дефицит: без налогов III провинции доход (с рынком) < содержания
       strongholds[0].buildings.zh1 = { built: true, corruptionStage: 'ok', debtDays: 0 };
       strongholds[0].buildings.ec1 = { built: true, corruptionStage: 'ok', debtDays: 0 };
-      strongholds[0].buildings.ec2 = { built: true, corruptionStage: 'ok', debtDays: 0 };
+      strongholds[0].buildings.df1 = { built: true, corruptionStage: 'ok', debtDays: 0 };
       strongholds[1].buildings.zh1 = { built: true, corruptionStage: 'ok', debtDays: 0 };
       HERO.gold = 0;
       Math.random = () => 0.99;
@@ -429,7 +438,7 @@ async function main() {
       };
     }`);
     l1('2-дефицит', 'P2: ночь 6 (всё в руине) — upkeep 0 → «оплаченный день» бесплатно: руины → обветшало, 0💰 потрачено',
-      'worn|worn|worn', freeHeal.stages, `золото на утро ${freeHeal.gold} (доход 7, списаний 0), debt=${freeHeal.debt}`);
+      'worn|worn|worn', freeHeal.stages, `золото на утро ${freeHeal.gold} (доход 3, списаний 0), debt=${freeHeal.debt}`);
     // Оплаченная ночь с реальным содержанием: worn → ok, −31💰
     await ev(`() => { HERO.gold = 100000; return true; }`);
     const heal1 = await ev(`() => {
@@ -439,8 +448,8 @@ async function main() {
         debt: strongholds[0].buildings.zh1.debtDays, gold: HERO.gold
       };
     }`);
-    l1('2-дефицит', 'оплаченная ночь (upkeep 31 списан): обветшало → Целое (1 ступень/день)', 'ok|ok', heal1.s,
-      `debt=${heal1.debt}, списано ${100007 - heal1.gold}💰`);
+    l1('2-дефицит', 'оплаченная ночь (upkeep 22 списан: 19+3): обветшало → Целое (1 ступень/день)', 'ok|ok', heal1.s,
+      `debt=${heal1.debt}, списано ${100003 - heal1.gold}💰`);
 
     // Маршрутный прирост в кампании: 6 → 7 соседних захватов, +1 путь = +2% налогов
     const routeBump = await ev(`() => {

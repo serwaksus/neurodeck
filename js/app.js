@@ -1931,6 +1931,15 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 // ===================== ТВЕРДЫНИ v2 (SPEC §1–§7; формулы — только js/stronghold-model.js) =====================
 var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
 const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
+// Campaign 2.0 C3: строка регионального правила провинции для панели твердыни. Текст и признаки живут
+// в каталоге StrongholdData.PROVINCES (§2 CAMPAIGN-2.0.md), модификаторы считают чистые функции
+// stronghold-model (provinceIncomeMult/UpkeepMult/SiegeMult) — здесь только отображение.
+function provinceRuleLineHtml(prov) {
+var cat = (typeof window !== 'undefined' && window.StrongholdData) ? window.StrongholdData : null;
+var p = (cat && cat.PROVINCES) ? cat.PROVINCES[prov] : null;
+if (!p || !p.rule || typeof p.rule.text !== 'string' || !p.rule.text) return '';
+return '<div class="sh-trade">🏛 ' + p.name + ': ' + p.rule.text + (p.rule.active === false ? ' · готовится' : '') + '</div>';
+}
 // ===================== Г2-1: ПОВЕРЕННЫЕ ТЬМЫ — боссы провинций (очередь I..XI по 4 провинциям каталога) =====================
 function bossEscalation(num) { return (1 + 0.05 * (num - 1)) * Math.pow(1.2, HERO.ascension || 0); } // цели фаз ×1.5 к XI · Г2-5: ×1.2^N за круг вознесения
 function ensureBossesState() {
@@ -2720,7 +2729,7 @@ var taxes = 0, econ = 0, market = 0, upkeep = 0, paid = true;
 var gold = HERO.gold || 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return; // стартовый лагерь sh01 до захвата освобождён от содержания и коррапшна (решение совета)
-    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov)); // Г1-3/Г2-1/Г2-2; Г4: эдикт провинции
+    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov) * (SM.provinceIncomeMult ? SM.provinceIncomeMult(STRONGHOLDS[i].prov) : 1)); // Г1-3/Г2-1/Г2-2; Г4: эдикт провинции; C3: правило провинции (Пепел +10% налог)
 builtList(i).forEach(function(id) {
 var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
 if (d.gold) econ += d.gold * m;
@@ -2752,7 +2761,7 @@ Object.keys(s.buildings).forEach(function(bid) {
 var bb = s.buildings[bid];
 if (bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000) imm[bid] = true;
 });
-var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: Math.max(1, Math.round((stepOpt + techGraceBonus()) * techCorrSlow())), immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * techUpkeepMult() }); // Г1-2 устав; Г2-2 метель; Г4 стойка; Г5-Т3: grace +2, ветшание ×0.5, содержание −28%
+var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: Math.max(1, Math.round((stepOpt + techGraceBonus()) * techCorrSlow())), immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * techUpkeepMult(), provinceUpkeepMult: SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1 }); // Г1-2 устав; Г2-2 метель; Г4 стойка; Г5-Т3: grace +2, ветшание ×0.5, содержание −28%; C3: правило провинции (Хутора −10% / Пепел +10%)
 gold = res.gold;
 upkeep += res.upkeep;
 if (!res.paid) paid = false;
@@ -3146,7 +3155,7 @@ var _sw = weatherSeasonWeek();
 var taxes = 0, econ = 0, market = 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return;
-    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov)); // Г1-3/Г2-1/Г2-2; Г4: эдикт — parity с тиком
+    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov) * (SM.provinceIncomeMult ? SM.provinceIncomeMult(STRONGHOLDS[i].prov) : 1)); // Г1-3/Г2-1/Г2-2; Г4: эдикт — parity с тиком; C3: правило провинции — parity с тиком
         builtList(i).forEach(function(id) {
             var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
             if (d.gold) econ += d.gold * m;
@@ -3170,7 +3179,7 @@ var _sw = weatherSeasonWeek();
 var u = 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return;
-    var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult(); // Г2-2: метель севера ×2; Г4: стойка недели — parity с тиком
+    var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1); // Г2-2: метель севера ×2; Г4: стойка недели; C3: правило провинции — parity с тиком
 Object.keys(s.buildings).forEach(function(id) {
 var b = s.buildings[id];
 if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDINGS[id].upkeep * _wm;
@@ -3904,7 +3913,8 @@ if (!s || (!s.captured && idx !== 0)) { currentShIdx = null; renderStrongholds()
 var html = '<button class="sh-back" data-action="sh-back">← Все твердыни</button>';
 html += bossCardHtml(idx); // Г2-1: карточка босса провинции сверху панели
 html += '<div class="sh-panel-head"><div class="sh-panel-title">' + d.icon + ' ' + d.name + '</div>' +
-'<div class="sh-panel-sub">Налог +' + d.tax + ' 💰/день · слоты ' + builtList(idx).length + '/' + d.slots + ' · ' + PROVINCES[d.prov] + '</div></div>';
+'<div class="sh-panel-sub">Налог +' + d.tax + ' 💰/день · слоты ' + builtList(idx).length + '/' + d.slots + ' · ' + PROVINCES[d.prov] + '</div></div>' +
+provinceRuleLineHtml(d.prov); // C3: региональное правило провинции (каталог PROVINCES; модификаторы — в stronghold-model)
 html += edictBlockHtml(idx); // Г4: эдикты провинции + порядок + ресурс
 if (idx === 19 && typeof throne !== 'undefined') {
 html += '<div class="sh-sec-title">👑 Вечный трон — ' + throne + '/5 · налоги +' + throne + '%</div>';

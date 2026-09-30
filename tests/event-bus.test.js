@@ -75,5 +75,5 @@ test('event-bus подключён в index.html до storage.js и в SW-пре
     const busPos = html.indexOf('js/event-bus.js');
     const storagePos = html.indexOf('js/storage.js');
     assert.ok(busPos > -1 && storagePos > busPos, 'event-bus грузится раньше storage');
-    assert.ok(sw.includes("'js/event-bus.js?v=82'"), 'event-bus в прекэше SW');
+    assert.ok(sw.includes("'js/event-bus.js?v=83'"), 'event-bus в прекэше SW');
 });
