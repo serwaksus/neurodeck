@@ -10,7 +10,7 @@ Baseline: b59ac16aeb999c0eb83964b1826a8655b321ecbc
 | R2 | 0 | precommit green; HEAD gate pending | queue4-evidence/R2.json | driver commit follows; see external SHA artifact |
 | R3 | 0 | precommit green; HEAD gate pending | queue4-evidence/R3.json | driver commit follows; see external SHA artifact |
 | R4 | 0 | precommit green; HEAD gate pending | queue4-evidence/R4.json | driver commit follows; see external SHA artifact |
-| R5 | pending | pending | pending | pending |
+| R5 | 0 | precommit green; HEAD gate pending | queue4-evidence/R5.json | driver commit follows; see external SHA artifact |
 | V1 | pending | pending | pending | pending |
 | V2 | pending | pending | pending | pending |
 | V3 | pending | pending | pending | pending |

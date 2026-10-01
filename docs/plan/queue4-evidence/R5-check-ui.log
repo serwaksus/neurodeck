@@ -1,0 +1,8 @@
+
+> neurodeck@0.0.0 check:ui
+> node tests/verify-ui-assets.cjs css/style.css index.html
+
+VERIFY css/style.css [/root/neurodeck/css/style.css]: PASS (braces 1434/1434, .siege-alarm ok, .totem-row ok, .totem-opt ok, .tower-card ok)
+VERIFY index.html [/root/neurodeck/index.html]: PASS (pins x15/15 unique=1, totemCard ok, order streak<totem ok)
+verified: css/style.css index.html -> PASS
+EXIT=0

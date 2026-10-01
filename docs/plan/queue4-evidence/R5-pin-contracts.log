@@ -1,0 +1,195 @@
+TAP version 13
+# Subtest: P21 дефолты по правилу 20: музыка выключена, SFX тихо, без сохранённого состояния
+ok 1 - P21 дефолты по правилу 20: музыка выключена, SFX тихо, без сохранённого состояния
+  ---
+  duration_ms: 2.236689
+  type: 'test'
+  ...
+# Subtest: P21 mix(): мьют категории/мастера глушит, иначе произведение; SFX-эффект ≤ 0.3
+ok 2 - P21 mix(): мьют категории/мастера глушит, иначе произведение; SFX-эффект ≤ 0.3
+  ---
+  duration_ms: 0.636488
+  type: 'test'
+  ...
+# Subtest: P21 setVol клампит и квантует к 5%; сохранение переживает перезагрузку (localStorage)
+ok 3 - P21 setVol клампит и квантует к 5%; сохранение переживает перезагрузку (localStorage)
+  ---
+  duration_ms: 2.88766
+  type: 'test'
+  ...
+# Subtest: P21 sanitize: битый JSON/чужие ключи/вне диапазона → дефолты-меш, без throw
+ok 4 - P21 sanitize: битый JSON/чужие ключи/вне диапазона → дефолты-меш, без throw
+  ---
+  duration_ms: 1.296664
+  type: 'test'
+  ...
+# Subtest: P21 reset(): дефолты (правило 20) + сразу в localStorage
+ok 5 - P21 reset(): дефолты (правило 20) + сразу в localStorage
+  ---
+  duration_ms: 0.774477
+  type: 'test'
+  ...
+# Subtest: P21 правило 20 (юнит-часть): tone() до unlock — тихий no-op, WebAudio в Node нет
+ok 6 - P21 правило 20 (юнит-часть): tone() до unlock — тихий no-op, WebAudio в Node нет
+  ---
+  duration_ms: 0.687997
+  type: 'test'
+  ...
+# Subtest: P21 правило 20 (source): одноразовые unlock-слушатели + гейт _unlocked в tone
+ok 7 - P21 правило 20 (source): одноразовые unlock-слушатели + гейт _unlocked в tone
+  ---
+  duration_ms: 4.004463
+  type: 'test'
+  ...
+# Subtest: P21 app.js: все 10 sfx разнесены по категориям через ndSfx (typeof-гвард)
+ok 8 - P21 app.js: все 10 sfx разнесены по категориям через ndSfx (typeof-гвард)
+  ---
+  duration_ms: 13.928746
+  type: 'test'
+  ...
+# Subtest: P21 app.js: клик-кейсы микшера + рендер секции; секция в syncModal (index.html)
+ok 9 - P21 app.js: клик-кейсы микшера + рендер секции; секция в syncModal (index.html)
+  ---
+  duration_ms: 6.203487
+  type: 'test'
+  ...
+# Subtest: P21 подключение: audio.js грузится до app.js и в SW-прекэше; схема сейва не тронута
+ok 10 - P21 подключение: audio.js грузится до app.js и в SW-прекэше; схема сейва не тронута
+  ---
+  duration_ms: 1.54675
+  type: 'test'
+  ...
+# Subtest: P21 app.js: категория тона не меняет вызовы — sfx-имена и call-сайты целы
+ok 11 - P21 app.js: категория тона не меняет вызовы — sfx-имена и call-сайты целы
+  ---
+  duration_ms: 2.835622
+  type: 'test'
+  ...
+# Subtest: event-bus: on → emit → подписчик получает payload; без подписчиков emit тих
+ok 12 - event-bus: on → emit → подписчик получает payload; без подписчиков emit тих
+  ---
+  duration_ms: 2.221647
+  type: 'test'
+  ...
+# Subtest: event-bus: без payload подписчик получает объект (не undefined)
+ok 13 - event-bus: без payload подписчик получает объект (не undefined)
+  ---
+  duration_ms: 1.432038
+  type: 'test'
+  ...
+# Subtest: event-bus: off() отписывает; падение подписчика изолировано от соседей
+ok 14 - event-bus: off() отписывает; падение подписчика изолировано от соседей
+  ---
+  duration_ms: 0.273211
+  type: 'test'
+  ...
+# Subtest: event-bus: лимит подписчиков — варн в консоль, но подписка работает
+ok 15 - event-bus: лимит подписчиков — варн в консоль, но подписка работает
+  ---
+  duration_ms: 0.378569
+  type: 'test'
+  ...
+# Subtest: storage.js: applySyncData и multi-tab-синк больше не зовут UI напрямую (шаг state-store)
+ok 16 - storage.js: applySyncData и multi-tab-синк больше не зовут UI напрямую (шаг state-store)
+  ---
+  duration_ms: 0.541656
+  type: 'test'
+  ...
+# Subtest: event-bus подключён в index.html до storage.js и в SW-прекэш
+ok 17 - event-bus подключён в index.html до storage.js и в SW-прекэш
+  ---
+  duration_ms: 0.758183
+  type: 'test'
+  ...
+# verified: css/style.css index.html PASS (wave3 contracts)
+# index.html: PASS
+# css/style.css: PASS
+# package.json: PASS
+# Subtest: wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка / прочее держимся / NaN нет обороны
+ok 18 - wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка / прочее держимся / NaN нет обороны
+  ---
+  duration_ms: 1.928176
+  type: 'test'
+  ...
+# Subtest: wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio
+ok 19 - wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio
+  ---
+  duration_ms: 2.013643
+  type: 'test'
+  ...
+# Subtest: wave3 Ф1: checkSiegeAlarmToast — тост только в дни 0/2, флаг дня не пускает повтор
+ok 20 - wave3 Ф1: checkSiegeAlarmToast — тост только в дни 0/2, флаг дня не пускает повтор
+  ---
+  duration_ms: 0.839455
+  type: 'test'
+  ...
+# Subtest: wave3 Ф1 контракты: панель .siege-alarm при daysToSiege≤2, CSS-класс есть, alarm toast flag в renderStrongholds
+ok 21 - wave3 Ф1 контракты: панель .siege-alarm при daysToSiege≤2, CSS-класс есть, alarm toast flag в renderStrongholds
+  ---
+  duration_ms: 2.212214
+  type: 'test'
+  ...
+# Subtest: wave3 Ф2: totemGoldMult/XpMult/DefMult — волк/сова/медведь, без тотема = 1
+ok 22 - wave3 Ф2: totemGoldMult/XpMult/DefMult — волк/сова/медведь, без тотема = 1
+  ---
+  duration_ms: 3.37858
+  type: 'test'
+  ...
+# Subtest: wave3 Ф2: renderTotemCard — до 1 захвата пусто, chosen-вид, re-choose возвращает выбор
+ok 23 - wave3 Ф2: renderTotemCard — до 1 захвата пусто, chosen-вид, re-choose возвращает выбор
+  ---
+  duration_ms: 2.238903
+  type: 'test'
+  ...
+# Subtest: wave3 Ф2: finishSeason ставит rechoose=true (id сохраняется), requestTotem сбрасывает
+ok 24 - wave3 Ф2: finishSeason ставит rechoose=true (id сохраняется), requestTotem сбрасывает
+  ---
+  duration_ms: 0.421204
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3: towerEnemyPower — base(неделя 1)×1.2^floor
+ok 25 - wave3 Ф3: towerEnemyPower — base(неделя 1)×1.2^floor
+  ---
+  duration_ms: 0.386413
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3: renderTowerCard — 19/20 нет, 20/20 кнопка, та же дата израсходовано, этаж 50 покорён
+ok 26 - wave3 Ф3: renderTowerCard — 19/20 нет, 20/20 кнопка, та же дата израсходовано, этаж 50 покорён
+  ---
+  duration_ms: 1.130954
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, поражение без потерь, флаг в обеих ветках
+ok 27 - wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, поражение без потерь, флаг в обеих ветках
+  ---
+  duration_ms: 1.275781
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html: единый ?v= ×10
+ok 28 - wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html: единый ?v= ×10
+  ---
+  duration_ms: 2.757194
+  type: 'test'
+  ...
+# Subtest: package.json: check:ui-скрипт верификации UI-ассетов подключён, JSON валиден
+ok 29 - package.json: check:ui-скрипт верификации UI-ассетов подключён, JSON валиден
+  ---
+  duration_ms: 4.434221
+  type: 'test'
+  ...
+# Subtest: wave3 style.css [/root/neurodeck/css/style.css]: .siege-alarm и .totem-* правила на месте, скобки сбалансированы
+ok 30 - wave3 style.css [/root/neurodeck/css/style.css]: .siege-alarm и .totem-* правила на месте, скобки сбалансированы
+  ---
+  duration_ms: 1.89816
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 258.699415
+EXIT=0

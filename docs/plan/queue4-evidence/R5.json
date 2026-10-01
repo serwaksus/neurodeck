@@ -1,0 +1,66 @@
+{
+  "package": "R5",
+  "status": "complete",
+  "base_head": "06ae23b2f083a2e7a249c046d647ea5e4016535d",
+  "summary": "Fresh evidence + release audit (docs-only package per R5 contract; no runtime/test code changed). (1) Independent static audit notes at docs/audit/AUDIT-2026-10-01-R5.md: version circuit verified consistent at audited HEAD 06ae23b — SCHEMA_VERSION 14 (js/storage.js:69), shell v104 uniform ×15 pins in index.html, sw.js VERSION 'nd-shell-v104' + 15 precache pins + filename-versioned config/weekly-modifiers.v1.json, all test/tool literal pins on v104 (only intentional \\d+ regex patterns remain), R3 release artifact versions 14/104/15 consistent (artifact head c5f147c is R3's own run record, one commit behind HEAD; R4 changed no client runtime). (2) Corrected stale pin/haptic counts and docs: AGENTS.md claimed check:js covers 6 core files — actually 7 since P21 c47ad2e added js/audio.js (state-guards, state/store, ui/strongholds, perf, audio, storage, app per package.json); queue-3 handoff SESSION-VPS-AUTO-2026-10-01.md claimed ND_HAPTICS has 18 events — actually 17, and 17 already at the P22 commit itself (verified via git show 82e9ad6:js/app.js), so it was a reporting error, not code drift; the same handoff's 'pins v102' line got a dated currency note (v102 was true at end of queue 3; R1→v103, R2→v104, ×15 composition unchanged); corrections are marked inline plus a dated 'Корректировки фактов (R5)' section so history is not silently rewritten; AGENTS.md skill-list check date refreshed after re-verifying the 12 .opencode/skills dirs. Historical records verified as correct-for-their-time and intentionally NOT retro-edited (queue-3 final CI counters 572/572 + 7 e2e files; DEVICE-MATRIX S1 nd-shell-v89 = P4-era run fact; TEST-CAMPAIGN-2 '15 проверок' = 2026-09-17 era, checklist now 35; archive v62 snapshot). (3) Fresh narrow evidence captured: check:js EXIT 0; check:ui PASS with pins x15/15 unique=1; pin/haptic literal contract tests (event-bus + audio-mixer + wave3) 30/30 pass 0 fail 0 skipped; full unit suite 617/617 pass skipped 0 (= R4 count, expected for docs-only). Haptic facts pinned in audit: ND_HAPTICS 17 events, hapticFor() ×7 call sites in app.js, raw haptic() ×70 in app.js (1 internal dispatch) + ×1 in storage.js, ND_HAPTIC_VIBES 7 vibrate patterns. No baselines touched (not a visual package). Full fresh CI (npm run ci / npm run release:verify) is the driver's independent post-commit run per this session's explicit override.",
+  "changed_files": [
+    "AGENTS.md",
+    "docs/session-handoff/SESSION-VPS-AUTO-2026-10-01.md",
+    "docs/audit/AUDIT-2026-10-01-R5.md",
+    "docs/plan/queue4-evidence/R5.json",
+    "docs/plan/queue4-evidence/R5-check-js.log",
+    "docs/plan/queue4-evidence/R5-check-ui.log",
+    "docs/plan/queue4-evidence/R5-pin-contracts.log",
+    "docs/plan/queue4-evidence/R5-unit.log"
+  ],
+  "tests": [
+    {
+      "command": "npm run check:js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R5-check-js.log"
+    },
+    {
+      "command": "npm run check:ui",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R5-check-ui.log"
+    },
+    {
+      "command": "node --test tests/event-bus.test.js tests/audio-mixer.test.js tests/wave3.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R5-pin-contracts.log"
+    },
+    {
+      "command": "npm test",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R5-unit.log"
+    }
+  ],
+  "artifacts": [
+    "docs/audit/AUDIT-2026-10-01-R5.md",
+    "docs/plan/queue4-evidence/R5-check-js.log",
+    "docs/plan/queue4-evidence/R5-check-ui.log",
+    "docs/plan/queue4-evidence/R5-pin-contracts.log",
+    "docs/plan/queue4-evidence/R5-unit.log"
+  ],
+  "schema_version": "14",
+  "app_version": "104",
+  "version_sources": {
+    "schema": {
+      "path": "js/storage.js",
+      "value": "const SCHEMA_VERSION = 14"
+    },
+    "app": {
+      "path": "index.html",
+      "value": "?v=104"
+    }
+  },
+  "limitations": [
+    "Physical device tests TBD; no physical certification claimed.",
+    "Fresh FULL CI (npm run ci / npm run release:verify, incl. e2e/visual/playtest/qa/sim) is delegated to the driver's independent run after commit, per this session's explicit override ('narrow tests sequentially; driver runs full CI'); this session's fresh evidence is the narrow set above (syntax, UI-asset pin contract, version/haptic literal contracts, full unit suite 617/617).",
+    "Docs-only package: no runtime, test, or baseline changes, so the synchronized pin set stays v104/104/14 (verified from source; no bump required).",
+    "R3 release artifact docs/release/verify/artifact.json was NOT regenerated here: it is the preserved record of the R3-time run (head c5f147c); its version fields remain consistent with current source; the driver's post-commit release:verify will refresh it.",
+    "Historical documents with era-correct counters (queue-3 handoff 572/572 units + 7 e2e files, DEVICE-MATRIX nd-shell-v89, TEST-CAMPAIGN-2 '15 проверок', archive v62) were deliberately not retro-edited — only factually wrong counters were corrected, with inline markers and a dated corrections section.",
+    "Haptic counts are static source counts (catalog entries / call sites), not runtime firing frequencies; runtime behavior stays covered by the unit harnesses.",
+    "No git commit/push was made from this session (driver commits); the completion ledger was not modified."
+  ]
+}
