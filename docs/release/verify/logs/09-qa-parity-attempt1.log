@@ -1,0 +1,12 @@
+$ npm run test:qa:parity
+
+> neurodeck@0.0.0 test:qa:parity
+> node tools/qa-economy-parity.cjs
+
+
+=== QA-ECONOMY PARITY (порт 8830, попыток 1) ===
+Проверок: 217, PASS: 217, FAIL: 0
+Инварианты кампании: нарушений 0
+PageErrors: 1
+  CONSOLE: Failed to load resource: net::ERR_FAILED
+

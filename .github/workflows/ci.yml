@@ -51,8 +51,41 @@ jobs:
             tests/e2e/snapshots/*-diff.png
           retention-days: 7
 
+  release-gate:
+    # R3 (queue 4): блокирующий гейт перед деплоем. В отличие от матричного job
+    # `test`: visual БЛОКИРУЕТ (там continue-on-error — базлайны сняты вне CI),
+    # economy sim включён (в матрице его нет), ретраи только у браузерных шагов
+    # с фиксацией флаков, полный артефакт (SHA/env/commands/exits) пишется в
+    # docs/release/verify/artifact.json. Только push в main: PR-фидбэк даёт
+    # матрица, гейт нужен ровно там, где решается деплой.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-release-gate-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npx playwright install chromium
+      - name: Release gate (visual blocking, economy sim included)
+        run: npm run release:verify
+      - name: Upload release gate artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-gate-artifact
+          path: docs/release/verify/
+          retention-days: 30
+
   deploy:
-    needs: test
+    # R3: деплой только после блокирующего release-гейта (и матрицы test).
+    needs: [test, release-gate]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

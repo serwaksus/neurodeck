@@ -1,0 +1,175 @@
+TAP version 13
+# [release-verify] 01/10 check:js: attempt 1/1 — npm run check:js
+# [release-verify] check:js: PASS exits=[0] 1ms
+# [release-verify] 02/10 unit: attempt 1/1 — npm run test
+# [release-verify] unit: PASS exits=[0] 0ms
+# [release-verify] 03/10 e2e: attempt 1/2 — npm run test:e2e
+# [release-verify] e2e: PASS exits=[0] 0ms
+# [release-verify] 04/10 e2e:visual: attempt 1/2 — npm run test:e2e:visual
+# [release-verify] e2e:visual: PASS exits=[0] 0ms
+# [release-verify] 05/10 playtest:strongholds: attempt 1/1 — npm run test:playtest:strongholds
+# [release-verify] playtest:strongholds: PASS exits=[0] 0ms
+# [release-verify] 06/10 playtest:acceptance: attempt 1/1 — npm run test:playtest:acceptance
+# [release-verify] playtest:acceptance: PASS exits=[0] 1ms
+# [release-verify] 07/10 qa:data: attempt 1/1 — npm run test:qa:data
+# [release-verify] qa:data: PASS exits=[0] 0ms
+# [release-verify] 08/10 qa:chaos: attempt 1/1 — npm run test:qa:chaos
+# [release-verify] qa:chaos: PASS exits=[0] 0ms
+# [release-verify] 09/10 qa:parity: attempt 1/1 — npm run test:qa:parity
+# [release-verify] qa:parity: PASS exits=[0] 0ms
+# [release-verify] 10/10 sim:economy: attempt 1/1 — npm run test:sim:economy
+# [release-verify] sim:economy: PASS exits=[0] 0ms
+# [release-verify] 01/10 check:js: attempt 1/1 — npm run check:js
+# [release-verify] check:js: PASS exits=[0] 1ms
+# [release-verify] 02/10 unit: attempt 1/1 — npm run test
+# [release-verify] unit: PASS exits=[0] 0ms
+# [release-verify] 03/10 e2e: attempt 1/2 — npm run test:e2e
+# [release-verify] e2e: exit 1 → повтор (политика: 1)
+# [release-verify] 03/10 e2e: attempt 2/2 — npm run test:e2e
+# [release-verify] e2e: PASS (flaky: 2 attempts) exits=[1,0] 0ms
+# [release-verify] 04/10 e2e:visual: attempt 1/2 — npm run test:e2e:visual
+# [release-verify] e2e:visual: PASS exits=[0] 0ms
+# [release-verify] 05/10 playtest:strongholds: attempt 1/1 — npm run test:playtest:strongholds
+# [release-verify] playtest:strongholds: PASS exits=[0] 0ms
+# [release-verify] 06/10 playtest:acceptance: attempt 1/1 — npm run test:playtest:acceptance
+# [release-verify] playtest:acceptance: PASS exits=[0] 0ms
+# [release-verify] 07/10 qa:data: attempt 1/1 — npm run test:qa:data
+# [release-verify] qa:data: PASS exits=[0] 0ms
+# [release-verify] 08/10 qa:chaos: attempt 1/1 — npm run test:qa:chaos
+# [release-verify] qa:chaos: PASS exits=[0] 3ms
+# [release-verify] 09/10 qa:parity: attempt 1/1 — npm run test:qa:parity
+# [release-verify] qa:parity: PASS exits=[0] 0ms
+# [release-verify] 10/10 sim:economy: attempt 1/1 — npm run test:sim:economy
+# [release-verify] sim:economy: PASS exits=[0] 0ms
+# [release-verify] 01/10 check:js: attempt 1/1 — npm run check:js
+# [release-verify] check:js: PASS exits=[0] 0ms
+# [release-verify] 02/10 unit: attempt 1/1 — npm run test
+# [release-verify] unit: PASS exits=[0] 0ms
+# [release-verify] 03/10 e2e: attempt 1/2 — npm run test:e2e
+# [release-verify] e2e: PASS exits=[0] 0ms
+# [release-verify] 04/10 e2e:visual: attempt 1/2 — npm run test:e2e:visual
+# [release-verify] e2e:visual: exit 1 → повтор (политика: 1)
+# [release-verify] 04/10 e2e:visual: attempt 2/2 — npm run test:e2e:visual
+# [release-verify] e2e:visual: FAIL exits=[1,1] 0ms
+# [release-verify] 05/10 playtest:strongholds: attempt 1/1 — npm run test:playtest:strongholds
+# [release-verify] playtest:strongholds: PASS exits=[0] 1ms
+# [release-verify] 06/10 playtest:acceptance: attempt 1/1 — npm run test:playtest:acceptance
+# [release-verify] playtest:acceptance: PASS exits=[0] 0ms
+# [release-verify] 07/10 qa:data: attempt 1/1 — npm run test:qa:data
+# [release-verify] qa:data: PASS exits=[0] 0ms
+# [release-verify] 08/10 qa:chaos: attempt 1/1 — npm run test:qa:chaos
+# [release-verify] qa:chaos: PASS exits=[0] 0ms
+# [release-verify] 09/10 qa:parity: attempt 1/1 — npm run test:qa:parity
+# [release-verify] qa:parity: PASS exits=[0] 0ms
+# [release-verify] 10/10 sim:economy: attempt 1/1 — npm run test:sim:economy
+# [release-verify] sim:economy: PASS exits=[0] 0ms
+# [release-verify] 01/10 check:js: attempt 1/1 — npm run check:js
+# [release-verify] check:js: PASS exits=[0] 0ms
+# [release-verify] 02/10 unit: attempt 1/1 — npm run test
+# [release-verify] unit: PASS exits=[0] 0ms
+# [release-verify] 03/10 e2e: attempt 1/2 — npm run test:e2e
+# [release-verify] e2e: PASS exits=[0] 0ms
+# [release-verify] 04/10 e2e:visual: attempt 1/2 — npm run test:e2e:visual
+# [release-verify] e2e:visual: PASS exits=[0] 1ms
+# [release-verify] 05/10 playtest:strongholds: attempt 1/1 — npm run test:playtest:strongholds
+# [release-verify] playtest:strongholds: PASS exits=[0] 0ms
+# [release-verify] 06/10 playtest:acceptance: attempt 1/1 — npm run test:playtest:acceptance
+# [release-verify] playtest:acceptance: PASS exits=[0] 0ms
+# [release-verify] 07/10 qa:data: attempt 1/1 — npm run test:qa:data
+# [release-verify] qa:data: FAIL exits=[1] 0ms
+# [release-verify] 08/10 qa:chaos: attempt 1/1 — npm run test:qa:chaos
+# [release-verify] qa:chaos: PASS exits=[0] 0ms
+# [release-verify] 09/10 qa:parity: attempt 1/1 — npm run test:qa:parity
+# [release-verify] qa:parity: PASS exits=[0] 0ms
+# [release-verify] 10/10 sim:economy: attempt 1/1 — npm run test:sim:economy
+# [release-verify] sim:economy: PASS exits=[0] 0ms
+# [release-verify] 01/10 check:js: attempt 1/1 — npm run check:js
+# [release-verify] check:js: PASS exits=[0] 0ms
+# [release-verify] 02/10 unit: attempt 1/1 — npm run test
+# [release-verify] unit: PASS exits=[0] 0ms
+# [release-verify] 03/10 e2e: attempt 1/2 — npm run test:e2e
+# [release-verify] e2e: PASS exits=[0] 0ms
+# [release-verify] 04/10 e2e:visual: attempt 1/2 — npm run test:e2e:visual
+# [release-verify] e2e:visual: PASS exits=[0] 0ms
+# [release-verify] 05/10 playtest:strongholds: attempt 1/1 — npm run test:playtest:strongholds
+# [release-verify] playtest:strongholds: PASS exits=[0] 0ms
+# [release-verify] 06/10 playtest:acceptance: attempt 1/1 — npm run test:playtest:acceptance
+# [release-verify] playtest:acceptance: PASS exits=[0] 0ms
+# [release-verify] 07/10 qa:data: attempt 1/1 — npm run test:qa:data
+# [release-verify] qa:data: FAIL exits=[1] 0ms
+# [release-verify] 08/10 qa:chaos: attempt 1/1 — npm run test:qa:chaos
+# [release-verify] qa:chaos: PASS exits=[0] 0ms
+# [release-verify] 09/10 qa:parity: attempt 1/1 — npm run test:qa:parity
+# [release-verify] qa:parity: PASS exits=[0] 0ms
+# [release-verify] 10/10 sim:economy: attempt 1/1 — npm run test:sim:economy
+# [release-verify] sim:economy: FAIL exits=[2] 0ms
+# [release-verify] PREFLIGHT FAIL: pins out of sync
+# Subtest: R3: шаги гейта = полная цепочка ci + economy sim; все шаги блокирующие
+ok 1 - R3: шаги гейта = полная цепочка ci + economy sim; все шаги блокирующие
+  ---
+  duration_ms: 1.465323
+  type: 'test'
+  ...
+# Subtest: R3: явные ретраи — только браузерные шаги (1 повтор), детерминированные без ретраев
+ok 2 - R3: явные ретраи — только браузерные шаги (1 повтор), детерминированные без ретраев
+  ---
+  duration_ms: 0.305443
+  type: 'test'
+  ...
+# Subtest: R3: чистый проход — по одной попытке, артефакт и все логи на месте
+ok 3 - R3: чистый проход — по одной попытке, артефакт и все логи на месте
+  ---
+  duration_ms: 7.683344
+  type: 'test'
+  ...
+# Subtest: R3: флак e2e (exit 1 → retry exit 0) — гейт пройден, флак зафиксирован, а не спрятан
+ok 4 - R3: флак e2e (exit 1 → retry exit 0) — гейт пройден, флак зафиксирован, а не спрятан
+  ---
+  duration_ms: 5.439771
+  type: 'test'
+  ...
+# Subtest: R3: visual упал дважды — гейт ЗАВАЛЕН (visual блокирует), оба exit-кода в артефакте
+ok 5 - R3: visual упал дважды — гейт ЗАВАЛЕН (visual блокирует), оба exit-кода в артефакте
+  ---
+  duration_ms: 4.995277
+  type: 'test'
+  ...
+# Subtest: R3: детерминированный шаг не ретраится — один прогон, провал = провал гейта
+ok 6 - R3: детерминированный шаг не ретраится — один прогон, провал = провал гейта
+  ---
+  duration_ms: 3.161986
+  type: 'test'
+  ...
+# Subtest: R3: провал не прерывает цепочку — артефакт полный, у каждого шага exit-код
+ok 7 - R3: провал не прерывает цепочку — артефакт полный, у каждого шага exit-код
+  ---
+  duration_ms: 2.223824
+  type: 'test'
+  ...
+# Subtest: R3: preflight — рассинхрон рантайм-пинов заваливает гейт до запуска шагов
+ok 8 - R3: preflight — рассинхрон рантайм-пинов заваливает гейт до запуска шагов
+  ---
+  duration_ms: 0.754134
+  type: 'test'
+  ...
+# Subtest: R3: readVersions — версии из исходников согласованы (storage.js / index.html ?v= / sw.js)
+ok 9 - R3: readVersions — версии из исходников согласованы (storage.js / index.html ?v= / sw.js)
+  ---
+  duration_ms: 2.394502
+  type: 'test'
+  ...
+# Subtest: R3: gitInfo — 40-символьный hex HEAD живого репозитория
+ok 10 - R3: gitInfo — 40-символьный hex HEAD живого репозитория
+  ---
+  duration_ms: 18.485791
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.789858

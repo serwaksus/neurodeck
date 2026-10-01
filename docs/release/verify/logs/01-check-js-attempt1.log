@@ -1,0 +1,6 @@
+$ npm run check:js
+
+> neurodeck@0.0.0 check:js
+> node --check js/state-guards.js && node --check js/state/store.js && node --check js/ui/strongholds.js && node --check js/perf.js && node --check js/audio.js && node --check js/storage.js && node --check js/app.js
+
+

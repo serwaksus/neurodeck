@@ -1,0 +1,80 @@
+{
+  "package": "R3",
+  "status": "complete",
+  "base_head": "c5f147c03674c9ae01c9b55b247fd5bd0cf324ba",
+  "summary": "Blocking release gate extracted as `npm run release:verify` (tools/release-verify.cjs): the full `npm run ci` chain as 10 explicit steps where EVERY step blocks, visual regression blocks (unlike the ci.yml matrix job where it stays continue-on-error advisory), and the economy sim (test:sim:economy, absent from the GitHub matrix job) is included. Explicit retry policy: exactly 1 retry for the two Playwright steps (e2e, visual) against environment flake, 0 retries for deterministic steps; a pass on the 2nd attempt is recorded as flaky in the artifact (steps[].flaky + summary.flaky) instead of being hidden. No fail-fast: all steps run so the artifact is always complete. Preflight checks runtime pin consistency (js/storage.js SCHEMA_VERSION, index.html ?v= pins, sw.js nd-shell-vN) and refuses to start on desync. Complete artifact docs/release/verify/artifact.json records git HEAD/branch/dirty, env (node/npm/platform/CI), source-parsed versions, per-step commands, exit codes of every attempt, durations, and per-attempt log paths under docs/release/verify/logs/. A crash mid-run leaves artifact.json at result:'running' (stale artifacts never masquerade as fresh). GitHub workflow: new release-gate job (push to main only) runs the gate and uploads the artifact; deploy now needs [test, release-gate] — deploy only after the release gate. Verified by a real full gate run on this VPS: 10/10 steps PASS, exit 0, no flakes (e2e 196s, visual 146s, unit suite 597 tests incl. the 10 new gate-contract tests). No runtime code changed, so shell pins stay ?v=104/nd-shell-v104 (no repin required); AGENTS.md verification section updated to describe the gate.",
+  "changed_files": [
+    "tools/release-verify.cjs",
+    "tests/release-verify.test.js",
+    "package.json",
+    ".github/workflows/ci.yml",
+    "AGENTS.md",
+    "docs/release/verify/artifact.json",
+    "docs/release/verify/logs/01-check-js-attempt1.log",
+    "docs/release/verify/logs/02-unit-attempt1.log",
+    "docs/release/verify/logs/03-e2e-attempt1.log",
+    "docs/release/verify/logs/04-e2e-visual-attempt1.log",
+    "docs/release/verify/logs/05-playtest-strongholds-attempt1.log",
+    "docs/release/verify/logs/06-playtest-acceptance-attempt1.log",
+    "docs/release/verify/logs/07-qa-data-attempt1.log",
+    "docs/release/verify/logs/08-qa-chaos-attempt1.log",
+    "docs/release/verify/logs/09-qa-parity-attempt1.log",
+    "docs/release/verify/logs/10-sim-economy-attempt1.log",
+    "docs/plan/queue4-evidence/R3-node-check.log",
+    "docs/plan/queue4-evidence/R3-gate-unit.log",
+    "docs/plan/queue4-evidence/R3-release-verify.log"
+  ],
+  "tests": [
+    {
+      "command": "node --check tools/release-verify.cjs && node --check tests/release-verify.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R3-node-check.log"
+    },
+    {
+      "command": "node --test tests/release-verify.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R3-gate-unit.log"
+    },
+    {
+      "command": "npm run release:verify",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R3-release-verify.log"
+    }
+  ],
+  "artifacts": [
+    "docs/release/verify/artifact.json",
+    "docs/release/verify/logs/01-check-js-attempt1.log",
+    "docs/release/verify/logs/02-unit-attempt1.log",
+    "docs/release/verify/logs/03-e2e-attempt1.log",
+    "docs/release/verify/logs/04-e2e-visual-attempt1.log",
+    "docs/release/verify/logs/05-playtest-strongholds-attempt1.log",
+    "docs/release/verify/logs/06-playtest-acceptance-attempt1.log",
+    "docs/release/verify/logs/07-qa-data-attempt1.log",
+    "docs/release/verify/logs/08-qa-chaos-attempt1.log",
+    "docs/release/verify/logs/09-qa-parity-attempt1.log",
+    "docs/release/verify/logs/10-sim-economy-attempt1.log",
+    "docs/plan/queue4-evidence/R3-node-check.log",
+    "docs/plan/queue4-evidence/R3-gate-unit.log",
+    "docs/plan/queue4-evidence/R3-release-verify.log"
+  ],
+  "schema_version": "14",
+  "app_version": "104",
+  "version_sources": {
+    "schema": {
+      "path": "js/storage.js",
+      "value": "const SCHEMA_VERSION = 14"
+    },
+    "app": {
+      "path": "index.html",
+      "value": "?v=104"
+    }
+  },
+  "limitations": [
+    "Physical device tests TBD.",
+    "No runtime changes in R3 (tools/tests/workflow/docs only), so index.html ?v= pins and sw.js nd-shell-v shell stay at 104 — no synchronized pin bump required this package; version consistency 104/104 + schema 14 is asserted by the gate preflight and recorded in docs/release/verify/artifact.json.",
+    "The modified GitHub Actions workflow was not executed on GitHub runners from this VPS (no push authorized): verified via a real local full gate run (npm run release:verify, 10/10 PASS) plus YAML parse of .github/workflows/ci.yml (jobs test/release-gate/deploy; deploy.needs=[test, release-gate]; release-gate gated to refs/heads/main). First real GitHub-side run happens on the driver's push.",
+    "On GitHub runners the release gate's visual step is expected to block deploys until CI-native visual baselines are captured (baselines are off-CI; the matrix job keeps visual advisory for PR feedback) — this is the intended blocking-release semantics, not a regression.",
+    "Retry policy is explicit but minimal: exactly 1 retry for the two Playwright steps; deterministic steps are never retried; flakes are recorded, not silenced.",
+    "The committed gate artifact truthfully records dirty=true / head=c5f147c because R3 files were uncommitted in the working tree at run time (driver commits after exit); re-running release:verify post-commit will record the committed SHA."
+  ]
+}

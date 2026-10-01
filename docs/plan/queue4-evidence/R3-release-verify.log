@@ -1,0 +1,29 @@
+
+> neurodeck@0.0.0 release:verify
+> node tools/release-verify.cjs
+
+[release-verify] NeuroDeck release gate (visual blocking, economy sim included)
+[release-verify] head=c5f147c03674c9ae01c9b55b247fd5bd0cf324ba branch=release/queue4-2026-10-01 dirty=true
+[release-verify] node=v22.22.1 platform=linux/x64
+[release-verify] 01/10 check:js: attempt 1/1 — npm run check:js
+[release-verify] check:js: PASS exits=[0] 317ms
+[release-verify] 02/10 unit: attempt 1/1 — npm run test
+[release-verify] unit: PASS exits=[0] 8305ms
+[release-verify] 03/10 e2e: attempt 1/2 — npm run test:e2e
+[release-verify] e2e: PASS exits=[0] 196006ms
+[release-verify] 04/10 e2e:visual: attempt 1/2 — npm run test:e2e:visual
+[release-verify] e2e:visual: PASS exits=[0] 145927ms
+[release-verify] 05/10 playtest:strongholds: attempt 1/1 — npm run test:playtest:strongholds
+[release-verify] playtest:strongholds: PASS exits=[0] 13871ms
+[release-verify] 06/10 playtest:acceptance: attempt 1/1 — npm run test:playtest:acceptance
+[release-verify] playtest:acceptance: PASS exits=[0] 66628ms
+[release-verify] 07/10 qa:data: attempt 1/1 — npm run test:qa:data
+[release-verify] qa:data: PASS exits=[0] 37523ms
+[release-verify] 08/10 qa:chaos: attempt 1/1 — npm run test:qa:chaos
+[release-verify] qa:chaos: PASS exits=[0] 23800ms
+[release-verify] 09/10 qa:parity: attempt 1/1 — npm run test:qa:parity
+[release-verify] qa:parity: PASS exits=[0] 3616ms
+[release-verify] 10/10 sim:economy: attempt 1/1 — npm run test:sim:economy
+[release-verify] sim:economy: PASS exits=[0] 552ms
+[release-verify] artifact: docs/release/verify/artifact.json
+[release-verify] RELEASE GATE PASSED: 10 steps, flaky=[none]

@@ -20,4 +20,5 @@ swap-skills --budget # show token estimate
 - `npm run check:js` — JS syntax check (covers 6 core files incl. js/state/store.js and js/ui/strongholds.js; stronghold-data/stronghold-model/perf-compat indirectly via tests)
 - `npm test` — full test suite
 - E2E: `npx playwright test tests/e2e/`
-- **Full chain = `npm run ci`** — check:js + unit + e2e + visual + playtest:strongholds/acceptance + qa:data/chaos/parity (same 9 steps run in GitHub Actions; visual stays continue-on-error there)
+- **Full chain = `npm run ci`** — check:js + unit + e2e + visual + playtest:strongholds/acceptance + qa:data/chaos/parity + sim:economy
+- **Release gate = `npm run release:verify`** — same chain but fully blocking: visual blocks (no continue-on-error), economy sim included, explicit e2e/visual retry with flake recording, full artifact `docs/release/verify/artifact.json` (SHA/env/commands/exits); GitHub Actions deploy runs only after this gate

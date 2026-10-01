@@ -1,0 +1,36 @@
+$ npm run test:e2e:visual
+
+> neurodeck@0.0.0 test:e2e:visual
+> npx playwright test tests/e2e/visual-regression.test.js tests/e2e/visual-regression-extended.test.js
+
+
+Running 25 tests using 1 worker
+
+  ✓   1 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab deck @ mobile matches baseline (7.2s)
+  ✓   2 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab hero @ mobile matches baseline (7.1s)
+  ✓   3 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab inv @ mobile matches baseline (7.0s)
+  ✓   4 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab quests @ mobile matches baseline (6.8s)
+  ✓   5 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab stats @ mobile matches baseline (7.0s)
+  ✓   6 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab strongholds @ mobile matches baseline (6.9s)
+  ✓   7 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab deck @ tablet matches baseline (7.1s)
+  ✓   8 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab hero @ tablet matches baseline (7.4s)
+  ✓   9 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab inv @ tablet matches baseline (7.4s)
+  ✓  10 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab quests @ tablet matches baseline (6.9s)
+  ✓  11 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab stats @ tablet matches baseline (7.5s)
+  ✓  12 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab strongholds @ tablet matches baseline (7.6s)
+  ✓  13 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal starterDeck matches baseline (3.9s)
+  ✓  14 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal editCard matches baseline (4.0s)
+  ✓  15 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal sync matches baseline (4.1s)
+  ✓  16 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal goal matches baseline (4.0s)
+  ✓  17 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal task matches baseline (4.0s)
+  ✓  18 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal siegeReport matches baseline (4.1s)
+  ✓  19 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal weekly matches baseline (3.9s)
+  ✓  20 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal return matches baseline (5.2s)
+  ✓  21 tests/e2e/visual-regression.test.js:7:1 › page screenshot matches baseline (4.4s)
+  ✓  22 tests/e2e/visual-regression.test.js:24:1 › starter deck modal screenshot matches baseline (4.0s)
+  ✓  23 tests/e2e/visual-regression.test.js:59:1 › deck card screenshot matches baseline (4.0s)
+  ✓  24 tests/e2e/visual-regression.test.js:81:1 › hero treasury screenshot matches baseline (4.1s)
+  ✓  25 tests/e2e/visual-regression.test.js:98:1 › strongholds top screenshot matches baseline (4.9s)
+
+  25 passed (2.4m)
+
