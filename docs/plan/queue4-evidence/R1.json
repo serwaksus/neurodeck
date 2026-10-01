@@ -1,0 +1,45 @@
+{
+  "package": "R1",
+  "status": "complete",
+  "base_head": "c9d033733ed522726f6827647af5eee846a7c9fc",
+  "summary": "Remote config fetch binding, timeout, size cap, and service-worker cache policy fixed with independent browser coverage.",
+  "changed_files": [
+    "js/remote-config.js",
+    "sw.js",
+    "tests/remote-config.test.js",
+    "tests/e2e/remote-config.test.js",
+    "package.json"
+  ],
+  "tests": [
+    {
+      "command": "node --test tests/remote-config.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R1-unit.log"
+    },
+    {
+      "command": "npm run ci",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R1-full-ci.log"
+    }
+  ],
+  "artifacts": [
+    "docs/plan/queue4-evidence/R1-unit.log",
+    "docs/plan/queue4-evidence/R1-e2e.log",
+    "docs/plan/queue4-evidence/R1-full-ci.log"
+  ],
+  "schema_version": "14",
+  "app_version": "102",
+  "version_sources": {
+    "schema": {
+      "path": "js/storage.js",
+      "value": "const SCHEMA_VERSION = 14"
+    },
+    "app": {
+      "path": "index.html",
+      "value": "?v=102"
+    }
+  },
+  "limitations": [
+    "Physical device tests TBD"
+  ]
+}

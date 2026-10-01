@@ -134,18 +134,47 @@
         opts = (opts && typeof opts === 'object') ? opts : {};
         var url = (typeof opts.url === 'string' && opts.url) ? opts.url : DEFAULT_URL;
         var nowMs = (typeof opts.now === 'number' && isFinite(opts.now)) ? opts.now : Date.now();
-        var fetchFn = (typeof opts.fetch === 'function') ? opts.fetch
-            : ((typeof root !== 'undefined' && typeof root.fetch === 'function') ? root.fetch : null);
-        if (!fetchFn) return Promise.resolve({ applied: false, reason: 'no-fetch' });
-        return Promise.resolve().then(function() {
-            return fetchFn(url, { cache: 'no-cache' });
+        var holder = typeof globalThis !== 'undefined' ? globalThis : null;
+        var fetchFn = typeof opts.fetch === 'function' ? opts.fetch : holder && holder.fetch;
+        if (typeof fetchFn !== 'function') return Promise.resolve({ applied: false, reason: 'no-fetch' });
+        var timeout = Number.isFinite(opts.timeout) && opts.timeout > 0 ? opts.timeout : 8000;
+        var maxBytes = 65536;
+        var controller = typeof AbortController === 'function' ? new AbortController() : null;
+        var timer;
+        function failure(reason) { var e = new Error(reason); e.configReason = reason; return e; }
+        var request = Promise.resolve().then(function() {
+            return fetchFn.call(typeof opts.fetch === 'function' ? opts : holder, url,
+                { cache: 'no-store', signal: controller ? controller.signal : undefined });
         }).then(function(res) {
-            if (!res || typeof res.text !== 'function' || !res.ok) {
-                var code = (res && typeof res.ok === 'boolean') ? ('http ' + res.status) : 'не Response';
-                throw new Error(code);
+            if (!res || typeof res.text !== 'function' || !res.ok) { var status = res && res.status; var err = failure('network'); err.message = status ? 'http ' + status : 'network'; throw err; }
+            var length = res.headers && res.headers.get('content-length');
+            if (length && Number(length) > maxBytes) throw failure('size');
+            // Stream where available: the cap bounds allocation, not merely validation.
+            if (res.body && typeof res.body.getReader === 'function' && typeof TextDecoder === 'function') {
+                var reader = res.body.getReader(), decoder = new TextDecoder(), bytes = 0, text = '';
+                function read() {
+                    return reader.read().then(function(chunk) {
+                        if (chunk.done) return text + decoder.decode();
+                        bytes += chunk.value.byteLength;
+                        if (bytes > maxBytes) { reader.cancel().catch(function() {}); throw failure('size'); }
+                        text += decoder.decode(chunk.value, { stream: true });
+                        return read();
+                    });
+                }
+                return read();
             }
-            return res.text();
-        }).then(function(text) {
+            return res.text().then(function(text) {
+                var bytes = typeof TextEncoder === 'function' ? new TextEncoder().encode(text).length : unescape(encodeURIComponent(text)).length;
+                if (bytes > maxBytes) throw failure('size');
+                return text;
+            });
+        });
+        var deadline = new Promise(function(resolve, reject) {
+            timer = setTimeout(function() { reject(failure('timeout')); if (controller) controller.abort(); }, timeout);
+        });
+        // Installation occurs only after the race: late requests cannot mutate the catalog.
+        return Promise.race([request, deadline]).then(function(text) {
+            clearTimeout(timer);
             var v = validateWeeklyConfig(text, nowMs);
             if (!v.ok) {
                 tel('nd_config_fallback', { reason: v.reason, detail: v.detail });
@@ -156,8 +185,11 @@
             tel('nd_config_apply', { version: v.version, count: v.modifiers.length, expires: v.expires });
             return { applied: true, version: v.version, count: v.modifiers.length, expires: v.expires };
         }).catch(function(e) {
-            tel('nd_config_fallback', { reason: 'network', detail: String(e && e.message || e) });
-            return { applied: false, reason: 'network', detail: String(e && e.message || e) };
+            clearTimeout(timer);
+            if (controller) controller.abort();
+            var reason = e && e.configReason || 'network';
+            tel('nd_config_fallback', { reason: reason, detail: String(e && e.message || e) });
+            return { applied: false, reason: reason, detail: String(e && e.message || e) };
         });
     }
 

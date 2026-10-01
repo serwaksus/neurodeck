@@ -74,6 +74,12 @@ self.addEventListener('fetch', (e) => {
 
   if (url.origin !== location.origin && url.href !== TG_SDK) return; // прочие кросс-домены не трогаем
 
+  // Config is mutable: never let shell precache pin a stale catalog.
+  if (url.origin === location.origin && /\/config\/weekly-modifiers[^/]*\.json$/.test(url.pathname)) {
+    e.respondWith(fetch(new Request(req, { cache: 'no-store' })).catch(() => caches.match(req).then((hit) => hit || Response.error())));
+    return;
+  }
+
   // статика (в т.ч. версионированная ?v=) — cache-first
   e.respondWith(
     caches.match(req).then((hit) => {

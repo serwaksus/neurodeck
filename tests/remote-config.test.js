@@ -158,3 +158,31 @@ test('проводка: remote-config.js в index.html ДО app.js, в прек�
     assert.ok(sw.includes('js/remote-config.js?v='), 'лоадер в прекэше SW (офлайн-старт)');
     assert.ok(sw.includes('config/weekly-modifiers.v1.json'), 'config-артефакт в прекэше SW (офлайн-фоллбэк того же контента)');
 });
+
+
+test('live global fetch keeps receiver and bypasses HTTP cache', async () => {
+    const previous = globalThis.fetch;
+    try {
+        globalThis.fetch = function(url, options) {
+            assert.equal(this, globalThis); assert.equal(options.cache, 'no-store');
+            return Promise.resolve({ok: true, text: async () => committedText});
+        };
+        assert.equal((await RC.loadWeeklyConfig({now: NOW})).applied, true);
+    } finally { globalThis.fetch = previous; cleanup(); }
+});
+test('deadline covers fetch and body; late completion never installs', async () => {
+    let finish;
+    const result = await RC.loadWeeklyConfig({timeout: 15, fetch: async () => ({ok:true, text: () => new Promise(r => {finish=r;})})});
+    assert.equal(result.reason, 'timeout');
+    finish(committedText); await new Promise(r => setTimeout(r, 10));
+    assert.equal(DATA.WEEKLY_MODS_REMOTE, undefined);
+    assert.equal((await RC.loadWeeklyConfig({timeout:15, fetch: () => new Promise(() => {})})).reason, 'timeout');
+});
+test('response byte cap checks header, UTF8 text and streamed body', async () => {
+    for (const response of [
+        {ok:true, headers:{get:()=> '65537'}, text:async()=>committedText},
+        {ok:true, text:async()=> 'я'.repeat(32769)},
+        new Response(new Uint8Array(65537))
+    ]) assert.equal((await RC.loadWeeklyConfig({fetch:async()=>response})).reason, 'size');
+    assert.equal(DATA.WEEKLY_MODS_REMOTE, undefined);
+});
