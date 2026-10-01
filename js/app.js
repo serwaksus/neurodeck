@@ -160,6 +160,8 @@ case 'close-boss-reward': if (typeof closeBossRewardModal === 'function') closeB
 case 'sh-back': currentShIdx = null; renderStrongholds(); break;
 case 'sh-assault': requestAssault(parseInt(el.dataset.idx)); break;
 case 'sh-buy': buyBuilding(parseInt(el.dataset.idx), el.dataset.bid); break;
+case 'sh-rebuild': rebuildBuilding(parseInt(el.dataset.idx), el.dataset.bid); break; // P7: восстановление worn/ruin (−25%)
+case 'sh-emergency-maint': requestEmergencyMaintenance(parseInt(el.dataset.idx)); break; // P7: аварийный ремонт (2× содержания)
 case 'reroll-event': rerollDailyEvent(); break;
 case 'treasury-info': showTreasuryBreakdown(); break;
 case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
@@ -2874,6 +2876,20 @@ pool[d.tier] += Math.round(d.grow * stageMult(b.corruptionStage) * wind * edictL
 hirePool = pool;
 }
 // День твердынь: налоги+эконом → содержание + коррапшн (upkeep первым, SPEC §6). Золото уже в HERO.gold.
+// P7: corruptionStepNow/corruptionTickOpts — единые параметры коррупшн-тика (step + upkeep-множители):
+// ночной тик, превью и аварийный ремонт считают одной формулой, без дублей.
+function corruptionStepNow() {
+var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
+return Math.max(1, Math.round((stepOpt + techGraceBonus()) * techCorrSlow())); // П3 → 4; Г5-Т3: grace +2, ветшание ×0.5
+}
+function corruptionTickOpts(i) {
+var _sw = weatherSeasonWeek();
+return {
+step: corruptionStepNow(),
+upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * techUpkeepMult(), // Г1-2 устав; Г2-2 метель; Г4 стойка; Г5-Т3 содержание −28%
+provinceUpkeepMult: (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1) * weeklyModsNow().upkeep // C3: правило провинции (Хутора −10% / Пепел +10%); C6-lite: модификатор недели (эндгейм 20/20)
+};
+}
 function strongholdsDailyTick() {
 ensureStrongholdState();
 if (!SM) return { income: 0, upkeep: 0, paid: true };
@@ -2906,7 +2922,7 @@ if (techOrderActive('sac')) taxes = Math.round(taxes * 1.3); // Г5-Т3 Ф2: В�
 gold += income;
 dqProgress('gold', income);
 checkDailyGoldGoal(); // #71: тик тоже двигает цель дня
-var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
+var ruined = [];
 strongholds.forEach(function(s, i) {
 if (!s.captured) return; // незахваченный стартовый лагерь вне экономики (решение совета)
 if (builtList(i).length === 0) return;
@@ -2915,14 +2931,22 @@ Object.keys(s.buildings).forEach(function(bid) {
 var bb = s.buildings[bid];
 if (bb.builtAt && Date.now() - bb.builtAt < 7 * 86400000) imm[bid] = true;
 });
-var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, { step: Math.max(1, Math.round((stepOpt + techGraceBonus()) * techCorrSlow())), immune: imm, upkeepMult: doctrineUpkeepMult() * weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * techUpkeepMult(), provinceUpkeepMult: (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1) * weeklyModsNow().upkeep }); // Г1-2 устав; Г2-2 метель; Г4 стойка; Г5-Т3: grace +2, ветшание ×0.5, содержание −28%; C3: правило провинции (Хутора −10% / Пепел +10%); C6-lite: модификатор недели (эндгейм 20/20)
+var prevB = s.buildings;
+var _cOpts = corruptionTickOpts(i); _cOpts.immune = imm;
+var res = SM.corruptionTick(s.buildings, gold, STATS.wil.value, _cOpts);
 gold = res.gold;
 upkeep += res.upkeep;
 if (!res.paid) paid = false;
+Object.keys(res.buildings).forEach(function(bid) { // P7: причина руины — какие постройки обратились в руину этим тиком (имена для тоста)
+var a = res.buildings[bid], was = prevB[bid];
+if (a && a.built && a.corruptionStage === 'ruin' && was && was.built && was.corruptionStage !== 'ruin' && BUILDINGS[bid]) {
+ruined.push({ sh: STRONGHOLDS[i].name, name: BUILDINGS[bid].name, debt: a.debtDays });
+}
+});
 s.buildings = res.buildings;
 });
 HERO.gold = gold;
-return { income: income, upkeep: upkeep, paid: paid };
+return { income: income, upkeep: upkeep, paid: paid, ruined: ruined };
 }
 function applyStackLoss(stacks, pct) {
 return (stacks || []).map(function(st) {
@@ -3248,6 +3272,48 @@ showToast('🏗 Построено: ' + d.name, '−' + buildCostOf(bid) + ' �
 sfxForge(); haptic('medium');
 renderStrongholds(); updateHeroUI(); saveGameState();
 }
+// ===================== P7 «Коррупция по-человечески»: аварийный ремонт + восстановление =====================
+function emergencyMaintNeeded(idx) { // есть что лечить/обнулять в твердыне (не-ок стадия или долг)
+var s = strongholds[idx];
+if (!s || !s.captured) return false;
+return Object.keys(s.buildings).some(function(bid) {
+var b = s.buildings[bid];
+return b && b.built && (b.corruptionStage !== 'ok' || (Math.round(Number(b.debtDays)) || 0) > 0);
+});
+}
+function requestEmergencyMaintenance(idx) { // оплата 2× содержания → +1 ступень всем постройкам, долг = 0 (paid-ветка тика)
+ensureStrongholdState();
+var s = strongholds[idx];
+if (!s || !SM || typeof SM.emergencyMaintenanceCost !== 'function' || typeof SM.applyEmergencyMaintenance !== 'function') return;
+if (!emergencyMaintNeeded(idx)) { showToast('🔧 Чинить нечего', 'Все постройки целы и долга содержания нет', 'violet'); return; }
+var cost = SM.emergencyMaintenanceCost(s.buildings, corruptionTickOpts(idx)); // те же множители, что в ночном тике
+if ((HERO.gold || 0) < cost) { showToast('💰 Мало золота', 'Аварийный ремонт: ' + cost + ' 💰 (2× содержания), в казне ' + (HERO.gold || 0), 'blood'); sfxError(); return; }
+HERO.gold -= cost;
+s.buildings = SM.applyEmergencyMaintenance(s.buildings);
+recalcHirePool(); // стадии влияют на прирост жилищ
+showToast('🔧 Аварийный ремонт', '−' + cost + ' 💰 · постройки +1 ступень, долг содержания обнулён', 'save');
+if (typeof addChronicle === 'function') addChronicle('🔧', 'Аварийный ремонт в «' + STRONGHOLDS[idx].name + '»: постройки укреплены');
+sfxForge(); haptic('medium');
+if (currentShIdx === idx) renderStrongholdPanel(idx); else renderStrongholds();
+updateHeroUI(); saveGameState();
+}
+function rebuildBuilding(idx, bid) { // восстановление worn/ruin вручную: цена постройки −25%, постройка «как новая»
+ensureStrongholdState();
+var d = BUILDINGS[bid], s = strongholds[idx], b = s && s.buildings[bid];
+if (!d || !s || !b || !b.built) return;
+if (b.corruptionStage !== 'worn' && b.corruptionStage !== 'ruin') { showToast('🔨 Целое не перестраивают', 'Восстановление нужно обветшалым и руинам', 'violet'); return; }
+if (!SM || typeof SM.rebuildCost !== 'function') return;
+var cost = SM.rebuildCost(buildCostOf(bid)); // скидка 25% от текущей цены постройки (доктрины/артефакты учтены)
+if ((HERO.gold || 0) < cost) { showToast('💰 Мало золота', 'Восстановление: ' + cost + ' 💰 (−25%), в казне ' + (HERO.gold || 0), 'blood'); sfxError(); return; }
+HERO.gold -= cost;
+s.buildings[bid] = { built: true, corruptionStage: 'ok', debtDays: 0, builtAt: Date.now() }; // как новая постройка (7 дн. иммунитета, паттерн buyBuilding)
+recalcHirePool();
+showToast('🔨 Восстановлено: ' + d.name, '−' + cost + ' 💰 (−25% от цены) · постройка снова целая', 'save');
+if (typeof addChronicle === 'function') addChronicle('🔨', 'Восстановлена постройка «' + d.name + '» в «' + STRONGHOLDS[idx].name + '»');
+sfxForge(); haptic('medium');
+if (currentShIdx === idx) renderStrongholdPanel(idx); else renderStrongholds();
+updateHeroUI(); saveGameState();
+}
 function hireUnit(tier, toGarrison, idx) {
 ensureStrongholdState();
 if ((hirePool[tier] || 0) <= 0) { showToast('⛺ Пул пуст', 'Недельный прирост придёт в понедельник', 'blood'); return; }
@@ -3430,8 +3496,29 @@ if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDING
 });
 return Math.round(u);
 }
+// P7: прогноз «до руины N дн.» — худший долг содержания по королевству (иммунитет <7 дн. не
+// учитываем — прогноз консервативен) в симуляцию модели; null = руина не грозит.
+function corruptionForecastDays() {
+if (!SM || typeof SM.daysToRuin !== 'function') return null;
+ensureStrongholdState();
+var debt = 0, has = false;
+strongholds.forEach(function(s) {
+if (!s || !s.captured) return;
+Object.keys(s.buildings || {}).forEach(function(bid) {
+var b = s.buildings[bid];
+if (b && b.built && b.corruptionStage !== 'ruin') { has = true; debt = Math.max(debt, Math.round(Number(b.debtDays) || 0)); }
+});
+});
+if (!has) return null;
+return SM.daysToRuin(HERO.gold || 0, shIncomePerDay(), shUpkeepPerDay(), debt, Math.min(7, 2 + Math.floor(STATS.wil.value / 20)), corruptionStepNow());
+}
+function corruptionForecastLineHtml() { // строка только при реальной угрозе — базлайны обзора не дрейфуют
+var n = corruptionForecastDays();
+if (n === null || n === undefined) return '';
+return '<div class="sh-ruin-forecast" title="Симуляция дневного цикла: доход → содержание; руина при долге &gt; льгота + окно">🏚 До руины: <b>' + n + ' дн.</b> — при текущем балансе казна не покроет содержание</div>';
+}
 function buildingEffectText(d) {
-if (d.grow) return '+' + d.grow + ' ' + UNIT_TIERS[d.tier].name + '/нед';
+	if (d.grow) return '+' + d.grow + ' ' + UNIT_TIERS[d.tier].name + '/нед';
 if (d.gold) return '+' + d.gold + ' 💰/день';
 if (d.market) return '+' + Math.round(d.market * 100) + '% к доходу казны';
 if (d.def) return '+' + d.def + ' к обороне';
@@ -4171,6 +4258,7 @@ var html = '<div class="sh-treasury">' +
 '<div>Налоги: <b style="color:var(--green)">+' + shIncomePerDay() + ' 💰/день</b></div>' +
 '<div>Содержание: <b style="color:var(--blood-bright)">−' + shUpkeepPerDay() + ' 💰/день</b></div>' +
 '<div>⚔ Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
+html += corruptionForecastLineHtml(); // P7: прогноз «до руины N дн.» (только при реальной угрозе)
 var fi = frontIdx();
 var daysToSiege = daysToSiegeNow();
 html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
@@ -4249,11 +4337,14 @@ function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" loadi
 function catClass(bd) { // ФАЗА F: категорийная рамка тайла постройки
 return 'cat-' + (bd.cat === 'house' ? 'zh' : bd.cat === 'econ' ? 'ec' : bd.cat === 'defense' ? 'df' : 'sp');
 }
-function builtTileHtml(id, bd, b) {
+function builtTileHtml(id, bd, b, rb) { // rb = {idx, cost} для worn/ruin (P7: кнопка восстановления, −25%)
 return '<div class="sh-tile built ' + catClass(bd) + '"><div class="sh-tile-icon">' + shSpriteImg('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
 '<div class="sh-tile-name">' + bd.name + '</div>' +
 '<div class="sh-tile-meta">' + buildingEffectText(bd) + ' · содержание ' + bd.upkeep + ' 💰/день</div>' +
-stageBadgeHtml(b.corruptionStage) + '</div>';
+stageBadgeHtml(b.corruptionStage) +
+((b.corruptionStage === 'worn' || b.corruptionStage === 'ruin') && rb && typeof rb.cost === 'number' && rb.cost > 0
+? '<button class="sh-buy sh-rebuild" data-action="sh-rebuild" data-idx="' + rb.idx + '" data-bid="' + id + '">🔨 Восстановить ' + rb.cost + ' 💰 (−25%)</button>'
+: '') + '</div>';
 }
 function buyTileHtml(idx, id, bd, reqOk, can, reason) {
 return '<div class="sh-tile buy ' + catClass(bd) + (reqOk ? '' : ' locked') + '"><div class="sh-tile-icon">' + shSpriteImg('img/tract/buildings/' + id + '.png', bd.icon) + '</div>' +
@@ -4288,13 +4379,21 @@ var _sc = 50 * capturedCount();
 html += '<div class="sh-sec-title">🌩 Буря над регионом</div><div class="sh-build-row buy"><div class="sh-build-body"><div class="sh-build-name">🌩 Буря над ' + STRONGHOLDS[idx].name + '</div><div class="sh-build-meta">Дань до дедлайна: ' + _sd + ' ' + (_sd === 1 ? 'день' : 'дн.') + ' · иначе постройки ветшают</div></div>' + ((HERO.gold || 0) >= _sc ? '<button class="sh-buy" data-action="storm-pay">🌧 ' + _sc.toLocaleString('ru-RU') + ' 💰</button>' : '<span class="sh-stage lock">🌧 ' + _sc.toLocaleString('ru-RU') + ' 💰</span>') + '</div>';
 }
 html += '<div class="sh-sec-title">🏗 Постройки</div>';
+if (emergencyMaintNeeded(idx) && SM && typeof SM.emergencyMaintenanceCost === 'function') { // P7: аварийный ремонт — лечит на ступень за 2× содержания
+var _emCost = SM.emergencyMaintenanceCost(s.buildings, corruptionTickOpts(idx));
+html += '<div class="sh-emergency"><div class="sh-emergency-body"><b>🔧 Аварийный ремонт</b> — все постройки +1 ступень, долг содержания обнулится. Цена 2× дневного содержания: <b>' + _emCost + ' 💰</b></div>' +
+((HERO.gold || 0) >= _emCost
+? '<button class="sh-buy" data-action="sh-emergency-maint" data-idx="' + idx + '">🔧 Оплатить ' + _emCost + ' 💰</button>'
+: '<span class="sh-stage lock">🔒 ' + _emCost + ' 💰</span>') + '</div>';
+}
 var built = builtList(idx);
 if (built.length === 0) html += '<div class="empty-state">Пока ничего не построено.</div>';
 if (built.length > 0) { // ФАЗА F: построенное — тайлы-сетка
 html += '<div class="sh-build-grid">';
 built.forEach(function(id) {
 var bd = BUILDINGS[id], b = s.buildings[id];
-html += builtTileHtml(id, bd, b);
+var _rb = ((b.corruptionStage === 'worn' || b.corruptionStage === 'ruin') && SM && typeof SM.rebuildCost === 'function') ? { idx: idx, cost: SM.rebuildCost(buildCostOf(id)) } : null; // P7
+html += builtTileHtml(id, bd, b, _rb);
 });
 html += '</div>';
 }
@@ -5379,7 +5478,7 @@ var _isBackfill = gapDays > 1;
         if (ev.id === 'wanderer' && !_isBackfill) { HERO.streakShields = Math.min(100, (HERO.streakShields || 0) + 1); goldGain(30, 'wanderer'); } // #41
         if (HERO.scouts && scoutFresh(HERO.scouts, todayKey) === null) { HERO.scouts = null; } // Г2-3: срок годности тени истёк (готовность + 2 дня)
         if (!_isBackfill) showToast(ev.icon + ' ' + ev.name, ev.text, 'save');
-var revenue = 0, upkeepTotal = 0, unpaid = 0;
+var revenue = 0, upkeepTotal = 0, unpaid = 0, ruinedNow = [];
 for (var gd = gapDays; gd >= 1; gd--) {
 if (gd > 1) dailyEvent = null; // события дня не действуют задним числом на пропущенные ночи
 expireGhostTasks(getMSKDayKey(Date.now() - gd * 86400000));
@@ -5387,6 +5486,7 @@ var tr = strongholdsDailyTick();
 revenue += tr.income;
 upkeepTotal += tr.upkeep;
 if (!tr.paid) unpaid++;
+if (tr.ruined && tr.ruined.length) ruinedNow = ruinedNow.concat(tr.ruined); // P7: что и почему обратилось в руину
 }
 dailyEvent = ev; // последний (сегодняшний) тик — под событием дня
 resolveProvinceOrder(); // Г4: эдикты двигают порядок, базовый дрейф +1/день
@@ -5403,6 +5503,11 @@ if (getMSKDayKey() > seasonEndDate(season.start)) finishSeason();
 checkStorm(); // Г1-5: буря сезона — триггер/просрочка раз в день
 if (unpaid > 0) {
 showToast('🏚 Не хватило на содержание', unpaid + ' дн. дефицита — постройки ветшают (grace ' + (2 + Math.floor(STATS.wil.value / 20)) + ' дн.)', 'blood');
+sfxFail(); haptic('error');
+}
+if (ruinedNow.length > 0) { // P7: причина разрушения — какие постройки рухнули и из-за какого долга содержания
+var _rn = ruinedNow.slice(0, 3).map(function(r) { return '«' + r.name + '» (' + r.sh + '· долг ' + r.debt + ' дн.)'; }).join(', ');
+showToast('💀 Постройки обратились в руину', (ruinedNow.length > 3 ? ruinedNow.length + ' шт., в т.ч. ' : 'Казна не платила содержание: ') + _rn, 'blood');
 sfxFail(); haptic('error');
 }
 if (HERO.dailyCompletions > 0 && HERO.dailySkips === 0) {

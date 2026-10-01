@@ -915,6 +915,13 @@ textarea:focus-visible {
 .sh-tile-upkeep { font-size: 10.5px; color: var(--blood-bright); }
 .sh-tile .sh-buy { width: 100%; }
 .sh-tile.locked { opacity: 0.75; }
+/* P7 «Коррупция по-человечески»: прогноз до руины, аварийный ремонт, восстановление */
+.sh-ruin-forecast { font-size: 11px; color: var(--blood-bright); background: rgba(120, 30, 30, 0.18); border: 1px solid var(--blood-bright); border-radius: 4px; padding: 6px 12px; margin: -6px 0 14px; }
+.sh-ruin-forecast b { color: var(--blood-bright); }
+.sh-emergency { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); border: 1px dashed var(--gold); border-radius: 4px; padding: 8px 12px; margin-bottom: 10px; font-size: 11px; color: var(--text-dim); }
+.sh-emergency-body b { color: var(--gold-bright); }
+.sh-rebuild { border-color: var(--green); color: var(--green); }
+.sh-rebuild:hover { box-shadow: 0 0 12px rgba(52,211,153,0.35); }
 .sh-tile.built { border-left-color: var(--green); }
 /* P6: брейкдауны экономики — строка тайла покупки и блок подтверждения штурма (статичный текст, без анимаций) */
 .sh-tile-break { font-size: 10.5px; color: var(--text-dim); border-top: 1px dashed var(--border); padding-top: 4px; }

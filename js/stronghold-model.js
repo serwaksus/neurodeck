@@ -116,19 +116,15 @@
         return Math.round(base * 0.6 * Math.pow(1.15, wEff) * (1 + 0.12 * wr));
     }
 
-    // SPEC §6: upkeep первым (руина не ест); оплата → +1 ступень всем, debtDays = 0;
-    // дефицит → gold 0, debtDays+1; grace = min(7; 2+floor(wil/20)); step = 2 (П3 → 4); иммунные (opts.immune) не деградируют.
-    // Чистая функция: возвращает новое состояние { gold, upkeep, paid, buildings }, вход не мутирует.
-    function corruptionTick(buildings, goldAvailable, wil, opts) {
+    // SPEC §6: дневное содержание набора построек — построенные не-руина постройки (руина «не ест»),
+    // сумма upkeep каталога × доктрина (0<m≤1) × правило провинции ((0;3]). Вынесено из corruptionTick
+    // без изменения математики: P7 (аварийный ремонт/прогноз) считают цену ТОЙ ЖЕ формулой SPEC §6.
+    function dailyUpkeep(buildings, opts) {
         opts = opts || {};
         var cat = catalog();
         var defs = (cat && cat.BUILDINGS && typeof cat.BUILDINGS === 'object') ? cat.BUILDINGS : null;
-        if (!defs) throw new Error('StrongholdModel: BUILDINGS недоступен (window.StrongholdData не задан?)');
-        var grace = Math.min(7, 2 + Math.floor((Number(wil) || 0) / 20));
-        var step = Number(opts.step) === 4 ? 4 : 2;
+        if (!defs) throw new Error('StrongholdModel: BUILDINGS недоступен (window.StrongholdData не заден?)');
         var src = (buildings && typeof buildings === 'object' && !Array.isArray(buildings)) ? buildings : {};
-        var gold = Number(goldAvailable); if (!isFinite(gold) || gold < 0) gold = 0;
-        var immune = (opts.immune && typeof opts.immune === 'object') ? opts.immune : null;
         var upkeep = 0;
         Object.keys(src).forEach(function(id) {
             var b = src[id];
@@ -141,7 +137,20 @@
         if (!isFinite(upkMult) || upkMult <= 0 || upkMult > 1) upkMult = 1;
         var provMult = Number(opts.provinceUpkeepMult); // C3: правило провинции (Хутора −10% / Пепел +10%) — в отличие от доктрины может быть >1
         if (!isFinite(provMult) || provMult <= 0 || provMult > 3) provMult = 1;
-        upkeep = Math.round(upkeep * upkMult * provMult);
+        return Math.round(upkeep * upkMult * provMult);
+    }
+
+    // SPEC §6: upkeep первым (руина не ест); оплата → +1 ступень всем, debtDays = 0;
+    // дефицит → gold 0, debtDays+1; grace = min(7; 2+floor(wil/20)); step = 2 (П3 → 4); иммунные (opts.immune) не деградируют.
+    // Чистая функция: возвращает новое состояние { gold, upkeep, paid, buildings }, вход не мутирует.
+    function corruptionTick(buildings, goldAvailable, wil, opts) {
+        opts = opts || {};
+        var grace = Math.min(7, 2 + Math.floor((Number(wil) || 0) / 20));
+        var step = Number(opts.step) === 4 ? 4 : 2;
+        var gold = Number(goldAvailable); if (!isFinite(gold) || gold < 0) gold = 0;
+        var immune = (opts.immune && typeof opts.immune === 'object') ? opts.immune : null;
+        var src = (buildings && typeof buildings === 'object' && !Array.isArray(buildings)) ? buildings : {};
+        var upkeep = dailyUpkeep(buildings, opts);
         var paid = gold >= upkeep;
         var out = {};
         Object.keys(src).forEach(function(id) {
@@ -165,6 +174,60 @@
             out[id] = { built: true, corruptionStage: stage, debtDays: debt , builtAt: b.builtAt || null };
         });
         return { gold: paid ? gold - upkeep : 0, upkeep: upkeep, paid: paid, buildings: out };
+    }
+
+    // P7 «Коррупция по-человечески»: прогноз до руины. Чистая симуляция дневного цикла SPEC §6
+    // в порядке тика (доход зачисляется, потом содержание): оплаченный день обнуляет долг и лечит,
+    // день дефицита — gold 0 и долг +1; постройка рушится, когда долг превышает grace + step.
+    // Возвращает номер дня руины худшей постройки (1 = ближайший ночной тик) или null —
+    // руина не грозит (содержание 0 / баланс покрывает / горизонт > 365 дней, как кап debtDays).
+    function daysToRuin(gold, incomePerDay, upkeepPerDay, worstDebt, grace, step) {
+        var g = Number(gold); if (!isFinite(g) || g < 0) g = 0;
+        var inc = Number(incomePerDay); if (!isFinite(inc) || inc < 0) inc = 0;
+        var up = Number(upkeepPerDay); if (!isFinite(up) || up < 0) up = 0;
+        if (up <= 0) return null; // содержания нет — деградации не будет (в т.ч. «руина не ест»)
+        var debt = Math.round(Number(worstDebt)); if (!isFinite(debt) || debt < 0) debt = 0;
+        var gr = Math.round(Number(grace)); if (!isFinite(gr) || gr < 0) gr = 2;
+        var st = Math.round(Number(step)); if (!isFinite(st) || st < 1) st = 2;
+        for (var day = 1; day <= 365; day++) {
+            g += inc;
+            if (g >= up) { g -= up; debt = 0; }
+            else { g = 0; debt += 1; }
+            if (debt > gr + st) return day;
+        }
+        return null;
+    }
+
+    // P7: аварийный ремонт — цена = 2 × дневное содержание (те же множители, что платит тик;
+    // минимум 1 — бригада не работает бесплатно, иначе «тотальная руина» чинилась бы в клик).
+    function emergencyMaintenanceCost(buildings, opts) {
+        return Math.max(1, dailyUpkeep(buildings, opts) * 2);
+    }
+
+    // P7: эффект аварийного ремонта = paid-ветка corruptionTick на один день (без списания золота —
+    // платит вызывающий): каждая построенная постройка +1 ступень (ruin→worn→ok), debtDays = 0.
+    // Чистая: возвращает новый объект buildings, вход не мутирует.
+    function applyEmergencyMaintenance(buildings) {
+        var src = (buildings && typeof buildings === 'object' && !Array.isArray(buildings)) ? buildings : {};
+        var out = {};
+        Object.keys(src).forEach(function(id) {
+            var b = src[id];
+            if (!b || typeof b !== 'object' || b.built !== true) {
+                out[id] = { built: false, corruptionStage: 'ok', debtDays: 0 };
+                return;
+            }
+            var stage = STAGE_SET[b.corruptionStage] ? b.corruptionStage : 'ok';
+            if (stage !== 'ok') stage = STAGE_ORDER[STAGE_ORDER.indexOf(stage) + 1];
+            out[id] = { built: true, corruptionStage: stage, debtDays: 0, builtAt: b.builtAt || null };
+        });
+        return out;
+    }
+
+    // P7: восстановление worn/ruin вручную — скидка 25% от цены постройки (ceil, как buildCostOf).
+    function rebuildCost(baseCost) {
+        var c = Number(baseCost);
+        if (!isFinite(c) || c <= 0) return 0;
+        return Math.ceil(c * 0.75);
     }
 
     // B4: торговые пути — пары соседних захваченных твердынь; бонус налогам +2%/путь, кап +38%.
@@ -336,6 +399,11 @@
         assaultOutcome: assaultOutcome,
         siegePower: siegePower,
         corruptionTick: corruptionTick,
+        dailyUpkeep: dailyUpkeep,
+        daysToRuin: daysToRuin,
+        emergencyMaintenanceCost: emergencyMaintenanceCost,
+        applyEmergencyMaintenance: applyEmergencyMaintenance,
+        rebuildCost: rebuildCost,
         stackPower: stackPower,
         tierPower: tierPower,
         tradeRoutes: tradeRoutes,
