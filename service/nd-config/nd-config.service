@@ -1,0 +1,26 @@
+[Unit]
+Description=NeuroDeck read-only config + opt-in telemetry service (localhost:8095)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Изоляция (правило 17): транзиентный пользователь от systemd, никакого пересечения
+# с neurodeck-bot.service (его файлы/процессы не читаются и не перезапускаются).
+DynamicUser=yes
+StateDirectory=neurodeck-config
+EnvironmentFile=/etc/neurodeck-config/env
+ExecStart=/usr/bin/env node /opt/neurodeck-config/server.cjs
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/neurodeck-config
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

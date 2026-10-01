@@ -85,7 +85,10 @@
 
 ## 7. Backlog (следующие итерации)
 
-1. Opt-in сетевой экспорт diag-журнала (минимальный приёмник рядом с ботом).
+1. Opt-in сетевой экспорт diag-журнала: **приёмник готов с 2026-10-01** — `nd-config.service`
+   на VPS (localhost:8095, `POST /v1/telemetry`, токен, DEFAULT OFF; runbook —
+   [CONFIG-SERVICE.md](CONFIG-SERVICE.md)). Клиентская часть по-прежнему НЕ отправляет ничего —
+   включение отправки = отдельное продуктовое решение (UI-флаг opt-in + адрес приёмника).
 2. Dual-generation в облаке (`nd_<saveId>_<i>` + хранение предыдущего поколения для
    облачного rollback) — требует пересмотра контракта `nd_0` в regression-T5M1.
 3. Компрессия payload (CompressionStream с фоллбэком) — при подходе к лимитам CloudStorage.
