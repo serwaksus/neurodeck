@@ -8,7 +8,12 @@
     "sw.js",
     "tests/remote-config.test.js",
     "tests/e2e/remote-config.test.js",
-    "package.json"
+    "package.json",
+    "index.html",
+    "tests/audio-mixer.test.js",
+    "tests/event-bus.test.js",
+    "tests/state-store.test.js",
+    "tests/e2e/remote-config.test.js"
   ],
   "tests": [
     {
@@ -20,15 +25,22 @@
       "command": "npm run ci",
       "exit": 0,
       "log": "docs/plan/queue4-evidence/R1-full-ci.log"
+    },
+    {
+      "command": "npm run ci",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R1-final-green-ci.log"
     }
   ],
   "artifacts": [
     "docs/plan/queue4-evidence/R1-unit.log",
     "docs/plan/queue4-evidence/R1-e2e.log",
-    "docs/plan/queue4-evidence/R1-full-ci.log"
+    "docs/plan/queue4-evidence/R1-full-ci.log",
+    "docs/plan/queue4-evidence/R1-final-ci.log",
+    "docs/plan/queue4-evidence/R1-final-green-ci.log"
   ],
   "schema_version": "14",
-  "app_version": "102",
+  "app_version": "103",
   "version_sources": {
     "schema": {
       "path": "js/storage.js",
@@ -36,10 +48,11 @@
     },
     "app": {
       "path": "index.html",
-      "value": "?v=102"
+      "value": "?v=103"
     }
   },
   "limitations": [
-    "Physical device tests TBD"
+    "Physical device tests TBD",
+    "Initial v103 CI found stale literal test pins (3 failures); exact assertions repinned to v103; failed run preserved."
   ]
 }

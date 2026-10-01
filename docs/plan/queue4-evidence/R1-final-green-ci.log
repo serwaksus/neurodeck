@@ -1,0 +1,3900 @@
+
+> neurodeck@0.0.0 ci
+> npm run check:js && npm test && npm run test:e2e && npm run test:e2e:visual && npm run test:playtest:strongholds && npm run test:playtest:acceptance && npm run test:qa:data && npm run test:qa:chaos && npm run test:qa:parity && npm run test:sim:economy
+
+
+> neurodeck@0.0.0 check:js
+> node --check js/state-guards.js && node --check js/state/store.js && node --check js/ui/strongholds.js && node --check js/perf.js && node --check js/audio.js && node --check js/storage.js && node --check js/app.js
+
+
+> neurodeck@0.0.0 test
+> node --test tests/*.test.js
+
+TAP version 13
+# Subtest: P21 дефолты по правилу 20: музыка выключена, SFX тихо, без сохранённого состояния
+ok 1 - P21 дефолты по правилу 20: музыка выключена, SFX тихо, без сохранённого состояния
+  ---
+  duration_ms: 2.262065
+  type: 'test'
+  ...
+# Subtest: P21 mix(): мьют категории/мастера глушит, иначе произведение; SFX-эффект ≤ 0.3
+ok 2 - P21 mix(): мьют категории/мастера глушит, иначе произведение; SFX-эффект ≤ 0.3
+  ---
+  duration_ms: 0.604607
+  type: 'test'
+  ...
+# Subtest: P21 setVol клампит и квантует к 5%; сохранение переживает перезагрузку (localStorage)
+ok 3 - P21 setVol клампит и квантует к 5%; сохранение переживает перезагрузку (localStorage)
+  ---
+  duration_ms: 2.915636
+  type: 'test'
+  ...
+# Subtest: P21 sanitize: битый JSON/чужие ключи/вне диапазона → дефолты-меш, без throw
+ok 4 - P21 sanitize: битый JSON/чужие ключи/вне диапазона → дефолты-меш, без throw
+  ---
+  duration_ms: 1.80594
+  type: 'test'
+  ...
+# Subtest: P21 reset(): дефолты (правило 20) + сразу в localStorage
+ok 5 - P21 reset(): дефолты (правило 20) + сразу в localStorage
+  ---
+  duration_ms: 1.070096
+  type: 'test'
+  ...
+# Subtest: P21 правило 20 (юнит-часть): tone() до unlock — тихий no-op, WebAudio в Node нет
+ok 6 - P21 правило 20 (юнит-часть): tone() до unlock — тихий no-op, WebAudio в Node нет
+  ---
+  duration_ms: 0.664497
+  type: 'test'
+  ...
+# Subtest: P21 правило 20 (source): одноразовые unlock-слушатели + гейт _unlocked в tone
+ok 7 - P21 правило 20 (source): одноразовые unlock-слушатели + гейт _unlocked в tone
+  ---
+  duration_ms: 4.11117
+  type: 'test'
+  ...
+# Subtest: P21 app.js: все 10 sfx разнесены по категориям через ndSfx (typeof-гвард)
+ok 8 - P21 app.js: все 10 sfx разнесены по категориям через ndSfx (typeof-гвард)
+  ---
+  duration_ms: 14.535946
+  type: 'test'
+  ...
+# Subtest: P21 app.js: клик-кейсы микшера + рендер секции; секция в syncModal (index.html)
+ok 9 - P21 app.js: клик-кейсы микшера + рендер секции; секция в syncModal (index.html)
+  ---
+  duration_ms: 5.894417
+  type: 'test'
+  ...
+# Subtest: P21 подключение: audio.js грузится до app.js и в SW-прекэше; схема сейва не тронута
+ok 10 - P21 подключение: audio.js грузится до app.js и в SW-прекэше; схема сейва не тронута
+  ---
+  duration_ms: 1.863157
+  type: 'test'
+  ...
+# Subtest: P21 app.js: категория тона не меняет вызовы — sfx-имена и call-сайты целы
+ok 11 - P21 app.js: категория тона не меняет вызовы — sfx-имена и call-сайты целы
+  ---
+  duration_ms: 3.936478
+  type: 'test'
+  ...
+# Subtest: C5: у всех 11 боссов есть artIcon из ICON_PATHS, файлы gameicons на месте и без чёрного фона
+ok 12 - C5: у всех 11 боссов есть artIcon из ICON_PATHS, файлы gameicons на месте и без чёрного фона
+  ---
+  duration_ms: 1.843086
+  type: 'test'
+  ...
+# Subtest: C5: bossCardHtml — game-icon портрет с эмодзи-фолббэком (extract-харнесс без artIconHtml)
+ok 13 - C5: bossCardHtml — game-icon портрет с эмодзи-фолббэком (extract-харнесс без artIconHtml)
+  ---
+  duration_ms: 6.58928
+  type: 'test'
+  ...
+# Subtest: C5: maybeBossIntro — лор-тост один раз на босса, только когда провинция собрана
+ok 14 - C5: maybeBossIntro — лор-тост один раз на босса, только когда провинция собрана
+  ---
+  duration_ms: 4.916528
+  type: 'test'
+  ...
+# Subtest: C5: победа — defeated + pendingReward, тост ведёт к выбору награды (пин волны Г2: имя артефакта в тосте)
+ok 15 - C5: победа — defeated + pendingReward, тост ведёт к выбору награды (пин волны Г2: имя артефакта в тосте)
+  ---
+  duration_ms: 2.739331
+  type: 'test'
+  ...
+# Subtest: C5: bossArtifactMult — pending гасит артефакт, выбор crown снимает, artifact возвращает, легаси-дефолт цел
+ok 16 - C5: bossArtifactMult — pending гасит артефакт, выбор crown снимает, artifact возвращает, легаси-дефолт цел
+  ---
+  duration_ms: 4.82351
+  type: 'test'
+  ...
+# Subtest: C5: chooseBossReward crown — венец сезона +1 (кап 5), повторное предложение гаснет
+ok 17 - C5: chooseBossReward crown — венец сезона +1 (кап 5), повторное предложение гаснет
+  ---
+  duration_ms: 4.020915
+  type: 'test'
+  ...
+# Subtest: C5: chooseBossReward ruin — восстанавливается самая дорогая руина; без руин — отказ
+ok 18 - C5: chooseBossReward ruin — восстанавливается самая дорогая руина; без руин — отказ
+  ---
+  duration_ms: 2.774824
+  type: 'test'
+  ...
+# Subtest: C5: chooseBossReward artifact — легаси-поведение награды, пассив включается
+ok 19 - C5: chooseBossReward artifact — легаси-поведение награды, пассив включается
+  ---
+  duration_ms: 1.775556
+  type: 'test'
+  ...
+# Subtest: C5: maybePendingBossReward — висящий выбор предлагается снова, битый pending очищается
+ok 20 - C5: maybePendingBossReward — висящий выбор предлагается снова, битый pending очищается
+  ---
+  duration_ms: 2.408875
+  type: 'test'
+  ...
+# Subtest: C5: sanitizeHero bosses — introSeen/rewardChoice/pendingReward в whitelist, мусор вычищается
+ok 21 - C5: sanitizeHero bosses — introSeen/rewardChoice/pendingReward в whitelist, мусор вычищается
+  ---
+  duration_ms: 1.357237
+  type: 'test'
+  ...
+# Subtest: C5: миграция v12→v13 — дефолты полей босс-арок, мусор клэмпится, idempotent
+ok 22 - C5: миграция v12→v13 — дефолты полей босс-арок, мусор клэмпится, idempotent
+  ---
+  duration_ms: 0.548203
+  type: 'test'
+  ...
+# Subtest: C5: интеграции в app.js — модалка, диспетчер, хук вступления, возврат pending
+ok 23 - C5: интеграции в app.js — модалка, диспетчер, хук вступления, возврат pending
+  ---
+  duration_ms: 0.95273
+  type: 'test'
+  ...
+# [bot] reminder 2026-9-17 sent: 2
+# [bot] reminder 2026-9-17 sent: 1
+# [bot] reminder -> 111 socks timeout
+# [bot] reminder 2026-9-17 sent: 1
+# [bot] poll: socks timeout
+# Subtest: polling.js: экспорт-контракт на месте (module.exports + require.main-guard)
+ok 24 - polling.js: экспорт-контракт на месте (module.exports + require.main-guard)
+  ---
+  duration_ms: 1.270336
+  type: 'test'
+  ...
+# Subtest: mskParts: ключ даты и MSK-часы (UTC+3)
+ok 25 - mskParts: ключ даты и MSK-часы (UTC+3)
+  ---
+  duration_ms: 17.858092
+  type: 'test'
+  ...
+# Subtest: schedulerTick: в окне 21:31 шлёт только подписанным, отписанные скипает
+ok 26 - schedulerTick: в окне 21:31 шлёт только подписанным, отписанные скипает
+  ---
+  duration_ms: 2.816527
+  type: 'test'
+  ...
+# Subtest: schedulerTick: вне окна — тишина; повторно в тот же день — не дублирует
+ok 27 - schedulerTick: вне окна — тишина; повторно в тот же день — не дублирует
+  ---
+  duration_ms: 3.511971
+  type: 'test'
+  ...
+# Subtest: schedulerTick: ошибка API на одном чате не валит рассылку остальных
+ok 28 - schedulerTick: ошибка API на одном чате не валит рассылку остальных
+  ---
+  duration_ms: 1.981925
+  type: 'test'
+  ...
+# Subtest: handleMessage /start: подписка сохраняется + ответ с инструкцией
+ok 29 - handleMessage /start: подписка сохраняется + ответ с инструкцией
+  ---
+  duration_ms: 1.019429
+  type: 'test'
+  ...
+# Subtest: handleMessage /stop: отписка сохраняется, /status отражает состояние
+ok 30 - handleMessage /stop: отписка сохраняется, /status отражает состояние
+  ---
+  duration_ms: 0.636405
+  type: 'test'
+  ...
+# Subtest: handleMessage: неизвестная команда — ничего не шлёт и не пишет
+ok 31 - handleMessage: неизвестная команда — ничего не шлёт и не пишет
+  ---
+  duration_ms: 0.314842
+  type: 'test'
+  ...
+# Subtest: handleMessage: сообщение без текста — игнор
+ok 32 - handleMessage: сообщение без текста — игнор
+  ---
+  duration_ms: 0.353792
+  type: 'test'
+  ...
+# [bot] poll: socks timeout
+# Subtest: pollLoop: ошибка API → ретрай, offset не теряется
+ok 33 - pollLoop: ошибка API → ретрай, offset не теряется
+  ---
+  duration_ms: 9.282362
+  type: 'test'
+  ...
+# Subtest: bot/neurodeck-bot.service (каноничный юнит в репо): file exists and parses structurally
+ok 34 - bot/neurodeck-bot.service (каноничный юнит в репо): file exists and parses structurally
+  ---
+  duration_ms: 1.134302
+  type: 'test'
+  ...
+# Subtest: /etc/systemd/system/neurodeck-bot.service must be a symlink to the repo copy (single source of truth, no drift possible)
+ok 35 - /etc/systemd/system/neurodeck-bot.service must be a symlink to the repo copy (single source of truth, no drift possible)
+  ---
+  duration_ms: 0.493171
+  type: 'test'
+  ...
+# Subtest: neurodeck-bot unit: ExecStart/EnvironmentFile targets exist on disk
+ok 36 - neurodeck-bot unit: ExecStart/EnvironmentFile targets exist on disk
+  ---
+  duration_ms: 0.560001
+  type: 'test'
+  ...
+# Subtest: neurodeck-bot unit: restart policy and token env are wired
+ok 37 - neurodeck-bot unit: restart policy and token env are wired
+  ---
+  duration_ms: 0.252578
+  type: 'test'
+  ...
+# Subtest: neurodeck-bot: token never committed to git
+ok 38 - neurodeck-bot: token never committed to git
+  ---
+  duration_ms: 0.297186
+  type: 'test'
+  ...
+# [bot] reminder 2026-9-20 sent: 1
+# [bot] reminder 2026-9-17 sent: 1
+# [bot] reminder 2026-9-17 sent: 1
+# [bot] reminder 2026-9-17 sent: 1
+# Subtest: normEntry: легаси true/false читаются как daily/off, мусор — дефолты
+ok 39 - normEntry: легаси true/false читаются как daily/off, мусор — дефолты
+  ---
+  duration_ms: 1.946582
+  type: 'test'
+  ...
+# Subtest: parseHHMM: ЧЧ:ММ валидируется
+ok 40 - parseHHMM: ЧЧ:ММ валидируется
+  ---
+  duration_ms: 0.526911
+  type: 'test'
+  ...
+# Subtest: schedulerTick: режим sunday — только воскресенье
+ok 41 - schedulerTick: режим sunday — только воскресенье
+  ---
+  duration_ms: 17.966995
+  type: 'test'
+  ...
+# Subtest: schedulerTick: кастомное время /start 08:15 срабатывает в 08:15, а не в 21:30
+ok 42 - schedulerTick: кастомное время /start 08:15 срабатывает в 08:15, а не в 21:30
+  ---
+  duration_ms: 1.104869
+  type: 'test'
+  ...
+# Subtest: schedulerTick: рестарт не дублирует, простой ≤2 ч — догоняет
+ok 43 - schedulerTick: рестарт не дублирует, простой ≤2 ч — догоняет
+  ---
+  duration_ms: 3.559181
+  type: 'test'
+  ...
+# Subtest: handleMessage: /start daily|sunday|off и /start ЧЧ:ММ применяются и подтверждаются
+ok 44 - handleMessage: /start daily|sunday|off и /start ЧЧ:ММ применяются и подтверждаются
+  ---
+  duration_ms: 1.115484
+  type: 'test'
+  ...
+# Subtest: handleMessage: /start при выключенном чате снова включает (v2 поверх легаси false)
+ok 45 - handleMessage: /start при выключенном чате снова включает (v2 поверх легаси false)
+  ---
+  duration_ms: 0.405689
+  type: 'test'
+  ...
+# Subtest: каталог: у всех 20 твердынь branch из {safe,war,trade} и next-массив существующих id
+ok 46 - каталог: у всех 20 твердынь branch из {safe,war,trade} и next-массив существующих id
+  ---
+  duration_ms: 2.552301
+  type: 'test'
+  ...
+# Subtest: граф ацикличен: next ссылается только вперёд по каталогу (обратные рёбра/циклы запрещены)
+ok 47 - граф ацикличен: next ссылается только вперёд по каталогу (обратные рёбра/циклы запрещены)
+  ---
+  duration_ms: 0.249714
+  type: 'test'
+  ...
+# Subtest: next ссылается только на соседей: цель в пределах i+1..i+2
+ok 48 - next ссылается только на соседей: цель в пределах i+1..i+2
+  ---
+  duration_ms: 0.246039
+  type: 'test'
+  ...
+# Subtest: связность: из sh01 по next-рёбрам достижимы все 20 твердынь
+ok 49 - связность: из sh01 по next-рёбрам достижимы все 20 твердынь
+  ---
+  duration_ms: 0.162985
+  type: 'test'
+  ...
+# Subtest: развилки только в пров. 2 и 4: next.length=2 ровно у sh07/sh17; пров. 1 и 3 линейны
+ok 50 - развилки только в пров. 2 и 4: next.length=2 ровно у sh07/sh17; пров. 1 и 3 линейны
+  ---
+  duration_ms: 0.737387
+  type: 'test'
+  ...
+# Subtest: ветки сходятся: у развилки оба пути ведут в один выход провинции; переходы провинций связаны
+ok 51 - ветки сходятся: у развилки оба пути ведут в один выход провинции; переходы провинций связаны
+  ---
+  duration_ms: 0.337648
+  type: 'test'
+  ...
+# Subtest: торговый характер развилок: узлы trade есть только в пров. 2 и 4
+ok 52 - торговый характер развилок: узлы trade есть только в пров. 2 и 4
+  ---
+  duration_ms: 0.148522
+  type: 'test'
+  ...
+# Subtest: tradeRoutesGraph 1:1 с tradeRoutes на линейном графе (совместимость)
+ok 53 - tradeRoutesGraph 1:1 с tradeRoutes на линейном графе (совместимость)
+  ---
+  duration_ms: 0.6069
+  type: 'test'
+  ...
+# Subtest: tradeRoutesGraph: явные рёбра парами id и map-форматом эквивалентны
+ok 54 - tradeRoutesGraph: явные рёбра парами id и map-форматом эквивалентны
+  ---
+  duration_ms: 0.429535
+  type: 'test'
+  ...
+# Subtest: tradeRoutesGraph по каталогу: полный захват = 21 маршруту (19 линейных + 2 диагонали развилок), кап +38%
+ok 55 - tradeRoutesGraph по каталогу: полный захват = 21 маршруту (19 линейных + 2 диагонали развилок), кап +38%
+  ---
+  duration_ms: 0.693872
+  type: 'test'
+  ...
+# Subtest: обход ветки: захват мимо sh08 даёт графу 8 маршрутов против 7 индексных (диагональ sh07→sh09)
+ok 56 - обход ветки: захват мимо sh08 даёт графу 8 маршрутов против 7 индексных (диагональ sh07→sh09)
+  ---
+  duration_ms: 0.201844
+  type: 'test'
+  ...
+# Subtest: захват одной ветки развилки: ш07+ш09 без ш08 — доход с графом не хуже индексного
+ok 57 - захват одной ветки развилки: ш07+ш09 без ш08 — доход с графом не хуже индексного
+  ---
+  duration_ms: 0.152749
+  type: 'test'
+  ...
+# Subtest: фоллбэк: каталог без next у всех узлов → индексная смежность (та же семантика, что tradeRoutes)
+ok 58 - фоллбэк: каталог без next у всех узлов → индексная смежность (та же семантика, что tradeRoutes)
+  ---
+  duration_ms: 1.339621
+  type: 'test'
+  ...
+# Subtest: robustness: неизвестные id в edges игнорируются; кривой ввод даёт 0
+ok 59 - robustness: неизвестные id в edges игнорируются; кривой ввод даёт 0
+  ---
+  duration_ms: 0.162344
+  type: 'test'
+  ...
+# Subtest: P17 модель: силы тиров каталога, stackPower/armyPower/defensePower — золотые значения
+ok 60 - P17 модель: силы тиров каталога, stackPower/armyPower/defensePower — золотые значения
+  ---
+  duration_ms: 1.727313
+  type: 'test'
+  ...
+# Subtest: P17 модель: siegePower — золотая таблица SPEC §5 (капы недели/гнева, мусорные входы)
+ok 61 - P17 модель: siegePower — золотая таблица SPEC §5 (капы недели/гнева, мусорные входы)
+  ---
+  duration_ms: 0.319859
+  type: 'test'
+  ...
+# Subtest: P17 модель: assaultOutcome — победа/поражение, attrition-модификаторы, клампы
+ok 62 - P17 модель: assaultOutcome — победа/поражение, attrition-модификаторы, клампы
+  ---
+  duration_ms: 1.186971
+  type: 'test'
+  ...
+# Subtest: P17 модель: торговые пути — индексные vs графовые (расхождение на развилке каталога), фронтир
+ok 63 - P17 модель: торговые пути — индексные vs графовые (расхождение на развилке каталога), фронтир
+  ---
+  duration_ms: 1.01854
+  type: 'test'
+  ...
+# Subtest: P17 модель: weekly-модификаторы — детерминизм (сезон 1, неделя 1) = «Жадность», гейт эндгейма 20/20
+ok 64 - P17 модель: weekly-модификаторы — детерминизм (сезон 1, неделя 1) = «Жадность», гейт эндгейма 20/20
+  ---
+  duration_ms: 0.377047
+  type: 'test'
+  ...
+# Subtest: P17 экономика: strongholdsDailyTick — оплаченный день (налоги+эконом+рынок; Хутора −10% в тике)
+ok 65 - P17 экономика: strongholdsDailyTick — оплаченный день (налоги+эконом+рынок; Хутора −10% в тике)
+  ---
+  duration_ms: 2.400903
+  type: 'test'
+  ...
+# Subtest: P17 экономика: strongholdsDailyTick — дефицит: gold=0, долг+1, руина на grace+step+1, иммунитет builtAt
+ok 66 - P17 экономика: strongholdsDailyTick — дефицит: gold=0, долг+1, руина на grace+step+1, иммунитет builtAt
+  ---
+  duration_ms: 2.881714
+  type: 'test'
+  ...
+# Subtest: P17 экономика: strongholdsDailyTick — незахваченный стартовый лагерь вне экономики
+ok 67 - P17 экономика: strongholdsDailyTick — незахваченный стартовый лагерь вне экономики
+  ---
+  duration_ms: 1.227663
+  type: 'test'
+  ...
+# Subtest: P17 экономика: strongholdsDailyTick — Пепел ×1.1 налог/содержание; рынок суммируется по королевству с капом 50%
+ok 68 - P17 экономика: strongholdsDailyTick — Пепел ×1.1 налог/содержание; рынок суммируется по королевству с капом 50%
+  ---
+  duration_ms: 2.226051
+  type: 'test'
+  ...
+# Subtest: P17 экономика: превью казны == тик (нейтральные множители); асимметрии округления и тотема — как есть
+ok 69 - P17 экономика: превью казны == тик (нейтральные множители); асимметрии округления и тотема — как есть
+  ---
+  duration_ms: 3.468186
+  type: 'test'
+  ...
+# Subtest: P17 осада: оборона держит — сила врага 28 vs оборона 113, гарнизон −15%, XP, week+1, win
+ok 70 - P17 осада: оборона держит — сила врага 28 vs оборона 113, гарнизон −15%, XP, week+1, win
+  ---
+  duration_ms: 1.373291
+  type: 'test'
+  ...
+# Subtest: P17 осада: формула гнева — min(10; 2×ghosts + wkSkips + wkTaskFails + approach)
+ok 71 - P17 осада: формула гнева — min(10; 2×ghosts + wkSkips + wkTaskFails + approach)
+  ---
+  duration_ms: 1.30606
+  type: 'test'
+  ...
+# Subtest: P17 осада: падение и каскад ×0.85 — capturedCount пересчитывается, прорыв останавливается
+ok 72 - P17 осада: падение и каскад ×0.85 — capturedCount пересчитывается, прорыв останавливается
+  ---
+  duration_ms: 0.798268
+  type: 'test'
+  ...
+# Subtest: P17 осада: анти-тупик — полный разгром возвращает прибежище sh01 в руине
+ok 73 - P17 осада: анти-тупик — полный разгром возвращает прибежище sh01 в руине
+  ---
+  duration_ms: 0.502314
+  type: 'test'
+  ...
+# Subtest: P17 осада: 0 захваченных — week=1 и тишина (без отчёта и хроники)
+ok 74 - P17 осада: 0 захваченных — week=1 и тишина (без отчёта и хроники)
+  ---
+  duration_ms: 0.467511
+  type: 'test'
+  ...
+# Subtest: P17 осада: applyStackLoss — floor-потери, стопа не исчезает полностью (SPEC §4)
+ok 75 - P17 осада: applyStackLoss — floor-потери, стопа не исчезает полностью (SPEC §4)
+  ---
+  duration_ms: 0.385878
+  type: 'test'
+  ...
+# Subtest: P17 штурм: requestAssault — гейты суток/армии, фронтир-редирект, тактика с 3-й твердыни
+ok 76 - P17 штурм: requestAssault — гейты суток/армии, фронтир-редирект, тактика с 3-й твердыни
+  ---
+  duration_ms: 11.995563
+  type: 'test'
+  ...
+# Subtest: P17 штурм: doAssault победа — потери floor, таран/лестницы расходуются, week=1, хроника/тост/XP
+ok 77 - P17 штурм: doAssault победа — потери floor, таран/лестницы расходуются, week=1, хроника/тост/XP
+  ---
+  duration_ms: 1.396476
+  type: 'test'
+  ...
+# Subtest: P17 штурм: таблица TACTICS реальна; doAssault поражение — без захвата, потери 10–30%, повтор завтра
+ok 78 - P17 штурм: таблица TACTICS реальна; doAssault поражение — без захвата, потери 10–30%, повтор завтра
+  ---
+  duration_ms: 0.967983
+  type: 'test'
+  ...
+# Subtest: P17 штурм: doAssault «Натиск» — атака ×1.25, потери ×2 (tacticAttrMult), победа дороже
+ok 79 - P17 штурм: doAssault «Натиск» — атака ×1.25, потери ×2 (tacticAttrMult), победа дороже
+  ---
+  duration_ms: 0.730597
+  type: 'test'
+  ...
+# Subtest: P17 штурм: assaultForecast — atk/defN на реальном каталоге, диапазон без Гильдии, точные числа со sp1
+ok 80 - P17 штурм: assaultForecast — atk/defN на реальном каталоге, диапазон без Гильдии, точные числа со sp1
+  ---
+  duration_ms: 0.681282
+  type: 'test'
+  ...
+# Subtest: pushCloudChunks: nd_meta — commit-pointer c отпечатком, id поколения и размером, записан последним
+ok 81 - pushCloudChunks: nd_meta — commit-pointer c отпечатком, id поколения и размером, записан последним
+  ---
+  duration_ms: 12.195633
+  type: 'test'
+  ...
+# Subtest: pushCloudChunks → loadCloudChunks: roundtrip и отсечение подменённого чанка
+ok 82 - pushCloudChunks → loadCloudChunks: roundtrip и отсечение подменённого чанка
+  ---
+  duration_ms: 14.734144
+  type: 'test'
+  ...
+# Subtest: loadCloudChunks: легаси-meta без c читается как раньше (обратная совместимость)
+ok 83 - loadCloudChunks: легаси-meta без c читается как раньше (обратная совместимость)
+  ---
+  duration_ms: 0.829445
+  type: 'test'
+  ...
+# Subtest: loadCloudChunks: отсутствующий чанк → ошибка (commit-pointer указывает на неполные данные)
+ok 84 - loadCloudChunks: отсутствующий чанк → ошибка (commit-pointer указывает на неполные данные)
+  ---
+  duration_ms: 0.435353
+  type: 'test'
+  ...
+# Subtest: pushCloudChunks: ошибка записи чанка → meta НЕ перезаписывается (старое поколение живо)
+ok 85 - pushCloudChunks: ошибка записи чанка → meta НЕ перезаписывается (старое поколение живо)
+  ---
+  duration_ms: 11.26772
+  type: 'test'
+  ...
+# Subtest: ndSnapshotChecksum: детерминирован и чувствителен к одному символу
+ok 86 - ndSnapshotChecksum: детерминирован и чувствителен к одному символу
+  ---
+  duration_ms: 0.462564
+  type: 'test'
+  ...
+# Subtest: DEFAULTS: только localhost:8095, телеметрия default off, ноль npm-зависимостей
+ok 87 - DEFAULTS: только localhost:8095, телеметрия default off, ноль npm-зависимостей
+  ---
+  duration_ms: 1.909696
+  type: 'test'
+  ...
+# Subtest: unit-файл nd-config.service изолирован от прод-бота (правило 17)
+ok 88 - unit-файл nd-config.service изолирован от прод-бота (правило 17)
+  ---
+  duration_ms: 0.5863
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.303Z","method":"GET","path":"/config/weekly-modifiers.v1.json","status":200,"ms":4}
+# {"t":"2026-10-01T16:46:24.314Z","method":"GET","path":"/config/weekly-modifiers.v1.json","status":304,"ms":0}
+# Subtest: GET /config/weekly-modifiers.v1.json: 200, байты 1:1 с артефактом, content-type, ETag→304
+ok 89 - GET /config/weekly-modifiers.v1.json: 200, байты 1:1 с артефактом, content-type, ETag→304
+  ---
+  duration_ms: 59.297476
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.320Z","method":"GET","path":"/config/unknown.json","status":404,"ms":0}
+# {"t":"2026-10-01T16:46:24.323Z","method":"GET","path":"/env","status":404,"ms":0}
+# {"t":"2026-10-01T16:46:24.325Z","method":"GET","path":"/server.cjs","status":404,"ms":1}
+# {"t":"2026-10-01T16:46:24.328Z","method":"GET","path":"/config/nested/weekly-modifiers.v1.json","status":404,"ms":0}
+# {"t":"2026-10-01T16:46:24.332Z","method":"GET","path":"/config/weekly-modifiers.vx.json","status":404,"ms":0}
+# Subtest: GET /config/<не-whitelist>: 404 (неизвестное имя, обход, подкаталог)
+ok 90 - GET /config/<не-whitelist>: 404 (неизвестное имя, обход, подкаталог)
+  ---
+  duration_ms: 18.141767
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.338Z","method":"GET","path":"/healthz","status":200,"ms":0}
+# {"t":"2026-10-01T16:46:24.342Z","method":"GET","path":"/","status":200,"ms":0}
+# Subtest: GET / и /healthz: самопрезентация и живость (telemetry: disabled)
+ok 91 - GET / и /healthz: самопрезентация и живость (telemetry: disabled)
+  ---
+  duration_ms: 10.375872
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.354Z","method":"POST","path":"/v1/telemetry","status":503,"ms":0}
+# Subtest: телеметрия выключена (default): POST → 503 telemetry_disabled, файл не создаётся
+ok 92 - телеметрия выключена (default): POST → 503 telemetry_disabled, файл не создаётся
+  ---
+  duration_ms: 11.305847
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.360Z","method":"POST","path":"/v1/telemetry","status":503,"ms":0}
+# {"t":"2026-10-01T16:46:24.363Z","method":"POST","path":"/v1/telemetry","status":503,"ms":0}
+# Subtest: fail-safe: флаг=1, но токен пустой/короткий → приёмник всё равно выключен
+ok 93 - fail-safe: флаг=1, но токен пустой/короткий → приёмник всё равно выключен
+  ---
+  duration_ms: 10.79383
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.371Z","method":"POST","path":"/v1/telemetry","status":401,"ms":1}
+# {"t":"2026-10-01T16:46:24.373Z","method":"POST","path":"/v1/telemetry","status":401,"ms":0}
+# {"t":"2026-10-01T16:46:24.378Z","method":"POST","path":"/v1/telemetry","status":202,"ms":3}
+# {"t":"2026-10-01T16:46:24.381Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# Subtest: включённая телеметрия: без токена и с неверным → 401; с верным (Bearer и X-ND-Token) → 202 + JSONL
+ok 94 - включённая телеметрия: без токена и с неверным → 401; с верным (Bearer и X-ND-Token) → 202 + JSONL
+  ---
+  duration_ms: 15.69196
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.386Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T16:46:24.389Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T16:46:24.391Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T16:46:24.393Z","method":"POST","path":"/v1/telemetry","status":413,"ms":1}
+# Subtest: валидация конверта: битый JSON → 400, массив/строка → 400, перелимит тела → 413
+ok 95 - валидация конверта: битый JSON → 400, массив/строка → 400, перелимит тела → 413
+  ---
+  duration_ms: 11.141021
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.402Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# {"t":"2026-10-01T16:46:24.404Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# {"t":"2026-10-01T16:46:24.406Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# {"t":"2026-10-01T16:46:24.408Z","method":"POST","path":"/v1/telemetry","status":429,"ms":0}
+# Subtest: rate limit: после N валидных POST в окне → 429
+ok 96 - rate limit: после N валидных POST в окне → 429
+  ---
+  duration_ms: 14.977148
+  type: 'test'
+  ...
+# {"t":"2026-10-01T16:46:24.413Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# {"t":"2026-10-01T16:46:24.424Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# Subtest: ротация: при переполнении telemetry.jsonl → .1, данные не теряются молча
+ok 97 - ротация: при переполнении telemetry.jsonl → .1, данные не теряются молча
+  ---
+  duration_ms: 16.355828
+  type: 'test'
+  ...
+# Subtest: P7 daysToRuin: руина при долге > grace+step; казна и доход задерживают дефицит
+ok 98 - P7 daysToRuin: руина при долге > grace+step; казна и доход задерживают дефицит
+  ---
+  duration_ms: 1.555495
+  type: 'test'
+  ...
+# Subtest: P7 daysToRuin: сверка с реальным corruptionTick — ночь за ночью до руины
+ok 99 - P7 daysToRuin: сверка с реальным corruptionTick — ночь за ночью до руины
+  ---
+  duration_ms: 0.504687
+  type: 'test'
+  ...
+# Subtest: P7 dailyUpkeep: байт-паритет с corruptionTick по всем множителям (руина не ест)
+ok 100 - P7 dailyUpkeep: байт-паритет с corruptionTick по всем множителям (руина не ест)
+  ---
+  duration_ms: 0.444588
+  type: 'test'
+  ...
+# Subtest: P7 emergencyMaintenanceCost: ровно 2× дневного содержания, минимум 1💰
+ok 101 - P7 emergencyMaintenanceCost: ровно 2× дневного содержания, минимум 1💰
+  ---
+  duration_ms: 0.148653
+  type: 'test'
+  ...
+# Subtest: P7 applyEmergencyMaintenance: paid-ветка тика — +1 ступень всем, долг 0, вход не мутирует
+ok 102 - P7 applyEmergencyMaintenance: paid-ветка тика — +1 ступень всем, долг 0, вход не мутирует
+  ---
+  duration_ms: 0.256857
+  type: 'test'
+  ...
+# Subtest: P7 rebuildCost: −25% от цены постройки, ceil; мусорная цена → 0
+ok 103 - P7 rebuildCost: −25% от цены постройки, ceil; мусорная цена → 0
+  ---
+  duration_ms: 0.165778
+  type: 'test'
+  ...
+# Subtest: P7 проводка: strongholdsDailyTick собирает причину руины и верёт опты из corruptionTickOpts
+ok 104 - P7 проводка: strongholdsDailyTick собирает причину руины и верёт опты из corruptionTickOpts
+  ---
+  duration_ms: 0.791819
+  type: 'test'
+  ...
+# Subtest: P7 проводка: checkDailyReset показывает тост-причину разрушения
+ok 105 - P7 проводка: checkDailyReset показывает тост-причину разрушения
+  ---
+  duration_ms: 0.890628
+  type: 'test'
+  ...
+# Subtest: P7 проводка: прогноз в обзоре Твердынь + единый step/множители + экшены
+ok 106 - P7 проводка: прогноз в обзоре Твердынь + единый step/множители + экшены
+  ---
+  duration_ms: 1.360942
+  type: 'test'
+  ...
+# Subtest: P7 corruptionForecastDays: худший долг по королевству (руина/непостроенные/незахваченные не считаются)
+ok 107 - P7 corruptionForecastDays: худший долг по королевству (руина/непостроенные/незахваченные не считаются)
+  ---
+  duration_ms: 1.382725
+  type: 'test'
+  ...
+# Subtest: P7 corruptionForecastLineHtml: строка только при угрозе
+ok 108 - P7 corruptionForecastLineHtml: строка только при угрозе
+  ---
+  duration_ms: 0.620561
+  type: 'test'
+  ...
+# Subtest: P7 requestEmergencyMaintenance: платит 2× содержания, лечит на ступень, долг 0, сейв
+ok 109 - P7 requestEmergencyMaintenance: платит 2× содержания, лечит на ступень, долг 0, сейв
+  ---
+  duration_ms: 0.722815
+  type: 'test'
+  ...
+# Subtest: P7 requestEmergencyMaintenance: мало золота/чинить нечего — казна и постройки не тронуты
+ok 110 - P7 requestEmergencyMaintenance: мало золота/чинить нечего — казна и постройки не тронуты
+  ---
+  duration_ms: 0.735053
+  type: 'test'
+  ...
+# Subtest: P7 rebuildBuilding: скидка 25% от цены постройки, «как новая» (builtAt иммунитет), сейв
+ok 111 - P7 rebuildBuilding: скидка 25% от цены постройки, «как новая» (builtAt иммунитет), сейв
+  ---
+  duration_ms: 1.281774
+  type: 'test'
+  ...
+# Subtest: P7 builtTileHtml: кнопка восстановления только у worn/ruin и только с ценой
+ok 112 - P7 builtTileHtml: кнопка восстановления только у worn/ruin и только с ценой
+  ---
+  duration_ms: 0.858168
+  type: 'test'
+  ...
+# Subtest: P7 CSS: .sh-ruin-forecast/.sh-emergency/.sh-rebuild (статичные — без motion-гейтов)
+ok 113 - P7 CSS: .sh-ruin-forecast/.sh-emergency/.sh-rebuild (статичные — без motion-гейтов)
+  ---
+  duration_ms: 0.234442
+  type: 'test'
+  ...
+# Subtest: P6 buildingBreakdown: Δдоход/Δсодержание из двух прогонов превью, окупаемость ceil(цена/нетто)
+ok 114 - P6 buildingBreakdown: Δдоход/Δсодержание из двух прогонов превью, окупаемость ceil(цена/нетто)
+  ---
+  duration_ms: 1.983947
+  type: 'test'
+  ...
+# Subtest: P6 buildingBreakdown: существующая (не построенная) запись восстанавливается байт-в-байт
+ok 115 - P6 buildingBreakdown: существующая (не построенная) запись восстанавливается байт-в-байт
+  ---
+  duration_ms: 0.653901
+  type: 'test'
+  ...
+# Subtest: P6 buildingBreakdown: нетто ≤ 0 → payback null; мусорный bid → null
+ok 116 - P6 buildingBreakdown: нетто ≤ 0 → payback null; мусорный bid → null
+  ---
+  duration_ms: 0.827992
+  type: 'test'
+  ...
+# Subtest: P6 buildingBreakdownHtml: «до → после», цена в окупаемости, «золотом не окупается»
+ok 117 - P6 buildingBreakdownHtml: «до → после», цена в окупаемости, «золотом не окупается»
+  ---
+  duration_ms: 0.908583
+  type: 'test'
+  ...
+# Subtest: P6 assaultBreakdownHtml: победа — соотношение + детерминированные потери формулой модели
+ok 118 - P6 assaultBreakdownHtml: победа — соотношение + детерминированные потери формулой модели
+  ---
+  duration_ms: 0.922965
+  type: 'test'
+  ...
+# Subtest: P6 assaultBreakdownHtml: поражение — worst-case 30% верхним краем формулы, таран ×0.9
+ok 119 - P6 assaultBreakdownHtml: поражение — worst-case 30% верхним краем формулы, таран ×0.9
+  ---
+  duration_ms: 0.827071
+  type: 'test'
+  ...
+# Subtest: P6 assaultBreakdownHtml: worst-case переиспользует attrition-формулу модели (пин семантики)
+ok 120 - P6 assaultBreakdownHtml: worst-case переиспользует attrition-формулу модели (пин семантики)
+  ---
+  duration_ms: 0.320891
+  type: 'test'
+  ...
+# Subtest: P6 встройка: buyTileHtml несёт брейкдаун; requestAssault/requestTactic рендерят блок
+ok 121 - P6 встройка: buyTileHtml несёт брейкдаун; requestAssault/requestTactic рендерят блок
+  ---
+  duration_ms: 2.269206
+  type: 'test'
+  ...
+# Subtest: P6 CSS: .sh-tile-break/.assault-breakdown + eco/reduced-motion гейты
+ok 122 - P6 CSS: .sh-tile-break/.assault-breakdown + eco/reduced-motion гейты
+  ---
+  duration_ms: 0.638719
+  type: 'test'
+  ...
+# Subtest: event-bus: on → emit → подписчик получает payload; без подписчиков emit тих
+ok 123 - event-bus: on → emit → подписчик получает payload; без подписчиков emit тих
+  ---
+  duration_ms: 2.281113
+  type: 'test'
+  ...
+# Subtest: event-bus: без payload подписчик получает объект (не undefined)
+ok 124 - event-bus: без payload подписчик получает объект (не undefined)
+  ---
+  duration_ms: 0.456205
+  type: 'test'
+  ...
+# Subtest: event-bus: off() отписывает; падение подписчика изолировано от соседей
+ok 125 - event-bus: off() отписывает; падение подписчика изолировано от соседей
+  ---
+  duration_ms: 0.283986
+  type: 'test'
+  ...
+# Subtest: event-bus: лимит подписчиков — варн в консоль, но подписка работает
+ok 126 - event-bus: лимит подписчиков — варн в консоль, но подписка работает
+  ---
+  duration_ms: 0.360621
+  type: 'test'
+  ...
+# Subtest: storage.js: applySyncData и multi-tab-синк больше не зовут UI напрямую (шаг state-store)
+ok 127 - storage.js: applySyncData и multi-tab-синк больше не зовут UI напрямую (шаг state-store)
+  ---
+  duration_ms: 0.634272
+  type: 'test'
+  ...
+# Subtest: event-bus подключён в index.html до storage.js и в SW-прекэш
+ok 128 - event-bus подключён в index.html до storage.js и в SW-прекэш
+  ---
+  duration_ms: 0.976627
+  type: 'test'
+  ...
+# Subtest: старт: ничего не захвачено — фронтир = [0] (стартовый лагерь без предков)
+ok 129 - старт: ничего не захвачено — фронтир = [0] (стартовый лагерь без предков)
+  ---
+  duration_ms: 2.78493
+  type: 'test'
+  ...
+# Subtest: линейные стыки: 0..k захвачены — фронтир из одного узла k+1 (пров. 1/3 и входы пров. 2/4)
+ok 130 - линейные стыки: 0..k захвачены — фронтир из одного узла k+1 (пров. 1/3 и входы пров. 2/4)
+  ---
+  duration_ms: 0.719651
+  type: 'test'
+  ...
+# Subtest: развилка пров. 2: после sh07 фронтир = [sh08(war), sh09(safe)] — обе ветки открыты
+ok 131 - развилка пров. 2: после sh07 фронтир = [sh08(war), sh09(safe)] — обе ветки открыты
+  ---
+  duration_ms: 0.303855
+  type: 'test'
+  ...
+# Subtest: взял военную ветку (sh08): фронтир = [sh09, sh10] — обходная ветка и сходка открыты
+ok 132 - взял военную ветку (sh08): фронтир = [sh09, sh10] — обходная ветка и сходка открыты
+  ---
+  duration_ms: 0.222725
+  type: 'test'
+  ...
+# Subtest: обошёл военную ветку (sh08 не захвачена, дальше пройдено): sh08 остаётся целью — тупика нет
+ok 133 - обошёл военную ветку (sh08 не захвачена, дальше пройдено): sh08 остаётся целью — тупика нет
+  ---
+  duration_ms: 0.252358
+  type: 'test'
+  ...
+# Subtest: развилка пров. 4: после sh17 фронтир = [sh18(war), sh19(safe)]; обход sh18 не запирает
+ok 134 - развилка пров. 4: после sh17 фронтир = [sh18(war), sh19(safe)]; обход sh18 не запирает
+  ---
+  duration_ms: 0.209556
+  type: 'test'
+  ...
+# Subtest: полный захват: фронтир пуст; флаги-«дырки» после каскада осад дают первую дырку
+ok 135 - полный захват: фронтир пуст; флаги-«дырки» после каскада осад дают первую дырку
+  ---
+  duration_ms: 0.278397
+  type: 'test'
+  ...
+# Subtest: ДЕФОЛТ = ЛИНЕЙНЫЙ: минимальный индекс фронтира равен первой незахваченной (инвариант на биттернах)
+ok 136 - ДЕФОЛТ = ЛИНЕЙНЫЙ: минимальный индекс фронтира равен первой незахваченной (инвариант на биттернах)
+  ---
+  duration_ms: 21.626338
+  type: 'test'
+  ...
+# Subtest: фоллбэк: каталог без next → линейная семантика; без каталога — тоже
+ok 137 - фоллбэк: каталог без next → линейная семантика; без каталога — тоже
+  ---
+  duration_ms: 0.641772
+  type: 'test'
+  ...
+# Subtest: анти-тупик: разрывный каталог (нет рёбер в узел 6) — линейный фоллбэк вместо пустого фронтира
+ok 138 - анти-тупик: разрывный каталог (нет рёбер в узел 6) — линейный фоллбэк вместо пустого фронтира
+  ---
+  duration_ms: 0.569645
+  type: 'test'
+  ...
+# Subtest: robustness: не-массив флагов → пусто; короткий массив обрезается, а не валит функцию
+ok 139 - robustness: не-массив флагов → пусто; короткий массив обрезается, а не валит функцию
+  ---
+  duration_ms: 0.243816
+  type: 'test'
+  ...
+# Subtest: P22 ndMotionOk: сводка гейта — 4 комбинации eco × reduced-motion
+ok 140 - P22 ndMotionOk: сводка гейта — 4 комбинации eco × reduced-motion
+  ---
+  duration_ms: 2.150549
+  type: 'test'
+  ...
+# Subtest: P22 ndMotionOk: самодостаточен для extract-харнессов (typeof-гварды, правило 19)
+ok 141 - P22 ndMotionOk: самодостаточен для extract-харнессов (typeof-гварды, правило 19)
+  ---
+  duration_ms: 0.474953
+  type: 'test'
+  ...
+# Subtest: P22 матрица ND_HAPTICS: все значения — валидные типы HapticFeedback
+ok 142 - P22 матрица ND_HAPTICS: все значения — валидные типы HapticFeedback
+  ---
+  duration_ms: 0.512069
+  type: 'test'
+  ...
+# Subtest: P22 матрица ND_HAPTICS: P22-события reward/prep заведены
+ok 143 - P22 матрица ND_HAPTICS: P22-события reward/prep заведены
+  ---
+  duration_ms: 0.266319
+  type: 'test'
+  ...
+# Subtest: P22 ND_HAPTIC_VIBES: 7 типов, notification-паттерны — массивы мс
+ok 144 - P22 ND_HAPTIC_VIBES: 7 типов, notification-паттерны — массивы мс
+  ---
+  duration_ms: 0.429394
+  type: 'test'
+  ...
+# Subtest: P22 hapticFor: известное событие зовёт haptic(тип) и возвращает тип; неизвестное — тишина
+ok 145 - P22 hapticFor: известное событие зовёт haptic(тип) и возвращает тип; неизвестное — тишина
+  ---
+  duration_ms: 1.090106
+  type: 'test'
+  ...
+# Subtest: P22 haptic: браузерный фоллбэк navigator.vibrate по паттерну из матрицы
+ok 146 - P22 haptic: браузерный фоллбэк navigator.vibrate по паттерну из матрицы
+  ---
+  duration_ms: 0.500191
+  type: 'test'
+  ...
+# Subtest: P22 siegePrepAnimate: motion разрешён → класс вспышки на панели
+ok 147 - P22 siegePrepAnimate: motion разрешён → класс вспышки на панели
+  ---
+  duration_ms: 1.111969
+  type: 'test'
+  ...
+# Subtest: P22 siegePrepAnimate: гейт закрыт (reduced-motion/eco) → false, класс не вешается
+ok 148 - P22 siegePrepAnimate: гейт закрыт (reduced-motion/eco) → false, класс не вешается
+  ---
+  duration_ms: 0.632559
+  type: 'test'
+  ...
+# Subtest: P22 siegePrepAnimate: панели нет в DOM → false без исключения
+ok 149 - P22 siegePrepAnimate: панели нет в DOM → false без исключения
+  ---
+  duration_ms: 0.477587
+  type: 'test'
+  ...
+# Subtest: P22 пины: reveal-секвенция в showBossRewardChoice ограждена ndMotionOk
+ok 150 - P22 пины: reveal-секвенция в showBossRewardChoice ограждена ndMotionOk
+  ---
+  duration_ms: 0.394732
+  type: 'test'
+  ...
+# Subtest: P22 пины: подход/отмена/склад — siegePrepAnimate за typeof-гвардом, haptic-фоллбек сохранён
+ok 151 - P22 пины: подход/отмена/склад — siegePrepAnimate за typeof-гвардом, haptic-фоллбек сохранён
+  ---
+  duration_ms: 0.534713
+  type: 'test'
+  ...
+# Subtest: P22 пины: chooseBossReward — haptic через матрицу с фоллбеком
+ok 152 - P22 пины: chooseBossReward — haptic через матрицу с фоллбеком
+  ---
+  duration_ms: 0.458147
+  type: 'test'
+  ...
+# Subtest: P22 CSS: секвенция reveal ≤ 2с, вспышка подготовки без сдвига лэйаута
+ok 153 - P22 CSS: секвенция reveal ≤ 2с, вспышка подготовки без сдвига лэйаута
+  ---
+  duration_ms: 0.664988
+  type: 'test'
+  ...
+# Subtest: P22 аудит call-sites: все сырые haptic('тип') в продукте — валидные типы
+ok 154 - P22 аудит call-sites: все сырые haptic('тип') в продукте — валидные типы
+  ---
+  duration_ms: 0.427792
+  type: 'test'
+  ...
+# Subtest: App.js no longer declares storage functions (extracted to storage.js)
+ok 155 - App.js no longer declares storage functions (extracted to storage.js)
+  ---
+  duration_ms: 5.859304
+  type: 'test'
+  ...
+# Subtest: Storage.js declares all storage functions
+ok 156 - Storage.js declares all storage functions
+  ---
+  duration_ms: 0.531357
+  type: 'test'
+  ...
+# Subtest: App.js no longer has dead Canvas 2D combat code
+ok 157 - App.js no longer has dead Canvas 2D combat code
+  ---
+  duration_ms: 2.400072
+  type: 'test'
+  ...
+# Subtest: App.js: tract economy removed, stronghold systems present
+ok 158 - App.js: tract economy removed, stronghold systems present
+  ---
+  duration_ms: 2.150127
+  type: 'test'
+  ...
+# Subtest: No combat bridge remnants in app.js
+ok 159 - No combat bridge remnants in app.js
+  ---
+  duration_ms: 3.258191
+  type: 'test'
+  ...
+# Subtest: Rank-up flow chains single unified edit modal (A2: banner -> one modal)
+ok 160 - Rank-up flow chains single unified edit modal (A2: banner -> one modal)
+  ---
+  duration_ms: 0.403374
+  type: 'test'
+  ...
+# Subtest: Unified rank-up modal: evolution section lives inside editCardModal
+ok 161 - Unified rank-up modal: evolution section lives inside editCardModal
+  ---
+  duration_ms: 0.231256
+  type: 'test'
+  ...
+# Subtest: Evolution handlers wired in app.js event delegation + save applies path
+ok 162 - Evolution handlers wired in app.js event delegation + save applies path
+  ---
+  duration_ms: 0.625879
+  type: 'test'
+  ...
+# Subtest: Forge card locks starting rank to C (anti-exploit)
+ok 163 - Forge card locks starting rank to C (anti-exploit)
+  ---
+  duration_ms: 0.361263
+  type: 'test'
+  ...
+# Subtest: Forge card mints evolutionPath correctly
+ok 164 - Forge card mints evolutionPath correctly
+  ---
+  duration_ms: 0.353079
+  type: 'test'
+  ...
+# Subtest: All data-action handlers wired in app.js click delegation
+ok 165 - All data-action handlers wired in app.js click delegation
+  ---
+  duration_ms: 0.484397
+  type: 'test'
+  ...
+# Subtest: Storage.js references STATE_GUARDS but only inside function bodies
+ok 166 - Storage.js references STATE_GUARDS but only inside function bodies
+  ---
+  duration_ms: 6.429149
+  type: 'test'
+  ...
+# Subtest: State guards UMD wrapper is present
+ok 167 - State guards UMD wrapper is present
+  ---
+  duration_ms: 0.156374
+  type: 'test'
+  ...
+# Subtest: Database schema survives JSON round-trip
+ok 168 - Database schema survives JSON round-trip
+  ---
+  duration_ms: 1.590817
+  type: 'test'
+  ...
+# Subtest: All Animation API references in app.js use window globals
+ok 169 - All Animation API references in app.js use window globals
+  ---
+  duration_ms: 2.870629
+  type: 'test'
+  ...
+# Subtest: No estus (removed in v25) references remain
+ok 170 - No estus (removed in v25) references remain
+  ---
+  duration_ms: 0.56635
+  type: 'test'
+  ...
+# Subtest: Cache bust versions are consistent
+ok 171 - Cache bust versions are consistent
+  ---
+  duration_ms: 0.259278
+  type: 'test'
+  ...
+# Subtest: State-guards sanitizeCard skips unknown fields safely
+ok 172 - State-guards sanitizeCard skips unknown fields safely
+  ---
+  duration_ms: 0.17346
+  type: 'test'
+  ...
+# Subtest: Stat values are clamped during import to safe range
+ok 173 - Stat values are clamped during import to safe range
+  ---
+  duration_ms: 0.113059
+  type: 'test'
+  ...
+# Subtest: Forge form does not expose SSS rank option in HTML
+ok 174 - Forge form does not expose SSS rank option in HTML
+  ---
+  duration_ms: 0.15286
+  type: 'test'
+  ...
+# Subtest: Storage snapshot includes all critical game fields
+ok 175 - Storage snapshot includes all critical game fields
+  ---
+  duration_ms: 0.188072
+  type: 'test'
+  ...
+# Subtest: Storage: chunks.push loop has emergency cap at 200 iterations
+ok 176 - Storage: chunks.push loop has emergency cap at 200 iterations
+  ---
+  duration_ms: 0.169374
+  type: 'test'
+  ...
+# Subtest: Storage: saveToIDB sets window._lastIDBSaveAt hook
+ok 177 - Storage: saveToIDB sets window._lastIDBSaveAt hook
+  ---
+  duration_ms: 0.072188
+  type: 'test'
+  ...
+# Subtest: Storage: saveMeta guards against finished=true (defensive)
+ok 178 - Storage: saveMeta guards against finished=true (defensive)
+  ---
+  duration_ms: 0.074633
+  type: 'test'
+  ...
+# Subtest: Regression: lastWeekReset is declared (was silently killing all saves after combat removal)
+ok 179 - Regression: lastWeekReset is declared (was silently killing all saves after combat removal)
+  ---
+  duration_ms: 0.17393
+  type: 'test'
+  ...
+# Subtest: Regression: checkDailyReset guards fresh install (no save before onboarding)
+ok 180 - Regression: checkDailyReset guards fresh install (no save before onboarding)
+  ---
+  duration_ms: 0.153891
+  type: 'test'
+  ...
+# Subtest: Regression: tract economy fully removed
+ok 181 - Regression: tract economy fully removed
+  ---
+  duration_ms: 0.997989
+  type: 'test'
+  ...
+# Subtest: нет легаси-строк вырезанных систем в продукте
+ok 182 - нет легаси-строк вырезанных систем в продукте
+  ---
+  duration_ms: 17.227536
+  type: 'test'
+  ...
+# Subtest: XP ledger: состав множителей заморожен, округление одно — после prestige
+ok 183 - XP ledger: состав множителей заморожен, округление одно — после prestige
+  ---
+  duration_ms: 2.188384
+  type: 'test'
+  ...
+# Subtest: XP ledger: математика эквивалентна исторической формуле
+ok 184 - XP ledger: математика эквивалентна исторической формуле
+  ---
+  duration_ms: 0.655673
+  type: 'test'
+  ...
+# Subtest: XP ledger: identity — все m=1 без round возвращает base; round округляет
+ok 185 - XP ledger: identity — все m=1 без round возвращает base; round округляет
+  ---
+  duration_ms: 0.333131
+  type: 'test'
+  ...
+# Subtest: perf: defaults — mode is auto when storage empty
+ok 186 - perf: defaults — mode is auto when storage empty
+  ---
+  duration_ms: 3.040643
+  type: 'test'
+  ...
+# Subtest: perf: setMode rejects invalid values
+ok 187 - perf: setMode rejects invalid values
+  ---
+  duration_ms: 0.573361
+  type: 'test'
+  ...
+# Subtest: perf: setMode accepts all three valid modes
+ok 188 - perf: setMode accepts all three valid modes
+  ---
+  duration_ms: 0.337366
+  type: 'test'
+  ...
+# Subtest: perf: localStorage persists non-default mode
+ok 189 - perf: localStorage persists non-default mode
+  ---
+  duration_ms: 0.154582
+  type: 'test'
+  ...
+# Subtest: perf: setMode(auto) clears storage key (NO clutter)
+ok 190 - perf: setMode(auto) clears storage key (NO clutter)
+  ---
+  duration_ms: 0.241052
+  type: 'test'
+  ...
+# Subtest: perf: persisted mode loaded on init
+ok 191 - perf: persisted mode loaded on init
+  ---
+  duration_ms: 0.153731
+  type: 'test'
+  ...
+# Subtest: perf: corrupted mode value falls back to auto
+ok 192 - perf: corrupted mode value falls back to auto
+  ---
+  duration_ms: 0.249725
+  type: 'test'
+  ...
+# Subtest: perf: auto + systemNormal → not reduced
+ok 193 - perf: auto + systemNormal → not reduced
+  ---
+  duration_ms: 0.244767
+  type: 'test'
+  ...
+# Subtest: perf: auto + systemReduced → reduced=true
+ok 194 - perf: auto + systemReduced → reduced=true
+  ---
+  duration_ms: 0.411377
+  type: 'test'
+  ...
+# Subtest: perf: low → reduced=true regardless of system
+ok 195 - perf: low → reduced=true regardless of system
+  ---
+  duration_ms: 0.540031
+  type: 'test'
+  ...
+# Subtest: perf: effects-off → reduced=true, isEffectsOff=true
+ok 196 - perf: effects-off → reduced=true, isEffectsOff=true
+  ---
+  duration_ms: 1.25883
+  type: 'test'
+  ...
+# Subtest: perf: isLowEffect=true on low-memory device (auto mode)
+ok 197 - perf: isLowEffect=true on low-memory device (auto mode)
+  ---
+  duration_ms: 0.215403
+  type: 'test'
+  ...
+# Subtest: perf: isLowEffect=true on few-core device (auto mode)
+ok 198 - perf: isLowEffect=true on few-core device (auto mode)
+  ---
+  duration_ms: 0.12676
+  type: 'test'
+  ...
+# Subtest: perf: isLowEffect=false on modern device (auto mode)
+ok 199 - perf: isLowEffect=false on modern device (auto mode)
+  ---
+  duration_ms: 0.091677
+  type: 'test'
+  ...
+# Subtest: perf: change event from OS flips prefersReducedMotion
+ok 200 - perf: change event from OS flips prefersReducedMotion
+  ---
+  duration_ms: 0.165898
+  type: 'test'
+  ...
+# Subtest: perf: onChange fires when mode changes
+ok 201 - perf: onChange fires when mode changes
+  ---
+  duration_ms: 0.164697
+  type: 'test'
+  ...
+# Subtest: perf: onChange ignores non-functions
+ok 202 - perf: onChange ignores non-functions
+  ---
+  duration_ms: 0.235434
+  type: 'test'
+  ...
+# Subtest: perf: onChange hand­ler throwing does not break others
+ok 203 - perf: onChange hand­ler throwing does not break others
+  ---
+  duration_ms: 0.170897
+  type: 'test'
+  ...
+# Subtest: perf: works when localStorage throws
+ok 204 - perf: works when localStorage throws
+  ---
+  duration_ms: 0.247702
+  type: 'test'
+  ...
+# Subtest: perf: works when matchMedia is missing
+ok 205 - perf: works when matchMedia is missing
+  ---
+  duration_ms: 0.13354
+  type: 'test'
+  ...
+# Subtest: perf.js exposes UMD module via module.exports
+ok 206 - perf.js exposes UMD module via module.exports
+  ---
+  duration_ms: 1.379891
+  type: 'test'
+  ...
+# Subtest: isEco covers low/effects-off union (compat semantics)
+ok 207 - isEco covers low/effects-off union (compat semantics)
+  ---
+  duration_ms: 0.466209
+  type: 'test'
+  ...
+# Subtest: default mode is auto, default eco is false
+ok 208 - default mode is auto, default eco is false
+  ---
+  duration_ms: 0.232069
+  type: 'test'
+  ...
+# Subtest: setMode(eco) flips effective eco on
+ok 209 - setMode(eco) flips effective eco on
+  ---
+  duration_ms: 0.165689
+  type: 'test'
+  ...
+# Subtest: setMode(performance) flips effective eco off
+ok 210 - setMode(performance) flips effective eco off
+  ---
+  duration_ms: 0.244075
+  type: 'test'
+  ...
+# Subtest: setMode(auto) follows systemReducedMotion
+ok 211 - setMode(auto) follows systemReducedMotion
+  ---
+  duration_ms: 0.131297
+  type: 'test'
+  ...
+# Subtest: invalid mode is rejected, current mode preserved
+ok 212 - invalid mode is rejected, current mode preserved
+  ---
+  duration_ms: 0.185858
+  type: 'test'
+  ...
+# Subtest: VALID_MODES is exposed and reasonable
+ok 213 - VALID_MODES is exposed and reasonable
+  ---
+  duration_ms: 0.751178
+  type: 'test'
+  ...
+# Subtest: CHANGE event fires listener only on actual eco transition
+ok 214 - CHANGE event fires listener only on actual eco transition
+  ---
+  duration_ms: 0.465918
+  type: 'test'
+  ...
+# Subtest: localStorage round-trip: set eco, require fresh, getMode reflects storage
+ok 215 - localStorage round-trip: set eco, require fresh, getMode reflects storage
+  ---
+  duration_ms: 0.44742
+  type: 'test'
+  ...
+# Subtest: index.html loads perf-compat right after perf.js, both before state-guards/storage
+ok 216 - index.html loads perf-compat right after perf.js, both before state-guards/storage
+  ---
+  duration_ms: 0.224407
+  type: 'test'
+  ...
+# Subtest: index.html cache-bust is uniform across all JS files (single version, no literal)
+ok 217 - index.html cache-bust is uniform across all JS files (single version, no literal)
+  ---
+  duration_ms: 0.543805
+  type: 'test'
+  ...
+# Subtest: CSS contains :root.perf-eco selector
+ok 218 - CSS contains :root.perf-eco selector
+  ---
+  duration_ms: 0.132318
+  type: 'test'
+  ...
+# Subtest: CSS reduces animation-duration in eco mode
+ok 219 - CSS reduces animation-duration in eco mode
+  ---
+  duration_ms: 0.167712
+  type: 'test'
+  ...
+# Subtest: CSS reduces transition-duration in eco mode
+ok 220 - CSS reduces transition-duration in eco mode
+  ---
+  duration_ms: 0.136474
+  type: 'test'
+  ...
+# Subtest: CSS disables backdrop-filter in eco mode
+ok 221 - CSS disables backdrop-filter in eco mode
+  ---
+  duration_ms: 0.135193
+  type: 'test'
+  ...
+# Subtest: CSS hides dust canvas in eco mode
+ok 222 - CSS hides dust canvas in eco mode
+  ---
+  duration_ms: 0.190626
+  type: 'test'
+  ...
+# Subtest: CSS hides mist layer in eco mode
+ok 223 - CSS hides mist layer in eco mode
+  ---
+  duration_ms: 0.204556
+  type: 'test'
+  ...
+# Subtest: app.js exposes __ndSetEcoMode global
+ok 224 - app.js exposes __ndSetEcoMode global
+  ---
+  duration_ms: 0.119059
+  type: 'test'
+  ...
+# Subtest: app.js __ndSetEcoMode toggles dustRunning
+ok 225 - app.js __ndSetEcoMode toggles dustRunning
+  ---
+  duration_ms: 0.176096
+  type: 'test'
+  ...
+# Subtest: app.js __ndSetEcoMode toggles particlesRunning
+ok 226 - app.js __ndSetEcoMode toggles particlesRunning
+  ---
+  duration_ms: 0.134191
+  type: 'test'
+  ...
+# Subtest: app.js set-perf dispatcher applies mode change
+ok 227 - app.js set-perf dispatcher applies mode change
+  ---
+  duration_ms: 0.148172
+  type: 'test'
+  ...
+# Subtest: app.js set-perf notifies user with five-mode map
+ok 228 - app.js set-perf notifies user with five-mode map
+  ---
+  duration_ms: 0.142734
+  type: 'test'
+  ...
+# Subtest: app.js initPerfMode is invoked at startup
+ok 229 - app.js initPerfMode is invoked at startup
+  ---
+  duration_ms: 0.266571
+  type: 'test'
+  ...
+# Subtest: app.js __ndSetEcoMode is wrapped in try/catch for safety
+ok 230 - app.js __ndSetEcoMode is wrapped in try/catch for safety
+  ---
+  duration_ms: 0.205148
+  type: 'test'
+  ...
+# Subtest: perf.js init() does not throw when matchMedia unavailable
+ok 231 - perf.js init() does not throw when matchMedia unavailable
+  ---
+  duration_ms: 0.572339
+  type: 'test'
+  ...
+# Subtest: perf.js itself does not dead-end or leave orphan state
+ok 232 - perf.js itself does not dead-end or leave orphan state
+  ---
+  duration_ms: 0.148252
+  type: 'test'
+  ...
+# Subtest: perf.js file size is reasonable (<300 lines)
+ok 233 - perf.js file size is reasonable (<300 lines)
+  ---
+  duration_ms: 0.129845
+  type: 'test'
+  ...
+# Subtest: P22 perf budget: app.js и style.css в пределах бюджета
+ok 234 - P22 perf budget: app.js и style.css в пределах бюджета
+  ---
+  duration_ms: 0.244307
+  type: 'test'
+  ...
+# Subtest: P22 perf budget: суммарный JS+CSS из SW-прекэша в пределах бюджета
+ok 235 - P22 perf budget: суммарный JS+CSS из SW-прекэша в пределах бюджета
+  ---
+  duration_ms: 1.018548
+  type: 'test'
+  ...
+# Subtest: P22 perf budget: версии в SW-прекэше едины и совпадают с index.html
+ok 236 - P22 perf budget: версии в SW-прекэше едины и совпадают с index.html
+  ---
+  duration_ms: 0.335734
+  type: 'test'
+  ...
+# Subtest: каталог PROVINCES: 4 записи, у каждой rule.text и mods {incomeMult, upkeepMult, siegeMult} в (0; 3]
+ok 237 - каталог PROVINCES: 4 записи, у каждой rule.text и mods {incomeMult, upkeepMult, siegeMult} в (0; 3]
+  ---
+  duration_ms: 2.18549
+  type: 'test'
+  ...
+# Subtest: инвариант неактивных правил: active=false ⇒ mods нейтральны (объявленное ≠ применяемое)
+ok 238 - инвариант неактивных правил: active=false ⇒ mods нейтральны (объявленное ≠ применяемое)
+  ---
+  duration_ms: 0.940351
+  type: 'test'
+  ...
+# Subtest: правила §2 CAMPAIGN-2.0: Хутора upkeep ×0.9; Пепел income ×1.1 и upkeep ×1.1; Крепости/Гниль нейтральны
+ok 239 - правила §2 CAMPAIGN-2.0: Хутора upkeep ×0.9; Пепел income ×1.1 и upkeep ×1.1; Крепости/Гниль нейтральны
+  ---
+  duration_ms: 0.294573
+  type: 'test'
+  ...
+# Subtest: provinceIncomeMult: каталог (Пепел 1.1, остальные 1.0); провинция строкой; неизвестная — нейтрально
+ok 240 - provinceIncomeMult: каталог (Пепел 1.1, остальные 1.0); провинция строкой; неизвестная — нейтрально
+  ---
+  duration_ms: 0.526771
+  type: 'test'
+  ...
+# Subtest: provinceUpkeepMult: каталог (Хутора 0.9, Пепел 1.1); неизвестная провинция — нейтрально
+ok 241 - provinceUpkeepMult: каталог (Хутора 0.9, Пепел 1.1); неизвестная провинция — нейтрально
+  ---
+  duration_ms: 0.296104
+  type: 'test'
+  ...
+# Subtest: provinceSiegeMult: в каталоге нейтрален у всех 4, но читает каталог (синтетический siegeMult 1.25 виден)
+ok 242 - provinceSiegeMult: в каталоге нейтрален у всех 4, но читает каталог (синтетический siegeMult 1.25 виден)
+  ---
+  duration_ms: 0.224007
+  type: 'test'
+  ...
+# Subtest: robustness: каталог без PROVINCES / кривые значения mods → 1 (экономика не ломается)
+ok 243 - robustness: каталог без PROVINCES / кривые значения mods → 1 (экономика не ломается)
+  ---
+  duration_ms: 0.316604
+  type: 'test'
+  ...
+# Subtest: corruptionTick: opts.provinceUpkeepMult применяется к содержанию (может быть >1), без опции — совместимость
+ok 244 - corruptionTick: opts.provinceUpkeepMult применяется к содержанию (может быть >1), без опции — совместимость
+  ---
+  duration_ms: 0.445048
+  type: 'test'
+  ...
+# Subtest: corruptionTick: provinceUpkeepMult перемножается с доктриной upkeepMult одним округлением
+ok 245 - corruptionTick: provinceUpkeepMult перемножается с доктриной upkeepMult одним округлением
+  ---
+  duration_ms: 0.491969
+  type: 'test'
+  ...
+# Subtest: app.js: модификаторы применены ровно в 2 местах каждый (тик + превью) — parity тик/превью не расходится
+ok 246 - app.js: модификаторы применены ровно в 2 местах каждый (тик + превью) — parity тик/превью не расходится
+  ---
+  duration_ms: 4.166544
+  type: 'test'
+  ...
+# Subtest: P5: provinceSiegeMult — превью осадной тревоги и тик runWeeklySiege дают одну силу удара
+ok 247 - P5: provinceSiegeMult — превью осадной тревоги и тик runWeeklySiege дают одну силу удара
+  ---
+  duration_ms: 6.325024
+  type: 'test'
+  ...
+# Subtest: getCloudStorage: заглушка вне Telegram (platform unknown) — не облако
+ok 248 - getCloudStorage: заглушка вне Telegram (platform unknown) — не облако
+  ---
+  duration_ms: 3.063759
+  type: 'test'
+  ...
+# Subtest: pushCloudChunks: nd_meta.t = savedAt снапшота, а не момент завершения пуша
+ok 249 - pushCloudChunks: nd_meta.t = savedAt снапшота, а не момент завершения пуша
+  ---
+  duration_ms: 10.469684
+  type: 'test'
+  ...
+# Subtest: autoCloudSave: форс-пуш во время летящего — в очередь, без второго параллельного пуша
+ok 250 - autoCloudSave: форс-пуш во время летящего — в очередь, без второго параллельного пуша
+  ---
+  duration_ms: 0.901873
+  type: 'test'
+  ...
+# Subtest: tryCloudRecovery: работает после ITP-чистки (без ever_saved), помнит отказ, держит старт-колоду
+ok 251 - tryCloudRecovery: работает после ITP-чистки (без ever_saved), помнит отказ, держит старт-колоду
+  ---
+  duration_ms: 40.520995
+  type: 'test'
+  ...
+# Subtest: deepRecovery и smartCloudSync: гварды согласованы с новым recovery-потоком
+ok 252 - deepRecovery и smartCloudSync: гварды согласованы с новым recovery-потоком
+  ---
+  duration_ms: 0.438998
+  type: 'test'
+  ...
+# Subtest: validDisplayText: «только эмодзи» и пустота отклоняются, длина обрезается
+ok 253 - validDisplayText: «только эмодзи» и пустота отклоняются, длина обрезается
+  ---
+  duration_ms: 1.594142
+  type: 'test'
+  ...
+# Subtest: boot: старт-колода придерживается до ответа облака, else-ветка без глубокого автоскана
+ok 254 - boot: старт-колода придерживается до ответа облака, else-ветка без глубокого автоскана
+  ---
+  duration_ms: 0.462785
+  type: 'test'
+  ...
+# Subtest: T1-H5: own-ключ __proto__ в data.stats не загрязняет Object.prototype
+ok 255 - T1-H5: own-ключ __proto__ в data.stats не загрязняет Object.prototype
+  ---
+  duration_ms: 2.339801
+  type: 'test'
+  ...
+# Save failed: QuotaErr [QuotaExceededError]: QuotaExceededError
+#     at Object.setItem (/root/neurodeck/tests/regression-T5M1-quota-chain.test.js:29:57)
+#     at saveGameState (storage.js:335:14)
+#     at evalmachine.<anonymous>:1:1
+#     at Script.runInContext (node:vm:149:12)
+#     at Object.runInContext (node:vm:301:6)
+#     at TestContext.<anonymous> (/root/neurodeck/tests/regression-T5M1-quota-chain.test.js:87:8)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# Subtest: T5-M1: quota на full_save — backup/IDB/cloud записаны, тост показан
+ok 256 - T5-M1: quota на full_save — backup/IDB/cloud записаны, тост показан
+  ---
+  duration_ms: 64.894505
+  type: 'test'
+  ...
+# Subtest: QA3-H1: v10-сейв без поля v — strongholds/season/throne не пересобираются
+ok 257 - QA3-H1: v10-сейв без поля v — strongholds/season/throne не пересобираются
+  ---
+  duration_ms: 1.679511
+  type: 'test'
+  ...
+# Subtest: QA3-H1: v-строка / v:0 / v:NaN — без реплея (army не пересоздаётся миграцией)
+ok 258 - QA3-H1: v-строка / v:0 / v:NaN — без реплея (army не пересоздаётся миграцией)
+  ---
+  duration_ms: 0.634362
+  type: 'test'
+  ...
+# Subtest: QA3-H1: легаси v6 по-прежнему мигрирует ВВЕРХ (фикс не сломал апгрейд)
+ok 259 - QA3-H1: легаси v6 по-прежнему мигрирует ВВЕРХ (фикс не сломал апгрейд)
+  ---
+  duration_ms: 1.133071
+  type: 'test'
+  ...
+# Subtest: QA3-M1: sanitizeHero переносит и клампит streakShields
+ok 260 - QA3-M1: sanitizeHero переносит и клампит streakShields
+  ---
+  duration_ms: 0.80657
+  type: 'test'
+  ...
+# Subtest: QA3-M1: streakShields переживает applySyncData (попадает в HERO)
+ok 261 - QA3-M1: streakShields переживает applySyncData (попадает в HERO)
+  ---
+  duration_ms: 3.007364
+  type: 'test'
+  ...
+# Subtest: QA3-M2: битые lastDayReset/lastWeekReset → null; валидные применяются
+ok 262 - QA3-M2: битые lastDayReset/lastWeekReset → null; валидные применяются
+  ---
+  duration_ms: 0.956436
+  type: 'test'
+  ...
+# Subtest: закоммиченный config/weekly-modifiers.v1.json валиден сейчас и = побайтовая копия встроенного каталога
+ok 263 - закоммиченный config/weekly-modifiers.v1.json валиден сейчас и = побайтовая копия встроенного каталога
+  ---
+  duration_ms: 2.53179
+  type: 'test'
+  ...
+# Subtest: fnv1a64: вектор-пины алгоритма (синхрон с ndSnapshotChecksum storage.js — charCodeAt/imul)
+ok 264 - fnv1a64: вектор-пины алгоритма (синхрон с ndSnapshotChecksum storage.js — charCodeAt/imul)
+  ---
+  duration_ms: 0.461753
+  type: 'test'
+  ...
+# Subtest: валидный конфиг → applied, каталог установлен, модель берёт WEEKLY_MODS_REMOTE; reset возвращает встроенный
+ok 265 - валидный конфиг → applied, каталог установлен, модель берёт WEEKLY_MODS_REMOTE; reset возвращает встроенный
+  ---
+  duration_ms: 1.190097
+  type: 'test'
+  ...
+# Subtest: fallback-приоритет: пустой/кривой WEEKLY_MODS_REMOTE НЕ ломает выбор — модель идёт во встроенный
+ok 266 - fallback-приоритет: пустой/кривой WEEKLY_MODS_REMOTE НЕ ломает выбор — модель идёт во встроенный
+  ---
+  duration_ms: 0.233832
+  type: 'test'
+  ...
+# Subtest: битый JSON / не объект / чужая schema / кривая version → ok:false с точным reason
+ok 267 - битый JSON / не объект / чужая schema / кривая version → ok:false с точным reason
+  ---
+  duration_ms: 0.535312
+  type: 'test'
+  ...
+# Subtest: кривые modifiers: не массив / пусто / кап 16 / кривой mods / не-строки / дубль id → reason modifiers|modifier
+ok 268 - кривые modifiers: не массив / пусто / кап 16 / кривой mods / не-строки / дубль id → reason modifiers|modifier
+  ---
+  duration_ms: 0.591487
+  type: 'test'
+  ...
+# Subtest: просроченный: синтетическое «сейчас» после expires → reason expired; кривая дата → reason expires
+ok 269 - просроченный: синтетическое «сейчас» после expires → reason expired; кривая дата → reason expires
+  ---
+  duration_ms: 0.266971
+  type: 'test'
+  ...
+# Subtest: tampered: правка множителя/имени без пересчёта checksum → reason checksum, каталог НЕ устанавливается
+ok 270 - tampered: правка множителя/имени без пересчёта checksum → reason checksum, каталог НЕ устанавливается
+  ---
+  duration_ms: 1.889706
+  type: 'test'
+  ...
+# Subtest: canonical: перестановка ключей в JSON не меняет checksum (канонический порядок фиксирован)
+ok 271 - canonical: перестановка ключей в JSON не меняет checksum (канонический порядок фиксирован)
+  ---
+  duration_ms: 0.802174
+  type: 'test'
+  ...
+# Subtest: лоадер-фоллбэки: сеть/HTTP/нет fetch → applied:false, встроенный каталог остаётся
+ok 272 - лоадер-фоллбэки: сеть/HTTP/нет fetch → applied:false, встроенный каталог остаётся
+  ---
+  duration_ms: 1.157347
+  type: 'test'
+  ...
+# Subtest: проводка: remote-config.js в index.html ДО app.js, в прекэше SW вместе с config-артефактом; вызов в app.js
+ok 273 - проводка: remote-config.js в index.html ДО app.js, в прекэше SW вместе с config-артефактом; вызов в app.js
+  ---
+  duration_ms: 5.349538
+  type: 'test'
+  ...
+# Subtest: live global fetch keeps receiver and bypasses HTTP cache
+ok 274 - live global fetch keeps receiver and bypasses HTTP cache
+  ---
+  duration_ms: 0.82652
+  type: 'test'
+  ...
+# Subtest: deadline covers fetch and body; late completion never installs
+ok 275 - deadline covers fetch and body; late completion never installs
+  ---
+  duration_ms: 40.533605
+  type: 'test'
+  ...
+# Subtest: response byte cap checks header, UTF8 text and streamed body
+ok 276 - response byte cap checks header, UTF8 text and streamed body
+  ---
+  duration_ms: 28.272442
+  type: 'test'
+  ...
+# Subtest: sanitizeSeason: defaults for null input
+ok 277 - sanitizeSeason: defaults for null input
+  ---
+  duration_ms: 2.148316
+  type: 'test'
+  ...
+# Subtest: sanitizeSeason: bad fields fall back, good fields kept
+ok 278 - sanitizeSeason: bad fields fall back, good fields kept
+  ---
+  duration_ms: 0.413
+  type: 'test'
+  ...
+# Subtest: sanitizeSeason: valid season passes through with clamped snapshot
+ok 279 - sanitizeSeason: valid season passes through with clamped snapshot
+  ---
+  duration_ms: 0.329104
+  type: 'test'
+  ...
+# Subtest: P10 risk: ratio ≥ 1.2 — рискованной пометки нет (граница 1.2 включительно)
+ok 280 - P10 risk: ratio ≥ 1.2 — рискованной пометки нет (граница 1.2 включительно)
+  ---
+  duration_ms: 1.893542
+  type: 'test'
+  ...
+# Subtest: P10 risk: ratio < 1.2 — «РИСКОВАННО» с честным числом и порогом
+ok 281 - P10 risk: ratio < 1.2 — «РИСКОВАННО» с честным числом и порогом
+  ---
+  duration_ms: 0.650807
+  type: 'test'
+  ...
+# Subtest: P10 risk: лестницы (+5% к ratio) могут снять пометку — порог по тому же соотношению, что в превью
+ok 282 - P10 risk: лестницы (+5% к ratio) могут снять пометку — порог по тому же соотношению, что в превью
+  ---
+  duration_ms: 0.545589
+  type: 'test'
+  ...
+# Subtest: P10 risk: мусорный прогноз — пустая строка, не падение
+ok 283 - P10 risk: мусорный прогноз — пустая строка, не падение
+  ---
+  duration_ms: 0.708743
+  type: 'test'
+  ...
+# Subtest: P10 отмена: подход ≠ «Штурм» — сброс к норме, тост, сейв и ререндер
+ok 284 - P10 отмена: подход ≠ «Штурм» — сброс к норме, тост, сейв и ререндер
+  ---
+  duration_ms: 1.838439
+  type: 'test'
+  ...
+# Subtest: P10 отмена: уже «Штурм» — no-op без тоста и ререндера
+ok 285 - P10 отмена: уже «Штурм» — no-op без тоста и ререндера
+  ---
+  duration_ms: 0.359981
+  type: 'test'
+  ...
+# Subtest: P10 отмена: уже «Штурм» — no-op без тоста и ререндера
+ok 286 - P10 отмена: уже «Штурм» — no-op без тоста и ререндера
+  ---
+  duration_ms: 0.305638
+  type: 'test'
+  ...
+# Subtest: P10 разведка: тень в пути — статус без отчёта
+ok 287 - P10 разведка: тень в пути — статус без отчёта
+  ---
+  duration_ms: 0.591548
+  type: 'test'
+  ...
+# Subtest: P10 разведка: свежий отчёт по фронту — «на фронте» + полный отчёт тени
+ok 288 - P10 разведка: свежий отчёт по фронту — «на фронте» + полный отчёт тени
+  ---
+  duration_ms: 0.945439
+  type: 'test'
+  ...
+# Subtest: P10 разведка: цель позади фронта и захваченная — честные статусы
+ok 289 - P10 разведка: цель позади фронта и захваченная — честные статусы
+  ---
+  duration_ms: 1.13297
+  type: 'test'
+  ...
+# Subtest: P10 разведка: устаревание и «разведки нет»
+ok 290 - P10 разведка: устаревание и «разведки нет»
+  ---
+  duration_ms: 0.79284
+  type: 'test'
+  ...
+# Subtest: P10 превью: штурм фронта — заголовок «до/после» с прогнозом + брейкдаун; оборона недели с числами
+ok 291 - P10 превью: штурм фронта — заголовок «до/после» с прогнозом + брейкдаун; оборона недели с числами
+  ---
+  duration_ms: 1.840282
+  type: 'test'
+  ...
+# Subtest: P10 превью: воскресенье — «сегодня ночью»; туман — без процента; риск — в строке штурма
+ok 292 - P10 превью: воскресенье — «сегодня ночью»; туман — без процента; риск — в строке штурма
+  ---
+  duration_ms: 0.690757
+  type: 'test'
+  ...
+# Subtest: P10 превью: нечего показывать — пусто (без захвата и без прогноза)
+ok 293 - P10 превью: нечего показывать — пусто (без захвата и без прогноза)
+  ---
+  duration_ms: 0.205679
+  type: 'test'
+  ...
+# Subtest: P10 панель: дефолт «Штурм» — разведка+подход+склад+превью, БЕЗ кнопки отмены
+ok 294 - P10 панель: дефолт «Штурм» — разведка+подход+склад+превью, БЕЗ кнопки отмены
+  ---
+  duration_ms: 0.557858
+  type: 'test'
+  ...
+# Subtest: P10 панель: подход ≠ «Штурм» — кнопка отмены подготовки до тика
+ok 295 - P10 панель: подход ≠ «Штурм» — кнопка отмены подготовки до тика
+  ---
+  duration_ms: 0.356215
+  type: 'test'
+  ...
+# Subtest: P10 встройка: requestAssault — «рискованно»-заголовок при риске, пины wave-g1 живы
+ok 296 - P10 встройка: requestAssault — «рискованно»-заголовок при риске, пины wave-g1 живы
+  ---
+  duration_ms: 0.222153
+  type: 'test'
+  ...
+# Subtest: P10 встройка: единый клик подтверждения — doAssault без промежуточных модалок (правило 13)
+ok 297 - P10 встройка: единый клик подтверждения — doAssault без промежуточных модалок (правило 13)
+  ---
+  duration_ms: 0.282965
+  type: 'test'
+  ...
+# Subtest: P10 встройка: dispatcher + renderStrongholds — отмена из панели, отчёт тени консолидирован
+ok 298 - P10 встройка: dispatcher + renderStrongholds — отмена из панели, отчёт тени консолидирован
+  ---
+  duration_ms: 0.735774
+  type: 'test'
+  ...
+# Subtest: P10 CSS: панель/отмена/риск + eco и reduced-motion гейты
+ok 299 - P10 CSS: панель/отмена/риск + eco и reduced-motion гейты
+  ---
+  duration_ms: 0.402093
+  type: 'test'
+  ...
+# Subtest: C4 подходы: каталог трёх id, мета неизвестного → «Штурм»
+ok 300 - C4 подходы: каталог трёх id, мета неизвестного → «Штурм»
+  ---
+  duration_ms: 1.760773
+  type: 'test'
+  ...
+# Subtest: C4 «Осада»: сила врага ×0.8, гнев +1; «Штурм»/«Хитрость»/мусор — норма
+ok 301 - C4 «Осада»: сила врага ×0.8, гнев +1; «Штурм»/«Хитрость»/мусор — норма
+  ---
+  duration_ms: 0.308132
+  type: 'test'
+  ...
+# Subtest: C4 «Хитрость»: гарнизон врага ×0.9 ТОЛЬКО в провинции 3
+ok 302 - C4 «Хитрость»: гарнизон врага ×0.9 ТОЛЬКО в провинции 3
+  ---
+  duration_ms: 0.209595
+  type: 'test'
+  ...
+# Subtest: C4 дефолт: без ram/ladder формула SPEC не меняется (пин)
+ok 303 - C4 дефолт: без ram/ladder формула SPEC не меняется (пин)
+  ---
+  duration_ms: 0.291407
+  type: 'test'
+  ...
+# Subtest: C4 лестницы: +5% к ratio — паритет (atk=def) становится победой, attrition по формуле
+ok 304 - C4 лестницы: +5% к ratio — паритет (atk=def) становится победой, attrition по формуле
+  ---
+  duration_ms: 1.472591
+  type: 'test'
+  ...
+# Subtest: C4 таран: attrition ×0.9 в обеих ветвях
+ok 305 - C4 таран: attrition ×0.9 в обеих ветвях
+  ---
+  duration_ms: 0.304387
+  type: 'test'
+  ...
+# Subtest: C4 таран+лестницы вместе: множители независимы (лестница → ratio, таран → attrition)
+ok 306 - C4 таран+лестницы вместе: множители независимы (лестница → ratio, таран → attrition)
+  ---
+  duration_ms: 0.11933
+  type: 'test'
+  ...
+# Subtest: C4 sanitizeSiege: rams/ladders — счётчики 0..999, дефолт 0
+ok 307 - C4 sanitizeSiege: rams/ladders — счётчики 0..999, дефолт 0
+  ---
+  duration_ms: 0.317256
+  type: 'test'
+  ...
+# Subtest: C4 миграция v11→v12: счётчики появляются с дефолтом 0, v = 14 (C5+P11 поверх)
+ok 308 - C4 миграция v11→v12: счётчики появляются с дефолтом 0, v = 14 (C5+P11 поверх)
+  ---
+  duration_ms: 0.448704
+  type: 'test'
+  ...
+# Subtest: C4 миграция v12: существующие счётчики сохраняются, мусор клэмпится
+ok 309 - C4 миграция v12: существующие счётчики сохраняются, мусор клэмпится
+  ---
+  duration_ms: 0.49291
+  type: 'test'
+  ...
+# Subtest: C4 миграция v12: idempotent — повторный прогон не меняет счётчики
+ok 310 - C4 миграция v12: idempotent — повторный прогон не меняет счётчики
+  ---
+  duration_ms: 0.178568
+  type: 'test'
+  ...
+# Subtest: C4→C5 цепочка v7: полный путь миграций доводит осадный склад до текущей схемы
+ok 311 - C4→C5 цепочка v7: полный путь миграций доводит осадный склад до текущей схемы
+  ---
+  duration_ms: 1.016786
+  type: 'test'
+  ...
+# Subtest: P11 персистентность: выбор игрока переживает sanitize (roundtrip сейва)
+ok 312 - P11 персистентность: выбор игрока переживает sanitize (roundtrip сейва)
+  ---
+  duration_ms: 0.330837
+  type: 'test'
+  ...
+# Subtest: P11 персистентность: v13-сейв с уже выбранным «Осадой» (поле приехало из будущего) не теряет выбор
+ok 313 - P11 персистентность: v13-сейв с уже выбранным «Осадой» (поле приехало из будущего) не теряет выбор
+  ---
+  duration_ms: 0.320281
+  type: 'test'
+  ...
+# Subtest: C4 данные: в провинции 3 есть штурмуемые цели — «Хитрость» не пустышка
+ok 314 - C4 данные: в провинции 3 есть штурмуемые цели — «Хитрость» не пустышка
+  ---
+  duration_ms: 0.151107
+  type: 'test'
+  ...
+# Subtest: sanitizeRank: valid ranks pass
+ok 315 - sanitizeRank: valid ranks pass
+  ---
+  duration_ms: 1.523166
+  type: 'test'
+  ...
+# Subtest: sanitizeRank: invalid → C
+ok 316 - sanitizeRank: invalid → C
+  ---
+  duration_ms: 0.280881
+  type: 'test'
+  ...
+# Subtest: sanitizeCard: drops unknown fields, applies defaults
+ok 317 - sanitizeCard: drops unknown fields, applies defaults
+  ---
+  duration_ms: 0.363776
+  type: 'test'
+  ...
+# Subtest: sanitizeCard: rank normalisation
+ok 318 - sanitizeCard: rank normalisation
+  ---
+  duration_ms: 0.183746
+  type: 'test'
+  ...
+# Subtest: sanitizeCard: stat whitelist
+ok 319 - sanitizeCard: stat whitelist
+  ---
+  duration_ms: 0.199449
+  type: 'test'
+  ...
+# Subtest: sanitizeCard: numbers clamped
+ok 320 - sanitizeCard: numbers clamped
+  ---
+  duration_ms: 0.189765
+  type: 'test'
+  ...
+# Subtest: sanitizeCard: null/undefined input → safe defaults
+ok 321 - sanitizeCard: null/undefined input → safe defaults
+  ---
+  duration_ms: 0.223566
+  type: 'test'
+  ...
+# Subtest: sanitizeInventory: empty defaults
+ok 322 - sanitizeInventory: empty defaults
+  ---
+  duration_ms: 0.928112
+  type: 'test'
+  ...
+# Subtest: sanitizeInventory: caps maxSlots 1..60
+ok 323 - sanitizeInventory: caps maxSlots 1..60
+  ---
+  duration_ms: 0.478939
+  type: 'test'
+  ...
+# Subtest: sanitizeInventory: input.not_object → empty defaults
+ok 324 - sanitizeInventory: input.not_object → empty defaults
+  ---
+  duration_ms: 1.537617
+  type: 'test'
+  ...
+# Subtest: sanitizeInventory: backward-compat for missing catalog
+ok 325 - sanitizeInventory: backward-compat for missing catalog
+  ---
+  duration_ms: 0.289545
+  type: 'test'
+  ...
+# Subtest: sanitizeCounter: clamps to range
+ok 326 - sanitizeCounter: clamps to range
+  ---
+  duration_ms: 0.162413
+  type: 'test'
+  ...
+# Subtest: sanitizeCounter: minimum respected
+ok 327 - sanitizeCounter: minimum respected
+  ---
+  duration_ms: 0.099989
+  type: 'test'
+  ...
+# Subtest: exported arrays are correct
+ok 328 - exported arrays are correct
+  ---
+  duration_ms: 0.260612
+  type: 'test'
+  ...
+# Subtest: sanitizeHero: full happy path
+ok 329 - sanitizeHero: full happy path
+  ---
+  duration_ms: 0.640151
+  type: 'test'
+  ...
+# Subtest: sanitizeHero: CRITICAL \#1 — unknown fields dropped, no Object.assign leak
+ok 330 - sanitizeHero: CRITICAL \#1 — unknown fields dropped, no Object.assign leak
+  ---
+  duration_ms: 0.291668
+  type: 'test'
+  ...
+# Subtest: sanitizeHero: numeric clamps applied
+ok 331 - sanitizeHero: numeric clamps applied
+  ---
+  duration_ms: 0.154233
+  type: 'test'
+  ...
+# Subtest: sanitizeHero: null/undefined input → safe defaults
+ok 332 - sanitizeHero: null/undefined input → safe defaults
+  ---
+  duration_ms: 0.155704
+  type: 'test'
+  ...
+# Subtest: sanitizeHero: passes through raw string (escaping is render-layer responsibility)
+ok 333 - sanitizeHero: passes through raw string (escaping is render-layer responsibility)
+  ---
+  duration_ms: 0.197155
+  type: 'test'
+  ...
+# Subtest: sanitizeGoals: not-array → empty
+ok 334 - sanitizeGoals: not-array → empty
+  ---
+  duration_ms: 0.21958
+  type: 'test'
+  ...
+# Subtest: sanitizeGoals: invalid type → short fallback
+ok 335 - sanitizeGoals: invalid type → short fallback
+  ---
+  duration_ms: 0.552408
+  type: 'test'
+  ...
+# Subtest: sanitizeGoals: invalid deadline → tomorrow fallback
+ok 336 - sanitizeGoals: invalid deadline → tomorrow fallback
+  ---
+  duration_ms: 0.18725
+  type: 'test'
+  ...
+# Subtest: sanitizeGoals: missing steps → auto-generates
+ok 337 - sanitizeGoals: missing steps → auto-generates
+  ---
+  duration_ms: 0.14058
+  type: 'test'
+  ...
+# Subtest: sanitizeGoals: steps is array of {text, done}
+ok 338 - sanitizeGoals: steps is array of {text, done}
+  ---
+  duration_ms: 0.186219
+  type: 'test'
+  ...
+# Subtest: sanitizeGoals: hard cap 200 entries
+ok 339 - sanitizeGoals: hard cap 200 entries
+  ---
+  duration_ms: 0.934954
+  type: 'test'
+  ...
+# Subtest: sanitizeGoals: stat whitelist
+ok 340 - sanitizeGoals: stat whitelist
+  ---
+  duration_ms: 0.157085
+  type: 'test'
+  ...
+# Subtest: sanitizeXpHistory: not-array → empty
+ok 341 - sanitizeXpHistory: not-array → empty
+  ---
+  duration_ms: 0.203095
+  type: 'test'
+  ...
+# Subtest: sanitizeXpHistory: drops malformed entries
+ok 342 - sanitizeXpHistory: drops malformed entries
+  ---
+  duration_ms: 0.148063
+  type: 'test'
+  ...
+# Subtest: sanitizeXpHistory: hard cap 366 (1 year)
+ok 343 - sanitizeXpHistory: hard cap 366 (1 year)
+  ---
+  duration_ms: 0.310715
+  type: 'test'
+  ...
+# Subtest: sanitizeBossKills: defaults when null/non-object
+ok 344 - sanitizeBossKills: defaults when null/non-object
+  ---
+  duration_ms: 0.203476
+  type: 'test'
+  ...
+# Subtest: sanitizeBossKills: clamps negatives and overflows
+ok 345 - sanitizeBossKills: clamps negatives and overflows
+  ---
+  duration_ms: 0.124487
+  type: 'test'
+  ...
+# Subtest: sanitizeBossKills: drops unknown boss names
+ok 346 - sanitizeBossKills: drops unknown boss names
+  ---
+  duration_ms: 0.16019
+  type: 'test'
+  ...
+# Subtest: sanitizeGoal round-trips a valid goal
+ok 347 - sanitizeGoal round-trips a valid goal
+  ---
+  duration_ms: 0.491327
+  type: 'test'
+  ...
+# Subtest: sanitizeGoal rejects junk input with safe defaults
+ok 348 - sanitizeGoal rejects junk input with safe defaults
+  ---
+  duration_ms: 0.190265
+  type: 'test'
+  ...
+# Subtest: sanitizeCard round-trips lastFailDay day-key
+ok 349 - sanitizeCard round-trips lastFailDay day-key
+  ---
+  duration_ms: 0.428203
+  type: 'test'
+  ...
+# Subtest: sanitizeCard rejects inherited stat names like toString
+ok 350 - sanitizeCard rejects inherited stat names like toString
+  ---
+  duration_ms: 0.143175
+  type: 'test'
+  ...
+# Subtest: sanitizeGoal rejects inherited goal types like constructor
+ok 351 - sanitizeGoal rejects inherited goal types like constructor
+  ---
+  duration_ms: 0.134702
+  type: 'test'
+  ...
+# Subtest: sanitizeGoal truncates oversized strings and arrays
+ok 352 - sanitizeGoal truncates oversized strings and arrays
+  ---
+  duration_ms: 0.998429
+  type: 'test'
+  ...
+# Subtest: P18 reducer: sh/capture — captured=true; вход не мутируется, соседние элементы те же ссылки
+ok 353 - P18 reducer: sh/capture — captured=true; вход не мутируется, соседние элементы те же ссылки
+  ---
+  duration_ms: 2.239262
+  type: 'test'
+  ...
+# Subtest: P18 reducer: sh/lose и sh/refuge — зеркало осадных правок runWeeklySiege (захват снят/прибежище, гарнизон [], постройки → ruin)
+ok 354 - P18 reducer: sh/lose и sh/refuge — зеркало осадных правок runWeeklySiege (захват снят/прибежище, гарнизон [], постройки → ruin)
+  ---
+  duration_ms: 1.748113
+  type: 'test'
+  ...
+# Subtest: P18 reducer: sh/restore-prefix — первые N каталога захвачены (\#49 checkCapturedRecovery); всё захвачено ⇒ та же ссылка
+ok 355 - P18 reducer: sh/restore-prefix — первые N каталога захвачены (\#49 checkCapturedRecovery); всё захвачено ⇒ та же ссылка
+  ---
+  duration_ms: 0.308633
+  type: 'test'
+  ...
+# Subtest: P18 reducer: sh/garrison:add — стек растёт/создаётся; take-stack изымает; мусор игнорируется
+ok 356 - P18 reducer: sh/garrison:add — стек растёт/создаётся; take-stack изымает; мусор игнорируется
+  ---
+  duration_ms: 2.076226
+  type: 'test'
+  ...
+# Subtest: P18 reducer: sh/build и sh/rebuild — форма постройки 1:1 buyBuilding/rebuildBuilding (built/ok/0/builtAt)
+ok 357 - P18 reducer: sh/build и sh/rebuild — форма постройки 1:1 buyBuilding/rebuildBuilding (built/ok/0/builtAt)
+  ---
+  duration_ms: 0.722997
+  type: 'test'
+  ...
+# Subtest: P18 reducer: sh/garrison:set и sh/buildings:set — санитайзер гарнизона и замена карты построек
+ok 358 - P18 reducer: sh/garrison:set и sh/buildings:set — санитайзер гарнизона и замена карты построек
+  ---
+  duration_ms: 0.490145
+  type: 'test'
+  ...
+# Subtest: P18 store: dispatch применяет команду НА МЕСТЕ — идентичность массива и объектов сохраняется
+ok 359 - P18 store: dispatch применяет команду НА МЕСТЕ — идентичность массива и объектов сохраняется
+  ---
+  duration_ms: 0.705429
+  type: 'test'
+  ...
+# Subtest: P18 store: false при отсутствии источника/мусорной команде — домен не тронут (фоллбек вызывающего)
+ok 360 - P18 store: false при отсутствии источника/мусорной команде — домен не тронут (фоллбек вызывающего)
+  ---
+  duration_ms: 1.117737
+  type: 'test'
+  ...
+# Subtest: P18 store: источник-accessor живёт сквозь замену массива (applySyncData) — ре-бинд не нужен
+ok 361 - P18 store: источник-accessor живёт сквозь замену массива (applySyncData) — ре-бинд не нужен
+  ---
+  duration_ms: 0.774824
+  type: 'test'
+  ...
+# Subtest: P18 store: селекторы чтения — sh/shCaptured/capturedCount/frontIdx (линейный дефолт фронта)
+ok 362 - P18 store: селекторы чтения — sh/shCaptured/capturedCount/frontIdx (линейный дефолт фронта)
+  ---
+  duration_ms: 0.73314
+  type: 'test'
+  ...
+# Subtest: P18 store: событие nd:store:stronghold на NDDBus (typeof-гвард: шины может не быть)
+ok 363 - P18 store: событие nd:store:stronghold на NDDBus (typeof-гвард: шины может не быть)
+  ---
+  duration_ms: 0.493281
+  type: 'test'
+  ...
+# Subtest: P18 подключение: store.js грузится в index.html до app.js и в SW-прекэше
+ok 364 - P18 подключение: store.js грузится в index.html до app.js и в SW-прекэше
+  ---
+  duration_ms: 1.219601
+  type: 'test'
+  ...
+# Subtest: P18→P19 app.js: адаптер чтения + команды write-потоков; тик/осада/штурм — inline-гварды стора
+ok 365 - P18→P19 app.js: адаптер чтения + команды write-потоков; тик/осада/штурм — inline-гварды стора
+  ---
+  duration_ms: 6.607606
+  type: 'test'
+  ...
+# Subtest: P18+P19 store: число команд доменов и неизменность схемы (никаких новых полей состояния)
+ok 366 - P18+P19 store: число команд доменов и неизменность схемы (никаких новых полей состояния)
+  ---
+  duration_ms: 2.859952
+  type: 'test'
+  ...
+# Subtest: P19 reducer: eco/army-loss — дельты по тирам, стопа не исчезает полностью, мусор игнорируется
+ok 367 - P19 reducer: eco/army-loss — дельты по тирам, стопа не исчезает полностью, мусор игнорируется
+  ---
+  duration_ms: 0.395904
+  type: 'test'
+  ...
+# Subtest: P19 reducer: eco/army-add / eco/army-zero — найм в поле и перевод стопы; zero при нуле — та же ссылка
+ok 368 - P19 reducer: eco/army-add / eco/army-zero — найм в поле и перевод стопы; zero при нуле — та же ссылка
+  ---
+  duration_ms: 0.172909
+  type: 'test'
+  ...
+# Subtest: P19 reducer: siege/* — неделя/итог недели/сутки штурма/осадный склад; идемпотенты — та же ссылка
+ok 369 - P19 reducer: siege/* — неделя/итог недели/сутки штурма/осадный склад; идемпотенты — та же ссылка
+  ---
+  duration_ms: 0.351849
+  type: 'test'
+  ...
+# Subtest: P19 store: dispatch eco/siege применяет НА МЕСТЕ — идентичность army, army.units и siege сохраняется
+ok 370 - P19 store: dispatch eco/siege применяет НА МЕСТЕ — идентичность army, army.units и siege сохраняется
+  ---
+  duration_ms: 0.56013
+  type: 'test'
+  ...
+# Subtest: P19 store: эквивалентность dispatch-пути и прежних прямых правок (осада/штурм на одинаковых данных)
+ok 371 - P19 store: эквивалентность dispatch-пути и прежних прямых правок (осада/штурм на одинаковых данных)
+  ---
+  duration_ms: 0.298108
+  type: 'test'
+  ...
+# Subtest: P19 store: snapshot() — живые ссылки трёх доменов; следует замене объектов (applySyncData) без ре-бинда
+ok 372 - P19 store: snapshot() — живые ссылки трёх доменов; следует замене объектов (applySyncData) без ре-бинда
+  ---
+  duration_ms: 0.94002
+  type: 'test'
+  ...
+# Subtest: P19 store: события nd:store:economy / nd:store:siege на NDDBus (typeof-гвард: шины может не быть)
+ok 373 - P19 store: события nd:store:economy / nd:store:siege на NDDBus (typeof-гвард: шины может не быть)
+  ---
+  duration_ms: 0.292289
+  type: 'test'
+  ...
+# Subtest: P19 storage.js: снапшот сейва собирает strongholds/army/siege ИЗ СТОРА (typeof-гвард + прямой фоллбек)
+ok 374 - P19 storage.js: снапшот сейва собирает strongholds/army/siege ИЗ СТОРА (typeof-гвард + прямой фоллбек)
+  ---
+  duration_ms: 0.684687
+  type: 'test'
+  ...
+# Subtest: каталог: 20 твердынь, gar+def=total, монотонность, слоты
+ok 375 - каталог: 20 твердынь, gar+def=total, монотонность, слоты
+  ---
+  duration_ms: 1.960382
+  type: 'test'
+  ...
+# Subtest: каталог: налоги — пин BALANCE круг 3 (247 + 85 + 8020 = 8352)
+ok 376 - каталог: налоги — пин BALANCE круг 3 (247 + 85 + 8020 = 8352)
+  ---
+  duration_ms: 0.640472
+  type: 'test'
+  ...
+# Subtest: каталог: 7 тиров — пин найма/силы/прироста (SPEC §3, BALANCE R1)
+ok 377 - каталог: 7 тиров — пин найма/силы/прироста (SPEC §3, BALANCE R1)
+  ---
+  duration_ms: 0.289084
+  type: 'test'
+  ...
+# Subtest: каталог: 20 построек, стоимости круга 2 (−40%), категории 7/5/4/4
+ok 378 - каталог: 20 построек, стоимости круга 2 (−40%), категории 7/5/4/4
+  ---
+  duration_ms: 0.322644
+  type: 'test'
+  ...
+# Subtest: миграция v7→v8: regions=5 → 5 captured, золото/карточки/задачи целы
+ok 379 - миграция v7→v8: regions=5 → 5 captured, золото/карточки/задачи целы
+  ---
+  duration_ms: 1.201033
+  type: 'test'
+  ...
+# Subtest: миграция v7→v8: guard'ы — regions 0 / отсутствие tractState / 99 → clamp 10
+ok 380 - миграция v7→v8: guard'ы — regions 0 / отсутствие tractState / 99 → clamp 10
+  ---
+  duration_ms: 0.436536
+  type: 'test'
+  ...
+# Subtest: миграция v7→v8: повторный вызов не меняет уже смигрированные поля
+ok 381 - миграция v7→v8: повторный вызов не меняет уже смигрированные поля
+  ---
+  duration_ms: 0.231398
+  type: 'test'
+  ...
+# Subtest: миграция v13→v14: подход появляется с дефолтом «assault», остальное не тронуто
+ok 382 - миграция v13→v14: подход появляется с дефолтом «assault», остальное не тронуто
+  ---
+  duration_ms: 0.135183
+  type: 'test'
+  ...
+# Subtest: миграция v13→v14: валидный сохранённый подход сохраняется, мусор/чужой id → «assault»
+ok 383 - миграция v13→v14: валидный сохранённый подход сохраняется, мусор/чужой id → «assault»
+  ---
+  duration_ms: 0.40042
+  type: 'test'
+  ...
+# Subtest: миграция v13→v14: idempotent — повторный прогон байт-стабилен
+ok 384 - миграция v13→v14: idempotent — повторный прогон байт-стабилен
+  ---
+  duration_ms: 0.444437
+  type: 'test'
+  ...
+# Subtest: sanitizeStrongholds: null/мусор → 20 безопасных записей
+ok 385 - sanitizeStrongholds: null/мусор → 20 безопасных записей
+  ---
+  duration_ms: 0.692169
+  type: 'test'
+  ...
+# Subtest: sanitizeStrongholds: whitelist id, captured bool, мусорные элементы игнорируются
+ok 386 - sanitizeStrongholds: whitelist id, captured bool, мусорные элементы игнорируются
+  ---
+  duration_ms: 0.209033
+  type: 'test'
+  ...
+# Subtest: sanitizeStrongholds: гарнизон — только t1..t7, clamp 0..1e6, дедуп по тиру
+ok 387 - sanitizeStrongholds: гарнизон — только t1..t7, clamp 0..1e6, дедуп по тиру
+  ---
+  duration_ms: 0.297306
+  type: 'test'
+  ...
+# Subtest: sanitizeStrongholds: постройки — только из каталога, стадия whitelist, debtDays 0..365
+ok 388 - sanitizeStrongholds: постройки — только из каталога, стадия whitelist, debtDays 0..365
+  ---
+  duration_ms: 0.270016
+  type: 'test'
+  ...
+# Subtest: sanitizeStrongholds: corruption whitelist + debtDays clamp; round-trip стабилен
+ok 389 - sanitizeStrongholds: corruption whitelist + debtDays clamp; round-trip стабилен
+  ---
+  duration_ms: 0.209415
+  type: 'test'
+  ...
+# Subtest: sanitizeArmy: дефолты, clamp 0..1e6, неделя 0..520, мусор отброшен
+ok 390 - sanitizeArmy: дефолты, clamp 0..1e6, неделя 0..520, мусор отброшен
+  ---
+  duration_ms: 0.218908
+  type: 'test'
+  ...
+# Subtest: sanitizeSiege: week 1..520, lastResult — только плоские примитивы
+ok 391 - sanitizeSiege: week 1..520, lastResult — только плоские примитивы
+  ---
+  duration_ms: 0.508494
+  type: 'test'
+  ...
+# Subtest: armyPower: Σ count×сила, обе формы входа, отрицательные игнорируются
+ok 392 - armyPower: Σ count×сила, обе формы входа, отрицательные игнорируются
+  ---
+  duration_ms: 0.287882
+  type: 'test'
+  ...
+# Subtest: defensePower: SPEC §4 — тренировочные нейтралы sh01 (gar 3, def 2, total 5)
+ok 393 - defensePower: SPEC §4 — тренировочные нейтралы sh01 (gar 3, def 2, total 5)
+  ---
+  duration_ms: 0.235084
+  type: 'test'
+  ...
+# Subtest: Г1-1 состав армии: ≥3 тиров ×1.08 атака, mono-гарнизон ×1.15 оборона, 2 тира нейтраль
+ok 394 - Г1-1 состав армии: ≥3 тиров ×1.08 атака, mono-гарнизон ×1.15 оборона, 2 тира нейтраль
+  ---
+  duration_ms: 0.241101
+  type: 'test'
+  ...
+# Subtest: assaultOutcome: победа/attrition по SPEC §4 (пример 22 против 15 ≈ 20.4%)
+ok 395 - assaultOutcome: победа/attrition по SPEC §4 (пример 22 против 15 ≈ 20.4%)
+  ---
+  duration_ms: 0.375504
+  type: 'test'
+  ...
+# Subtest: assaultOutcome: модификаторы agi (−50% кап) и Кузни Знамён (×0.8)
+ok 396 - assaultOutcome: модификаторы agi (−50% кап) и Кузни Знамён (×0.8)
+  ---
+  duration_ms: 0.158197
+  type: 'test'
+  ...
+# Subtest: assaultOutcome: отступление 10–30% (rand), границы; def 0 → победа
+ok 397 - assaultOutcome: отступление 10–30% (rand), границы; def 0 → победа
+  ---
+  duration_ms: 0.153269
+  type: 'test'
+  ...
+# Subtest: siegePower: пины SPEC §5 [C: 76/115/167/267/777], W_eff-кап по прогрессу (ADR П1-12)
+ok 398 - siegePower: пины SPEC §5 [C: 76/115/167/267/777], W_eff-кап по прогрессу (ADR П1-12)
+  ---
+  duration_ms: 0.236566
+  type: 'test'
+  ...
+# Subtest: corruptionTick: upkeep первым, оплата → gold-upkeep, вход не мутируется
+ok 399 - corruptionTick: upkeep первым, оплата → gold-upkeep, вход не мутируется
+  ---
+  duration_ms: 0.345568
+  type: 'test'
+  ...
+# Subtest: corruptionTick: grace (wil 0 → 2) не ест 1-й и 2-й день, деградация Целое→Обветшало→Руина
+ok 400 - corruptionTick: grace (wil 0 → 2) не ест 1-й и 2-й день, деградация Целое→Обветшало→Руина
+  ---
+  duration_ms: 0.143115
+  type: 'test'
+  ...
+# Subtest: corruptionTick: grace растёт от wil (2+floor(wil/20)), кап 7
+ok 401 - corruptionTick: grace растёт от wil (2+floor(wil/20)), кап 7
+  ---
+  duration_ms: 0.202495
+  type: 'test'
+  ...
+# Subtest: corruptionTick: step 4 при Соборе Порядка (П3)
+ok 402 - corruptionTick: step 4 при Соборе Порядка (П3)
+  ---
+  duration_ms: 0.128102
+  type: 'test'
+  ...
+# Subtest: corruptionTick: восстановление 1 ступень/день, debtDays → 0; руина не ест
+ok 403 - corruptionTick: восстановление 1 ступень/день, debtDays → 0; руина не ест
+  ---
+  duration_ms: 0.181402
+  type: 'test'
+  ...
+# Subtest: corruptionTick: иммунитет нового — не деградирует и не копит долг, оплата сбрасывает
+ok 404 - corruptionTick: иммунитет нового — не деградирует и не копит долг, оплата сбрасывает
+  ---
+  duration_ms: 0.174994
+  type: 'test'
+  ...
+# Subtest: corruptionTick: built:false и чужие id игнорируются, дефицит обнуляет золото
+ok 405 - corruptionTick: built:false и чужие id игнорируются, дефицит обнуляет золото
+  ---
+  duration_ms: 0.09382
+  type: 'test'
+  ...
+# Subtest: P20 модуль: 8 функций рендера объявлены в js/ui/strongholds.js и убраны из app.js
+ok 406 - P20 модуль: 8 функций рендера объявлены в js/ui/strongholds.js и убраны из app.js
+  ---
+  duration_ms: 2.892841
+  type: 'test'
+  ...
+# Subtest: P20 подключение: index.html грузит ui-модуль между event-bus и app.js; SW прекэшит его
+ok 407 - P20 подключение: index.html грузит ui-модуль между event-bus и app.js; SW прекэшит его
+  ---
+  duration_ms: 0.242434
+  type: 'test'
+  ...
+# Subtest: P20 исходник: подписка на все три доменных события стора, без шины — тихий ноль
+ok 408 - P20 исходник: подписка на все три доменных события стора, без шины — тихий ноль
+  ---
+  duration_ms: 0.464788
+  type: 'test'
+  ...
+# Subtest: P20 подписки: событие стора перерисовывает ТОЛЬКО активную вкладку «Твердыни»
+ok 409 - P20 подписки: событие стора перерисовывает ТОЛЬКО активную вкладку «Твердыни»
+  ---
+  duration_ms: 1.684637
+  type: 'test'
+  ...
+# Subtest: P20 подписки: упавший рендер не роняет подписчика (try/catch), флаг возврата честный
+ok 410 - P20 подписки: упавший рендер не роняет подписчика (try/catch), флаг возврата честный
+  ---
+  duration_ms: 0.736385
+  type: 'test'
+  ...
+# Subtest: checkDailyReset вызывает дневной тик твердынь (содержание+коррапшн) и воскресную осаду
+ok 411 - checkDailyReset вызывает дневной тик твердынь (содержание+коррапшн) и воскресную осаду
+  ---
+  duration_ms: 2.077949
+  type: 'test'
+  ...
+# Subtest: strongholdsDailyTick использует corruptionTick из stronghold-model (не дублирует формулу)
+ok 412 - strongholdsDailyTick использует corruptionTick из stronghold-model (не дублирует формулу)
+  ---
+  duration_ms: 0.97862
+  type: 'test'
+  ...
+# Subtest: runWeeklySiege использует siegePower/defensePower модели и анти-тупик D3
+ok 413 - runWeeklySiege использует siegePower/defensePower модели и анти-тупик D3
+  ---
+  duration_ms: 0.639931
+  type: 'test'
+  ...
+# Subtest: штурм идёт через SM.assaultOutcome, подтверждается dungeonConfirm, лимит 1/сутки
+ok 414 - штурм идёт через SM.assaultOutcome, подтверждается dungeonConfirm, лимит 1/сутки
+  ---
+  duration_ms: 0.705329
+  type: 'test'
+  ...
+# Subtest: коррапшн: обнулили золото → тик → стадия worn (grace wil=3 → 2 дня, step 2)
+ok 415 - коррапшн: обнулили золото → тик → стадия worn (grace wil=3 → 2 дня, step 2)
+  ---
+  duration_ms: 3.180744
+  type: 'test'
+  ...
+# Subtest: коррапшн: оплата поднимает ступень (worn → ok), руина не ест
+ok 416 - коррапшн: оплата поднимает ступень (worn → ok), руина не ест
+  ---
+  duration_ms: 0.340029
+  type: 'test'
+  ...
+# Subtest: легаси-Карта снесена: ROOMS/ESCAPE_MAX/renderMap/updateEscapeDisplay отсутствуют
+ok 417 - легаси-Карта снесена: ROOMS/ESCAPE_MAX/renderMap/updateEscapeDisplay отсутствуют
+  ---
+  duration_ms: 1.891329
+  type: 'test'
+  ...
+# Subtest: вкладка Карты заменена на Твердыни (nav, bottom-nav, view, диспетчер)
+ok 418 - вкладка Карты заменена на Твердыни (nav, bottom-nav, view, диспетчер)
+  ---
+  duration_ms: 0.396326
+  type: 'test'
+  ...
+# Subtest: hero: statRankups/statEscape заменены на «Твердынь N/20»
+ok 419 - hero: statRankups/statEscape заменены на «Твердынь N/20»
+  ---
+  duration_ms: 0.589174
+  type: 'test'
+  ...
+# Subtest: header: «Побег» → «Твердыни», счётчик 0/20, кэш-пин единообразно
+ok 420 - header: «Побег» → «Твердыни», счётчик 0/20, кэш-пин единообразно
+  ---
+  duration_ms: 0.8523
+  type: 'test'
+  ...
+# Subtest: css: сетка провинций, панель, коррапшн-стадии ok/worn/ruin; стили Карты снесены
+ok 421 - css: сетка провинций, панель, коррапшн-стадии ok/worn/ruin; стили Карты снесены
+  ---
+  duration_ms: 0.73932
+  type: 'test'
+  ...
+# Subtest: штурм из e2e-сценария: 14×Т1 (power 28) берёт твердыню №1 (defN 5)
+ok 422 - штурм из e2e-сценария: 14×Т1 (power 28) берёт твердыню №1 (defN 5)
+  ---
+  duration_ms: 0.49953
+  type: 'test'
+  ...
+# Subtest: P9: BRANCH_META — у всех трёх веток текст последствий; тултип = путь + факт узла
+ok 423 - P9: BRANCH_META — у всех трёх веток текст последствий; тултип = путь + факт узла
+  ---
+  duration_ms: 0.829084
+  type: 'test'
+  ...
+# Subtest: P9: chooseAssaultTarget — locked-цели disabled+aria-disabled с причиной; тултипы на целях, карточках и рёбрах карты
+ok 424 - P9: chooseAssaultTarget — locked-цели disabled+aria-disabled с причиной; тултипы на целях, карточках и рёбрах карты
+  ---
+  duration_ms: 0.334982
+  type: 'test'
+  ...
+# Subtest: telemetry: event() попадает в кольцо и счётчик, flush() пишет в localStorage
+ok 425 - telemetry: event() попадает в кольцо и счётчик, flush() пишет в localStorage
+  ---
+  duration_ms: 2.659551
+  type: 'test'
+  ...
+# Subtest: telemetry: повтор того же имени < 2 c — в счётчик, без дубля в кольце
+ok 426 - telemetry: повтор того же имени < 2 c — в счётчик, без дубля в кольце
+  ---
+  duration_ms: 0.813951
+  type: 'test'
+  ...
+# Subtest: telemetry: error() пишется немедленно, без ожидания flush-таймера
+ok 427 - telemetry: error() пишется немедленно, без ожидания flush-таймера
+  ---
+  duration_ms: 1.707894
+  type: 'test'
+  ...
+# Subtest: telemetry: кольцо ограничено 200 событиями, старые вытесняются
+ok 428 - telemetry: кольцо ограничено 200 событиями, старые вытесняются
+  ---
+  duration_ms: 0.991678
+  type: 'test'
+  ...
+# Subtest: telemetry: журнал и счётчики восстанавливаются после перезапуска (новая вкладка/сессия)
+ok 429 - telemetry: журнал и счётчики восстанавливаются после перезапуска (новая вкладка/сессия)
+  ---
+  duration_ms: 0.457948
+  type: 'test'
+  ...
+# Subtest: telemetry: битый журнал в localStorage не роняет старт
+ok 430 - telemetry: битый журнал в localStorage не роняет старт
+  ---
+  duration_ms: 0.245429
+  type: 'test'
+  ...
+# Subtest: telemetry: DOMContentLoaded регистрируется при loading и даёт dom_ready
+ok 431 - telemetry: DOMContentLoaded регистрируется при loading и даёт dom_ready
+  ---
+  duration_ms: 0.259539
+  type: 'test'
+  ...
+# Subtest: telemetry: готовый документ (interactive) → dom_ready сразу
+ok 432 - telemetry: готовый документ (interactive) → dom_ready сразу
+  ---
+  duration_ms: 0.36568
+  type: 'test'
+  ...
+# Subtest: telemetry: RUNTIME_ERROR ловится через window error-listener
+ok 433 - telemetry: RUNTIME_ERROR ловится через window error-listener
+  ---
+  duration_ms: 0.586881
+  type: 'test'
+  ...
+# Subtest: telemetry: данные событий санитизируются (строки обрезаются, объекты уплощаются)
+ok 434 - telemetry: данные событий санитизируются (строки обрезаются, объекты уплощаются)
+  ---
+  duration_ms: 0.523976
+  type: 'test'
+  ...
+# Subtest: pickTodayCard: стрик под угрозой важнее близости к ранг-апу
+ok 435 - pickTodayCard: стрик под угрозой важнее близости к ранг-апу
+  ---
+  duration_ms: 1.410567
+  type: 'test'
+  ...
+# Subtest: pickTodayCard: без стриков — ближайшая к ранг-апу
+ok 436 - pickTodayCard: без стриков — ближайшая к ранг-апу
+  ---
+  duration_ms: 0.581573
+  type: 'test'
+  ...
+# Subtest: pickTodayCard: больший стрик среди горящих, выполненные сегодня исключены
+ok 437 - pickTodayCard: больший стрик среди горящих, выполненные сегодня исключены
+  ---
+  duration_ms: 0.368684
+  type: 'test'
+  ...
+# Subtest: pickTodayCard: все выполнены → card:null; пустая колода → null
+ok 438 - pickTodayCard: все выполнены → card:null; пустая колода → null
+  ---
+  duration_ms: 0.618339
+  type: 'test'
+  ...
+# Subtest: todayKingdomLine: долг содержания важнее осадного календаря
+ok 439 - todayKingdomLine: долг содержания важнее осадного календаря
+  ---
+  duration_ms: 1.576838
+  type: 'test'
+  ...
+# Subtest: renderTodayPriority: кнопка переиспользует complete-card, контекст королевства присутствует
+ok 440 - renderTodayPriority: кнопка переиспользует complete-card, контекст королевства присутствует
+  ---
+  duration_ms: 1.572169
+  type: 'test'
+  ...
+# Subtest: renderTodayPriority: пустая колода и закрытый день — без кнопки действия
+ok 441 - renderTodayPriority: пустая колода и закрытый день — без кнопки действия
+  ---
+  duration_ms: 1.420572
+  type: 'test'
+  ...
+# Subtest: daysToSiegeNow: штурм = воскресная ночь; Вс→0, Сб→1, Вт→5 (ревизия 30.09: суббота больше не 7)
+ok 442 - daysToSiegeNow: штурм = воскресная ночь; Вс→0, Сб→1, Вт→5 (ревизия 30.09: суббота больше не 7)
+  ---
+  duration_ms: 0.296745
+  type: 'test'
+  ...
+# Subtest: renderDashboard интегрирует панель до beginner/veteran-ветвления (контракт ux-first-day не тронут)
+ok 443 - renderDashboard интегрирует панель до beginner/veteran-ветвления (контракт ux-first-day не тронут)
+  ---
+  duration_ms: 0.57324
+  type: 'test'
+  ...
+# Subtest: tradeRoutes counts adjacent captured pairs only
+ok 444 - tradeRoutes counts adjacent captured pairs only
+  ---
+  duration_ms: 1.078159
+  type: 'test'
+  ...
+# Subtest: tradeBonus: +2% per route, cap 38%
+ok 445 - tradeBonus: +2% per route, cap 38%
+  ---
+  duration_ms: 0.296195
+  type: 'test'
+  ...
+# Subtest: trade income matches app contract on full chain
+ok 446 - trade income matches app contract on full chain
+  ---
+  duration_ms: 1.776897
+  type: 'test'
+  ...
+# Subtest: STARTER_DECK constant is declared with 3-4 cards
+ok 447 - STARTER_DECK constant is declared with 3-4 cards
+  ---
+  duration_ms: 1.293431
+  type: 'test'
+  ...
+# Subtest: STARTER_DECK cards have required fields (name, stat, time, duration)
+ok 448 - STARTER_DECK cards have required fields (name, stat, time, duration)
+  ---
+  duration_ms: 0.381734
+  type: 'test'
+  ...
+# Subtest: STARTER_DECK stats are valid RPG attributes
+ok 449 - STARTER_DECK stats are valid RPG attributes
+  ---
+  duration_ms: 0.322874
+  type: 'test'
+  ...
+# Subtest: Starter deck modal exists in HTML
+ok 450 - Starter deck modal exists in HTML
+  ---
+  duration_ms: 0.313089
+  type: 'test'
+  ...
+# Subtest: All starter-deck data-actions wired in event delegation
+ok 451 - All starter-deck data-actions wired in event delegation
+  ---
+  duration_ms: 0.242164
+  type: 'test'
+  ...
+# Subtest: showStarterDeck function exists and is guarded
+ok 452 - showStarterDeck function exists and is guarded
+  ---
+  duration_ms: 0.266079
+  type: 'test'
+  ...
+# Subtest: acceptStarterDeck function exists and adds cards
+ok 453 - acceptStarterDeck function exists and adds cards
+  ---
+  duration_ms: 0.328693
+  type: 'test'
+  ...
+# Subtest: closeStarterDeck records done flag even when skipping
+ok 454 - closeStarterDeck records done flag even when skipping
+  ---
+  duration_ms: 0.339078
+  type: 'test'
+  ...
+# Subtest: makeStarterCard returns lock-rank-to-C card
+ok 455 - makeStarterCard returns lock-rank-to-C card
+  ---
+  duration_ms: 0.385279
+  type: 'test'
+  ...
+# Subtest: Dashboard has help (info) button
+ok 456 - Dashboard has help (info) button
+  ---
+  duration_ms: 0.598629
+  type: 'test'
+  ...
+# Subtest: toggleHelp function provides rewards/risks content
+ok 457 - toggleHelp function provides rewards/risks content
+  ---
+  duration_ms: 4.135046
+  type: 'test'
+  ...
+# Subtest: showTextTooltip helper exists for non-inventory help
+ok 458 - showTextTooltip helper exists for non-inventory help
+  ---
+  duration_ms: 0.145769
+  type: 'test'
+  ...
+# Subtest: renderDashboard branches beginner vs veteran
+ok 459 - renderDashboard branches beginner vs veteran
+  ---
+  duration_ms: 0.566951
+  type: 'test'
+  ...
+# Subtest: Beginner dashboard mentions key numbers
+ok 460 - Beginner dashboard mentions key numbers
+  ---
+  duration_ms: 0.257407
+  type: 'test'
+  ...
+# Subtest: Starter deck is triggered for first-run players
+ok 461 - Starter deck is triggered for first-run players
+  ---
+  duration_ms: 0.452069
+  type: 'test'
+  ...
+# Subtest: CSS provides starter-card and info-btn styles
+ok 462 - CSS provides starter-card and info-btn styles
+  ---
+  duration_ms: 0.273531
+  type: 'test'
+  ...
+# Subtest: Starter deck never forces non-default rank
+ok 463 - Starter deck never forces non-default rank
+  ---
+  duration_ms: 0.232338
+  type: 'test'
+  ...
+# Subtest: Starter deck respects anti-exploit: rank always C
+ok 464 - Starter deck respects anti-exploit: rank always C
+  ---
+  duration_ms: 0.11991
+  type: 'test'
+  ...
+# Subtest: KG: 20 тайлов watertight, 4 провинции по 5, центры в полигонах, смежность-цепь, мир 780×1120
+ok 465 - KG: 20 тайлов watertight, 4 провинции по 5, центры в полигонах, смежность-цепь, мир 780×1120
+  ---
+  duration_ms: 11.209424
+  type: 'test'
+  ...
+# Subtest: карта рендерит 20 узлов role=button + aria-label + legend 4 состояния
+ok 466 - карта рендерит 20 узлов role=button + aria-label + legend 4 состояния
+  ---
+  duration_ms: 7.257381
+  type: 'test'
+  ...
+# Subtest: статусы: captured/locked/front/siege + connector owned + corruption arc + полит-заливки
+ok 467 - статусы: captured/locked/front/siege + connector owned + corruption arc + полит-заливки
+  ---
+  duration_ms: 7.966645
+  type: 'test'
+  ...
+# Subtest: тап по узлу открывает панель + keydown Enter/Space (контракты диспетчера)
+ok 468 - тап по узлу открывает панель + keydown Enter/Space (контракты диспетчера)
+  ---
+  duration_ms: 6.362108
+  type: 'test'
+  ...
+# Subtest: Фаза F: catClass категории zh/ec/df/sp + builtTileHtml img/stageBadge + buyTileHtml reason
+ok 469 - Фаза F: catClass категории zh/ec/df/sp + builtTileHtml img/stageBadge + buyTileHtml reason
+  ---
+  duration_ms: 0.917557
+  type: 'test'
+  ...
+# Subtest: Фаза F: каталог рендерится тайлами — все доступные + reason-логика + CSS сетки
+ok 470 - Фаза F: каталог рендерится тайлами — все доступные + reason-логика + CSS сетки
+  ---
+  duration_ms: 0.661563
+  type: 'test'
+  ...
+# Subtest: Г1-2: гейты доктрин — t1 на 3, t2 на 8, t3 на 14 захватах
+ok 471 - Г1-2: гейты доктрин — t1 на 3, t2 на 8, t3 на 14 захватах
+  ---
+  duration_ms: 2.544619
+  type: 'test'
+  ...
+# Subtest: Г1-2: doctrineOf — id в своём тире, cross-tier → null, пусто → null
+ok 472 - Г1-2: doctrineOf — id в своём тире, cross-tier → null, пусто → null
+  ---
+  duration_ms: 2.040483
+  type: 'test'
+  ...
+# Subtest: Г1-2: эффекты 8 id — tax 1.15 / upkeep 0.8 / atk 1.10 / growth 1.25 / fort 1.10 / crown 1.10 / veteran 0.7 / engine 0.85
+ok 473 - Г1-2: эффекты 8 id — tax 1.15 / upkeep 0.8 / atk 1.10 / growth 1.25 / fort 1.10 / crown 1.10 / veteran 0.7 / engine 0.85
+  ---
+  duration_ms: 2.107102
+  type: 'test'
+  ...
+# Subtest: Г1-2: activeDoctrineList — только выбранные, порядок t1→t2→t3
+ok 474 - Г1-2: activeDoctrineList — только выбранные, порядок t1→t2→t3
+  ---
+  duration_ms: 0.314373
+  type: 'test'
+  ...
+# Subtest: Г1-2: activeDoctrineList — имена выбранных доктрин
+ok 475 - Г1-2: activeDoctrineList — имена выбранных доктрин
+  ---
+  duration_ms: 0.38641
+  type: 'test'
+  ...
+# Subtest: Г1-2: finishSeason сбрасывает doctrines на null + тост «Сезон новых доктрин»
+ok 476 - Г1-2: finishSeason сбрасывает doctrines на null + тост «Сезон новых доктрин»
+  ---
+  duration_ms: 3.153923
+  type: 'test'
+  ...
+# Subtest: Г1-2: sanitizeHero doctrines — whitelist 9 id, мусор → null
+ok 477 - Г1-2: sanitizeHero doctrines — whitelist 9 id, мусор → null
+  ---
+  duration_ms: 1.724158
+  type: 'test'
+  ...
+# Subtest: Г1-3: df-четвёрка в твердыне → def ×1.05, иначе ×1
+ok 478 - Г1-3: df-четвёрка в твердыне → def ×1.05, иначе ×1
+  ---
+  duration_ms: 1.042054
+  type: 'test'
+  ...
+# Subtest: Г1-3: 3+ ec → местный налог ×1.15, 2 ec → ×1
+ok 479 - Г1-3: 3+ ec → местный налог ×1.15, 2 ec → ×1
+  ---
+  duration_ms: 0.918087
+  type: 'test'
+  ...
+# Subtest: Г1-3: полная zh-линейка в захваченной → найм ×0.9; 6 из 7 или не захвачена → ×1
+ok 480 - Г1-3: полная zh-линейка в захваченной → найм ×0.9; 6 из 7 или не захвачена → ×1
+  ---
+  duration_ms: 1.24571
+  type: 'test'
+  ...
+# Subtest: Г1-3: sp2 в захваченном соседе с sp3 → atk ×1.05; иначе ×1
+ok 481 - Г1-3: sp2 в захваченном соседе с sp3 → atk ×1.05; иначе ×1
+  ---
+  duration_ms: 1.01281
+  type: 'test'
+  ...
+# Subtest: Г1-3: synergyRows — строки только активных синергий
+ok 482 - Г1-3: synergyRows — строки только активных синергий
+  ---
+  duration_ms: 0.728323
+  type: 'test'
+  ...
+# Subtest: Г1-3: source-контракты — синергии встроены в тик/доход/найм/штурм/панель/казну
+ok 483 - Г1-3: source-контракты — синергии встроены в тик/доход/найм/штурм/панель/казну
+  ---
+  duration_ms: 0.718849
+  type: 'test'
+  ...
+# Subtest: Г1-4: множители тактик — normal 1/1, feint 0.8/0.7, rush 1.25/2
+ok 484 - Г1-4: множители тактик — normal 1/1, feint 0.8/0.7, rush 1.25/2
+  ---
+  duration_ms: 0.428752
+  type: 'test'
+  ...
+# Subtest: Г1-4: дефолт — неизвестная/пустая тактика = «Штурм» (ESC-семантика)
+ok 485 - Г1-4: дефолт — неизвестная/пустая тактика = «Штурм» (ESC-семантика)
+  ---
+  duration_ms: 0.294042
+  type: 'test'
+  ...
+# Subtest: Г1-4: requestAssault — ветка тактики с 3 захватов, ниже — обычный confirm
+ok 486 - Г1-4: requestAssault — ветка тактики с 3 захватов, ниже — обычный confirm
+  ---
+  duration_ms: 0.237837
+  type: 'test'
+  ...
+# Subtest: Г1-4: requestTactic — 3 кнопки на confirmOverlay, свой ESC → «Штурм», cleanup восстанавливает
+ok 487 - Г1-4: requestTactic — 3 кнопки на confirmOverlay, свой ESC → «Штурм», cleanup восстанавливает
+  ---
+  duration_ms: 0.228633
+  type: 'test'
+  ...
+# Subtest: Г1-4: doAssault — atk и attrition умножаются на тактику, мусорная тактика = норма
+ok 488 - Г1-4: doAssault — atk и attrition умножаются на тактику, мусорная тактика = норма
+  ---
+  duration_ms: 0.217836
+  type: 'test'
+  ...
+# Subtest: Г1-5: stormDayOf — 9+(num%7) = 12±3, детерминированно от сезона
+ok 489 - Г1-5: stormDayOf — 9+(num%7) = 12±3, детерминированно от сезона
+  ---
+  duration_ms: 0.642284
+  type: 'test'
+  ...
+# Subtest: Г1-5: sanitizeStorm — whitelist 4 полей, мусор → null, paid только true
+ok 490 - Г1-5: sanitizeStorm — whitelist 4 полей, мусор → null, paid только true
+  ---
+  duration_ms: 0.253721
+  type: 'test'
+  ...
+# Subtest: Г1-5: checkStorm — деградация на 1 стадию (ok→worn→ruin), просрочка гасит бурю
+ok 491 - Г1-5: checkStorm — деградация на 1 стадию (ok→worn→ruin), просрочка гасит бурю
+  ---
+  duration_ms: 0.224957
+  type: 'test'
+  ...
+# Subtest: Г1-6: warlordTempo — floor(0.8×captured), минимум 1
+ok 492 - Г1-6: warlordTempo — floor(0.8×captured), минимум 1
+  ---
+  duration_ms: 0.637807
+  type: 'test'
+  ...
+# Subtest: Г1-6: seasonCapturedDelta — захваты сезона = счётчик − snapshot.captured, минимум 0
+ok 493 - Г1-6: seasonCapturedDelta — захваты сезона = счётчик − snapshot.captured, минимум 0
+  ---
+  duration_ms: 0.627632
+  type: 'test'
+  ...
+# Subtest: Г1-6: налог +5% при обгоне — после венцов и трона
+ok 494 - Г1-6: налог +5% при обгоне — после венцов и трона
+  ---
+  duration_ms: 0.214722
+  type: 'test'
+  ...
+# Subtest: Г1-6: finishSeason — обгон-флаг по дельте захвата, тост; sanitizeHero — строго boolean
+ok 495 - Г1-6: finishSeason — обгон-флаг по дельте захвата, тост; sanitizeHero — строго boolean
+  ---
+  duration_ms: 0.554392
+  type: 'test'
+  ...
+# Subtest: Г1-6: строка воеводы в сезонном блоке Твердыней + мини-бар
+ok 496 - Г1-6: строка воеводы в сезонном блоке Твердыней + мини-бар
+  ---
+  duration_ms: 0.741523
+  type: 'test'
+  ...
+# Subtest: Г2-1: каталог 11 боссов — имена, 3 фазы валидных типов, артефакты 4×tax/3×attrition/2×def/1×xp/1×cost
+ok 497 - Г2-1: каталог 11 боссов — имена, 3 фазы валидных типов, артефакты 4×tax/3×attrition/2×def/1×xp/1×cost
+  ---
+  duration_ms: 1.899681
+  type: 'test'
+  ...
+# Subtest: Г2-1: доступность — босс доступен на первом узле собранной провинции, недобор/частичная очередь закрывают
+ok 498 - Г2-1: доступность — босс доступен на первом узле собранной провинции, недобор/частичная очередь закрывают
+  ---
+  duration_ms: 6.777552
+  type: 'test'
+  ...
+# Subtest: Г2-1: фазы 4 типов закрываются/проваливаются на статах дня
+ok 499 - Г2-1: фазы 4 типов закрываются/проваливаются на статах дня
+  ---
+  duration_ms: 0.920652
+  type: 'test'
+  ...
+# Subtest: Г2-1: эскалация ×1.5 к XI — цели фаз масштабируются
+ok 500 - Г2-1: эскалация ×1.5 к XI — цели фаз масштабируются
+  ---
+  duration_ms: 0.897476
+  type: 'test'
+  ...
+# Subtest: Г2-1: 1 попытка/день — повтор отклонён, завтра попытка обновлена, босс продолжается
+ok 501 - Г2-1: 1 попытка/день — повтор отклонён, завтра попытка обновлена, босс продолжается
+  ---
+  duration_ms: 1.749336
+  type: 'test'
+  ...
+# Subtest: Г2-1: победа над боссом I (cards→streak→gold×2 по дням) — defeated+тост артефакта
+ok 502 - Г2-1: победа над боссом I (cards→streak→gold×2 по дням) — defeated+тост артефакта
+  ---
+  duration_ms: 2.397279
+  type: 'test'
+  ...
+# Subtest: Г2-1: пассивы артефактов — вкл/выкл, провинциальный скоуп, xp/cost глобальные
+ok 503 - Г2-1: пассивы артефактов — вкл/выкл, провинциальный скоуп, xp/cost глобальные
+  ---
+  duration_ms: 1.687162
+  type: 'test'
+  ...
+# Subtest: Г2-1: карточка босса рендерится сверху панели — вызов/фазы/артефакт
+ok 504 - Г2-1: карточка босса рендерится сверху панели — вызов/фазы/артефакт
+  ---
+  duration_ms: 2.600443
+  type: 'test'
+  ...
+# Subtest: Г2-1: sanitizeHero whitelist bosses — мусор → безопасная форма
+ok 505 - Г2-1: sanitizeHero whitelist bosses — мусор → безопасная форма
+  ---
+  duration_ms: 1.083116
+  type: 'test'
+  ...
+# Subtest: Г2-1: интеграции пассивов и хуков в app.js
+ok 506 - Г2-1: интеграции пассивов и хуков в app.js
+  ---
+  duration_ms: 1.346741
+  type: 'test'
+  ...
+# Subtest: Г2-2: weatherOf детерминирован — типы ясно/туман/засуха/метель, чистая функция без сейва
+ok 507 - Г2-2: weatherOf детерминирован — типы ясно/туман/засуха/метель, чистая функция без сейва
+  ---
+  duration_ms: 0.883897
+  type: 'test'
+  ...
+# Subtest: Г2-2: эффекты погоды вкл/выкл — гейт север/юг (метель ×2 upkeep только север 1-2, засуха ×0.75 налог только юг 3-4)
+ok 508 - Г2-2: эффекты погоды вкл/выкл — гейт север/юг (метель ×2 upkeep только север 1-2, засуха ×0.75 налог только юг 3-4)
+  ---
+  duration_ms: 0.76676
+  type: 'test'
+  ...
+# Subtest: Г2-2: пин-окна симов — сезон 1, недели 1-4: захваты пров 1-2 без метели, неделя 1 без эффектной засухи (контракт acceptance/parity/strongholds)
+ok 509 - Г2-2: пин-окна симов — сезон 1, недели 1-4: захваты пров 1-2 без метели, неделя 1 без эффектной засухи (контракт acceptance/parity/strongholds)
+  ---
+  duration_ms: 0.693561
+  type: 'test'
+  ...
+# Subtest: Г2-2: frontPowerText — туман прячет силу фронта, свежая тень её прокалывает
+ok 510 - Г2-2: frontPowerText — туман прячет силу фронта, свежая тень её прокалывает
+  ---
+  duration_ms: 1.284949
+  type: 'test'
+  ...
+# Subtest: Г2-3: лазутчик — совет тактики по ratio (штурм/ложный отход/казармы)
+ok 511 - Г2-3: лазутчик — совет тактики по ratio (штурм/ложный отход/казармы)
+  ---
+  duration_ms: 1.309245
+  type: 'test'
+  ...
+# Subtest: Г2-3: гейт 50💰 + одна тень за раз + срок годности 3 дня
+ok 512 - Г2-3: гейт 50💰 + одна тень за раз + срок годности 3 дня
+  ---
+  duration_ms: 3.889298
+  type: 'test'
+  ...
+# Subtest: Г2-2/Г2-3: интеграционные пины — экономика/тревога/карта/кейс/сброс тени/whitelist
+ok 513 - Г2-2/Г2-3: интеграционные пины — экономика/тревога/карта/кейс/сброс тени/whitelist
+  ---
+  duration_ms: 1.552389
+  type: 'test'
+  ...
+# Subtest: Г2-4: каталог COMBOS — 8 шт, id уникальны, need валиден (пара/тройка/3-разных/any)
+ok 514 - Г2-4: каталог COMBOS — 8 шт, id уникальны, need валиден (пара/тройка/3-разных/any)
+  ---
+  duration_ms: 0.747983
+  type: 'test'
+  ...
+# Subtest: Г2-4: comboCountsMet — пары, Триумвират ×3, Гармония 3-разных, Фокус wil+any
+ok 515 - Г2-4: comboCountsMet — пары, Триумвират ×3, Гармония 3-разных, Фокус wil+any
+  ---
+  duration_ms: 0.629785
+  type: 'test'
+  ...
+# Subtest: Г2-4: checkCombos — срабатывание → эффект+тост+combosFound, однократно в день, завтра снова
+ok 516 - Г2-4: checkCombos — срабатывание → эффект+тост+combosFound, однократно в день, завтра снова
+  ---
+  duration_ms: 0.93177
+  type: 'test'
+  ...
+# Subtest: Г2-4: эффекты комбо — blades/triumvirate/dawn золото, axis гнев, focus щит, vortex dayXp
+ok 517 - Г2-4: эффекты комбо — blades/triumvirate/dawn золото, axis гнев, focus щит, vortex dayXp
+  ---
+  duration_ms: 1.752229
+  type: 'test'
+  ...
+# Subtest: Г2-4: sanitizeHero whitelist — combosFound/dayStatCounts/combosToday/comboDayXp
+ok 518 - Г2-4: sanitizeHero whitelist — combosFound/dayStatCounts/combosToday/comboDayXp
+  ---
+  duration_ms: 0.395372
+  type: 'test'
+  ...
+# Subtest: Г2-4: интеграционные пины — completeCard/checkDailyReset/renderCards/index.html/css
+ok 519 - Г2-4: интеграционные пины — completeCard/checkDailyReset/renderCards/index.html/css
+  ---
+  duration_ms: 1.806882
+  type: 'test'
+  ...
+# Subtest: Г2-5: множители — ascEnemyMult ×(1+0.25N), bossEscalation ×1.2^N, dailyGoldGoal ×1.2^N (кап тоже ×1.2^N)
+ok 520 - Г2-5: множители — ascEnemyMult ×(1+0.25N), bossEscalation ×1.2^N, dailyGoldGoal ×1.2^N (кап тоже ×1.2^N)
+  ---
+  duration_ms: 1.011087
+  type: 'test'
+  ...
+# Subtest: Г2-5: артефакты ×0.5 (bossArtifactMult Half-режим)
+ok 521 - Г2-5: артефакты ×0.5 (bossArtifactMult Half-режим)
+  ---
+  duration_ms: 2.070499
+  type: 'test'
+  ...
+# Subtest: Г2-5: палитра asc-N по N%3 (пепел/кровь/звёзды)
+ok 522 - Г2-5: палитра asc-N по N%3 (пепел/кровь/звёзды)
+  ---
+  duration_ms: 0.398117
+  type: 'test'
+  ...
+# Subtest: Г2-5: инварианты вознесения — сохранено/сброшено (source-контракты)
+ok 523 - Г2-5: инварианты вознесения — сохранено/сброшено (source-контракты)
+  ---
+  duration_ms: 0.183937
+  type: 'test'
+  ...
+# Subtest: Г2-5: интеграции — гейт throne 5/5, кнопка, кейс, ×3 call-site врага, бут-палитра, whitelist
+ok 524 - Г2-5: интеграции — гейт throne 5/5, кнопка, кейс, ×3 call-site врага, бут-палитра, whitelist
+  ---
+  duration_ms: 1.620201
+  type: 'test'
+  ...
+# Subtest: Г4: sanitizeSeason принимает Г4-поля (edicts/order/lastRevoltDay/resource) с клампом
+ok 525 - Г4: sanitizeSeason принимает Г4-поля (edicts/order/lastRevoltDay/resource) с клампом
+  ---
+  duration_ms: 3.524169
+  type: 'test'
+  ...
+# Subtest: Г4: sanitizeSiege stance — whitelist
+ok 526 - Г4: sanitizeSiege stance — whitelist
+  ---
+  duration_ms: 0.606931
+  type: 'test'
+  ...
+# Subtest: Г4: provOrder/provResource дефолты 75/0; revoltRisk 0 при order≥70 или неполной провинции, до 30% при 0
+ok 527 - Г4: provOrder/provResource дефолты 75/0; revoltRisk 0 при order≥70 или неполной провинции, до 30% при 0
+  ---
+  duration_ms: 2.472932
+  type: 'test'
+  ...
+# Subtest: Г4: roll-контракт восстания — Math.random>=0.7 не бунтует (пины симов живы)
+ok 528 - Г4: roll-контракт восстания — Math.random>=0.7 не бунтует (пины симов живы)
+  ---
+  duration_ms: 0.924858
+  type: 'test'
+  ...
+# Subtest: Г4: мультипликаторы — tax ×1.25, levy ×1.5, resources +2%/ед, стойки upkeep/atk/def
+ok 529 - Г4: мультипликаторы — tax ×1.25, levy ×1.5, resources +2%/ед, стойки upkeep/atk/def
+  ---
+  duration_ms: 3.214814
+  type: 'test'
+  ...
+# Subtest: Г4: revolt-задача — normal, без награды, терминальное снятие через chest_open
+ok 530 - Г4: revolt-задача — normal, без награды, терминальное снятие через chest_open
+  ---
+  duration_ms: 1.15275
+  type: 'test'
+  ...
+# Subtest: Г4: провинциальный order — resolveProvinceOrder двигает к эдиктам (клампы), revolt ставит lastRevoltDay+сброс week
+ok 531 - Г4: провинциальный order — resolveProvinceOrder двигает к эдиктам (клампы), revolt ставит lastRevoltDay+сброс week
+  ---
+  duration_ms: 1.292701
+  type: 'test'
+  ...
+# Subtest: Г5-Т3: каталог 48 технологий (6 ветвей × 8 тиров) + 3 идеи-капстоуна, цены валидны
+ok 532 - Г5-Т3: каталог 48 технологий (6 ветвей × 8 тиров) + 3 идеи-капстоуна, цены валидны
+  ---
+  duration_ms: 3.190388
+  type: 'test'
+  ...
+# Subtest: Г5-Т: buyTech — гейты (тир-цепь, очки, ресурсы) и списание
+ok 533 - Г5-Т: buyTech — гейты (тир-цепь, очки, ресурсы) и списание
+  ---
+  duration_ms: 3.076377
+  type: 'test'
+  ...
+# Subtest: Г5-Т: мультипликаторы — полный набор и нейтральный дефолт (симы/пины живы)
+ok 534 - Г5-Т: мультипликаторы — полный набор и нейтральный дефолт (симы/пины живы)
+  ---
+  duration_ms: 1.78565
+  type: 'test'
+  ...
+# Subtest: Г5-Т: techDailyTick — ресурсы +2 (+1 за e3) ТОЛЬКО под Указом о порядке (нейтрал не растёт — канон-пины), кап 999; очки +1/пров при ≥85
+ok 535 - Г5-Т: techDailyTick — ресурсы +2 (+1 за e3) ТОЛЬКО под Указом о порядке (нейтрал не растёт — канон-пины), кап 999; очки +1/пров при ≥85
+  ---
+  duration_ms: 2.132751
+  type: 'test'
+  ...
+# Subtest: Г5-Т2: тиры 5–6 — кросс-требование (5 ← тир 3 в двух других, 6 ← тир 4 в двух других), стеки
+ok 536 - Г5-Т2: тиры 5–6 — кросс-требование (5 ← тир 3 в двух других, 6 ← тир 4 в двух других), стеки
+  ---
+  duration_ms: 2.512351
+  type: 'test'
+  ...
+# Subtest: Г5-Т2: идеи-капстоуны — открытие тиром 6, исключительность навсегда, мультипликаторы
+ok 537 - Г5-Т2: идеи-капстоуны — открытие тиром 6, исключительность навсегда, мультипликаторы
+  ---
+  duration_ms: 3.388496
+  type: 'test'
+  ...
+# Subtest: wave2 \#41/C3: buildDailyEvents — 5 событий, порядок id стабильный
+ok 538 - wave2 \#41/C3: buildDailyEvents — 5 событий, порядок id стабильный
+  ---
+  duration_ms: 2.269646
+  type: 'test'
+  ...
+# Subtest: wave2 \#41: rollDailyEvent — детерминированные пины Math.random (старые 0-4, окно тёмных, restore)
+ok 539 - wave2 \#41: rollDailyEvent — детерминированные пины Math.random (старые 0-4, окно тёмных, restore)
+  ---
+  duration_ms: 2.230808
+  type: 'test'
+  ...
+# Subtest: wave2 \#8: holidayBonus — 01-01 tickMult 1.5 / 10-31 ghostsFree / 09-17 rewardMult 1.1 / прочее null
+ok 540 - wave2 \#8: holidayBonus — 01-01 tickMult 1.5 / 10-31 ghostsFree / 09-17 rewardMult 1.1 / прочее null
+  ---
+  duration_ms: 0.375033
+  type: 'test'
+  ...
+# Subtest: wave2 \#71: dailyGoldGoal — captured 0→50 / 10→150 / 20→200 (кап)
+ok 541 - wave2 \#71: dailyGoldGoal — captured 0→50 / 10→150 / 20→200 (кап)
+  ---
+  duration_ms: 0.531516
+  type: 'test'
+  ...
+# Subtest: wave2 \#55: heroPathInfo — str→Воин, ничья str/end→Страж, agi→Следопыт
+ok 542 - wave2 \#55: heroPathInfo — str→Воин, ничья str/end→Страж, agi→Следопыт
+  ---
+  duration_ms: 0.638207
+  type: 'test'
+  ...
+# Subtest: wave2 \#49: capturedRecoveryPlan — validSave v10: факт=снапшоту→null, порча на 2→восстановить, на 1→null
+ok 543 - wave2 \#49: capturedRecoveryPlan — validSave v10: факт=снапшоту→null, порча на 2→восстановить, на 1→null
+  ---
+  duration_ms: 1.064316
+  type: 'test'
+  ...
+# Subtest: wave2 \#42: weeklyDeltaHtml — другая неделя содержит ↑, та же неделя — пусто
+ok 544 - wave2 \#42: weeklyDeltaHtml — другая неделя содержит ↑, та же неделя — пусто
+  ---
+  duration_ms: 17.478222
+  type: 'test'
+  ...
+# Subtest: wave2 \#95: canCounterSiege — fail+100→true; retried→false; win→false; gold 99→false
+ok 545 - wave2 \#95: canCounterSiege — fail+100→true; retried→false; win→false; gold 99→false
+  ---
+  duration_ms: 0.736865
+  type: 'test'
+  ...
+# Subtest: wave2 контракты: кровь в налогах/XP, праздник в XP, Хэллоуин в призраках, помодоро-ключи, reset контрштурма
+ok 546 - wave2 контракты: кровь в налогах/XP, праздник в XP, Хэллоуин в призраках, помодоро-ключи, reset контрштурма
+  ---
+  duration_ms: 1.368054
+  type: 'test'
+  ...
+# verified: css/style.css index.html PASS (wave3 contracts)
+# index.html: PASS
+# css/style.css: PASS
+# package.json: PASS
+# Subtest: wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка / прочее держимся / NaN нет обороны
+ok 547 - wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка / прочее держимся / NaN нет обороны
+  ---
+  duration_ms: 3.484059
+  type: 'test'
+  ...
+# Subtest: wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio
+ok 548 - wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio
+  ---
+  duration_ms: 2.130807
+  type: 'test'
+  ...
+# Subtest: wave3 Ф1: checkSiegeAlarmToast — тост только в дни 0/2, флаг дня не пускает повтор
+ok 549 - wave3 Ф1: checkSiegeAlarmToast — тост только в дни 0/2, флаг дня не пускает повтор
+  ---
+  duration_ms: 0.792169
+  type: 'test'
+  ...
+# Subtest: wave3 Ф1 контракты: панель .siege-alarm при daysToSiege≤2, CSS-класс есть, alarm toast flag в renderStrongholds
+ok 550 - wave3 Ф1 контракты: панель .siege-alarm при daysToSiege≤2, CSS-класс есть, alarm toast flag в renderStrongholds
+  ---
+  duration_ms: 4.39072
+  type: 'test'
+  ...
+# Subtest: wave3 Ф2: totemGoldMult/XpMult/DefMult — волк/сова/медведь, без тотема = 1
+ok 551 - wave3 Ф2: totemGoldMult/XpMult/DefMult — волк/сова/медведь, без тотема = 1
+  ---
+  duration_ms: 4.074956
+  type: 'test'
+  ...
+# Subtest: wave3 Ф2: renderTotemCard — до 1 захвата пусто, chosen-вид, re-choose возвращает выбор
+ok 552 - wave3 Ф2: renderTotemCard — до 1 захвата пусто, chosen-вид, re-choose возвращает выбор
+  ---
+  duration_ms: 1.745089
+  type: 'test'
+  ...
+# Subtest: wave3 Ф2: finishSeason ставит rechoose=true (id сохраняется), requestTotem сбрасывает
+ok 553 - wave3 Ф2: finishSeason ставит rechoose=true (id сохраняется), requestTotem сбрасывает
+  ---
+  duration_ms: 0.302623
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3: towerEnemyPower — base(неделя 1)×1.2^floor
+ok 554 - wave3 Ф3: towerEnemyPower — base(неделя 1)×1.2^floor
+  ---
+  duration_ms: 0.3259
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3: renderTowerCard — 19/20 нет, 20/20 кнопка, та же дата израсходовано, этаж 50 покорён
+ok 555 - wave3 Ф3: renderTowerCard — 19/20 нет, 20/20 кнопка, та же дата израсходовано, этаж 50 покорён
+  ---
+  duration_ms: 1.075345
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, поражение без потерь, флаг в обеих ветках
+ok 556 - wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, поражение без потерь, флаг в обеих ветках
+  ---
+  duration_ms: 1.028323
+  type: 'test'
+  ...
+# Subtest: wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html: единый ?v= ×10
+ok 557 - wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html: единый ?v= ×10
+  ---
+  duration_ms: 2.570598
+  type: 'test'
+  ...
+# Subtest: package.json: check:ui-скрипт верификации UI-ассетов подключён, JSON валиден
+ok 558 - package.json: check:ui-скрипт верификации UI-ассетов подключён, JSON валиден
+  ---
+  duration_ms: 2.59865
+  type: 'test'
+  ...
+# Subtest: wave3 style.css [/root/neurodeck/css/style.css]: .siege-alarm и .totem-* правила на месте, скобки сбалансированы
+ok 559 - wave3 style.css [/root/neurodeck/css/style.css]: .siege-alarm и .totem-* правила на месте, скобки сбалансированы
+  ---
+  duration_ms: 1.868634
+  type: 'test'
+  ...
+# Subtest: каталог WEEKLY_MODS: 6–8 записей, уникальные id, тексты для UI, mods {incomeMult, upkeepMult, siegeMult} в (0; 3]
+ok 560 - каталог WEEKLY_MODS: 6–8 записей, уникальные id, тексты для UI, mods {incomeMult, upkeepMult, siegeMult} в (0; 3]
+  ---
+  duration_ms: 1.233772
+  type: 'test'
+  ...
+# Subtest: тематические пины §5: «Неделя тумана» и «Неделя жадности» в каталоге; каждая неделя — трейд-офф (множитель ≠ 1)
+ok 561 - тематические пины §5: «Неделя тумана» и «Неделя жадности» в каталоге; каждая неделя — трейд-офф (множитель ≠ 1)
+  ---
+  duration_ms: 0.211056
+  type: 'test'
+  ...
+# Subtest: детерминизм: выбор стабилен между вызовами и пиннут по паре (season, week)
+ok 562 - детерминизм: выбор стабилен между вызовами и пиннут по паре (season, week)
+  ---
+  duration_ms: 0.339089
+  type: 'test'
+  ...
+# Subtest: ротация: сезон 1 недели 1–12 пиннут; за 6 сезонов × 26 недель достижим весь каталог
+ok 563 - ротация: сезон 1 недели 1–12 пиннут; за 6 сезонов × 26 недель достижим весь каталог
+  ---
+  duration_ms: 0.731017
+  type: 'test'
+  ...
+# Subtest: гейт 20/20: endgame=false → все множители 1 даже у «Жадности»; endgame=true → значения каталога
+ok 564 - гейт 20/20: endgame=false → все множители 1 даже у «Жадности»; endgame=true → значения каталога
+  ---
+  duration_ms: 0.53942
+  type: 'test'
+  ...
+# Subtest: robustness: без каталога / пустой каталог / кривые mods → null и 1 (экономика не ломается)
+ok 565 - robustness: без каталога / пустой каталог / кривые mods → null и 1 (экономика не ломается)
+  ---
+  duration_ms: 0.213591
+  type: 'test'
+  ...
+# Subtest: corruptionTick: недельный upkeep перемножается с провинцией одним множителем (паттерн тика app.js)
+ok 566 - corruptionTick: недельный upkeep перемножается с провинцией одним множителем (паттерн тика app.js)
+  ---
+  duration_ms: 0.51958
+  type: 'test'
+  ...
+# Subtest: parity ре-пин C6: (сезон 1, неделя 1) = «Жадность» ×1.3 → 20/20 доход 16117, корона 17729
+ok 567 - parity ре-пин C6: (сезон 1, неделя 1) = «Жадность» ×1.3 → 20/20 доход 16117, корона 17729
+  ---
+  duration_ms: 0.164158
+  type: 'test'
+  ...
+# Subtest: app.js: множители применены ровно в 2 местах каждый (тик+превью / осада+тревога), гварды и гейт на месте
+ok 568 - app.js: множители применены ровно в 2 местах каждый (тик+превью / осада+тревога), гварды и гейт на месте
+  ---
+  duration_ms: 3.459502
+  type: 'test'
+  ...
+# Subtest: P14 формула-пины: компоненты и итог считаются детерминированно из четырёх фактов
+ok 569 - P14 формула-пины: компоненты и итог считаются детерминированно из четырёх фактов
+  ---
+  duration_ms: 1.667823
+  type: 'test'
+  ...
+# Subtest: P14 границы: минимум 54 (полный провал), максимум 400 (S), грейды S/A/B/C/D достижимы
+ok 570 - P14 границы: минимум 54 (полный провал), максимум 400 (S), грейды S/A/B/C/D достижимы
+  ---
+  duration_ms: 0.324256
+  type: 'test'
+  ...
+# Subtest: P14 капы и клампы входов: captures≤5, zeroDays≤8, recoveries≤2, lossesPct∈[0;1]
+ok 571 - P14 капы и клампы входов: captures≤5, zeroDays≤8, recoveries≤2, lossesPct∈[0;1]
+  ---
+  duration_ms: 0.305489
+  type: 'test'
+  ...
+# Subtest: P14 robustness: мусорные входы не бросают и читаются как нули; факты не мутируются
+ok 572 - P14 robustness: мусорные входы не бросают и читаются как нули; факты не мутируются
+  ---
+  duration_ms: 0.361342
+  type: 'test'
+  ...
+# Subtest: P14 форма ответа: {score, grade, parts{4}, max}, score всегда в 50..400
+ok 573 - P14 форма ответа: {score, grade, parts{4}, max}, score всегда в 50..400
+  ---
+  duration_ms: 5.189389
+  type: 'test'
+  ...
+# Subtest: P14 app.js: факт-коллектор из существующих полей + строка при 20/20 в панели сезона за модификатором
+ok 574 - P14 app.js: факт-коллектор из существующих полей + строка при 20/20 в панели сезона за модификатором
+  ---
+  duration_ms: 0.887041
+  type: 'test'
+  ...
+# Subtest: P14 модель: экспорт и чистота формулы (никаких Date/random/каталога в weeklyScore)
+ok 575 - P14 модель: экспорт и чистота формулы (никаких Date/random/каталога в weeklyScore)
+  ---
+  duration_ms: 0.326261
+  type: 'test'
+  ...
+1..575
+# tests 575
+# suites 0
+# pass 575
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7750.744864
+
+> neurodeck@0.0.0 test:e2e
+> npx playwright test tests/e2e/neurodeck.test.js tests/e2e/logic.test.js tests/e2e/campaign-flows.test.js tests/e2e/boss-flow.test.js tests/e2e/weekly-modifier.test.js tests/e2e/responsive-gates.test.js tests/e2e/device-matrix.test.js tests/e2e/remote-config.test.js
+
+
+Running 55 tests using 1 worker
+
+  ✓   1 tests/e2e/boss-flow.test.js:111:1 › P12: интро-лор ровно один раз; вызов босса и фазы cards→streak (G2: 2 фазы/день) (4.7s)
+  ✓   2 tests/e2e/boss-flow.test.js:165:1 › P12: gold-фаза честным доходом → босс повержен; reward-choice и pending после reload (15.4s)
+  ✓   3 tests/e2e/campaign-flows.test.js:138:1 › C2: развилка фронта — модалка выбора цели: открыть/отменить/подтвердить (3.5s)
+  ✓   4 tests/e2e/campaign-flows.test.js:169:1 › P9: недоступные цели развилки — disabled с причиной; тултипы safe/war/trade; aria (2.4s)
+  ✓   5 tests/e2e/campaign-flows.test.js:206:1 › C5: reward-choice — венец disabled при капе 5/5, артефакт выбирается и не возвращается (8.6s)
+  ✓   6 tests/e2e/campaign-flows.test.js:235:1 › C5: незакрытый выбор награды (pending) возвращается после reload (5.8s)
+  ✓   7 tests/e2e/campaign-flows.test.js:260:1 › C6: weekly modifier — 19/20 скрыт, 20/20 виден и масштабирует налоги (3.5s)
+  ✓   8 tests/e2e/campaign-flows.test.js:282:1 › C4: покупка тарана/лестниц за 25💰 и списание склада после штурма (3.0s)
+  ✓   9 tests/e2e/campaign-flows.test.js:311:1 › C4: подход недели — «Осада» +1 гнев, «Хитрость» меняет превью гарнизона (пров. 3) (4.1s)
+  ✓  10 tests/e2e/campaign-flows.test.js:335:1 › P10: панель подготовки — разведка, склад, превью до/после, отмена подхода до тика (8.8s)
+  ✓  11 tests/e2e/campaign-flows.test.js:363:1 › P10: «рискованно»-подтверждение при ratio<1.2 — отмена не тратит день, подтверждение проводит штурм (6.2s)
+  ✓  12 tests/e2e/campaign-flows.test.js:393:1 › P10: превью в панели живо — подход «Хитрость» меняет прогноз гарнизона (1100 → 990) (2.0s)
+  ✓  13 tests/e2e/campaign-flows.test.js:402:1 › P11: подход «Хитрость» переживает перезагрузку — выбор доезжает до сейва и возвращается (3.1s)
+  ✓  14 tests/e2e/campaign-flows.test.js:420:1 › P11: сейв v14 с подходом «Осада» — бут сразу в нём (гнев +1 без кликов) (1.3s)
+  ✓  15 tests/e2e/campaign-flows.test.js:428:1 › P11: легаси-сейв v13 без подхода — миграция до v14, дефолт «Штурм» активен (1.3s)
+  ✓  16 tests/e2e/campaign-flows.test.js:439:1 › P6: брейкдауны — тайл покупки «до → после» с окупаемостью; штурм — соотношение и worst-case (2.5s)
+[device-matrix] S2 cold boot → .app-wrap: 614 ms (dom_ready: 277 ms)
+  ✓  17 tests/e2e/device-matrix.test.js:73:3 › boot timings (S2) › cold boot → интерактив: .app-wrap + метка dom_ready телеметрии (743ms)
+[device-matrix] S2 warm boot → .app-wrap: 463 ms (cold в этом же контексте: 617 ms)
+  ✓  18 tests/e2e/device-matrix.test.js:82:3 › boot timings (S2) › warm boot (кэш контекста) → интерактив, не медленнее холодного (1.3s)
+[device-matrix] S9 reduced-motion boot → .app-wrap: 529 ms
+[device-matrix] S9 perf-состояние: {"prm":true,"bodyClass":true,"perfEco":true,"mode":"auto","motionOk":false}
+  ✓  19 tests/e2e/device-matrix.test.js:94:3 › reduced motion (S9) › prefers-reduced-motion: boot чистый, eco-эквивалент применён (920ms)
+[device-matrix] S1 поколения кэша после precache: ["nd-shell-v103"]
+[device-matrix] S1 офлайн cold-boot → .app-wrap: 357 ms (SW network-first → cache fallback)
+  ✓  20 tests/e2e/device-matrix.test.js:129:3 › service worker (S1/S12) › S1: офлайн-старт — shell из SW-кэша, приложение интерактивно (1.6s)
+[device-matrix] S12 SW-update nd-shell-v103 → nd-shell-v103-update-probe: кэш ровно одного поколения (2264 мс)
+[device-matrix] S12 офлайн-бут после обновления: интерактивен
+  ✓  21 tests/e2e/device-matrix.test.js:145:3 › service worker (S1/S12) › S12: SW-update на стенде — одно поколение кэша, офлайн-бут после обновления жив (3.8s)
+  ✓  22 tests/e2e/logic.test.js:56:1 › goal XP exact split: 4 steps + completion ~= 100 XP, no 1.5x inflation (4.4s)
+  ✓  23 tests/e2e/logic.test.js:63:1 › completeGoal does NOT increase HERO.actionPoints (4.3s)
+  ✓  24 tests/e2e/logic.test.js:70:1 › getPrestigeXPBonus caps at 1.5 with high prestige values (3.4s)
+  ✓  25 tests/e2e/logic.test.js:84:1 › perf-eco class applied on documentElement in eco and low modes (3.5s)
+  ✓  26 tests/e2e/logic.test.js:101:1 › perf bridge: legacy listener fires only on eco transitions incl low/effects-off (3.5s)
+  ✓  27 tests/e2e/logic.test.js:118:1 › XP curve pinned: getXpToNext(15)=68000, (16)=round(68000*1.65) (3.5s)
+  ✓  28 tests/e2e/logic.test.js:126:1 › perf UI: perfLowBtn click drives full chain (setMode, bridge, legacy listener) (3.5s)
+  ✓  29 tests/e2e/logic.test.js:143:1 › strongholds: assault model — win captures with bounded attrition, overpower retreats 10-30% (2.2s)
+  ✓  30 tests/e2e/logic.test.js:171:1 › tasks: complete -> chest choice adds gold or xp; ghosts expire after ghostDays (2.4s)
+  ✓  31 tests/e2e/logic.test.js:191:1 › ghosts: nightly penalty capped at 5/night (2.2s)
+  ✓  32 tests/e2e/logic.test.js:205:1 › quest board: counters track progress; claim gated until goal met (2.3s)
+  ✓  33 tests/e2e/neurodeck.test.js:7:1 › page loads without JS errors (3.3s)
+  ✓  34 tests/e2e/neurodeck.test.js:21:1 › canvas elements exist (723ms)
+  ✓  35 tests/e2e/neurodeck.test.js:27:1 › starter deck modal can be closed (3.4s)
+  ✓  36 tests/e2e/neurodeck.test.js:38:1 › tab navigation switches views (6.2s)
+  ✓  37 tests/e2e/neurodeck.test.js:53:1 › hero view shows character stats (4.3s)
+  ✓  38 tests/e2e/neurodeck.test.js:69:1 › audio mixer: settings section, localStorage persistence, no autoplay before interaction (6.6s)
+  ✓  39 tests/e2e/remote-config.test.js:8:1 › boot requests real config, applies it and resets builtin (784ms)
+  ✓  40 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: checksum (1.2s)
+  ✓  41 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: expired (1.2s)
+  ✓  42 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: size (1.2s)
+  ✓  43 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: timeout (1.2s)
+  ✓  44 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: network (1.0s)
+  ✓  45 tests/e2e/remote-config.test.js:34:1 › service worker config uses network, not poisoned shell cache; offline falls back (1.3s)
+  ✓  46 tests/e2e/responsive-gates.test.js:111:3 › safe-area contract › viewport-fit=cover в meta, env()-инсеты в наве и шеле приложения (401ms)
+  ✓  47 tests/e2e/responsive-gates.test.js:126:3 › safe-area contract › runtime: при нулевых инсетах нав внутри экрана, вёрстка чистая (6.5s)
+  ✓  48 tests/e2e/responsive-gates.test.js:138:5 › short viewport (landscape <600h) › deck: без hscroll, нав виден целиком, перекрытий нет (6.5s)
+  ✓  49 tests/e2e/responsive-gates.test.js:138:5 › short viewport (landscape <600h) › strongholds: без hscroll, нав виден целиком, перекрытий нет (6.6s)
+  ✓  50 tests/e2e/responsive-gates.test.js:151:5 › font 200% (textZoom×2 emulation) › deck: без hscroll и перекрытий при удвоенном шрифте (6.8s)
+  ✓  51 tests/e2e/responsive-gates.test.js:151:5 › font 200% (textZoom×2 emulation) › strongholds: без hscroll и перекрытий при удвоенном шрифте (7.0s)
+  ✓  52 tests/e2e/weekly-modifier.test.js:159:1 › P13: 19/20 — строки нет, множители нейтральны, казна равна нейтральной неделе (2.6s)
+  ✓  53 tests/e2e/weekly-modifier.test.js:180:1 › P13: 20/20 — строка видна по имени, налоги/содержание ×k каталога (2.7s)
+  ✓  54 tests/e2e/weekly-modifier.test.js:210:1 › P13: 20/20 — налоги/содержание в DOM совпадают с strongholdsDailyTick на живой странице (1.6s)
+  ✓  55 tests/e2e/weekly-modifier.test.js:238:1 › P13: 20/20 — превью «Осада недели» несёт силу врага ×siegeMult (parity с runWeeklySiege) (1.3s)
+
+  55 passed (3.3m)
+
+> neurodeck@0.0.0 test:e2e:visual
+> npx playwright test tests/e2e/visual-regression.test.js tests/e2e/visual-regression-extended.test.js
+
+
+Running 25 tests using 1 worker
+
+  ✓   1 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab deck @ mobile matches baseline (7.2s)
+  ✓   2 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab hero @ mobile matches baseline (7.1s)
+  ✓   3 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab inv @ mobile matches baseline (7.0s)
+  ✓   4 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab quests @ mobile matches baseline (6.8s)
+  ✓   5 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab stats @ mobile matches baseline (7.0s)
+  ✓   6 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × mobile › tab strongholds @ mobile matches baseline (6.9s)
+  ✓   7 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab deck @ tablet matches baseline (7.2s)
+  ✓   8 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab hero @ tablet matches baseline (7.4s)
+  ✓   9 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab inv @ tablet matches baseline (7.4s)
+  ✓  10 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab quests @ tablet matches baseline (6.9s)
+  ✓  11 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab stats @ tablet matches baseline (7.4s)
+  ✓  12 tests/e2e/visual-regression-extended.test.js:37:7 › tabs × tablet › tab strongholds @ tablet matches baseline (7.5s)
+  ✓  13 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal starterDeck matches baseline (4.0s)
+  ✓  14 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal editCard matches baseline (3.9s)
+  ✓  15 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal sync matches baseline (4.0s)
+  ✓  16 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal goal matches baseline (3.9s)
+  ✓  17 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal task matches baseline (3.9s)
+  ✓  18 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal siegeReport matches baseline (3.9s)
+  ✓  19 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal weekly matches baseline (4.0s)
+  ✓  20 tests/e2e/visual-regression-extended.test.js:86:5 › modals @ mobile › modal return matches baseline (3.9s)
+  ✓  21 tests/e2e/visual-regression.test.js:7:1 › page screenshot matches baseline (3.8s)
+  ✓  22 tests/e2e/visual-regression.test.js:24:1 › starter deck modal screenshot matches baseline (3.8s)
+  ✓  23 tests/e2e/visual-regression.test.js:59:1 › deck card screenshot matches baseline (3.9s)
+  ✓  24 tests/e2e/visual-regression.test.js:81:1 › hero treasury screenshot matches baseline (3.9s)
+  ✓  25 tests/e2e/visual-regression.test.js:98:1 › strongholds top screenshot matches baseline (4.5s)
+
+  25 passed (2.3m)
+
+> neurodeck@0.0.0 test:playtest:strongholds
+> node tools/playtest-strongholds.cjs
+
+
+===== РЕЗУЛЬТАТЫ ПЛЕЙТЕСТА ТВЕРДЫНЬ =====
+OK   1.1 старт-колода: выбрать 2 карточки
+OK   1.2 онбординг пролистан
+OK   2.1 вкладка открывается: SVG-карта 20 узлов (фаза E), фронт = sh01
+OK   3.1 Сендер-Хутор открыт как стартовый лагерь, каталог показывает Ж1
+OK   3.2 золото выдано, Ж1 построен за 60
+OK   4.1 понедельник: пул Т1 = 14 из Ж1
+OK   4.2 скидка cha=3: цена ceil(1×(1−0.015))=1, найм 14 в армию
+OK   4.3 пул пуст: найм блокируется
+OK   5.1 подтверждение штурма показывает прогноз сил
+OK   5.2 штурм подтверждён → sh01 захвачена, армия в строю (28>15, floor держит ≥1)
+OK   5.3 второй штурм в сутки заблокирован
+OK   6.1 sh02 (новый фронт): армия усилена читом, лимит суток сброшен, штурм → захват
+OK   6.2 sh02: панель открывается, Ж1 строится за 60 (слоты 6)
+OK   7.1 перезагрузка: захват, постройки, армия, пул восстановлены
+OK   7.2 герой: сводка «Твердынь N/20» по числу захваченных
+OK   8.1 воскресный тик: осада отбита (garDef 15 > siege 9), модалка итогов, week→2
+OK   9.1 дефицит 6 ночей (3 вызова × gap-докрутка): Ж1 sh02 → worn (через руину; SPEC §6: руина не ест, «оплатa» 0 лечит 1 ступень/ночь → debt 0)
+OK   9.2 оплата лечит: worn → ok, долг 0 (обе постройки)
+
+ИТОГО: 18/18 OK, провалено: 0
+JS-ошибки консоли за сессию: нет
+
+> neurodeck@0.0.0 test:playtest:acceptance
+> node tools/playtest-acceptance.cjs
+
+
+===== ПРИЁМОЧНЫЙ ПРОГОН «МЕСЯЦ ЖИЗНИ КОРОЛЕВСТВА» =====
+OK   0.1 старт-колода: выбор 2 карточек и принятие
+OK   0.2 онбординг пролистан до конца
+OK   0.3 вкладка «Твердыни»: SVG-карта 20 узлов, фронт sh01, прогресс 0/20 (фаза E)
+OK   1.1 казна выдана (чит 500), Ж1 в Сендер-Хуторе построен через UI, иммунитет записан
+OK   1.2 неделя 1, понедельник: пул Т1 = 14 из Ж1; осада при 0 захваченных не приходит (week=1)
+OK   1.3 неделя 1: найм 6 в гарнизон + 8 в армию (−14💰, delta-проверка), штурм sh01 → захват (atk по SM > 15)
+OK   1.4 БАГ-ПРОБА: иконки захваченных твердынь не содержат «undefined» (дубль shSprite app.js:1608/1709)
+OK   1.5 воскресенье 1: осада отбита гарнизоном (garDef ≥ power по SM), гарнизон −15% c floor, week→2
+OK   1.6 неделя 2: пул 14, штурм sh02 → захват, Ж1 в sh02, гарнизон 4
+OK   1.7 воскресенье 2: отбито (фронт sh02 «Лаголь»); захват sh02 сбросил счётчик → week 1+1 = 2 (SPEC §5: W от захвата фронта)
+OK   1.8 неделя 3: штурм sh03 → захват, Ж1, гарнизон 4; воскресенье 3: отбито «Лесопилка», week 2
+OK   1.9 неделя 4: штурм sh04 → захват, Ж1, гарнизон 6; воскресенье 4: отбито «Медные Копи», week 2
+OK   1.10 неделя 5 + ГНЕВ: 1 просрочка → призрак (гнев 3), штурм sh05 → захват, гарнизон 8; воскресенье 5: отбито «Житницы» при гневе (power 90 = SM-формуле), week 2
+OK   1.11 неделя 6 без захватов: счётчик копится (w=1), осада отбита (power = SM при живом гневе), week 3
+OK   1.12 неделя 7 без захватов: w=2, отбита (power = SM), week 4 — счётчик готов к каскаду
+OK   1.13 неделя 8 — КАСКАД: гарнизоны слиты в армию, +4 призрака (гнев 10), w=3: прорыв 1.5× сносит sh05→sh04→sh03, на sh03 гаснет (58 ≤ 1.5×47), week→1
+OK   1.14 после каскада: sh03/sh04/sh05 пали (постройки в руине), sh01+sh02 целы, фронт sh03 — нейтралы по таблице (40)
+OK   2.1 фиксстура: sh01+sh02 без гарнизонов, неделя 2; фронт sh03 — нейтралы базовые 40 (не накопленные)
+OK   2.2 осада с гневом 10: ОБЕ падают с прорывом → refuge: sh01 захвачена той же ночью, гарнизон 0, постройки в руине, week→1
+OK   2.3 возврат возможен: починка Ж1 + неделя (осада отбита, гнев 0) → пул 14 → найм 14 → штурм sh02 → захват (2/20)
+OK   3.1 фиксстура: 10 захваченных, фронт sh11 (нейтралы 1100), армия 500 т1 → atk 1060 < 1100 (поражение гарантировано по SM)
+OK   3.2 отступлений 5 подряд: потери каждой стопы 10–30% (равномерно), армия никогда не в ноль
+OK   3.3 фронт не сдвинулся: штурмовать sh11 снова можно (нейтралы на месте, захватов всё ещё 10)
+OK   4.1 фиксстура: sh01; Ж1+Частокол+Рынок; иммунитеты сброшены; wil 3 → grace 2; апкип 19 (Хутора −10%), доход 1
+OK   4.2 дефицит, ночь 1: upkeep первым, казна → 0 (доход 1 < апкипа 19), все debt 1, стадия ещё Целое (grace 2)
+OK   4.3 ИММУНИТЕТ + Обветшало: zh1 помечен «свежим» (чит) → ночи 2–3 его не трогают (debt 1), df1/ec1 → debt 3 Обветшало; пул полон (zh1 цел), формула −50% = 7; оборона +10, апкип 19
+OK   4.4 восстановление: оплата лечит 1 ступень/день → Обветшало → Целое, долг 0; арифметика дня = +доход −апкип
+OK   4.5 руина: 5 ночей дефицита (debt 5 > grace+step 4) → Руина; «руина не ест»: содержание 0, эффекты 0
+OK   4.6 «руина не ест» + лечение: оплаченный день поднимает на 1 ступень (Руина→Обветшало), при upkeep 0 — даже с пустой казной
+OK   5.1 пул найма: без П4 — 14/нед; sp4 в sh13 (ок) → round(14×1.4) = 20/нед
+OK   6.1 фиксстура: 1 захваченная без построек, казна 100, неделя 1; уровень 5 (xpToNext 5000 — воскресная осада +100 XP НЕ даст level-up +30💰)
+OK   6.2 lastDayReset −10 дней: докрутка капом 7 (налог +7💰, НЕ +10), осадное воскресенье внутри окна отработано ровно один раз (week 1→2), без спирали
+OK   7.1 captured=6, календарная неделя 13: осада считалась с W_eff=9 (floor(6×1.5)), НЕ 12; отбита, power в отчёте = SM-формуле
+OK   8.1 cha=40: цена Т2 = ceil(5×0.8) = 4 (hireCostOf), найм списывает ровно 4
+OK   8.2 переводы армия↔гарнизон бесплатны (золото не трогается), стек доезжает целиком
+OK   8.3 F5: гарнизон переживает перезагрузку
+OK   9.1 фиксстура v7 (tractState.regions=7, золото 555, задача) → миграция: ровно 7 захваченных, золото цело, армия пуста, неделя осады 1, схема 14 (P11 re-pin)
+OK   9.2 F5 после миграции: 7 захватов и золото 555 переживают перезагрузку
+OK   10.1 обогащение состояния: Ж1 в sh01, Амбары (worn, debt 3) в sh02, гарнизон т1×5 в sh02, неделя осады 3
+OK   10.2 F5 байт-в-байт: золото, твердыни, гарнизоны, стадии коррапшна, неделя осады — строка JSON идентична до и после
+
+ИТОГО: 40/40 OK, провалено: 0
+JS-ошибки консоли за сессию: 0 (из них 404-ресурсы: 0, прочие: 0)
+404 URL (0 запросов, уникальных 0): []
+
+> neurodeck@0.0.0 test:qa:data
+> node tools/playtest-data.cjs
+
+OK   A1 [node] фаззинг санитайзеров: 100 случайных мутаций валидного state — STATE_GUARDS.* не бросают, выход в норме
+OK   A2 [node] миграция v7 → v10: regions→captured (порядок каталога), золото/карточки/задачи целы, army/siege созданы, season посеян (MIGRATIONS[7] для входа v7 не вызывается — он для v≤6)
+OK   A2b [node] миграция v5 (+мусорные поля v≤6: shards/flasks/hp/isHollow/boss*) → v10: MIGRATIONS[7] вычищает легаси, tractState отсутствует → regions 0
+OK   A3 [node] миграция v8 (без season) → v10: Сезон 1 со снапшотом текущего прогресса
+OK   B1 онбординг: старт-колода принимается (2 карточки), онбординг закрывается — база для слоёв защиты
+OK   B2 обогащение состояния v10: золото 777, 3 карточки, 2 твердыни (zh1 worn, builtAt), гарнизон, осада w3, задачи+призрак, квесты с progress, Сезон 2 — saveGameState OK
+OK   B3 [шаг1] F5 round-trip v9 байт-в-контент: gold/strongholds/army/siege/tasks/quests(progress)/season/hirePool — stable stringify идентичен (норма builtAt null→undefined)
+OK   B4 [шаг2а] v7-фикстура с мусором (shards/boss*/isHollow) → applySyncData: v9, 7 захватов, мусор вычищен, золото 4321, задачи целы, Сезон 1 посеян
+OK   B5 [шаг2б] v8-фикстура без season → v10: сеется Сезон 1 (start=сегодня MSK) со снапшотом {totalXp 7000, gold 1234, captured 3, completions 9, level 7}
+OK   B6 [шаг2в] битые JSON ×20 (детерминированные мутации валидного сейва) → applySyncData: приложение не падает, санитайзеры держат инварианты
+OK   B7 [шаг2г] битый сейв в localStorage через полный F5 ×3 (обрезка/порча символов/v:999): приложение не падает, UI рендерится
+OK   B8 [шаг3, слой 1] удалён neurodeck_full_save при живом cards_backup → после F5 карточки и прогресс восстановлены из аварийной копии
+OK   B9 [шаг3, слой 2] FORGED пуст + ever_saved=1 → онбординг не заблокирован: старт-колода не навязывается, UI жив, ошибок нет
+OK   B10 [шаг4] export-json → скачивание контента → импорт через file input (syncModal) → экспортированное подмножество восстановлено (gold 777, 3 карточки, цели)
+OK   B11 [шаг4б] полный бэкап .ndsync (download-sync-file) → импорт через file input: байт-в-контент восстановление ВСЕГО состояния (твердыни, сезон, квесты, builtAt)
+OK   B12 [шаг5] мульти-вкладка: свежая вкладка видит запись A; живая вкладка B адоптирует её через storage-event; LWW-гвард не даёт устаревшему сейву B затереть запись A
+     [i] квота: забито ключей=4, ошибка=Failed to execute 'setItem' on 'Storage': Setting the value of 'qa_fill_4' excee, тост-очередь=false
+OK   B13 [шаг6] квота: localStorage забит до отказа → saveGameState не роняет приложение; после очистки сохранение снова работает
+OK   B14 [шаг7] new-game-keep-cards: прогресс сброшен (золото 30, ур.1, захваты 0), карточки живы (3)
+OK   B15 [шаг7] full-wipe-all: чистое состояние после перезагрузки (золото 30, карточек 0, сейв без прогресса) + наблюдение онбординга
+OK   B17 [шаг8] гонка облака: локальные изменения при открытом диалоге smartCloudSync → устаревший applySyncData отбрасывается (облачный снапшот не затирает живое состояние)
+
+===== QA-DATA: ЦЕЛОСТНОСТЬ ДАННЫХ =====
+OK   A1 [node] фаззинг санитайзеров: 100 случайных мутаций валидного state — STATE_GUARDS.* не бросают, выход в норме
+OK   A2 [node] миграция v7 → v10: regions→captured (порядок каталога), золото/карточки/задачи целы, army/siege созданы, season посеян (MIGRATIONS[7] для входа v7 не вызывается — он для v≤6)
+OK   A2b [node] миграция v5 (+мусорные поля v≤6: shards/flasks/hp/isHollow/boss*) → v10: MIGRATIONS[7] вычищает легаси, tractState отсутствует → regions 0
+OK   A3 [node] миграция v8 (без season) → v10: Сезон 1 со снапшотом текущего прогресса
+OK   B1 онбординг: старт-колода принимается (2 карточки), онбординг закрывается — база для слоёв защиты
+OK   B2 обогащение состояния v10: золото 777, 3 карточки, 2 твердыни (zh1 worn, builtAt), гарнизон, осада w3, задачи+призрак, квесты с progress, Сезон 2 — saveGameState OK
+OK   B3 [шаг1] F5 round-trip v9 байт-в-контент: gold/strongholds/army/siege/tasks/quests(progress)/season/hirePool — stable stringify идентичен (норма builtAt null→undefined)
+OK   B4 [шаг2а] v7-фикстура с мусором (shards/boss*/isHollow) → applySyncData: v9, 7 захватов, мусор вычищен, золото 4321, задачи целы, Сезон 1 посеян
+OK   B5 [шаг2б] v8-фикстура без season → v10: сеется Сезон 1 (start=сегодня MSK) со снапшотом {totalXp 7000, gold 1234, captured 3, completions 9, level 7}
+OK   B6 [шаг2в] битые JSON ×20 (детерминированные мутации валидного сейва) → applySyncData: приложение не падает, санитайзеры держат инварианты
+OK   B7 [шаг2г] битый сейв в localStorage через полный F5 ×3 (обрезка/порча символов/v:999): приложение не падает, UI рендерится
+OK   B8 [шаг3, слой 1] удалён neurodeck_full_save при живом cards_backup → после F5 карточки и прогресс восстановлены из аварийной копии
+OK   B9 [шаг3, слой 2] FORGED пуст + ever_saved=1 → онбординг не заблокирован: старт-колода не навязывается, UI жив, ошибок нет
+OK   B10 [шаг4] export-json → скачивание контента → импорт через file input (syncModal) → экспортированное подмножество восстановлено (gold 777, 3 карточки, цели)
+OK   B11 [шаг4б] полный бэкап .ndsync (download-sync-file) → импорт через file input: байт-в-контент восстановление ВСЕГО состояния (твердыни, сезон, квесты, builtAt)
+OK   B12 [шаг5] мульти-вкладка: свежая вкладка видит запись A; живая вкладка B адоптирует её через storage-event; LWW-гвард не даёт устаревшему сейву B затереть запись A
+OK   B13 [шаг6] квота: localStorage забит до отказа → saveGameState не роняет приложение; после очистки сохранение снова работает
+OK   B14 [шаг7] new-game-keep-cards: прогресс сброшен (золото 30, ур.1, захваты 0), карточки живы (3)
+OK   B15 [шаг7] full-wipe-all: чистое состояние после перезагрузки (золото 30, карточек 0, сейв без прогресса) + наблюдение онбординга
+OK   B17 [шаг8] гонка облака: локальные изменения при открытом диалоге smartCloudSync → устаревший applySyncData отбрасывается (облачный снапшот не затирает живое состояние)
+
+ИТОГО: 20/20 OK, провалено: 0, skip: 0
+JS-ошибки консоли за сессию: 0
+
+> neurodeck@0.0.0 test:qa:chaos
+> node tools/playtest-chaos.cjs
+
+
+===== QA-CHAOS ПРОГОН =====
+OK   C0.1 даблклик «Принять» старт-колоды: ровно 2 карточки, не 4
+OK   C0.2 онбординг закрыт (если показан)
+OK   A.1 фиксстура: sh01 захвачена (налог 1), построек нет, казна 100; неделя «текущая» (осада подавлена)
+OK   A.2 clock=MSK 23:59:59, lastDayReset=вчера → тик: ровно один, налог ровно +1, событие «quiet» (пин 0.8)
+OK   A.3 clock +11с = 00:00:10 следующего дня → второй суточный тик: снова ровно +1, без дублей (пин quiet)
+OK   A.4 повторный вызов checkDailyReset в тех же сутках = no-op (дельта 0, событие не перебрасывается)
+OK   B.1 оффлайн −7 дней: докрутка ровно 7 (налог 1×7), осада ровно 1 раз (week 1→2), reset=сегодня
+OK   B.2 оффлайн −8 дней: кап — докручено те же 7, не 8
+OK   B.3 оффлайн −30 дней: кап 7, без спирали и без зависания (zh1+df1+ec1, казна 0 → дефицит)
+OK   C.1 фиксстура: sh01, казна 500, карточка id1 (C, mastery 0/5)
+OK   C.2 даблклик «Выполнить» карточки: XP/💰/мастерство начислены РОВНО один раз
+OK   C.3 даблклик покупки zh1: списано ровно 60, построено 1 раз
+OK   C.4 даблклик найма «В армию» (t1): пул −2, казна −2 — корректно на каждый клик
+OK   C.5 даблклик «Да» в конфирме штурма: ровно ОДИН штурм (пин rand 0.99 → детерминированные потери)
+OK   D.1 фиксстура: 2 карточки; edit-card открыт
+OK   D.2 edit-card → ранг-ап (QA-чит mastery) → вторая волна edit поверх; поверх — sync; закрытие в обратном порядке
+OK   D.3 sync → штурм-конфирм поверх → отмена → всё живо
+OK   E.caravan (пин Math.random=0): событие=caravan, фактическая механика
+OK   E.market (пин Math.random=0.4): событие=market, фактическая механика
+OK   E.quiet (пин Math.random=0.8): событие=quiet, фактическая механика
+OK   F.1 forge: пустое имя — блокируется
+OK   F.2 forge: имя 1000 символов обрезается до 40 (раунд 4: лимит длины), сейв не падает
+OK   F.3 forge: имя только эмодзи — отклонено валидацией (P3c, волна 1), без краша
+OK   F.4 задача с именем-эмодзи — отклонена валидацией (P3c, волна 1), без краша
+OK   F.5 цель с 50 шагами — создается, рендер без краша
+OK   G.1 фиксстура: карточка id1; Клятва назначена на неё (QA-чит = assignBloodOath-объект)
+OK   G.2 удаление карточки с активной Клятвой: клятва отменяется, без краша
+OK   H.1 HERO.gold = −500 (QA-чит): найм блокирован, пул и постройки не тронуты
+OK   H.2 при казне −500: выполнение карточки +1💰 и пропуск (clamp max(0,…)) — без краша
+
+ИТОГО: 29/29 OK, провалено: 0
+Крашей (pageerror/консоль): 0
+Зависаний (шаг >15с): 0
+
+--- СОБЫТИЯ ДНЯ (доказательства) ---
+[
+ {
+  "event": "caravan",
+  "delta": 21,
+  "toastText": "Торговцы из-за гор: +20 💰 мгновенно!",
+  "cost2_before": 5,
+  "cost2_after": 5,
+  "income_before": 1,
+  "income_after": 1,
+  "taskStatus": null,
+  "wkTaskFails": 0
+ },
+ {
+  "event": "market",
+  "delta": 2,
+  "toastText": "Налоги твердынь ×1.5 сегодня!",
+  "cost2_before": 5,
+  "cost2_after": 5,
+  "income_before": 1,
+  "income_after": 2,
+  "taskStatus": null,
+  "wkTaskFails": 0
+ },
+ {
+  "event": "quiet",
+  "delta": 1,
+  "toastText": "Ничего не произошло. Но золото капает.",
+  "cost2_before": 5,
+  "cost2_after": 5,
+  "income_before": 2,
+  "income_after": 1,
+  "taskStatus": null,
+  "wkTaskFails": 0
+ }
+]
+
+--- НАХОДКИ ---
+[OK] Караван (caravan) — РАБОТАЕТ
+   казна +21 приCaptured=1 (налог 1 + бонус max(20, 1×15)=20); bonus в checkDailyReset app.js:2815
+[OK] Ярмарка (market) — РАБОТАЕТ (раунд 4): налоги ×1.5 в тике
+   доход твердынь 1 → 2
+[P2] Бейдж Клятвы перекрывает кнопки ✎/🗑 карточки: тап по 🗑 на карточке с активной Клятвой не проходит (делегированный обработчик получает бейдж без data-action — клик умирает)
+   geometry: кнопка {"x":304,"y":422,"w":26,"h":26}, бейдж {"x":40,"y":426,"w":111,"h":21}, elementFromPoint(центр кнопки) = DIV|card-btn delete; .blood-oath-badge position:absolute (css) — z над .card-corner-actions
+404 URL: []
+
+> neurodeck@0.0.0 test:qa:parity
+> node tools/qa-economy-parity.cjs
+
+
+=== QA-ECONOMY PARITY (порт 8830, попыток 1) ===
+Проверок: 217, PASS: 217, FAIL: 0
+Инварианты кампании: нарушений 0
+PageErrors: 1
+  CONSOLE: Failed to load resource: net::ERR_FAILED
+
+> neurodeck@0.0.0 test:sim:economy
+> node tools/sim-economy.cjs
+
+===== ЭКОНОМИЧЕСКАЯ СИМУЛЯЦИЯ (реальные stronghold-model функции, 90 дней, сиды 11/22/33) =====
+Сценарий            | захват@90 | штурм-день | нулей💰 | P50💰 | макс.долг | руин-соб | потерян.нед | выбор-дни
+Дисциплина          |        10 |          9 |       0 |    58 |         0 |    4 |           1 |       49%
+Ветвление           |         9 |          9 |       0 |    57 |         0 |    4 |           1 |       42%
+Оптимизатор-эконом  |        11 |          9 |       0 |   116 |         0 |    9 |           1 |       32%
+Казуал              |         8 |         17 |       5 |    65 |         3 |    0 |           1 |        4%
+Отпуск              |         6 |          9 |       0 |    62 |         0 |    0 |           1 |       22%
+Голо-армия          |        11 |          9 |       0 |    70 |         0 |    6 |           2 |       38%
+Голо-экономия       |         1 |          — |       7 |    78 |         7 |   90 |           0 |        0%
+Инфляция дохода (дисциплина, д90/д30): ×31.5
+OK   G1. дисциплина: первая осада ≤ 14 дней (факт: 9)
+OK   G1. дисциплина: ≥ 10 твердынь за 90 дней (факт: 10)
+OK   G1. дисциплина: нулевых дней ≤ 20 (факт: 0)
+OK   G1. дисциплина: коррупционных руин нет (осадные — легитимны; факт: 0)
+OK   G2. казуал: ≥ 4 твердынь без стратегии (факт: 8)
+OK   G2. казуал: ранняя руина невозможна (факт: null)
+OK   G3. отпуск 14 дн: разрушений ≤ 8 (факт: 0)
+OK   G3. отпуск: comeback не отбрасывает глубже казуала (факт: 6 vs 8)
+OK   G4. армия-фокус жизнеспособна: ≥ 6 твердынь (факт: 11)
+OK   G5. эконом-жокей не обязателен: разрыв ≤ 12 (факт: -1)
+OK   G6. sinks работают: P50 золота дисциплины не копится бесконтрольно (факт: 58)
+OK   G7. ветвление: первая осада ≤ 14 дней (факт: 9)
+OK   G7. ветвление: ≥ 9 твердынь из 18 доступных (обход ш08/ш18; факт: 9)
+OK   G7. ветвление: нулевых дней ≤ 20 (факт: 0)
+OK   G7. ветвление: коррупционных руин нет (факт: 0)
+OK   G7. ветвление: обход ш08 — граф-маршруты больше индексных, диагональ ш07→ш09 платит за обход (факт: 8 vs 7)
+OK   G7. ветвление: кап бонуса путей +38% соблюдается (факт: 0.16)
+Отчёт (не гейт): рост дохода д90/д30 ×31.5; руины по коррупции: А=0 F=2; P50 золота: E=70; маршруты ветвления: граф 8 / индекс 7
+
+===== ГОРИЗОНТЫ P8 (Марафонец: 180/365 дней, престиж-цикл, эндгейм-ротация, рост сейва) =====
+Марафонец 180 дн | захват@180: 20/20/20 (мед 20) | вознесений: 0/0/0 | P50💰: 258/258/258 | нулей💰: 0/0/0 | потер.нед: 3/3/3
+  сид-медиана: трон 3/5 · венцы 5 · руин 4 (по коррупции 0, макс.долг 0 дн) · эндгейм 11 дн / 1 вс · модификаторов недели: goldvein,greed
+Марафонец 365 дн | захват@365: 20/20/20 (мед 20) | вознесений: 1/1/1 | P50💰: 51370/51370/51370 | нулей💰: 0/0/0 | потер.нед: 5/5/5
+  сид-медиана: трон 3/5 · венцы 4 · руин 4 (по коррупции 0, макс.долг 0 дн) · эндгейм 85 дн / 12 вс · модификаторов недели: goldvein,greed,stillness,fog,feast,lent,storm · вознесения в дни 242
+Сейв-оценка@180: 87 186 симв = 22 чанков (порог 160) · карточек 183 (54 КБ) · истории 17 КБ · твердыни 9 КБ · герой 1 КБ · прочее 4 КБ · запас до рельсы: 2078 карточек
+Сейв-оценка@365: 143 357 симв = 35 чанков (порог 160) · карточек 368 (108 КБ) · истории 18 КБ · твердыни 10 КБ · герой 1 КБ · прочее 4 КБ · запас до рельсы: 2072 карточек
+OK   G8. марафон 180д: ≥ 15 твердынь (факт: 20)
+OK   G8. марафон 180д: нулевых дней ≤ 40 (факт: 0)
+OK   G8. марафон 180д: коррупционных руин нет (факт: 0)
+OK   G9. престиж-цикл: ≥ 1 вознесения за 365д (факт: 1)
+OK   G9. после сброса мир восстановим: ≥ 5 твердынь к д365 (факт: 20)
+OK   G9. година: нулевых дней ≤ 80 (факт: 0)
+OK   G10. эндгейм-ротация живая: ≥ 3 модификаторов недели за год (факт: goldvein,greed,stillness,fog,feast,lent,storm)
+OK   G10. худшие недели модификаторов не рушат дисциплину (факт коррупционных руин: 0)
+OK   G10. вне эндгейма ротация не применяется (гейт 20/20 — как weeklyModsNow в app.js)
+OK   G11. сейв@365: 35 чанков ≤ 160 (жёсткий лимит облака 200; CAMPAIGN-2.0.md §риски)
+ИТОГО: гейты экономики пройдены

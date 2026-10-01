@@ -6,7 +6,7 @@ Baseline: b59ac16aeb999c0eb83964b1826a8655b321ecbc
 
 | Package | CLI | CI | Evidence | Commit |
 |---|---|---|---|---|
-| R1 | 0 | precommit and independent full CI green | queue4-evidence/R1.json | commit follows; push after HEAD CI |
+| R1 | 0 | final pinned-files CI and committed HEAD CI required | queue4-evidence/R1.json | R1 pin repair; validated external R1-release.json records final SHA |
 | R2 | pending | pending | pending | pending |
 | R3 | pending | pending | pending | pending |
 | R4 | pending | pending | pending | pending |

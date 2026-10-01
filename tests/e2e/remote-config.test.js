@@ -36,7 +36,7 @@ test('service worker config uses network, not poisoned shell cache; offline fall
   await page.evaluate(async () => { await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready; });
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await page.evaluate(async () => {
-    const cache = await caches.open('nd-shell-v102');
+    const cache = await caches.open('nd-shell-v103');
     await cache.put('/config/weekly-modifiers.v1.json', new Response('poisoned'));
   });
   const text = await page.evaluate(async () => (await fetch('/config/weekly-modifiers.v1.json')).text());
