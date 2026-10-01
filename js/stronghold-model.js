@@ -394,6 +394,35 @@
     function weeklyUpkeepMult(seasonNum, week, endgame) { return weeklyMult(seasonNum, week, 'upkeepMult', endgame); }
     function weeklySiegeMult(seasonNum, week, endgame) { return weeklyMult(seasonNum, week, 'siegeMult', endgame); }
 
+    // P14: детерминированный счёт недели (CAMPAIGN-2.0.md §5 — «эффективность, не голый спидран»):
+    // захваты / потери гарнизона / нулевые дни / восстановление после риска. Чистая функция от
+    // фактов — состояние собирает вызывающий (app.js weeklyScoreFacts из существующих полей),
+    // модель в сейв и каталог не ходит, одинаковые факты дают одинаковый результат.
+    // Компоненты: ⚔ захваты 20/шт (кап 5) · 🛡 гарнизон 100×(1−lossesPct) · 📖 дисциплина
+    // 100−12×нулевые дни (кап 8) · ♻ восстановление 25/шт (кап 2); база 50 — «корона держится».
+    // Итог 50..400 (WEEKLY_SCORE_MAX); грейды: S ≥300 · A ≥240 · B ≥180 · C ≥120 · иначе D.
+    var WEEKLY_SCORE_MAX = 400;
+    function weeklyScore(facts) {
+        var f = (facts && typeof facts === 'object') ? facts : {};
+        function clampInt(v, lo, hi) {
+            var n = Math.floor(Number(v));
+            if (!isFinite(n)) n = 0;
+            return Math.max(lo, Math.min(hi, n));
+        }
+        var lp = Number(f.lossesPct);
+        if (!isFinite(lp) || lp < 0) lp = 0;
+        if (lp > 1) lp = 1;
+        var parts = {
+            captures: 20 * clampInt(f.captures, 0, 5),                 // 0..100
+            garrison: Math.round(100 * (1 - lp)),                      // 0..100
+            discipline: 100 - 12 * clampInt(f.zeroDays, 0, 8),         // 4..100
+            recovery: 25 * clampInt(f.recoveries, 0, 2)                // 0..50
+        };
+        var score = 50 + parts.captures + parts.garrison + parts.discipline + parts.recovery;
+        var grade = (score >= 300) ? 'S' : (score >= 240) ? 'A' : (score >= 180) ? 'B' : (score >= 120) ? 'C' : 'D';
+        return { score: score, grade: grade, parts: parts, max: WEEKLY_SCORE_MAX };
+    }
+
     return {
         armyPower: armyPower,
         defensePower: defensePower,
@@ -423,6 +452,7 @@
         weeklyIncomeMult: weeklyIncomeMult,
         weeklyUpkeepMult: weeklyUpkeepMult,
         weeklySiegeMult: weeklySiegeMult,
+        weeklyScore: weeklyScore,
         TIER_KEYS: TIER_KEYS
     };
 });

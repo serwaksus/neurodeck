@@ -1983,6 +1983,35 @@ var m = SM.weeklyModifierOf(sw.sn, sw.wk);
 if (!m || typeof m.name !== 'string' || typeof m.desc !== 'string') return '';
 return '<div class="sh-trade">' + (m.icon || '🌀') + ' <b>' + m.name + '</b>: ' + m.desc + ' <span style="color:var(--text-dim)">· эндгейм-модификатор недели</span></div>';
 }
+// ===================== P14: СЧЁТ НЕДЕЛИ — детерминированный (CAMPAIGN-2.0.md §5) =====================
+// Факты выводятся ТОЛЬКО из существующих полей — новых полей схемы нет (миграция v14 была
+// исключительной, P11). Смысл фактов: захваты = дельта сезона от снапшота (в эндгейме это возвраты
+// павших после воскресных осад); потери гарнизона = доля удерживаемых твердынь без гарнизона
+// (невосполненные потери — следующее воскресенье бьёт по фронту без обороны); нулевые дни =
+// siege.wkSkips (пропуски текущей недели, обнуляется в понедельник); восстановление после риска =
+// контрштурм после падения (#95) + возврат всех 20/20 после провального воскресенья.
+function weeklyScoreFacts() {
+    ensureStrongholdState();
+    var held = 0, defended = 0;
+    strongholds.forEach(function(s) {
+        if (!s || !s.captured) return;
+        held++;
+        if (SM && typeof SM.stackPower === 'function' && SM.stackPower(s.garrison) > 0) defended++;
+    });
+    return {
+        captures: (typeof seasonCapturedDelta === 'function') ? seasonCapturedDelta() : 0,
+        lossesPct: held > 0 ? 1 - defended / held : 0,
+        zeroDays: (siege && typeof siege.wkSkips === 'number') ? siege.wkSkips : 0,
+        recoveries: ((siege && siege.retriedThisWeek === true) ? 1 : 0) + ((siege && siege.lastResult === 'fail' && capturedCount() >= STRONGHOLDS.length) ? 1 : 0)
+    };
+}
+function weeklyScoreLineHtml() { // P14: счёт недели в панели сезона (только эндгейм 20/20 — вне эндгейма строка пустая, базлайны не задеты)
+    if (!weeklyEndgame() || !SM || typeof SM.weeklyScore !== 'function') return '';
+    var r = SM.weeklyScore(weeklyScoreFacts());
+    if (!r || typeof r.score !== 'number' || !isFinite(r.score)) return '';
+    return '<div class="sh-trade" title="Эффективность недели (CAMPAIGN-2.0 §5): ⚔ захваты ' + r.parts.captures + ' · 🛡 гарнизон ' + r.parts.garrison + ' · 📖 дисциплина ' + r.parts.discipline + ' · ♻ восстановление ' + r.parts.recovery + ' · из ' + r.max + '">'
+        + '🏅 Счёт недели: <b>' + r.score + '</b> · <b>' + r.grade + '</b> <span style="color:var(--text-dim)">· ⚔' + r.parts.captures + ' 🛡' + r.parts.garrison + ' 📖' + r.parts.discipline + ' ♻' + r.parts.recovery + '</span></div>';
+}
 // ===================== Г2-1: ПОВЕРЕННЫЕ ТЬМЫ — боссы провинций (очередь I..XI по 4 провинциям каталога) =====================
 function bossEscalation(num) { return (1 + 0.05 * (num - 1)) * Math.pow(1.2, HERO.ascension || 0); } // цели фаз ×1.5 к XI · Г2-5: ×1.2^N за круг вознесения
 function ensureBossesState() {
@@ -4368,6 +4397,7 @@ var _sTotal = seasonDaysTotal(_season.start);
 var _sDone = seasonDaysDone(_season.start);
 html += '<div class="sh-season"><div class="sh-season-line">🍂 Сезон ' + _season.num + ': <b>' + seasonName(_season.num) + '</b> · осталось <b>' + Math.max(0, _sTotal - _sDone) + '</b> дн.</div><div class="sh-season-bar"><div class="sh-season-fill" style="width:' + Math.min(100, Math.round(_sDone / _sTotal * 100)) + '%;"></div></div></div>';
 html += weeklyModifierLineHtml(); // C6-lite: модификатор недели (только эндгейм 20/20 — вне эндгейма строка пустая, базлайны не задеты)
+html += weeklyScoreLineHtml(); // P14: счёт недели (только эндгейм 20/20) — в блоке панели сезона
 var _wt = warlordTempo(), _wm = seasonCapturedDelta(); // Г1-6: тень воеводы
 html += '<div class="sh-warlord">⚔ Глорх, Погибель Урядов: <b>' + _wt + '</b> · ты: <b>' + _wm + '</b><div class="sh-season-bar" title="Прогресс до обгона воеводы"><div class="sh-season-fill' + (_wm >= _wt ? ' warlord-ahead' : '') + '" style="width:' + Math.min(100, Math.round(_wm / (_wt + 1) * 100)) + '%;"></div></div></div>';
 html += '<div class="sh-wrath">😮 Гнев: <b>' + siegeWrathNow() + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
