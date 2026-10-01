@@ -5,7 +5,7 @@
    При новом деплое: бампни ?v= в index.html И VERSION ниже — старый кэш удалится в activate. */
 'use strict';
 
-const VERSION = 'nd-shell-v93';
+const VERSION = 'nd-shell-v94';
 const SHELL = [
   './',
   'index.html',

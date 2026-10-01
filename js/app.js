@@ -169,6 +169,7 @@ case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodor
 case 'counter-siege': requestCounterSiege(); break;
 	case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
 	case 'km-approach': requestApproach(String(el.dataset.approach || '')); break; // C4: подход недели (не пишется в сейв)
+	case 'km-approach-cancel': requestApproachCancel(); break; // P10: отмена подготовки до тика (runtime, без полей состояния)
 	case 'sh-siege-store': buySiegeStore(String(el.dataset.store || '')); break; // C4: осадные ресурсы (схема v12)
 case 'km-edict': requestEdict(parseInt(el.dataset.idx), String(el.dataset.edict || '')); break; // Г4: эдикт провинции
 case 'km-chronicle-open': showChronicle(); break; // Г5-Ф: летопись
@@ -3089,7 +3090,7 @@ var overlay = document.getElementById('confirmOverlay');
 var yes = document.getElementById('confirmYes'), no = document.getElementById('confirmNo');
 var oldYes = yes.textContent, oldNo = no.textContent;
 document.getElementById('confirmTitle').textContent = 'Тактика штурма';
-document.getElementById('confirmBody').innerHTML = '⚔ «' + esc(STRONGHOLDS[idx].name) + '» · ' + f.line + assaultBreakdownHtml(idx, f) + '<br><span style="color:var(--text-dim)">' + f.lossLine + '</span><br><span style="color:var(--text-dim)">⚔ Штурм — норма · 🪶 Ложный отход: урон −20%, потери ×0.7 · 🔥 Натиск: урон +25%, потери ×2</span><br><span style="color:var(--blood-bright)">ESC — штурмовать по-обычному.</span>';
+	document.getElementById('confirmBody').innerHTML = '⚔ «' + esc(STRONGHOLDS[idx].name) + '» · ' + f.line + ((typeof assaultRiskInfo === 'function') ? assaultRiskInfo(f) : '') + assaultBreakdownHtml(idx, f) + '<br><span style="color:var(--text-dim)">' + f.lossLine + '</span><br><span style="color:var(--text-dim)">⚔ Штурм — норма · 🪶 Ложный отход: урон −20%, потери ×0.7 · 🔥 Натиск: урон +25%, потери ×2</span><br><span style="color:var(--blood-bright)">ESC — штурмовать по-обычному.</span>';
 yes.textContent = '⚔ Штурм'; no.textContent = '🪶 Ложный отход';
 var third = document.createElement('button');
 third.className = no.className;
@@ -3122,6 +3123,16 @@ function assaultForecast(idx) {
 	if ((siege.rams || 0) > 0 || (siege.ladders || 0) > 0) _lp += ' · 🧰 склад будет потрачен';
 	if (hasSpecialOk('sp1')) return { atk: atk, defN: defN, lossLine: _lp, line: '⚔ ' + atk + ' против 🛡 ' + defN + (atk > defN ? ' · превосходство' : ' · сил мало') };
 	return { atk: atk, defN: defN, lossLine: _lp, line: '⚔ ~' + Math.round(atk * 0.75) + '–' + Math.round(atk * 1.25) + ' против 🛡 ' + defN + ' (Гильдия Разведчиков даст точные числа)' };
+}
+// P10: «рискованно»-порог штурма — ratio < 1.2 (то же соотношение, что в превью: лестницы учтены).
+// При риске подтверждение меняет заголовок на ⚠ и несёт честную строку потерь; поток прежний —
+// один клик (линейные плейтесты 5.x–6.x/acceptance кликают #confirmYes однократно, правило 13).
+function assaultRiskInfo(f) {
+	if (!SM || !f || !Number.isFinite(f.atk) || !Number.isFinite(f.defN) || f.defN <= 0) return '';
+	var _common = { agi: STATS.agi.value, banner: (typeof hasSpecialOk === 'function') ? hasSpecialOk('sp2') : false, ram: (siege.rams || 0) > 0, ladder: (siege.ladders || 0) > 0 };
+	var _o = SM.assaultOutcome(f.atk, f.defN, _common);
+	if (!Number.isFinite(_o.ratio) || _o.ratio >= 1.2) return '';
+	return '<div class="assault-risk">⚠ РИСКОВАННО: соотношение ' + Math.round(_o.ratio * 100) + '% &lt; 120% — победа не гарантирована, при неудаче потери 10–30%.</div>';
 }
 // P6: брейкдаун штурма — соотношение, worst-case потери по attrition-формуле модели
 // (поражение — честный верхний край: rand()=1 → 30% до тарана), эффект подхода недели
@@ -3229,16 +3240,17 @@ if (siege.assaultDay === getMSKDayKey()) { showToast('⚔ Штурм уже бы
 if (!SM || SM.armyPower(army.units) <= 0) { showToast('⚔ Армии нет', 'Найми существ в твердыне', 'blood'); sfxError(); return; }
 var targets = assaultTargetChoices(); // C2: фронтир по графу next[]; одна цель = прежний линейный поток
 if (targets.indexOf(idx) < 0) idx = targets.length ? targets[0] : idx; // штурмовать можно только фронтир
-var confirmAssault = function(idx) { // параметр idx — пин wave-g1 Г1-4 (requestTactic(idx, f)/doAssault(idx, f, t))
-var f = assaultForecast(idx);
-if (capturedCount() >= 3) { // Г1-4: с 3-й твердыни — выбор тактики
-requestTactic(idx, f).then(function(t) { if (t) doAssault(idx, f, t); });
-return;
+	var confirmAssault = function(idx) { // параметр idx — пин wave-g1 Г1-4 (requestTactic(idx, f)/doAssault(idx, f, t))
+	var f = assaultForecast(idx);
+	var _risk = (typeof assaultRiskInfo === 'function') ? assaultRiskInfo(f) : ''; // P10: ratio<1.2 — «рискованно»-подтверждение (один клик, честный ⚠)
+	if (capturedCount() >= 3) { // Г1-4: с 3-й твердыни — выбор тактики
+	requestTactic(idx, f).then(function(t) { if (t) doAssault(idx, f, t); });
+	return;
 }
-	dungeonConfirm('⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + assaultBreakdownHtml(idx, f) + '<br><span style="color:var(--blood-bright)">' + f.lossLine + '</span>').then(function(ok) {
-	if (ok) doAssault(idx, f);
-	});
-};
+	dungeonConfirm(_risk ? '⚠ Рискованный штурм «' + esc(STRONGHOLDS[idx].name) + '»?' : '⚔ Штурм «' + esc(STRONGHOLDS[idx].name) + '»?', f.line + _risk + assaultBreakdownHtml(idx, f) + '<br><span style="color:var(--blood-bright)">' + f.lossLine + '</span>').then(function(ok) {
+		if (ok) doAssault(idx, f);
+		});
+	};
 if (targets.length > 1) { chooseAssaultTarget(targets, idx).then(function(pick) { if (pick !== null && !isNaN(pick)) confirmAssault(pick); }); return; } // развилка: сперва цель, потом подтверждение/тактика
 confirmAssault(idx);
 }
@@ -3658,6 +3670,8 @@ function requestStance(stanceId) {
 /* ===================== Campaign 2.0 C4: подготовка осады (подход недели + осадный склад) ===================== */
 // Подход НЕ пишется в сейв: выбор в UI → применение в тике (недельная осада / штурм); новая неделя
 // и перезагрузка всегда начинают со «Штурма» (норма). Модификаторы — чистые функции модели.
+// P10: панель консолидирована — разведка-статус, подход недели (+отмена до тика), осадный склад
+// и превью до/после в одном месте; только существующие функции и состояние, без новых полей.
 var siegeApproach = 'assault';
 function weekApproach() {
   return (SM && SM.SIEGE_APPROACHES && SM.SIEGE_APPROACHES[siegeApproach]) ? siegeApproach : 'assault';
@@ -3673,6 +3687,12 @@ function requestApproach(approachId) {
   showToast('🧭 Подход недели: ' + meta.name, meta.desc + ' · действует до воскресной осады', 'save');
   haptic('light'); renderStrongholds();
 }
+function requestApproachCancel() { // P10: отмена подготовки до тика — подход сбрасывается к норме «Штурм» (runtime-вар, сейва нет; склад не сгорает)
+  if (weekApproach() === 'assault') return;
+  siegeApproach = 'assault';
+  showToast('🧭 Подготовка отменена', 'Подход недели снова «Штурм» — воскресная осада пойдёт по норме. Осадный склад останется до штурма.', 'save');
+  haptic('light'); renderStrongholds();
+}
 function buySiegeStore(kind) { // C4: лестницы/таран — по 25💰, тратятся при следующем штурме (siege.rams/ladders, схема v12)
   ensureStrongholdState();
   if (kind !== 'ram' && kind !== 'ladder') return;
@@ -3685,17 +3705,48 @@ function buySiegeStore(kind) { // C4: лестницы/таран — по 25�
   sfxEquip(); haptic('light');
   renderStrongholds(); updateHeroUI(); saveGameState();
 }
-function siegePrepBlockHtml() { // C4: панель подготовки — подход недели + покупка осадных ресурсов
+function siegePrepScoutHtml() { // P10: статус разведки фронта — существующая механика тени (Г2-3), отчёт консолидирован в панель
+  var _today = (typeof getMSKDayKey === 'function') ? getMSKDayKey() : '';
+  var _st = (typeof scoutFresh === 'function') ? scoutFresh(HERO.scouts, _today) : null;
+  if (_st === 'pending') return '<div class="sh-scout">🌙 Разведка: тень в пути — точные силы врага будут завтра.</div>';
+  if (_st === 'fresh' && HERO.scouts && HERO.scouts.idx != null && STRONGHOLDS[HERO.scouts.idx]) {
+    var _si = HERO.scouts.idx;
+    var _where = (strongholds[_si] && strongholds[_si].captured) ? 'цель уже захвачена'
+      : ((typeof assaultTargetChoices === 'function' && assaultTargetChoices().indexOf(_si) >= 0) ? 'на фронте' : 'цель позади фронта');
+    var _stale = ((typeof daysBetween === 'function') && daysBetween(_today, HERO.scouts.readyDayKey) === -2) ? ' · устареет завтра' : '';
+    return '<div class="sh-scout">🌙 Разведка: свежий отчёт по «' + esc(STRONGHOLDS[_si].name) + '» — ' + _where + _stale + '.</div>' +
+      ((typeof scoutReportHtml === 'function') ? scoutReportHtml(_si) : '');
+  }
+  var _fi = (typeof frontIdx === 'function') ? frontIdx() : -1;
+  return '<div class="sh-scout">🌫 Разведки нет' + ((_fi >= 0 && STRONGHOLDS[_fi] && !strongholds[_fi].captured) ? ' — тень на фронте даст точные силы врага' : '') + '.</div>';
+}
+function siegePrepPreviewHtml() { // P10: превью до/после — фронтальный штурм (assaultForecast + брейкдаун P6) и недельная оборона (siegeAlarmPreview)
+  if (!SM) return '';
+  var _targets = (typeof assaultTargetChoices === 'function') ? assaultTargetChoices() : [];
+  var _ti = _targets.length ? _targets[0] : ((typeof frontIdx === 'function') ? frontIdx() : -1);
+  var _atk = (_ti >= 0 && STRONGHOLDS[_ti] && (typeof assaultForecast === 'function')) ? assaultForecast(_ti) : null;
+  var _dts = (typeof daysToSiegeNow === 'function') ? daysToSiegeNow() : -1;
+  var _def = (typeof siegeAlarmPreview === 'function') ? siegeAlarmPreview() : null;
+  if (!_atk && !_def) return '';
+  var rows = [];
+  if (_atk) rows.push('⚔ Штурм фронта «' + esc(STRONGHOLDS[_ti].name) + '» — до/после: ' + _atk.line + ((typeof assaultRiskInfo === 'function') ? assaultRiskInfo(_atk) : ''));
+  if (_def) rows.push('🛡 Осада недели ' + (_dts === 0 ? 'сегодня ночью' : '(через ' + Math.max(1, _dts) + ' дн.)') + ': враг ~' + _def.power + ' · оборона ' + _def.def + (_def.ratio === null ? ' — ' : ' (' + Math.round(_def.ratio * 100) + '%) — ') + _def.advice);
+  return '<div class="assault-breakdown">' + rows.map(function(r) { return '<div>' + r + '</div>'; }).join('') + '</div>' +
+    (_atk && (typeof assaultBreakdownHtml === 'function') ? assaultBreakdownHtml(_ti, _atk) : '');
+}
+function siegePrepBlockHtml() { // P10: консолидированная панель подготовки осады — разведка, подход недели (+отмена), осадный склад, превью
   var cat = (SM && SM.SIEGE_APPROACHES) ? SM.SIEGE_APPROACHES : { assault: { icon: '⚔', name: 'Штурм', desc: 'без модификаторов' }, siege: { icon: '🏰', name: 'Осада', desc: 'сила врага −20%, гнев +1' }, trick: { icon: '🎭', name: 'Хитрость', desc: 'пров. 3: гарнизон врага −10%' } };
   var cur = weekApproach();
   var row = '<div class="km-stance-row">' + Object.keys(cat).map(function(aid) {
     var a = cat[aid], act = cur === aid;
-    return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-approach" data-approach="' + aid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + a.icon + '</span><span class="km-stance-name">' + a.name + '</span><span class="km-stance-desc">' + a.desc + '</span></button>';
-  }).join('') + '</div>';
+    return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-approach" data-approach="' + aid + '" aria-pressed="' + (act ? 'true' : 'false') + '" title="' + a.name + ': ' + a.desc + ' · действует до воскресной осады"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + a.icon + '</span><span class="km-stance-name">' + a.name + '</span><span class="km-stance-desc">' + a.desc + '</span></button>';
+  }).join('') +
+    (cur !== 'assault' ? '<button class="km-stance sh-prep-cancel" data-action="km-approach-cancel" title="Отмена подготовки до тика: воскресная осада пойдёт нормой «Штурм». Осадный склад не сгорает." aria-label="Отменить подготовку: вернуть подход Штурм"><span class="km-stance-ico">↩</span><span class="km-stance-name">Отменить</span><span class="km-stance-desc">подход до осады</span></button>' : '') +
+    '</div>';
   var ramN = siege.rams || 0, ladN = siege.ladders || 0;
   var store = '<div class="sh-trade" style="margin:0 0 6px">🧰 Осадный склад: 🐏 таран ×' + ramN + ' (−10% потерь) · 🪜 лестницы ×' + ladN + ' (+5% к соотношению) — тратятся при штурме</div>' +
     '<div style="margin:0 0 12px"><button class="sh-mini" data-action="sh-siege-store" data-store="ram">🐏 Таран 25💰</button> <button class="sh-mini" data-action="sh-siege-store" data-store="ladder">🪜 Лестницы 25💰</button></div>';
-  return '<div class="sh-sec-title">🧭 Подход недели — подготовка осады</div>' + row + store;
+  return '<div class="siege-prep"><div class="sh-sec-title">🧭 Подготовка осады</div>' + siegePrepScoutHtml() + row + store + siegePrepPreviewHtml() + '</div>';
 }
 var EDICTS = {
   tax:   { icon: '💰', name: 'Военный налог',   desc: 'налоги провинции ×1.25, порядок −2/день',      cost: 150, taxMult: 1.25, orderPerDay: -2 },
@@ -4308,8 +4359,7 @@ html += '<div class="sh-card' + (ti === front ? ' front' : '') + ' km-front-card
 '<div class="sh-meta">' + frontPowerText(ti) + '</div></div>' +
 '<button class="sh-assault" data-action="sh-assault" data-idx="' + ti + '">⚔ Штурм</button>' + scoutButtonHtml(ti) + '</div>';
 });
-if (front >= 0) html += scoutReportHtml(front);
-var tRoutesUI = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
+var tRoutesUI = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0; // P10: отчёт тени консолидирован в панель подготовки (siegePrepScoutHtml) — и для не-фронтальных целей
 if (tRoutesUI > 0) html += '<div class="sh-trade">🛃 Торговые пути: <b>' + tRoutesUI + '</b> · налоги <b>+' + Math.round((SM.tradeBonus(tRoutesUI)) * 100) + '%</b></div>';
 var _season = ensureSeason();
 var _sTotal = seasonDaysTotal(_season.start);

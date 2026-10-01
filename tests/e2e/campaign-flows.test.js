@@ -323,6 +323,73 @@ test('C4: подход недели — «Осада» +1 гнев, «Хитро
   await expect(page.locator('#confirmBody')).not.toContainText('против 🛡 1100');
 });
 
+// ===================== P10: панель подготовки осады (консолидация) =====================
+test('P10: панель подготовки — разведка, склад, превью до/после, отмена подхода до тика', async ({ page }) => {
+  await bootWithSave(page, makeSave({ captured: 1 })); // фронт sh02 «Лаголь Земли»
+
+  // консолидированная панель: разведка-статус, склад и превью в одном контейнере
+  const panel = page.locator('.siege-prep');
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText('Подготовка осады');
+  await expect(panel).toContainText('Разведки нет'); // тени не было
+  await expect(panel).toContainText('тень на фронте даст точные силы');
+  await expect(panel.locator('.sh-trade', { hasText: 'Осадный склад' })).toContainText('таран ×0');
+  await expect(panel).toContainText('Штурм фронта «Лаголь Земли» — до/после'); // превью штурма (assaultForecast)
+  await expect(panel).toContainText('против 🛡 28');
+  await expect(panel).toContainText('Осада недели'); // превятие обороны (siegeAlarmPreview), любой день
+
+  // отмена подготовки до тика: кнопки нет при дефолте, появляется после выбора подхода
+  await expect(panel.locator('[data-action="km-approach-cancel"]')).toHaveCount(0);
+  await page.click('.km-stance[data-approach="siege"]');
+  await expect(page.locator('.sh-context-anchor')).toContainText('Гнев: 1/10'); // «Осада» честно +1 гнев
+  const cancel = panel.locator('[data-action="km-approach-cancel"]');
+  await expect(cancel).toHaveCount(1);
+  await expect(cancel).toHaveAttribute('title', /Отмена подготовки до тика/);
+  await cancel.click();
+  await expect(page.locator('#toast .t-title')).toContainText('Подготовка отменена');
+  await expect(page.locator('.km-stance[data-approach="assault"]')).toHaveClass(/active/);
+  await expect(page.locator('.sh-context-anchor')).toContainText('Гнев: 0/10'); // гнев подхода снят до тика
+  await expect(panel.locator('[data-action="km-approach-cancel"]')).toHaveCount(0); // отменили — кнопка ушла
+});
+
+test('P10: «рискованно»-подтверждение при ratio<1.2 — отмена не тратит день, подтверждение проводит штурм', async ({ page }) => {
+  // армия 10×t1 → atk 21 против 🛡 28 → ratio 75% < 120%
+  const save = makeSave({ captured: 1 });
+  save.army = { units: { t1: 10, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 3 };
+  await bootWithSave(page, save);
+
+  // рискованная пометка видна ещё в панели подготовки — до клика на штурм
+  await expect(page.locator('.siege-prep')).toContainText('РИСКОВАННО');
+
+  await page.click('.sh-assault[data-idx="1"]');
+  await expect(page.locator('#confirmOverlay')).toHaveClass(/show/);
+  await expect(page.locator('#confirmTitle')).toHaveText('⚠ Рискованный штурм «Лаголь Земли»?');
+  const body = page.locator('#confirmBody');
+  await expect(body.locator('.assault-risk')).toHaveCount(1);
+  await expect(body).toContainText('РИСКОВАННО: соотношение 75% < 120%');
+  await expect(body).toContainText('при неудаче потери 10–30%');
+  await expect(body.locator('.assault-breakdown')).toHaveCount(1); // брейкдаун P6 на месте
+
+  // отмена — день штурма не потрачен: модалка открывается снова
+  await page.click('#confirmNo');
+  await expect(page.locator('#confirmOverlay')).not.toHaveClass(/show/);
+  await page.click('.sh-assault[data-idx="1"]');
+  await expect(page.locator('#confirmTitle')).toHaveText('⚠ Рискованный штурм «Лаголь Земли»?');
+
+  // подтверждение — один клик, штурм проводится (ratio 0.75 → отступление с потерями)
+  await page.click('#confirmYes');
+  await expect(page.locator('#toast .t-title')).toContainText('Отступление');
+  await expect(page.locator('.km-front-card', { hasText: 'Лаголь Земли' })).toHaveCount(1); // фронт не сдвинулся
+});
+
+test('P10: превью в панели живо — подход «Хитрость» меняет прогноз гарнизона (1100 → 990)', async ({ page }) => {
+  await bootWithSave(page, makeSave({ captured: 10 })); // фронт sh11 пров. 3, total 1100
+  await expect(page.locator('.siege-prep')).toContainText('против 🛡 1100');
+  await page.click('.km-stance[data-approach="trick"]');
+  await expect(page.locator('.siege-prep')).toContainText('против 🛡 990');
+  await expect(page.locator('.siege-prep')).not.toContainText('против 🛡 1100');
+});
+
 // ===================== P6: брейкдауны экономики =====================
 test('P6: брейкдауны — тайл покупки «до → после» с окупаемостью; штурм — соотношение и worst-case', async ({ page }) => {
   // sh01+sh02 захвачены: налоги 3/день, построек нет; в рекомендациях sh02 доступна ec2 «Амбары»
