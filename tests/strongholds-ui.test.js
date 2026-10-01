@@ -149,3 +149,25 @@ test('штурм из e2e-сценария: 14×Т1 (power 28) берёт тве
     assert.equal(out.win, true, '28 > 5 → победа');
     assert.ok(out.attritionPct > 0.05 && out.attritionPct < 0.3, 'attrition в клампах');
 });
+
+// ----------------------------------------------------------------
+// P9: branch UX полировка — disabled-цели развилки, тултипы последствий safe/war/trade, aria (source-pins)
+// ----------------------------------------------------------------
+
+test('P9: BRANCH_META — у всех трёх веток текст последствий; тултип = путь + факт узла', () => {
+    for (const b of ['safe', 'war', 'trade']) {
+        assert.ok(new RegExp(b + ":\\s*\\{[^}]*tip:\\s*'[^']{15,}'").test(app), 'tip-последствия у ветки ' + b);
+    }
+    const tip = extractFn(app, 'branchTipText');
+    assert.ok(tip.includes('.tip') && tip.includes('.tax') && tip.includes('.total'), 'тултип: характер пути + налог + гарнизон узла');
+});
+
+test('P9: chooseAssaultTarget — locked-цели disabled+aria-disabled с причиной; тултипы на целях, карточках и рёбрах карты', () => {
+    const fn = extractFn(app, 'chooseAssaultTarget');
+    assert.ok(fn.includes('confirm-target locked') && fn.includes('disabled aria-disabled="true"'), 'locked-строка: disabled + aria-disabled');
+    assert.ok(fn.includes('data-locked-idx') && fn.includes('откроется после'), 'у locked-цели нет data-target-idx и есть причина');
+    assert.ok(fn.includes('title="\' + branchTipText(i)'), 'тултип ветки на целях модалки');
+    assert.ok(/sh-req" title="' \+ branchTipText\(ti\)/.test(app), 'тултип на фронтирных карточках');
+    assert.ok(/branchT\(rBranch\)\.name \+ ' — ' \+ branchT\(rBranch\)\.tip/.test(app), 'тултип последствий на рёбрах карты');
+    assert.ok(css.includes('.confirm-target.locked') && css.includes(':hover:not(.locked)'), 'CSS: locked-стили и hover доступных');
+});

@@ -138,7 +138,7 @@ test('C2: развилка фронта — модалка выбора цели
   await page.click('.sh-assault[data-idx="7"]');
   await expect(page.locator('#confirmOverlay')).toHaveClass(/show/);
   await expect(page.locator('#confirmTitle')).toHaveText('Цель штурма');
-  await expect(page.locator('.confirm-target')).toHaveCount(2);
+  await expect(page.locator('.confirm-target[data-target-idx]')).toHaveCount(2); // P9: считаем только доступные (locked-цели без data-target-idx)
   await expect(page.locator('.confirm-target[data-target-idx="7"]')).toContainText('Дозорный Замок');
   await expect(page.locator('.confirm-target[data-target-idx="8"]')).toContainText('Башня Тягости');
 
@@ -155,6 +155,43 @@ test('C2: развилка фронта — модалка выбора цели
   await expect(page.locator('.km-front-card', { hasText: 'Башня Тягости' })).toHaveCount(0);
   // фронт ушёл дальше по safe-ветке: sh10 стал фронтирным рядом с недобитым sh08
   await expect(page.locator('.km-front-card', { hasText: 'Врата Свободы' })).toHaveCount(1);
+});
+
+// ===================== P9: disabled-цели, тултипы веток, a11y =====================
+test('P9: недоступные цели развилки — disabled с причиной; тултипы safe/war/trade; aria', async ({ page }) => {
+  await bootWithSave(page, makeSave({ captured: 7 })); // sh01–sh07 → фронтир sh08+sh09, за фронтом sh10
+  await page.click('.sh-assault[data-idx="7"]');
+  await expect(page.locator('#confirmOverlay')).toHaveClass(/show/);
+
+  // доступные цели активны и несут тултип-последствия своей ветки (путь + факт узла каталога)
+  const war = page.locator('.confirm-target[data-target-idx="7"]');
+  const safe = page.locator('.confirm-target[data-target-idx="8"]');
+  await expect(war).toBeEnabled();
+  await expect(safe).toBeEnabled();
+  await expect(war).toHaveAttribute('title', /военный путь: обычно .* · этот узел: налог \+30💰\/д · гарнизон 450/);
+  await expect(safe).toHaveAttribute('title', /безопасный путь: обычно .* · этот узел: налог \+39💰\/д · гарнизон 510/);
+
+  // недоступная цель sh10 («Врата Свободы») — за фронтом: disabled, aria-disabled, причина «откроется после»
+  const locked = page.locator('.confirm-target.locked');
+  await expect(locked).toHaveCount(1);
+  await expect(locked).toBeDisabled();
+  await expect(locked).toHaveAttribute('aria-disabled', 'true');
+  await expect(locked).toContainText('Врата Свободы');
+  await expect(locked).toContainText('откроется после');
+
+  // программный клик по заблокированной цели ничего не делает: модалка выбора всё ещё открыта
+  await page.evaluate(() => document.querySelector('.confirm-target.locked').click());
+  await expect(page.locator('#confirmOverlay')).toHaveClass(/show/);
+  await expect(page.locator('#confirmTitle')).toHaveText('Цель штурма');
+
+  // день штурма не потрачен — доступная цель по-прежнему выбирается и ведёт в подтверждение
+  await page.click('.confirm-target[data-target-idx="7"]');
+  await expect(page.locator('#confirmTitle')).toHaveText('Тактика штурма');
+  await page.click('#confirmNo');
+  await expect(page.locator('#confirmOverlay')).not.toHaveClass(/show/);
+
+  // тултипы веток и на фронтирных карточках под картой (развилка >1 цели)
+  await expect(page.locator('.km-front-card .sh-req').first()).toHaveAttribute('title', /путь: обычно/);
 });
 
 // ===================== C5: reward-choice босса =====================

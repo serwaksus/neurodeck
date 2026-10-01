@@ -3157,8 +3157,14 @@ function assaultBreakdownHtml(idx, f) {
 // Цель захвата = любой незахваченный next-узел захваченных твердынь (граф C1), не только линейный
 // индекс. ДЕФОЛТ (цель одна / игрок не выбирал) = прежний линейный порядок — линейные плейтесты
 // (strongholds 5.x–6.x, acceptance) проходят без правок. Тип ветки развилки — из branch цели.
-var BRANCH_META = { safe: { icon: '🌿', name: 'безопасный путь' }, war: { icon: '⚔', name: 'военный путь' }, trade: { icon: '🪙', name: 'торговый путь' } };
+var BRANCH_META = { safe: { icon: '🌿', name: 'безопасный путь', tip: 'обычно слабее гарнизоны и дешевле содержание' }, war: { icon: '⚔', name: 'военный путь', tip: 'обычно сильный гарнизон, но военная добыча' }, trade: { icon: '🪙', name: 'торговый путь', tip: 'обычно выше налоги и дальше маршруты, но дороже содержание' } };
 function branchMeta(b) { return BRANCH_META[b] || BRANCH_META.safe; }
+// P9: тултип ветки — характер пути (CAMPAIGN-2.0.md §1; «обычно» — путь, не гарантия) +
+// факт конкретного узла, чтобы решение игрока опиралось на числа каталога, а не только на ярлык
+function branchTipText(i) {
+var d = STRONGHOLDS[i], bm = branchMeta(d.branch);
+return bm.icon + ' ' + bm.name + ': ' + bm.tip + ' · этот узел: налог +' + d.tax + '💰/д · гарнизон ' + d.total;
+}
 function assaultTargetChoices() { // фронтирные цели штурма по графу next[] (модель); фоллбэк — линейный фронт
 var flags = strongholds.map(function(s) { return !!s.captured; });
 var t = (SM && typeof SM.frontierTargets === 'function') ? SM.frontierTargets(flags) : null;
@@ -3173,12 +3179,32 @@ var overlay = document.getElementById('confirmOverlay');
 var yes = document.getElementById('confirmYes'), no = document.getElementById('confirmNo');
 var oldYes = yes.textContent, oldNo = no.textContent;
 document.getElementById('confirmTitle').textContent = 'Цель штурма';
+// P9: недоступные цели той же развилки — прямые next-узлы фронтирных (не захвачены и сами не фронтир):
+// показываются disabled (кнопка + aria-disabled) с причиной «откроется после» — игрок видит, куда ведёт каждая ветка
+var _byId = {};
+for (var bi = 0; bi < STRONGHOLDS.length; bi++) _byId[STRONGHOLDS[bi].id] = bi;
+var lockedMap = {};
+targets.forEach(function(ti) {
+	var nd = STRONGHOLDS[ti];
+	if (!nd || !Array.isArray(nd.next)) return;
+	nd.next.forEach(function(nid) {
+		var ni = _byId[nid];
+		if (ni === undefined || strongholds[ni].captured || targets.indexOf(ni) >= 0) return;
+		(lockedMap[ni] = lockedMap[ni] || []).push(ti);
+	});
+});
 var list = targets.map(function(i) {
 var d = STRONGHOLDS[i], bm = branchMeta(d.branch);
-return '<button class="confirm-target' + (i === defIdx ? ' default' : '') + '" data-target-idx="' + i + '">' +
+return '<button type="button" class="confirm-target' + (i === defIdx ? ' default' : '') + '" data-target-idx="' + i + '" title="' + branchTipText(i) + '">' +
 '<span class="ct-ico">' + d.icon + '</span><span class="ct-body"><b>' + esc(d.name) + (i === defIdx ? ' · фронт' : '') + '</b><i>' + bm.icon + ' ' + bm.name + ' · ' + frontPowerText(i) + '</i></span></button>';
 }).join('');
-document.getElementById('confirmBody').innerHTML = 'Развилка фронта — выбери твердыню для штурма:<div class="confirm-target-list">' + list + '</div>';
+Object.keys(lockedMap).map(function(k) { return parseInt(k, 10); }).sort(function(a, b) { return a - b; }).forEach(function(i) {
+var d = STRONGHOLDS[i], bm = branchMeta(d.branch);
+var parents = lockedMap[i].map(function(p) { return STRONGHOLDS[p].name; }).join(' / ');
+return list += '<button type="button" class="confirm-target locked" disabled aria-disabled="true" data-locked-idx="' + i + '" title="' + branchTipText(i) + ' · откроется после: ' + parents + '">' +
+'<span class="ct-ico">' + d.icon + '</span><span class="ct-body"><b>' + esc(d.name) + '</b><i>' + bm.icon + ' ' + bm.name + '</i><em>🔒 откроется после «' + esc(parents) + '»</em></span></button>';
+});
+document.getElementById('confirmBody').innerHTML = 'Развилка фронта — выбери твердыню для штурма (🔒 — цели позади фронта):<div class="confirm-target-list" role="list">' + list + '</div>';
 yes.style.display = 'none';
 no.textContent = 'Отмена';
 overlay.classList.add('show');
@@ -4149,7 +4175,7 @@ var rBranch = rFork ? (STRONGHOLDS[toIdx].branch || 'safe') : null;
 var rCls = rBranch ? ' km-branch-edge km-branch-' + rBranch : '';
 var rOwned = (strongholds[ri].captured && strongholds[toIdx].captured) ? ' owned' : '';
 segs += '<path class="km-road-case' + rCls + '" d="' + dpath + '"/>';
-segs += '<path class="km-connector' + rCls + rOwned + '" d="' + dpath + '"><title>' + escT(STRONGHOLDS[ri].name) + ' → ' + escT(STRONGHOLDS[toIdx].name) + (rBranch ? ' · ' + branchT(rBranch).name : '') + '</title></path>';
+segs += '<path class="km-connector' + rCls + rOwned + '" d="' + dpath + '"><title>' + escT(STRONGHOLDS[ri].name) + ' → ' + escT(STRONGHOLDS[toIdx].name) + (rBranch ? ' · ' + branchT(rBranch).name + ' — ' + branchT(rBranch).tip : '') + '</title></path>';
 if (rBranch) { // глиф типа ветки на середине развилочного ребра
 var rm = parts.length > 2 ? parts[1] : { x: Math.round((a.x + b2.x) / 2), y: Math.round((a.y + b2.y) / 2) };
 segs += '<text class="km-branch-glyph km-branch-' + rBranch + '" x="' + rm.x + '" y="' + (rm.y + 4) + '" text-anchor="middle">' + branchT(rBranch).icon + '</text>';
@@ -4276,7 +4302,7 @@ var _frontTargets = assaultTargetChoices();
 _frontTargets.forEach(function(ti) {
 var fd = STRONGHOLDS[ti];
 var _tiLabel = (ti === 0) ? ' <span class="sh-req">стартовый лагерь</span>'
-: (_frontTargets.length > 1 ? ' <span class="sh-req">' + branchMeta(fd.branch).icon + ' ' + branchMeta(fd.branch).name + '</span>' : '');
+: (_frontTargets.length > 1 ? ' <span class="sh-req" title="' + branchTipText(ti) + '">' + branchMeta(fd.branch).icon + ' ' + branchMeta(fd.branch).name + '</span>' : '');
 html += '<div class="sh-card' + (ti === front ? ' front' : '') + ' km-front-card"><div class="sh-icon">' + fd.icon + '</div>' +
 '<div class="sh-body"><div class="sh-name">' + fd.name + _tiLabel + '</div>' +
 '<div class="sh-meta">' + frontPowerText(ti) + '</div></div>' +

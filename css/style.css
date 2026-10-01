@@ -612,6 +612,10 @@ letter-spacing: 1px;
 .confirm-target-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .confirm-target { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: rgba(12, 10, 8, 0.78); border: 1px solid var(--hairline); border-radius: 10px; color: var(--text); cursor: pointer; text-align: left; }
 .confirm-target:active { background: rgba(30, 24, 16, 0.95); }
+.confirm-target:hover:not(.locked) { border-color: var(--gold-bright); } /* P9: доступные цели отзываются на hover (тултип ветки — в title) */
+.confirm-target.locked { opacity: 0.55; cursor: not-allowed; } /* P9: цель за фронтом — недоступна, причина в строке */
+.confirm-target.locked .ct-body b { color: var(--text-dim); }
+.confirm-target .ct-body em { display: block; font-style: normal; font-size: 11px; color: var(--text-dim); }
 .confirm-target.default { border-color: var(--gold); background: rgba(251, 191, 36, 0.06); }
 .confirm-target .ct-ico { font-size: 20px; line-height: 1; }
 .confirm-target .ct-body { display: flex; flex-direction: column; gap: 2px; }
