@@ -5,28 +5,29 @@
    При новом деплое: бампни ?v= в index.html И VERSION ниже — старый кэш удалится в activate. */
 'use strict';
 
-const VERSION = 'nd-shell-v99';
+const VERSION = 'nd-shell-v100';
 const SHELL = [
   './',
   'index.html',
-  'css/style.css?v=99',
-  'fonts/fonts.css?v=99',
+  'css/style.css?v=100',
+  'fonts/fonts.css?v=100',
   'fonts/cinzel-var.woff2',
   'fonts/CrimsonText-400.woff2',
   'fonts/CrimsonText-400i.woff2',
   'fonts/CrimsonText-600.woff2',
-  'js/perf.js?v=99',
-  'js/perf-compat.js?v=99',
-  'js/event-bus.js?v=99',
-  'js/telemetry.js?v=99',
-  'js/stronghold-data.js?v=99',
-  'js/state-guards.js?v=99',
-  'js/storage.js?v=99',
-  'js/stronghold-model.js?v=99',
-  'js/state/store.js?v=99',
-  'js/remote-config.js?v=99',
+  'js/perf.js?v=100',
+  'js/perf-compat.js?v=100',
+  'js/event-bus.js?v=100',
+  'js/telemetry.js?v=100',
+  'js/stronghold-data.js?v=100',
+  'js/state-guards.js?v=100',
+  'js/storage.js?v=100',
+  'js/stronghold-model.js?v=100',
+  'js/state/store.js?v=100',
+  'js/remote-config.js?v=100',
+  'js/ui/strongholds.js?v=100',
   'config/weekly-modifiers.v1.json',
-  'js/app.js?v=99',
+  'js/app.js?v=100',
   'manifest.json',
   'img/icon-192.png',
   'img/icon-512.png'

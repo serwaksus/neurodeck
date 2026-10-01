@@ -70,9 +70,10 @@ test('P14 app.js: факт-коллектор из существующих по
         assert.ok(factsSrc.includes(s), 'факт-коллектор читает ' + s + ' (существующее состояние)'));
     assert.ok(!/saveGameState|SCHEMA|\.v\s*=|MIGRATIONS/.test(factsSrc), 'коллектор только читает — без записи состояния/схемы');
     assert.ok(app.includes('if (!weeklyEndgame() || !SM || typeof SM.weeklyScore !== \'function\') return \'\';'), 'typeof-гвард SM.weeklyScore (extract-харнессы)');
-    assert.ok(app.includes('html += weeklyModifierLineHtml();'), 'строка модификатора на месте (соседство)');
-    assert.ok(app.indexOf('html += weeklyModifierLineHtml();') < app.indexOf('html += weeklyScoreLineHtml();'), 'счёт — после модификатора, в блоке панели сезона');
-    const rs = app.match(/function renderStrongholds\(\)[\s\S]*?\nfunction /)[0];
+    const ui = fs.readFileSync(path.join(__dirname, '..', 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: renderStrongholds — в ui-модуле
+    assert.ok(ui.includes('html += weeklyModifierLineHtml();'), 'строка модификатора на месте (соседство)');
+    assert.ok(ui.indexOf('html += weeklyModifierLineHtml();') < ui.indexOf('html += weeklyScoreLineHtml();'), 'счёт — после модификатора, в блоке панели сезона');
+    const rs = ui.match(/function renderStrongholds\(\)[\s\S]*?\nfunction /)[0];
     assert.ok(rs.includes('weeklyScoreLineHtml();'), 'renderStrongholds зовёт строку счёта');
 });
 

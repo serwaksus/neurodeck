@@ -11,6 +11,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+const ui = fs.readFileSync(path.join(root, 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердыней — тут
 const css = fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8');
 globalThis.StrongholdData = require('../js/stronghold-data.js');
 const SM = require('../js/stronghold-model.js');
@@ -27,6 +28,16 @@ function extractBlock(anchor) {
     return app.slice(start, end + 1);
 }
 const extractFn = (name) => extractBlock('function ' + name + '(');
+const extractUiFn = (name) => { // P20: рендеры Твердынь вынесены в js/ui/strongholds.js
+    const start = ui.indexOf('function ' + name + '(');
+    assert.ok(start > -1, 'ui anchor not found: ' + name);
+    let depth = 0, end = -1;
+    for (let i = ui.indexOf('{', start); i < ui.length; i++) {
+        if (ui[i] === '{') depth++;
+        else if (ui[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    return ui.slice(start, end + 1);
+};
 
 function buildIn({ decls = [], stubs = {}, body }) {
     const src = decls.join('\n') + '\nreturn (' + body + ');';
@@ -306,7 +317,7 @@ test('P10 встройка: единый клик подтверждения —
 
 test('P10 встройка: dispatcher + renderStrongholds — отмена из панели, отчёт тени консолидирован', () => {
     assert.ok(app.includes("case 'km-approach-cancel': requestApproachCancel();"), 'dispatcher: действие отмены');
-    const rs = extractFn('renderStrongholds');
+    const rs = extractUiFn('renderStrongholds');
     assert.ok(!rs.includes('scoutReportHtml(front)'), 'P10: отдельный отчёт под картой убран');
     assert.ok(rs.includes('siegePrepBlockHtml()'), 'панель подготовки на месте');
     const sp = extractFn('siegePrepBlockHtml');

@@ -75,5 +75,5 @@ test('event-bus подключён в index.html до storage.js и в SW-пре
     const busPos = html.indexOf('js/event-bus.js');
     const storagePos = html.indexOf('js/storage.js');
     assert.ok(busPos > -1 && storagePos > busPos, 'event-bus грузится раньше storage');
-    assert.ok(sw.includes("'js/event-bus.js?v=99'"), 'event-bus в прекэше SW'); // ре-пин при бампе кэш-версии (v99, P19 state-store шаг 2; v98 — P18)
+    assert.ok(sw.includes("'js/event-bus.js?v=100'"), 'event-bus в прекэше SW'); // ре-пин при бампе кэш-версии (v100, P20 stronghold-UI модуль; v99 — P19)
 });

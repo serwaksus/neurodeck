@@ -6,8 +6,19 @@ const path = require('path');
 const { STRONGHOLDS, BOSSES } = require(path.join(__dirname, '..', 'js', 'stronghold-data.js'));
 
 const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+const ui = fs.readFileSync(path.join(__dirname, '..', 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердыней — тут
 const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'style.css'), 'utf8');
 
+function extractUiFn(name) { // P20: тайл-хелперы рендеров Твердыней вынесены в js/ui/strongholds.js
+  const start = ui.indexOf('function ' + name + '(');
+  assert.ok(start > -1, 'fn ' + name + ' найдена в js/ui/strongholds.js');
+  let i = ui.indexOf('{', start), depth = 0, end = i;
+  for (; i < ui.length; i++) {
+    if (ui[i] === '{') depth++;
+    else if (ui[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  return ui.slice(start, end + 1);
+}
 function extractFn(name) {
   const start = app.indexOf('function ' + name + '(');
   assert.ok(start > -1, 'fn ' + name + ' найдена в app.js');
@@ -138,7 +149,7 @@ test('тап по узлу открывает панель + keydown Enter/Space
 
 // ФАЗА F: тайлы построек
 test('Фаза F: catClass категории zh/ec/df/sp + builtTileHtml img/stageBadge + buyTileHtml reason', () => {
-  const catClass = new Function(extractFn('catClass') + '\nreturn catClass;')();
+  const catClass = new Function(extractUiFn('catClass') + '\nreturn catClass;')();
   assert.equal(catClass({ cat: 'house' }), 'cat-zh');
   assert.equal(catClass({ cat: 'econ' }), 'cat-ec');
   assert.equal(catClass({ cat: 'defense' }), 'cat-df');
@@ -146,8 +157,8 @@ test('Фаза F: catClass категории zh/ec/df/sp + builtTileHtml img/st
   assert.equal(catClass({ cat: 'other' }), 'cat-sp', 'неизвестная категория — sp');
 
   const sprite = (p) => '<img src="' + p + '">';
-  const catSrc = extractFn('catClass') + '\n';
-  const builtHtml = new Function('shSpriteImg', 'buildingEffectText', 'stageBadgeHtml', catSrc + extractFn('builtTileHtml') + '\nreturn builtTileHtml;')(
+  const catSrc = extractUiFn('catClass') + '\n';
+  const builtHtml = new Function('shSpriteImg', 'buildingEffectText', 'stageBadgeHtml', catSrc + extractUiFn('builtTileHtml') + '\nreturn builtTileHtml;')(
     sprite, () => 'эффект', (st) => '<i class="sh-stage">' + st + '</i>'
   )('sawmill', { cat: 'econ', name: 'Пила', icon: '🪚', upkeep: 2 }, { corruptionStage: 2 });
   assert.ok(builtHtml.includes('img/tract/buildings/sawmill.png'), 'img-путь');
@@ -156,7 +167,7 @@ test('Фаза F: catClass категории zh/ec/df/sp + builtTileHtml img/st
   assert.ok(builtHtml.includes('содержание 2'), 'upkeep');
 
   const CAT = { wall: { name: 'Стена' }, fence: { cost: 100 } };
-  const mkBuy = new Function('BUILDINGS', 'shSpriteImg', 'buildingEffectText', 'buildCostOf', 'buildingBreakdownHtml', catSrc + extractFn('buyTileHtml') + '\nreturn buyTileHtml;')(
+  const mkBuy = new Function('BUILDINGS', 'shSpriteImg', 'buildingEffectText', 'buildCostOf', 'buildingBreakdownHtml', catSrc + extractUiFn('buyTileHtml') + '\nreturn buyTileHtml;')(
     CAT, sprite, () => 'эффект', (id) => CAT[id].cost, () => '' // P6: same-layer стаб брейкдауна (превью казны вне этого пина)
   );
   const lockedHtml = mkBuy('3', 'fence', { cat: 'defense', name: 'Забор', icon: '🚧', cost: 100, upkeep: 1, req: 'wall' }, false, false, 'нужна: Стена');
@@ -171,12 +182,12 @@ test('Фаза F: catClass категории zh/ec/df/sp + builtTileHtml img/st
 });
 
 test('Фаза F: каталог рендерится тайлами — все доступные + reason-логика + CSS сетки', () => {
-  const loopStart = app.indexOf('shown.forEach(function(id) {');
+  const loopStart = ui.indexOf('shown.forEach(function(id) {'); // P20: каталог — в ui-модуле
   assert.ok(loopStart > -1, 'каталогный цикл на месте');
-  const loopBody = app.slice(loopStart, app.indexOf('});', loopStart));
+  const loopBody = ui.slice(loopStart, ui.indexOf('});', loopStart));
   assert.ok(loopBody.includes('buyTileHtml(idx, id, bd, reqOk, can, reason)'), 'каталог на buyTileHtml (все доступные)');
   assert.ok(!loopBody.includes('sh-build-row'), 'старые ряды удалены из каталога');
-  assert.ok(app.includes("var reason = !reqOk ? 'нужна: ' + BUILDINGS[bd.req].name : (slotLeft <= 0 ? 'нет слотов' : 'мало золота');"), 'reason: нет слотов/мало золота/нужна: X');
+  assert.ok(ui.includes("var reason = !reqOk ? 'нужна: ' + BUILDINGS[bd.req].name : (slotLeft <= 0 ? 'нет слотов' : 'мало золота');"), 'reason: нет слотов/мало золота/нужна: X');
   for (const sel of ['--cat-zh', '--cat-ec', '--cat-df', '--cat-sp', '.sh-build-grid', '.sh-tile ', '.sh-tile-icon', '.sh-tile-badges', '.sh-tile .sh-buy']) assert.ok(css.includes(sel), 'css ' + sel);
   assert.ok(/\.sh-build-grid\s*{[^}]*repeat\(2/.test(css), 'сетка 2 колонки');
   assert.ok(/@media \(max-width: 420px\)[\s\S]{0,200}\.sh-build-grid\s*{[^}]*1fr/.test(css), 'мобайл ≤420px 1 колонка');

@@ -189,14 +189,14 @@ test('P18 store: событие nd:store:stronghold на NDDBus (typeof-гвар
 // ЧАСТЬ 3. ПОДКЛЮЧЕНИЕ — index.html / sw.js / app.js (адаптер + команды)
 // ============================================================
 
-test('P18 подключение: store.js грузится в index.html до app.js и в SW-прекэше (v98)', () => {
+test('P18 подключение: store.js грузится в index.html до app.js и в SW-прекэше', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
     const storePos = html.indexOf('js/state/store.js');
     const appPos = html.indexOf('js/app.js');
     assert.ok(storePos > -1 && appPos > storePos, 'store.js грузится раньше app.js');
-    assert.ok(sw.includes("'js/state/store.js?v=99'"), 'store.js в прекэше SW (ре-пин v99 (P19))');
-    assert.ok(/VERSION = 'nd-shell-v99'/.test(sw), 'SW-версия бампнута');
+    assert.ok(sw.includes("'js/state/store.js?v=100'"), 'store.js в прекэше SW (ре-пин v100 (P20); v99 — P19)');
+    assert.ok(/VERSION = 'nd-shell-v100'/.test(sw), 'SW-версия бампнута');
 });
 
 test('P18→P19 app.js: адаптер чтения + команды write-потоков; тик/осада/штурм — inline-гварды стора', () => {

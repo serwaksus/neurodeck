@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 // Campaign 2.0 C6-lite: эндгейм-ротация модификаторов недели (CAMPAIGN-2.0.md §5) — каталог WEEKLY_MODS
 // (stronghold-data), детерминированный выбор по (season.num, siege.week) без бэкенда, гейт 20/20,
 // чистые множители в stronghold-model (те же три ключа, что у правил провинций C3).
@@ -7,6 +9,7 @@ const SM = require('../js/stronghold-model.js');
 const DATA = require('../js/stronghold-data.js');
 globalThis.StrongholdData = DATA; // catalog() модели
 const WM = DATA.WEEKLY_MODS;
+const ui = fs.readFileSync(path.join(__dirname, '..', 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердынь — тут
 
 test('каталог WEEKLY_MODS: 6–8 записей, уникальные id, тексты для UI, mods {incomeMult, upkeepMult, siegeMult} в (0; 3]', () => {
     assert.ok(Array.isArray(WM) && WM.length >= 6 && WM.length <= 8, '6–8 модификаторов, сейчас ' + (WM ? WM.length : 'нет'));
@@ -119,5 +122,5 @@ test('app.js: множители применены ровно в 2 местах
         assert.ok(app.includes('(SM && SM.' + k + ') ? SM.' + k + '('), 'typeof-гвард вызова ' + k);
     });
     assert.ok(app.includes('function weeklyEndgame() { return capturedCount() >= STRONGHOLDS.length; }'), 'гейт ротации = 20/20');
-    assert.ok(app.includes('html += weeklyModifierLineHtml();'), 'строка модификатора недели в панели Твердынь');
+    assert.ok(ui.includes('html += weeklyModifierLineHtml();'), 'строка модификатора недели в панели Твердынь (P20: ui-модуль)');
 });

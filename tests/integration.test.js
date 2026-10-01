@@ -46,11 +46,19 @@ test('App.js no longer has dead Canvas 2D combat code', () => {
 });
 
 test('App.js: tract economy removed, stronghold systems present', () => {
-    ['strongholdsDailyTick', 'renderStrongholdPanel', 'renderStrongholds',
+    ['strongholdsDailyTick',
      'createTask', 'completeTask', 'claimTaskChest', 'expireGhostTasks', 'renderTasks'
     ].forEach(fn => {
         const re = new RegExp('function\\s+' + fn + '\\b');
         assert.equal(re.test(app), true, fn + ' should stay in app.js');
+    });
+    // P20 (state-store шаг 3): рендеры Твердыней вынесены из app.js в js/ui/strongholds.js —
+    // исходный текст не менялся, вызовы из app.js остались глобальными
+    const ui = read('js/ui/strongholds.js');
+    ['renderStrongholdPanel', 'renderStrongholds'].forEach(fn => {
+        const re = new RegExp('function\\s+' + fn + '\\b');
+        assert.equal(re.test(ui), true, fn + ' should stay in js/ui/strongholds.js (P20)');
+        assert.equal(re.test(app), false, fn + ' moved out of app.js (P20)');
     });
 });
 

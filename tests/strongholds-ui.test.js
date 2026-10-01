@@ -17,6 +17,7 @@ const root = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
 const app = read('js/app.js');
+const ui = read('js/ui/strongholds.js'); // P20: рендеры Твердыней вынесены сюда
 const html = read('index.html');
 const css = read('css/style.css');
 
@@ -167,7 +168,7 @@ test('P9: chooseAssaultTarget — locked-цели disabled+aria-disabled с пр
     assert.ok(fn.includes('confirm-target locked') && fn.includes('disabled aria-disabled="true"'), 'locked-строка: disabled + aria-disabled');
     assert.ok(fn.includes('data-locked-idx') && fn.includes('откроется после'), 'у locked-цели нет data-target-idx и есть причина');
     assert.ok(fn.includes('title="\' + branchTipText(i)'), 'тултип ветки на целях модалки');
-    assert.ok(/sh-req" title="' \+ branchTipText\(ti\)/.test(app), 'тултип на фронтирных карточках');
+    assert.ok(/sh-req" title="' \+ branchTipText\(ti\)/.test(ui), 'тултип на фронтирных карточках (P20: в ui-модуле)');
     assert.ok(/branchT\(rBranch\)\.name \+ ' — ' \+ branchT\(rBranch\)\.tip/.test(app), 'тултип последствий на рёбрах карты');
     assert.ok(css.includes('.confirm-target.locked') && css.includes(':hover:not(.locked)'), 'CSS: locked-стили и hover доступных');
 });

@@ -10,6 +10,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+const ui = fs.readFileSync(path.join(root, 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердыней вынесены из app.js
 const F = require('./fixtures/saves-factory.cjs');
 
 function extractBlock(anchor) {
@@ -24,6 +25,16 @@ function extractBlock(anchor) {
     return app.slice(start, end + 1);
 }
 const extractFn = (name) => extractBlock('function ' + name + '(');
+const extractUiBlockFn = (name) => { // P20: рендеры Твердынь — в js/ui/strongholds.js
+    const start = ui.indexOf('function ' + name + '(');
+    assert.ok(start > -1, 'ui anchor not found: ' + name);
+    let depth = 0, end = -1;
+    for (let i = ui.indexOf('{', start); i < ui.length; i++) {
+        if (ui[i] === '{') depth++;
+        else if (ui[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    return ui.slice(start, end + 1);
+};
 
 function buildIn({ decls = [], stubs = {}, body }) {
     const src = decls.join('\n') + '\nreturn (' + body + ');';
@@ -125,8 +136,8 @@ test('wave3 Ф1: checkSiegeAlarmToast — тост только в дни 0/2, �
 // Ф1: source-контракты интеграции
 // ----------------------------------------------------------------
 test('wave3 Ф1 контракты: панель .siege-alarm при daysToSiege≤2, CSS-класс есть, alarm toast flag в renderStrongholds', () => {
-    assert.ok(extractFn('renderStrongholds').includes('siegeAlarmPreview()'), 'renderStrongholds зовёт превью');
-    assert.ok(extractFn('renderStrongholds').includes('siege-alarm'), 'панель .siege-alarm в разметке');
+    assert.ok(extractUiBlockFn('renderStrongholds').includes('siegeAlarmPreview()'), 'renderStrongholds зовёт превью (P20: ui-модуль)');
+    assert.ok(extractUiBlockFn('renderStrongholds').includes('siege-alarm'), 'панель .siege-alarm в разметке');
     assert.ok(app.includes("nd_siegealarm_"), 'флаг однократности/день');
     assert.ok(cssSource().includes('.siege-alarm'), 'style.css: класс .siege-alarm существует');
 });
@@ -286,13 +297,14 @@ test('wave3 Ф3: requestTowerClimb — победа floor+1+100×floor💰, по
 // Ф3: контракты интеграции + единый кэш-пин
 // ----------------------------------------------------------------
 test('wave3 Ф3 контракты [css/style.css + index.html]: башня в renderStrongholds, экшн-кейс, CSS .tower-card, index.html: единый ?v= ×10', () => {
-    assert.ok(extractFn('renderStrongholds').includes('renderTowerCard(cap)'), 'renderStrongholds зовёт карточку башни');
+    assert.ok(ui.includes('function renderStrongholds('), 'P20: рендеры Твердыней живут в js/ui/strongholds.js');
+    assert.ok(ui.slice(ui.indexOf('function renderStrongholds(')).includes('renderTowerCard(cap)'), 'renderStrongholds зовёт карточку башни');
     assert.ok(app.includes("case 'tower-climb': requestTowerClimb()"), 'data-action-паттерн tower-climb');
     assert.ok(app.includes('TOWER_MAX_FLOOR = 50'), 'кап этажа 50');
     assert.ok(cssSource().includes('.tower-card'), 'style.css: класс .tower-card существует');
     const html = htmlSource();
     const pins = (html.match(/v=(\d+)/g) || []);
-    assert.equal(pins.length, 13, 'index.html: 13 вхождений ?v= (P18: +js/state/store.js)');
+    assert.equal(pins.length, 14, 'index.html: 14 вхождений ?v= (P20: +js/ui/strongholds.js)');
     assert.equal(new Set(pins).size, 1, 'все ?v= одинаковы (факт: ' + pins.join(',') + ')');
     assert.ok(!html.includes('?v=80'), 'v80 не остался');
     console.log('verified: css/style.css index.html PASS (wave3 contracts)');
@@ -302,7 +314,7 @@ test('package.json: check:ui-скрипт верификации UI-ассето
     assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
     const _pins = htmlSource().match(/v=\d+/g) || [];
-    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 13 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×13, P18: +js/state/store.js)');
+    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 14 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×14, P20: +js/ui/strongholds.js)');
     assert.ok(cssSource().includes('.tower-card') && cssSource().includes('.siege-alarm'), 'css/style.css: PASS (tower-card + siege-alarm)');
     console.log('index.html: PASS');
     console.log('css/style.css: PASS');

@@ -10,6 +10,8 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+const ui = fs.readFileSync(path.join(root, 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердынь — тут
+
 const SD = require('../js/stronghold-data.js');
 const SG = require('../js/state-guards.js');
 const STRONGHOLDS = SD.STRONGHOLDS;
@@ -28,6 +30,16 @@ function extractBlock(anchor) {
     return app.slice(start, end + 1);
 }
 const extractFn = (name) => extractBlock('function ' + name + '(');
+const extractUiFn = (name) => { // P20: рендеры Твердынь вынесены в js/ui/strongholds.js
+    const start = ui.indexOf('function ' + name + '(');
+    assert.ok(start > -1, 'ui anchor not found: ' + name);
+    let depth = 0, end = -1;
+    for (let i = ui.indexOf('{', start); i < ui.length; i++) {
+        if (ui[i] === '{') depth++;
+        else if (ui[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    return ui.slice(start, end + 1);
+};
 
 const BOSS_FNS = ['ensureBossesState', 'bossEscalation', 'bossOf', 'provCaptured', 'provBossNum', 'bossNodeIdx', 'bossActiveFor', 'bossAttemptAvailable', 'requestBossChallenge', 'bossTodayStats', 'bossPhaseCheck', 'bossPhaseLabel', 'bossProgressTick', 'bossArtifactMult', 'bossCardHtml'];
 
@@ -538,7 +550,7 @@ test('Г2-5: инварианты вознесения — сохранено/с
 
 test('Г2-5: интеграции — гейт throne 5/5, кнопка, кейс, ×3 call-site врага, бут-палитра, whitelist', () => {
     assert.ok(extractFn('requestAscension').indexOf('throne < 5') !== -1, 'гейт трон 5/5');
-    assert.ok(extractFn('renderStrongholdPanel').indexOf('data-action="ascend"') !== -1, 'кнопка «✨ Вознестись» в трон-панели');
+    assert.ok(extractUiFn('renderStrongholdPanel').indexOf('data-action="ascend"') !== -1, 'кнопка «✨ Вознестись» в трон-панели (P20: ui-модуль)');
     assert.ok(app.indexOf("case 'ascend': requestAscension();") !== -1 && app.indexOf("case 'asc-doctrine': pickAscensionDoctrine(el.dataset.id);") !== -1, 'кейсы диспетчера');
     assert.equal((app.match(/\* ascEnemyMult\(\)/g) || []).length, 3, '3 call-site SM.siegePower ×множитель');
     assert.ok(app.indexOf('Math.pow(1.2, HERO.ascension || 0)') !== -1, '×1.2^N в bossEscalation/dailyGoldGoal');

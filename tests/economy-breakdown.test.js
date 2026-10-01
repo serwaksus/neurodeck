@@ -13,6 +13,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+const ui = fs.readFileSync(path.join(root, 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердыней — тут
 const css = fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8');
 globalThis.StrongholdData = require('../js/stronghold-data.js');
 const SM = require('../js/stronghold-model.js');
@@ -29,6 +30,16 @@ function extractBlock(anchor) {
     return app.slice(start, end + 1);
 }
 const extractFn = (name) => extractBlock('function ' + name + '(');
+const extractUiFn = (name) => { // P20: рендеры Твердыней вынесены в js/ui/strongholds.js
+    const start = ui.indexOf('function ' + name + '(');
+    assert.ok(start > -1, 'ui anchor not found: ' + name);
+    let depth = 0, end = -1;
+    for (let i = ui.indexOf('{', start); i < ui.length; i++) {
+        if (ui[i] === '{') depth++;
+        else if (ui[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    return ui.slice(start, end + 1);
+};
 
 function buildIn({ decls = [], stubs = {}, body }) {
     const src = decls.join('\n') + '\nreturn (' + body + ');';
@@ -203,7 +214,7 @@ test('P6 assaultBreakdownHtml: worst-case переиспользует attrition
 // ----------------------------------------------------------------
 
 test('P6 встройка: buyTileHtml несёт брейкдаун; requestAssault/requestTactic рендерят блок', () => {
-    const buy = extractFn('buyTileHtml');
+    const buy = extractUiFn('buyTileHtml');
     assert.ok(buy.includes('buildingBreakdownHtml(idx, id)'), 'тайл покупки вызывает брейкдаун');
     const ra = extractFn('requestAssault');
     assert.ok(ra.includes('assaultBreakdownHtml(idx, f)'), 'подтверждение до 3 захватов — с брейкдауном');

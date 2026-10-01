@@ -13,6 +13,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+const ui = fs.readFileSync(path.join(root, 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердыней — тут
 const css = fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8');
 globalThis.StrongholdData = require('../js/stronghold-data.js');
 const SM = require('../js/stronghold-model.js');
@@ -29,6 +30,16 @@ function extractBlock(anchor) {
     return app.slice(start, end + 1);
 }
 const extractFn = (name) => extractBlock('function ' + name + '(');
+const extractUiFn = (name) => { // P20: рендеры Твердынь вынесены в js/ui/strongholds.js
+    const start = ui.indexOf('function ' + name + '(');
+    assert.ok(start > -1, 'ui anchor not found: ' + name);
+    let depth = 0, end = -1;
+    for (let i = ui.indexOf('{', start); i < ui.length; i++) {
+        if (ui[i] === '{') depth++;
+        else if (ui[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    return ui.slice(start, end + 1);
+};
 
 function buildIn({ decls = [], stubs = {}, body }) {
     const src = decls.join('\n') + '\nreturn (' + body + ');';
@@ -141,13 +152,13 @@ test('P7 проводка: checkDailyReset показывает тост-при�
 });
 
 test('P7 проводка: прогноз в обзоре Твердынь + единый step/множители + экшены', () => {
-    assert.ok(extractFn('renderStrongholds').includes('corruptionForecastLineHtml()'), 'строка прогноза в обзоре');
+    assert.ok(extractUiFn('renderStrongholds').includes('corruptionForecastLineHtml()'), 'строка прогноза в обзоре');
     const opts = extractFn('corruptionTickOpts');
     assert.ok(opts.includes('corruptionStepNow()'), 'step — из corruptionStepNow (единый с тиком)');
     assert.ok(opts.includes('weeklyModsNow().upkeep') && opts.includes('SM.provinceUpkeepMult'), 'множители тика не продублированы');
     assert.ok(app.includes("case 'sh-rebuild':"), 'диспетчер: sh-rebuild');
     assert.ok(app.includes("case 'sh-emergency-maint':"), 'диспетчер: sh-emergency-maint');
-    assert.ok(extractFn('renderStrongholdPanel').includes('emergencyMaintNeeded(idx)'), 'блок аварийного ремонта в панели твердыни');
+    assert.ok(extractUiFn('renderStrongholdPanel').includes('emergencyMaintNeeded(idx)'), 'блок аварийного ремонта в панели твердыни');
 });
 
 // ----------------------------------------------------------------
@@ -304,7 +315,7 @@ test('P7 rebuildBuilding: скидка 25% от цены постройки, «�
 
 test('P7 builtTileHtml: кнопка восстановления только у worn/ruin и только с ценой', () => {
     const mk = (stage, rb) => buildIn({
-        decls: [extractFn('builtTileHtml')],
+        decls: [extractUiFn('builtTileHtml')],
         stubs: {
             shSpriteImg: () => '<i>', buildingEffectText: () => 'эффект',
             stageBadgeHtml: (s) => '<i class="sh-stage">' + s + '</i>', catClass: () => 'cat-ec'

@@ -10,6 +10,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+const ui = fs.readFileSync(path.join(root, 'js', 'ui', 'strongholds.js'), 'utf8'); // P20: рендеры Твердыней — тут
 const SG = require('../js/state-guards.js');
 
 function extractBlock(anchor) {
@@ -24,6 +25,16 @@ function extractBlock(anchor) {
     return app.slice(start, end + 1);
 }
 const extractFn = (name) => extractBlock('function ' + name + '(');
+const extractUiFn = (name) => { // P20: рендеры Твердыней вынесены в js/ui/strongholds.js
+    const start = ui.indexOf('function ' + name + '(');
+    assert.ok(start > -1, 'ui anchor not found: ' + name);
+    let depth = 0, end = -1;
+    for (let i = ui.indexOf('{', start); i < ui.length; i++) {
+        if (ui[i] === '{') depth++;
+        else if (ui[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    return ui.slice(start, end + 1);
+};
 
 function buildIn({ decls = [], stubs = {}, body }) {
     const src = decls.join('\n') + '\nreturn (' + body + ');';
@@ -378,9 +389,9 @@ test('Г1-6: finishSeason — обгон-флаг по дельте захват
 });
 
 test('Г1-6: строка воеводы в сезонном блоке Твердыней + мини-бар', () => {
-    assert.ok(app.indexOf('⚔ Глорх, Погибель Урядов') !== -1, 'строка «⚔ Глорх: N · ты: M»');
-    assert.ok(app.indexOf('warlordTempo(), _wm = seasonCapturedDelta()') !== -1, 'рендер использует хелперы');
-    const rs = extractFn('renderStrongholds');
+    assert.ok(ui.indexOf('⚔ Глорх, Погибель Урядов') !== -1, 'строка «⚔ Глорх: N · ты: M» (P20: в ui-модуле)');
+    assert.ok(ui.indexOf('warlordTempo(), _wm = seasonCapturedDelta()') !== -1, 'рендер использует хелперы');
+    const rs = extractUiFn('renderStrongholds');
     assert.ok(rs.indexOf('warlord-ahead') !== -1, 'мини-бар: класс при обгоне');
     assert.ok(rs.indexOf('_wm / (_wt + 1) * 100') !== -1, 'заполнение бара M/(темп+1)');
 });
