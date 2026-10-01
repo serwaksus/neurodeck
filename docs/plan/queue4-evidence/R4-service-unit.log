@@ -1,0 +1,184 @@
+TAP version 13
+# Subtest: DEFAULTS: только localhost:8095, телеметрия default off, retention 30, ноль npm-зависимостей
+ok 1 - DEFAULTS: только localhost:8095, телеметрия default off, retention 30, ноль npm-зависимостей
+  ---
+  duration_ms: 1.791287
+  type: 'test'
+  ...
+# Subtest: unit-файл nd-config.service изолирован от прод-бота (правило 17) и стартует через current
+ok 2 - unit-файл nd-config.service изолирован от прод-бота (правило 17) и стартует через current
+  ---
+  duration_ms: 1.568682
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.479Z","method":"GET","path":"/config/weekly-modifiers.v1.json","status":200,"ms":3}
+# {"t":"2026-10-01T18:41:57.490Z","method":"GET","path":"/config/weekly-modifiers.v1.json","status":304,"ms":1}
+# Subtest: GET /config/weekly-modifiers.v1.json: 200, байты 1:1 с артефактом, content-type, ETag→304
+ok 3 - GET /config/weekly-modifiers.v1.json: 200, байты 1:1 с артефактом, content-type, ETag→304
+  ---
+  duration_ms: 48.485316
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.496Z","method":"GET","path":"/config/unknown.json","status":404,"ms":0}
+# {"t":"2026-10-01T18:41:57.499Z","method":"GET","path":"/env","status":404,"ms":0}
+# {"t":"2026-10-01T18:41:57.503Z","method":"GET","path":"/server.cjs","status":404,"ms":1}
+# {"t":"2026-10-01T18:41:57.504Z","method":"GET","path":"/config/nested/weekly-modifiers.v1.json","status":404,"ms":0}
+# {"t":"2026-10-01T18:41:57.507Z","method":"GET","path":"/config/weekly-modifiers.vx.json","status":404,"ms":1}
+# Subtest: GET /config/<не-whitelist>: 404 (неизвестное имя, обход, подкаталог)
+ok 4 - GET /config/<не-whitelist>: 404 (неизвестное имя, обход, подкаталог)
+  ---
+  duration_ms: 16.696151
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.511Z","method":"GET","path":"/healthz","status":200,"ms":0}
+# {"t":"2026-10-01T18:41:57.515Z","method":"GET","path":"/","status":200,"ms":0}
+# Subtest: GET / и /healthz: самопрезентация и живость (telemetry: disabled, retention)
+ok 5 - GET / и /healthz: самопрезентация и живость (telemetry: disabled, retention)
+  ---
+  duration_ms: 9.219683
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.526Z","method":"POST","path":"/v1/telemetry","status":503,"ms":1}
+# Subtest: телеметрия выключена (default): POST → 503 telemetry_disabled, файл не создаётся
+ok 6 - телеметрия выключена (default): POST → 503 telemetry_disabled, файл не создаётся
+  ---
+  duration_ms: 10.940815
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.535Z","method":"POST","path":"/v1/telemetry","status":503,"ms":1}
+# {"t":"2026-10-01T18:41:57.540Z","method":"POST","path":"/v1/telemetry","status":503,"ms":0}
+# Subtest: fail-safe: флаг=1, но токен пустой/короткий → приёмник всё равно выключен
+ok 7 - fail-safe: флаг=1, но токен пустой/короткий → приёмник всё равно выключен
+  ---
+  duration_ms: 12.579824
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.545Z","method":"POST","path":"/v1/telemetry","status":401,"ms":0}
+# {"t":"2026-10-01T18:41:57.548Z","method":"POST","path":"/v1/telemetry","status":401,"ms":1}
+# {"t":"2026-10-01T18:41:57.551Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# {"t":"2026-10-01T18:41:57.553Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# Subtest: включённая телеметрия: без токена и с неверным → 401; с верным (Bearer и X-ND-Token) → 202 + JSONL
+ok 8 - включённая телеметрия: без токена и с неверным → 401; с верным (Bearer и X-ND-Token) → 202 + JSONL
+  ---
+  duration_ms: 13.707155
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.558Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.564Z","method":"POST","path":"/v1/telemetry","status":400,"ms":1}
+# {"t":"2026-10-01T18:41:57.566Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.568Z","method":"POST","path":"/v1/telemetry","status":413,"ms":1}
+# Subtest: валидация конверта: битый JSON → 400, массив/строка → 400, перелимит тела → 413
+ok 9 - валидация конверта: битый JSON → 400, массив/строка → 400, перелимит тела → 413
+  ---
+  duration_ms: 14.139324
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.575Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# {"t":"2026-10-01T18:41:57.577Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# {"t":"2026-10-01T18:41:57.579Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# {"t":"2026-10-01T18:41:57.580Z","method":"POST","path":"/v1/telemetry","status":429,"ms":0}
+# Subtest: rate limit: после N валидных POST в окне → 429
+ok 10 - rate limit: после N валидных POST в окне → 429
+  ---
+  duration_ms: 12.200405
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.585Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# {"t":"2026-10-01T18:41:57.593Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# Subtest: ротация: при переполнении telemetry.jsonl → .1, данные не теряются молча
+ok 11 - ротация: при переполнении telemetry.jsonl → .1, данные не теряются молча
+  ---
+  duration_ms: 12.662358
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.598Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# Subtest: allowlist: неизвестное поле конверта → 400 envelope_field_not_allowed (имя, не значение)
+ok 12 - allowlist: неизвестное поле конверта → 400 envelope_field_not_allowed (имя, не значение)
+  ---
+  duration_ms: 5.507975
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.603Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.608Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.612Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.617Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# Subtest: allowlist: неизвестное имя события/счётчика → 400; пустое имя события → 400
+ok 13 - allowlist: неизвестное имя события/счётчика → 400; пустое имя события → 400
+  ---
+  duration_ms: 18.401189
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.621Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.624Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.626Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.627Z","method":"POST","path":"/v1/telemetry","status":400,"ms":0}
+# {"t":"2026-10-01T18:41:57.632Z","method":"POST","path":"/v1/telemetry","status":400,"ms":1}
+# {"t":"2026-10-01T18:41:57.636Z","method":"POST","path":"/v1/telemetry","status":202,"ms":2}
+# Subtest: allowlist: структурные нарушения конверта → 400 (events не массив, counters не объект, ts не число)
+ok 14 - allowlist: структурные нарушения конверта → 400 (events не массив, counters не объект, ts не число)
+  ---
+  duration_ms: 19.447507
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.641Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# Subtest: redaction: на диск пишется только sanitized-проекция (href без query, ≤200, секреты замазаны)
+ok 15 - redaction: на диск пишется только sanitized-проекция (href без query, ≤200, секреты замазаны)
+  ---
+  duration_ms: 3.999751
+  type: 'test'
+  ...
+# Subtest: redaction: sanitizeEnvelope чист и детерминирован на реальном клиентском dump()
+ok 16 - redaction: sanitizeEnvelope чист и детерминирован на реальном клиентском dump()
+  ---
+  duration_ms: 0.450877
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.646Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# Subtest: retention: записи старше срока вычищаются при очередной записи, свежие остаются
+ok 17 - retention: записи старше срока вычищаются при очередной записи, свежие остаются
+  ---
+  duration_ms: 4.943056
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.650Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# Subtest: retention: ротированные файлы старше срока удаляются; retentionDays=0 — ничего не вычищает
+ok 18 - retention: ротированные файлы старше срока удаляются; retentionDays=0 — ничего не вычищает
+  ---
+  duration_ms: 3.322053
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.653Z","method":"POST","path":"/v1/telemetry","status":202,"ms":1}
+# {"t":"2026-10-01T18:41:57.654Z","method":"DELETE","path":"/v1/telemetry","status":401,"ms":0}
+# {"t":"2026-10-01T18:41:57.655Z","method":"DELETE","path":"/v1/telemetry","status":401,"ms":0}
+# {"t":"2026-10-01T18:41:57.656Z","method":"DELETE","path":"/v1/telemetry","status":200,"ms":0}
+# {"t":"2026-10-01T18:41:57.658Z","method":"DELETE","path":"/v1/telemetry","status":200,"ms":1}
+# {"t":"2026-10-01T18:41:57.659Z","method":"POST","path":"/v1/telemetry","status":202,"ms":0}
+# Subtest: DELETE /v1/telemetry: токен-гейт; стирает активный и ротированные; повторная запись работает
+ok 19 - DELETE /v1/telemetry: токен-гейт; стирает активный и ротированные; повторная запись работает
+  ---
+  duration_ms: 9.247866
+  type: 'test'
+  ...
+# {"t":"2026-10-01T18:41:57.661Z","method":"DELETE","path":"/v1/telemetry","status":200,"ms":0}
+# {"t":"2026-10-01T18:41:57.663Z","method":"DELETE","path":"/v1/telemetry","status":401,"ms":0}
+# Subtest: DELETE работает и при выключенном приёмнике (флаг выключает приём, не удаление данных)
+ok 20 - DELETE работает и при выключенном приёмнике (флаг выключает приём, не удаление данных)
+  ---
+  duration_ms: 3.875966
+  type: 'test'
+  ...
+# Subtest: allowlist drift: серверный каталог синхронен клиентскому коду и документации
+ok 21 - allowlist drift: серверный каталог синхронен клиентскому коду и документации
+  ---
+  duration_ms: 1.365108
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 315.054876

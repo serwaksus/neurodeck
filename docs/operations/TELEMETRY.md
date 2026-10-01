@@ -1,6 +1,6 @@
 # Телеметрия NeuroDeck (фаза 0 «Trust»)
 
-> Статус: действует с v80 · Owner: @evgenidsimakov · Обновлён: 2026-10-01 (R2: envelope v3)
+> Статус: действует с v80 · Owner: @evgenidsimakov · Обновлён: 2026-10-01 (R2: envelope v3; R4: privacy-гейты приёмника)
 > Реализация: [js/telemetry.js](../../js/telemetry.js) · Инструментация: [js/storage.js](../../js/storage.js)
 
 ## 1. Приватность (неизменяемый принцип)
@@ -109,8 +109,12 @@
 
 1. Opt-in сетевой экспорт diag-журнала: **приёмник готов с 2026-10-01** — `nd-config.service`
    на VPS (localhost:8095, `POST /v1/telemetry`, токен, DEFAULT OFF; runbook —
-   [CONFIG-SERVICE.md](CONFIG-SERVICE.md)). Клиентская часть по-прежнему НЕ отправляет ничего —
-   включение отправки = отдельное продуктовое решение (UI-флаг opt-in + адрес приёмника).
+   [CONFIG-SERVICE.md](CONFIG-SERVICE.md)). С 2026-10-01 (R4) приёмник принимает только
+   каталог §4–§5 (allowlist; дрейф пинится тестом), хранит sanitized-проекцию (redaction:
+   href без query, строки ≤200, секреты замазаны, только плоские `d` ≤8 полей), вычищает
+   записи старше 30 дней (retention) и стирается целиком по `DELETE /v1/telemetry` (токен).
+   Клиентская часть по-прежнему НЕ отправляет ничего — включение отправки = отдельное
+   продуктовое решение (UI-флаг opt-in + адрес приёмника).
 2. ~~Dual-generation в облаке~~ — реализовано в R2 (очередь 4, envelope v3, см. §6);
    контракты `nd_0` в regression-T5M1 и e2e T1-H3 пересмотрены на поколенческие ключи.
 3. Компрессия payload (CompressionStream с фоллбэком) — при подходе к лимитам CloudStorage.

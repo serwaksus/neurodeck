@@ -1,0 +1,78 @@
+{
+  "package": "R4",
+  "status": "complete",
+  "base_head": "1e0b7d9bcee1a5f07ae14c9035f0d29e107c409b",
+  "summary": "Config service upgrade/rollback + privacy gates (service version 2). (1) Atomic release layout for nd-config: deploy.sh now stages each deployment into /opt/neurodeck-config/releases/<epoch-ns>/ and flips the 'current' symlink with a single rename (ln + mv -T), so code/config swaps are atomic; unit ExecStart goes through current/server.cjs; the pre-R4 flat layout is auto-normalized into a '0-legacy-…' release (old code is preserved and rollback-able); KEEP_RELEASES=3 newest are kept, current is never pruned, and a failed release is kept for forensics. (2) Gates after every activate+restart: unit-active, real HTTP healthz with JSON contract (ok/service/version == the staged release's SERVICE_VERSION, so 'old process still running' is caught), MainPID>0, port-owner via real ss -tlnp (port held by nd-config's own PID, not a stranger), symlink target, and file-ownership checks (root-owned, nothing world-writable). A failed upgrade triggers automatic rollback to the previous release (symlink back, restart, gates re-run, non-zero exit, service left healthy on old code); release-rollback [name] reverts code (default: previous release) with roll-forward on gate failure; 'rollback' remains the full uninstall (telemetry data preserved unless --purge-data). Reinstall on a live service now performs an explicit restart (enable --now never restarts an active unit — the old update path silently kept old code). (3) Privacy gates on the telemetry receiver: event-name/error-code/counter/envelope-key allowlists built from the client catalog (js/telemetry.js + js/storage.js), with a drift test pinning server allowlist == client emissions; unknown names/fields are rejected 400 with the offending NAME only (no values echoed). Redaction: only a sanitized projection is stored — href stripped of query/fragment, all strings capped at 200, Bearer/token-like values replaced with [redacted], event data flattened to primitives with max 8 fields, nested structures never stored. Retention: records older than ND_TELEMETRY_RETENTION_DAYS (default 30, 0=off) are pruned lazily on write (throttled to hourly; atomic tmp+rename rewrite preserving 0600); rotated files older than retention are deleted. Delete contract: DELETE /v1/telemetry (token-gated, works with the receiver flag off when a token is configured) wipes the store and rotations. Telemetry remains DEFAULT OFF and the service remains localhost-only (127.0.0.1:8095); no external exposure was added or attempted. Verified by: 21 unit tests on the server (allowlist/redaction/retention/delete/drift) and 10 orchestration tests that run the real deploy.sh in a sandbox where ONLY systemctl is a stub — the stub actually starts the real staged server.cjs process, healthz gates use real curl over real HTTP, port-owner gates use real ss -tlnp against the real listening PID, and ownership gates use real stat/find; scenarios covered: fresh install, reinstall of a live service, upgrade, upgrade with failing gates → automatic rollback + roll-forward back, named/previous release-rollback, refusal cases, legacy migration, full uninstall with data preservation and --purge-data. Full unit suite 617/617 pass. No running services were touched on this VPS during R4; no bot interaction exists anywhere in deploy.sh (pinned by tests).",
+  "changed_files": [
+    "service/nd-config/server.cjs",
+    "service/nd-config/deploy.sh",
+    "service/nd-config/nd-config.service",
+    "service/nd-config/env.example",
+    "tests/config-service.test.js",
+    "tests/config-service-deploy.test.js",
+    "docs/operations/CONFIG-SERVICE.md",
+    "docs/operations/TELEMETRY.md",
+    "docs/plan/queue4-evidence/R4.json",
+    "docs/plan/queue4-evidence/R4-syntax.log",
+    "docs/plan/queue4-evidence/R4-service-unit.log",
+    "docs/plan/queue4-evidence/R4-deploy-orchestration.log",
+    "docs/plan/queue4-evidence/R4-full-unit.log",
+    "docs/plan/queue4-evidence/R4-check-js.log"
+  ],
+  "tests": [
+    {
+      "command": "node --check service/nd-config/server.cjs && node --check tests/config-service.test.js && node --check tests/config-service-deploy.test.js && bash -n service/nd-config/deploy.sh",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R4-syntax.log"
+    },
+    {
+      "command": "node --test tests/config-service.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R4-service-unit.log"
+    },
+    {
+      "command": "node --test tests/config-service-deploy.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R4-deploy-orchestration.log"
+    },
+    {
+      "command": "npm test",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R4-full-unit.log"
+    },
+    {
+      "command": "npm run check:js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R4-check-js.log"
+    }
+  ],
+  "artifacts": [
+    "docs/plan/queue4-evidence/R4-syntax.log",
+    "docs/plan/queue4-evidence/R4-service-unit.log",
+    "docs/plan/queue4-evidence/R4-deploy-orchestration.log",
+    "docs/plan/queue4-evidence/R4-full-unit.log",
+    "docs/plan/queue4-evidence/R4-check-js.log"
+  ],
+  "schema_version": "14",
+  "app_version": "104",
+  "version_sources": {
+    "schema": {
+      "path": "js/storage.js",
+      "value": "const SCHEMA_VERSION = 14"
+    },
+    "app": {
+      "path": "index.html",
+      "value": "?v=104"
+    }
+  },
+  "limitations": [
+    "Physical device tests TBD.",
+    "No real systemd operations were executed from this session (constraint: do not change running services). In the orchestration tests only systemctl is a stub (logging + PID management that starts the real staged server.cjs); the actual 'install/upgrade/release-rollback' against real systemd on this VPS is the owner's/driver's run — the commands are documented in docs/operations/CONFIG-SERVICE.md §4.",
+    "The deploy orchestration tests require root (real ss -tlnp PID info, file-ownership gates); they ran as root on this VPS.",
+    "The GitHub-workflow-facing side is untouched by R4; the release gate (R3) was not re-run here — the driver runs full CI (npm run ci / release:verify) after exit. Local verification: full unit suite 617/617 pass, check:js pass.",
+    "No client runtime files changed (service/tests/docs only), so index.html ?v= pins (15× ?v=104), sw.js nd-shell-v104 and js/storage.js SCHEMA_VERSION=14 stay in sync at 104/104/14 — no synchronized pin bump required this package; consistency re-verified from source during R4.",
+    "Config service external exposure remains NOT authorized and NOT implemented: service stays bound to 127.0.0.1:8095, telemetry receiver stays DEFAULT OFF (fail-safe: requires ND_TELEMETRY_ENABLED=1 AND token ≥16 chars), client-side export remains off; retention default 30 days, delete contract via DELETE /v1/telemetry with token.",
+    "Retention pruning is lazy (runs on incoming writes, at most hourly): a completely idle receiver does not self-clean until the next write or an explicit DELETE /v1/telemetry — documented in CONFIG-SERVICE.md §3/§5.",
+    "Server-side allowlist couples the receiver to the client telemetry catalog by design: a future client event without a server allowlist update fails the drift test and would be rejected 400 in production until the server is upgraded (intended privacy-gate semantics, documented in the incidents table)."
+  ]
+}

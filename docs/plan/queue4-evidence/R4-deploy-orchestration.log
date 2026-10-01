@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: deploy.sh: bash -n (синтаксис) и использование только переопределяемых путей
+ok 1 - deploy.sh: bash -n (синтаксис) и использование только переопределяемых путей
+  ---
+  duration_ms: 7.534285
+  type: 'test'
+  ...
+# Subtest: install: stage → current → env(600, telemetry OFF) → unit → реальный server отвечает; гейты прошли
+ok 2 - install: stage → current → env(600, telemetry OFF) → unit → реальный server отвечает; гейты прошли
+  ---
+  duration_ms: 427.395962
+  type: 'test'
+  ...
+# Subtest: install повторно на живом сервисе: env не перегенерируется, релизов больше, порт занят «самим собой» — ок
+ok 3 - install повторно на живом сервисе: env не перегенерируется, релизов больше, порт занят «самим собой» — ок
+  ---
+  duration_ms: 861.608308
+  type: 'test'
+  ...
+# Subtest: upgrade: атомарная смена current на новый релиз, гейты, prune старых
+ok 4 - upgrade: атомарная смена current на новый релиз, гейты, prune старых
+  ---
+  duration_ms: 1181.79382
+  type: 'test'
+  ...
+# Subtest: upgrade без установки: отказ с понятной причиной, ничего не ломается
+ok 5 - upgrade без установки: отказ с понятной причиной, ничего не ломается
+  ---
+  duration_ms: 12.552499
+  type: 'test'
+  ...
+# Subtest: upgrade с провалом гейтов: автооткат на предыдущий релиз, сервис здоров, провалившийся релиз сохранён
+ok 6 - upgrade с провалом гейтов: автооткат на предыдущий релиз, сервис здоров, провалившийся релиз сохранён
+  ---
+  duration_ms: 1417.166904
+  type: 'test'
+  ...
+# Subtest: release-rollback без имени: current → предыдущий релиз, гейты, более новые сохранены
+ok 7 - release-rollback без имени: current → предыдущий релиз, гейты, более новые сохранены
+  ---
+  duration_ms: 977.435328
+  type: 'test'
+  ...
+# Subtest: release-rollback: именованный; на единственном релизе откатываться некуда
+ok 8 - release-rollback: именованный; на единственном релизе откатываться некуда
+  ---
+  duration_ms: 1407.750187
+  type: 'test'
+  ...
+# Subtest: легаси-плоская раскладка нормализуется в релиз: install переносит старый код, не теряя его
+ok 9 - легаси-плоская раскладка нормализуется в релиз: install переносит старый код, не теряя его
+  ---
+  duration_ms: 660.784399
+  type: 'test'
+  ...
+# Subtest: rollback (снос): unit/opt/env удалены, данные телеметрии сохранены; --purge-data удаляет
+ok 10 - rollback (снос): unit/opt/env удалены, данные телеметрии сохранены; --purge-data удаляет
+  ---
+  duration_ms: 524.990831
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7573.680958

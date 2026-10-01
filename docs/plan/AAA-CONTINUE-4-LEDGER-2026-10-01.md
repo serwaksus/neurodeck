@@ -9,7 +9,7 @@ Baseline: b59ac16aeb999c0eb83964b1826a8655b321ecbc
 | R1 | 0 | final pinned-files CI and committed HEAD CI required | queue4-evidence/R1.json | R1 pin repair; validated external R1-release.json records final SHA |
 | R2 | 0 | precommit green; HEAD gate pending | queue4-evidence/R2.json | driver commit follows; see external SHA artifact |
 | R3 | 0 | precommit green; HEAD gate pending | queue4-evidence/R3.json | driver commit follows; see external SHA artifact |
-| R4 | pending | pending | pending | pending |
+| R4 | 0 | precommit green; HEAD gate pending | queue4-evidence/R4.json | driver commit follows; see external SHA artifact |
 | R5 | pending | pending | pending | pending |
 | V1 | pending | pending | pending | pending |
 | V2 | pending | pending | pending | pending |

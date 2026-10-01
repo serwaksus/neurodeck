@@ -1,0 +1,8 @@
+$ node --check service/nd-config/server.cjs
+exit=0
+$ node --check tests/config-service.test.js
+exit=0
+$ node --check tests/config-service-deploy.test.js
+exit=0
+$ bash -n service/nd-config/deploy.sh
+exit=0
