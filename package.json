@@ -8,7 +8,7 @@
     "check:ui": "node tests/verify-ui-assets.cjs css/style.css index.html",
     "test": "node --test tests/*.test.js",
     "ci": "npm run check:js && npm test && npm run test:e2e && npm run test:e2e:visual && npm run test:playtest:strongholds && npm run test:playtest:acceptance && npm run test:qa:data && npm run test:qa:chaos && npm run test:qa:parity && npm run test:sim:economy",
-    "test:e2e": "npx playwright test tests/e2e/neurodeck.test.js tests/e2e/logic.test.js tests/e2e/campaign-flows.test.js tests/e2e/boss-flow.test.js tests/e2e/responsive-gates.test.js tests/e2e/device-matrix.test.js",
+    "test:e2e": "npx playwright test tests/e2e/neurodeck.test.js tests/e2e/logic.test.js tests/e2e/campaign-flows.test.js tests/e2e/boss-flow.test.js tests/e2e/weekly-modifier.test.js tests/e2e/responsive-gates.test.js tests/e2e/device-matrix.test.js",
     "test:e2e:visual": "npx playwright test tests/e2e/visual-regression.test.js tests/e2e/visual-regression-extended.test.js",
     "test:e2e:visual:update": "npm run test:e2e:visual -- --update-snapshots",
     "test:e2e:all": "npx playwright test tests/e2e/",
