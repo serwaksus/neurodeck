@@ -198,7 +198,7 @@ test('C5: sanitizeHero bosses — introSeen/rewardChoice/pendingReward в whitel
 test('C5: миграция v12→v13 — дефолты полей босс-арок, мусор клэмпится, idempotent', () => {
     const d = { v: 12, hero: { bosses: { defeated: [1], activeNum: null, phase: 0 } } };
     IV.migrateSyncData(d);
-    assert.equal(d.v, 13);
+    assert.equal(d.v, 14, 'v12-мигрант доводится до текущей схемы (P11: v14 поверх C5)');
     assert.deepEqual(d.hero.bosses.introSeen, [], 'дефолт introSeen');
     assert.deepEqual(d.hero.bosses.rewardChoice, {}, 'дефолт rewardChoice');
     assert.equal(d.hero.bosses.pendingReward, null, 'дефолт pendingReward');
@@ -229,7 +229,7 @@ test('C5: интеграции в app.js — модалка, диспетчер,
     assert.ok(app.indexOf('bossRewardModal: closeBossRewardModal') !== -1, 'Esc/оверлей-закрытие в MODAL_CLOSE_FNS');
     const sg = fs.readFileSync(path.join(root, 'js', 'state-guards.js'), 'utf8');
     assert.ok(sg.indexOf('introSeen') !== -1 && sg.indexOf('pendingReward') !== -1, 'sanitize новых полей');
-    assert.equal(IV.SCHEMA_VERSION, 13, 'SCHEMA_VERSION 13');
+    assert.equal(IV.SCHEMA_VERSION, 14, 'SCHEMA_VERSION 14');
 });
 
 // ----------------------------------------------------------------

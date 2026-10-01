@@ -89,14 +89,15 @@ test('C4 sanitizeSiege: rams/ladders — счётчики 0..999, дефолт 0
     assert.equal(SG.sanitizeSiege({ rams: '4', ladders: 2.7 }).ladders, 3);
 });
 
-test('C4 миграция v11→v12: счётчики появляются с дефолтом 0, v = 13 (C5 поверх)', () => {
+test('C4 миграция v11→v12: счётчики появляются с дефолтом 0, v = 14 (C5+P11 поверх)', () => {
     const d = { v: 11, hero: {}, forged: [], siege: { week: 3, lastResult: 'fail', wkSkips: 1 } };
     IV.migrateSyncData(d);
-    assert.equal(d.v, 13);
+    assert.equal(d.v, 14);
     assert.equal(d.siege.week, 3, 'поле недели не тронуто');
     assert.equal(d.siege.rams, 0);
     assert.equal(d.siege.ladders, 0);
     assert.equal(d.siege.lastResult, 'fail');
+    assert.equal(d.siege.approach, 'assault', 'P11: v14 добавляет подход с дефолтом-нормой');
 });
 
 test('C4 миграция v12: существующие счётчики сохраняются, мусор клэмпится', () => {
@@ -127,10 +128,31 @@ test('C4→C5 цепочка v7: полный путь миграций дово
         inventory: { backpack: [], equipped: {} }, tasks: [], tractState: { regions: 2, building: null }
     };
     IV.migrateSyncData(d);
-    assert.equal(d.v, 13);
+    assert.equal(d.v, 14);
     assert.equal(d.siege.rams, 0);
     assert.equal(d.siege.ladders, 0);
     assert.equal(d.siege.week, 1);
+    assert.equal(d.siege.approach, 'assault', 'P11: подход в конце цепочки — норма');
+});
+
+// ----------------------------------------------------------------
+// P11: персистентный подход недели (siege.approach, схема v14)
+// ----------------------------------------------------------------
+
+test('P11 персистентность: выбор игрока переживает sanitize (roundtrip сейва)', () => {
+    for (const choice of ['siege', 'trick']) {
+        const saved = SG.sanitizeSiege({ week: 4, rams: 1, approach: choice });
+        const reloaded = SG.sanitizeSiege(saved); // reload = applySyncData → sanitizeSiege
+        assert.equal(reloaded.approach, choice, 'подход «' + choice + '» дожил до новой сессии');
+    }
+    assert.equal(SG.sanitizeSiege(SG.sanitizeSiege({ approach: 'siege' })).approach, 'siege', 'sanitize∘sanitize стабилен');
+});
+
+test('P11 персистентность: v13-сейв с уже выбранным «Осадой» (поле приехало из будущего) не теряет выбор', () => {
+    const d = { v: 13, siege: { week: 2, approach: 'siege', rams: 3 } };
+    IV.migrateSyncData(d);
+    assert.equal(d.siege.approach, 'siege', 'валидное значение миграция не перетирает');
+    assert.equal(SG.sanitizeSiege(d.siege).approach, 'siege', 'и sanitize вслед за миграцией тоже');
 });
 
 // ----------------------------------------------------------------

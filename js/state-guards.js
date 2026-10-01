@@ -418,7 +418,8 @@
         var rams = Math.round(clampNumber(src.rams, 0, 999, 0)); // C4: осадные ресурсы (схема v12) — счётчики, всегда в выходе
         var ladders = Math.round(clampNumber(src.ladders, 0, 999, 0));
         var stance = ['assault', 'defend', 'scout', 'economy'].indexOf(src.stance) >= 0 ? src.stance : null; // Г4: стойка недели
-        var out = { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails, retriedThisWeek: src.retriedThisWeek === true, rams: rams, ladders: ladders };
+        var approach = ['assault', 'siege', 'trick'].indexOf(src.approach) >= 0 ? src.approach : 'assault'; // P11: подход недели персистентный (схема v14), дефолт — норма «Штурм»
+        var out = { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails, retriedThisWeek: src.retriedThisWeek === true, rams: rams, ladders: ladders, approach: approach };
         if (src.stance !== undefined) out.stance = stance; // Г4: лениво — байт-стабильный раундтрип сейвов без стойки
         return out;
     }

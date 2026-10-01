@@ -1,7 +1,7 @@
 'use strict';
 // P10: консолидированная панель подготовки осады — разведка-статус, подход недели (+отмена до тика),
 // осадный склад, превью до/после (фронтальный штурм + недельная оборона) и «рискованно»-подтверждение
-// при ratio<1.2. НОВЫХ полей состояния нет: подход — runtime-вар, склад/тень — существующие поля схемы.
+// при ratio<1.2. P11: подход недели персистентен (siege.approach, схема v14) — UI пишет выбор в сейв.
 // Харнессы — extract-паттерн wave3/P6 (функции поодиночке, same-layer зависимости закрываются стабами).
 
 const test = require('node:test');
@@ -78,59 +78,65 @@ test('P10 risk: мусорный прогноз — пустая строка, �
 });
 
 // ----------------------------------------------------------------
-// requestApproachCancel: отмена подготовки до тика (runtime-вар, сейва нет)
+// requestApproachCancel: отмена подготовки до тика (P11: сброс в siege.approach — в сейве)
 // ----------------------------------------------------------------
 
-test('P10 отмена: подход ≠ «Штурм» — сброс к норме, тост и ререндер', () => {
-    const calls = { toast: 0, render: 0, haptic: 0 };
+test('P10 отмена: подход ≠ «Штурм» — сброс к норме, тост, сейв и ререндер', () => {
+    const calls = { toast: 0, render: 0, haptic: 0, save: 0 };
     const out = buildIn({
-        decls: ['var siegeApproach = \'siege\';', extractFn('requestApproachCancel')],
+        decls: ['var siege = { approach: \'siege\' };', extractFn('requestApproachCancel')],
         stubs: {
             weekApproach: () => 'siege',
             showToast: () => calls.toast++,
             haptic: () => calls.haptic++,
+            saveSoon: () => calls.save++,
             renderStrongholds: () => calls.render++,
         },
-        body: '(function(){ requestApproachCancel(); return siegeApproach; })',
+        body: '(function(){ requestApproachCancel(); return siege.approach; })',
     });
-    assert.equal(out(), 'assault', 'подход сброшен в «Штурм»');
+    assert.equal(out(), 'assault', 'подход сброшен в «Штурм» (поле сейва)');
     assert.equal(calls.toast, 1, 'тост об отмене');
     assert.equal(calls.render, 1, 'панель перерендерена');
     assert.equal(calls.haptic, 1, 'haptic');
+    assert.equal(calls.save, 1, 'P11: сброс сохраняется в сейв');
 });
 
 test('P10 отмена: уже «Штурм» — no-op без тоста и ререндера', () => {
-    const calls = { toast: 0, render: 0 };
+    const calls = { toast: 0, render: 0, save: 0 };
     const out = buildIn({
-        decls: ['var siegeApproach = \'assault\';', extractFn('requestApproachCancel')],
+        decls: ['var siege = { approach: \'assault\' };', extractFn('requestApproachCancel')],
         stubs: {
             weekApproach: () => 'assault',
             showToast: () => calls.toast++,
             haptic: () => {},
+            saveSoon: () => calls.save++,
             renderStrongholds: () => calls.render++,
         },
-        body: '(function(){ requestApproachCancel(); return siegeApproach; })',
+        body: '(function(){ requestApproachCancel(); return siege.approach; })',
     });
     assert.equal(out(), 'assault');
     assert.equal(calls.toast, 0, 'нечего отменять — молча');
     assert.equal(calls.render, 0);
+    assert.equal(calls.save, 0);
 });
 
 test('P10 отмена: уже «Штурм» — no-op без тоста и ререндера', () => {
-    const calls = { toast: 0, render: 0 };
+    const calls = { toast: 0, render: 0, save: 0 };
     const out = buildIn({
-        decls: ['var siegeApproach = \'assault\';', extractFn('requestApproachCancel')],
+        decls: ['var siege = { approach: \'assault\' };', extractFn('requestApproachCancel')],
         stubs: {
             weekApproach: () => 'assault',
             showToast: () => calls.toast++,
             haptic: () => {},
+            saveSoon: () => calls.save++,
             renderStrongholds: () => calls.render++,
         },
-        body: '(function(){ requestApproachCancel(); return siegeApproach; })',
+        body: '(function(){ requestApproachCancel(); return siege.approach; })',
     });
     assert.equal(out(), 'assault');
     assert.equal(calls.toast, 0, 'нечего отменять — молча');
     assert.equal(calls.render, 0);
+    assert.equal(calls.save, 0);
 });
 
 // ----------------------------------------------------------------

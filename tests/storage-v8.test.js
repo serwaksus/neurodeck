@@ -99,7 +99,7 @@ function v7Fixture(regions) {
 test('миграция v7→v8: regions=5 → 5 captured, золото/карточки/задачи целы', () => {
     const d = v7Fixture(5);
     IV.migrateSyncData(d);
-    assert.equal(d.v, 13, 'цепочка миграций доводит до текущей схемы (C5: v13)');
+    assert.equal(d.v, 14, 'цепочка миграций доводит до текущей схемы (P11: v14)');
     assert.equal(d.strongholds.length, 20);
     d.strongholds.forEach((s, i) => {
         assert.equal(s.id, DATA.STRONGHOLDS[i].id, 'порядок/ID соответствуют каталогу');
@@ -109,7 +109,7 @@ test('миграция v7→v8: regions=5 → 5 captured, золото/карт�
         assert.deepEqual(s.corruption, { stage: 'ok', debtDays: 0 });
     });
     assert.deepEqual(d.army, { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 });
-    assert.deepEqual(d.siege, { week: 1, lastResult: null, rams: 0, ladders: 0 }); // C4: v12 добавляет осадный склад
+    assert.deepEqual(d.siege, { week: 1, lastResult: null, rams: 0, ladders: 0, approach: 'assault' }); // C4: v12 склад; P11: v14 подход — дефолт «Штурм»
     assert.equal(d.hero.gold, 4321, 'золото цело (ADR §10)');
     assert.equal(d.forged.length, 1, 'карточки целы');
     assert.equal(d.tasks.length, 1);
@@ -140,6 +140,45 @@ test('миграция v7→v8: повторный вызов не меняет 
     IV.migrateSyncData(d);
     assert.equal(JSON.stringify(d.strongholds), snap, 'повторная миграция запрещена (SPEC §9.8)');
     assert.equal(d.siege.week, 1);
+});
+
+// ----------------------------------------------------------------
+// Миграция v13 → v14 (P11: персистентный подход недели — siege.approach)
+// ----------------------------------------------------------------
+
+test('миграция v13→v14: подход появляется с дефолтом «assault», остальное не тронуто', () => {
+    const d = { v: 13, hero: {}, forged: [], siege: { week: 7, lastResult: 'win', rams: 2, ladders: 1 } };
+    IV.migrateSyncData(d);
+    assert.equal(d.v, 14);
+    assert.equal(d.siege.approach, 'assault', 'P11: мигрант из v13 начинается с нормы');
+    assert.equal(d.siege.week, 7, 'неделя не тронута');
+    assert.equal(d.siege.rams, 2, 'склад цел');
+    assert.equal(d.siege.lastResult, 'win');
+});
+
+test('миграция v13→v14: валидный сохранённый подход сохраняется, мусор/чужой id → «assault»', () => {
+    for (const good of ['assault', 'siege', 'trick']) {
+        const d = { v: 13, siege: { week: 2, approach: good } };
+        IV.migrateSyncData(d);
+        assert.equal(d.siege.approach, good, 'валидный подход ' + good + ' прошёл');
+    }
+    for (const bad of ['ram', 'ASSAULT', 42, null, undefined]) {
+        const d = { v: 13, siege: { week: 2, approach: bad } };
+        IV.migrateSyncData(d);
+        assert.equal(d.siege.approach, 'assault', 'мусор ' + JSON.stringify(bad) + ' → норма');
+    }
+    const noSiege = { v: 13, hero: {} };
+    IV.migrateSyncData(noSiege);
+    assert.equal(noSiege.siege.approach, 'assault', 'без siege-объекта — создаётся с дефолтами');
+});
+
+test('миграция v13→v14: idempotent — повторный прогон байт-стабилен', () => {
+    const d = { v: 13, siege: { week: 5, approach: 'siege' } };
+    IV.migrateSyncData(d);
+    const snap = JSON.stringify(d.siege);
+    IV.migrateSyncData(d);
+    assert.equal(JSON.stringify(d.siege), snap, 'sanitize∘migrate не меняет поле');
+    assert.equal(d.siege.approach, 'siege', 'выбор игрока не потерян вторым прогоном');
 });
 
 // ----------------------------------------------------------------
@@ -218,10 +257,15 @@ test('sanitizeArmy: дефолты, clamp 0..1e6, неделя 0..520, мусо�
 });
 
 test('sanitizeSiege: week 1..520, lastResult — только плоские примитивы', () => {
-    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }); // C4: счётчики склада всегда в выходе
+    assert.deepEqual(SG.sanitizeSiege(null), { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0, approach: 'assault' }); // C4: счётчики склада; P11: подход всегда в выходе (схема v14)
     assert.equal(SG.sanitizeSiege({ stance: 'defend' }).stance, 'defend', 'Г4: валидная стойка проходит');
     assert.equal(SG.sanitizeSiege({ stance: 'hack' }).stance, null, 'Г4: мусорная стойка → null');
     assert.equal(SG.sanitizeSiege({}).stance, undefined, 'Г4: без стойки поле лениво (байт-стабильный раундтрип)');
+    assert.equal(SG.sanitizeSiege({ approach: 'siege' }).approach, 'siege', 'P11: выбранный подход проходит');
+    assert.equal(SG.sanitizeSiege({ approach: 'trick' }).approach, 'trick');
+    for (const junk of ['ram', 'ASSAULT', 42, null, undefined, {}, '']) {
+        assert.equal(SG.sanitizeSiege({ approach: junk }).approach, 'assault', 'P11: мусорный подход → норма: ' + JSON.stringify(junk));
+    }
     assert.equal(SG.sanitizeSiege({ week: 0 }).week, 1, 'минимум 1');
     assert.equal(SG.sanitizeSiege({ week: 1e9 }).week, 520);
     const kept = SG.sanitizeSiege({ lastResult: { week: 3, lost: 2, held: 1, evil: { nested: true } } });

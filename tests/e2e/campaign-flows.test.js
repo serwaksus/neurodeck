@@ -1,10 +1,13 @@
 const { test, expect } = require('@playwright/test');
+const assert = require('node:assert/strict');
 
 // P1: расширенные браузерные гейты кампании (Campaign 2.0 C2/C4/C5/C6) — реальные
 // потоки UI на настоящем app.js: развилки фронтира, reward-choice боссов, ротация
-// эндгейм-модификаторов, осадный склад и превью подхода недели.
+// эндгейм-модификаторов, осадный склад и превью подхода недели. P11: персистентный
+// подход (схема v14) — выбор переживает перезагрузку, сейв с подходом уважается с бута.
 // Все сиды — v13-сейвы с lastDayReset=сегодня (дневной/недельный тики не срабатывают,
-// состояние детерминировано). Каталог и модель подключаются в Node для расчёта
+// состояние детерминировано; P11-гейты проверяют миграцию v13→v14 и готовый v14-сейв).
+// Каталог и модель подключаются в Node для расчёта
 // эталонов (тот же код, что в браузере — window.StrongholdData/StrongholdModel).
 
 globalThis.StrongholdData = require('../../js/stronghold-data.js');
@@ -108,13 +111,18 @@ async function bootWithSave(page, save) {
     if (j) {
       sessionStorage.removeItem('__nd_e2e_save');
       localStorage.setItem('neurodeck_full_save', j);
+      // LWW-консистентность (как в responsive-gates/visual-extended): GEN_KEY обязан
+      // соответствовать сиду, иначе хвост beforeunload прошлой страницы (GEN_KEY новее)
+      // вооружает adopt в saveGameState — первый дебаунс-сейв применит СИД поверх
+      // runtime-выбора игрока (подход недели P11 затирался именно так, C4-флейк).
+      try { localStorage.setItem('neurodeck_gen', String(JSON.parse(j).gen || 1)); } catch (e) {}
       localStorage.setItem('neurodeck_onboarding_done', '1');
     }
   });
   await page.goto('/e2e-prologue'); // 404 на том же origin: приложение не грузится
   await loadSave(page, save);
 }
-// подмена сейва в уже открытой странице (подход недели не персистится — нужен свежий бут)
+// подмена сейва в уже открытой странице (P11: подход персистентен — свежий сейв сбрасывает его к дефолту)
 async function loadSave(page, save) {
   await page.evaluate((s) => sessionStorage.setItem('__nd_e2e_save', JSON.stringify(s)), save);
   await page.goto('/');
@@ -309,7 +317,7 @@ test('C4: подход недели — «Осада» +1 гнев, «Хитро
   await expect(page.locator('#confirmTitle')).toHaveText('Тактика штурма');
   await expect(page.locator('#confirmBody')).toContainText('против 🛡 1100');
 
-  // после подхода: свежий бут (подход — runtime-выбор), фронт тот же sh11
+  // после подхода: свежий сейв (дефолт «Штурм»), фронт тот же sh11
   await loadSave(page, makeSave({ captured: 10 }));
   // «Осада»: гнев +1, кнопка активна
   await page.click('.km-stance[data-approach="siege"]');
@@ -388,6 +396,43 @@ test('P10: превью в панели живо — подход «Хитрос
   await page.click('.km-stance[data-approach="trick"]');
   await expect(page.locator('.siege-prep')).toContainText('против 🛡 990');
   await expect(page.locator('.siege-prep')).not.toContainText('против 🛡 1100');
+});
+
+// ===================== P11: персистентный подход недели (схема v14) =====================
+test('P11: подход «Хитрость» переживает перезагрузку — выбор доезжает до сейва и возвращается', async ({ page }) => {
+  await bootWithSave(page, makeSave({ captured: 10 })); // sh11 пров. 3: гарнизон 1100 → «Хитрость» 990
+  await page.click('.km-stance[data-approach="trick"]');
+  await expect(page.locator('.km-stance[data-approach="trick"]')).toHaveClass(/active/);
+  await expect(page.locator('.siege-prep')).toContainText('против 🛡 990');
+
+  // выбор доехал до localStorage (saveSoon-дебаунч 300мс): до P11 подход жил только в сессии
+  await expect.poll(() => page.evaluate(() => {
+    try { return (JSON.parse(localStorage.getItem('neurodeck_full_save') || '{}').siege || {}).approach || ''; } catch (e) { return ''; }
+  }), { timeout: 5000 }).toBe('trick');
+
+  await page.reload(); // свежая сессия — тот же сейв
+  await openStrongholds(page);
+  await expect(page.locator('.km-stance[data-approach="trick"]')).toHaveClass(/active/); // UI уважает сохранённый выбор
+  await expect(page.locator('.siege-prep')).toContainText('против 🛡 990'); // модификатор применён с бута
+  await expect(page.locator('.siege-prep [data-action="km-approach-cancel"]')).toHaveCount(1); // отмена до тика доступна
+});
+
+test('P11: сейв v14 с подходом «Осада» — бут сразу в нём (гнев +1 без кликов)', async ({ page }) => {
+  const save = makeSave({ captured: 10 });
+  save.v = 14; save.siege.approach = 'siege'; // враг/сосед прислал сейв с уже выбранным подходом
+  await bootWithSave(page, save);
+  await expect(page.locator('.km-stance[data-approach="siege"]')).toHaveClass(/active/);
+  await expect(page.locator('.sh-context-anchor')).toContainText('Гнев: 1/10'); // «Осада» честно +1 гнев с бута
+});
+
+test('P11: легаси-сейв v13 без подхода — миграция до v14, дефолт «Штурм» активен', async ({ page }) => {
+  await bootWithSave(page, makeSave({ captured: 10 })); // фикстура v13 → миграция v13→v14 на буте
+  await expect(page.locator('.km-stance[data-approach="assault"]')).toHaveClass(/active/);
+  await expect(page.locator('.siege-prep [data-action="km-approach-cancel"]')).toHaveCount(0); // нечего отменять
+  // миграция видна в runtime-состоянии: siege.approach появился с дефолтом (сейв в localStorage
+  // ещё не переписан — бут без сохраняющих интеракций; формулу v=14 пиняют юнит-тесты миграции)
+  const approach = await page.evaluate(() => (typeof siege !== 'undefined' && siege) ? siege.approach : null);
+  assert.equal(approach, 'assault', 'v13-мигрант получил подход с дефолтом «Штурм»');
 });
 
 // ===================== P6: брейкдауны экономики =====================

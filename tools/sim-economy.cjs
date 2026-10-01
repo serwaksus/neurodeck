@@ -716,14 +716,14 @@ function estimateSaveJson(p, days, activeDays) {
     return { id: s.id, captured: !!p.captured[i], garrison: [], buildings: b };
   });
   const snapshot = {
-    v: 13, gen: days * 4 + 17, hero: hero, stats: stats, forged: forged, goals: goals,
+    v: 14, gen: days * 4 + 17, hero: hero, stats: stats, forged: forged, goals: goals,
     inventory: { backpack: backpack, equipped: { relic: backpack[0], weapon: backpack[1] }, maxSlots: 30 },
     lastDayReset: dayKey(days), forgedIdCounter: cardCount + 1, uidCounter: 250, goalIdCounter: 7,
     xpHistory: xpHistory, bloodOath: null, lastWeekReset: dayKey(days - 2),
     tasks: tasks, taskIdCounter: 9, hirePool: p.pool, savedAt: 1790000000000,
     strongholds: strongholdsState,
     army: { units: p.units, week: 3 },
-    siege: { week: p.siegeWeek, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 },
+    siege: { week: p.siegeWeek, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0, approach: 'assault' },
     dailyQuests: null, dailyEvent: null,
     season: { num: p.seasonNum, start: dayKey(days - 10), crownBonus: p.crowns, snapshot: { totalXp: 120000, gold: p.gold, captured: capturedCount(p), completions: 900, level: 30 } },
     throne: p.throne, TECHS: {}, TECH_PTS: 40, TECH_IDEA: null, TECH_ACTIVES: {},

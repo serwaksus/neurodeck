@@ -168,8 +168,8 @@ case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
 case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
 case 'counter-siege': requestCounterSiege(); break;
 	case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
-	case 'km-approach': requestApproach(String(el.dataset.approach || '')); break; // C4: подход недели (не пишется в сейв)
-	case 'km-approach-cancel': requestApproachCancel(); break; // P10: отмена подготовки до тика (runtime, без полей состояния)
+	case 'km-approach': requestApproach(String(el.dataset.approach || '')); break; // C4/P11: подход недели — пишется в сейв (siege.approach)
+	case 'km-approach-cancel': requestApproachCancel(); break; // P10: отмена подготовки до тика (P11: сброс — тоже в сейве)
 	case 'sh-siege-store': buySiegeStore(String(el.dataset.store || '')); break; // C4: осадные ресурсы (схема v12)
 case 'km-edict': requestEdict(parseInt(el.dataset.idx), String(el.dataset.edict || '')); break; // Г4: эдикт провинции
 case 'km-chronicle-open': showChronicle(); break; // Г5-Ф: летопись
@@ -2700,7 +2700,7 @@ function performAscension(keepId) { // ядро сброса: сохранить
     HERO.scouts = null; // тени старого мира сгорают
     strongholds = null; ensureStrongholdState(); // твердыни/постройки/гарнизоны — заново
     army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-    siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }; // C4: осадный склад обнуляется
+    siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0, approach: 'assault' }; // C4: осадный склад обнуляется; P11: подход — норма «Штурм» (схема v14)
     hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
     dailyQuests = null; dailyEvent = null; throne = 0;
     lastDayReset = null; lastWeekReset = getThisMondayKey();
@@ -3668,13 +3668,15 @@ function requestStance(stanceId) {
   haptic('light'); saveSoon(); renderStrongholds();
 }
 /* ===================== Campaign 2.0 C4: подготовка осады (подход недели + осадный склад) ===================== */
-// Подход НЕ пишется в сейв: выбор в UI → применение в тике (недельная осада / штурм); новая неделя
-// и перезагрузка всегда начинают со «Штурма» (норма). Модификаторы — чистые функции модели.
+// P11: подход недели персистентен — siege.approach (схема v14, миграция из v13 с дефолтом
+// 'assault'). Выбор в UI сохраняется в сейв и переживает перезагрузку, но по-прежнему сгорает
+// вместе с неделей: после воскресного тика неделя начинается со «Штурма» (норма).
+// Модификаторы — чистые функции модели.
 // P10: панель консолидирована — разведка-статус, подход недели (+отмена до тика), осадный склад
 // и превью до/после в одном месте; только существующие функции и состояние, без новых полей.
-var siegeApproach = 'assault';
 function weekApproach() {
-  return (SM && SM.SIEGE_APPROACHES && SM.SIEGE_APPROACHES[siegeApproach]) ? siegeApproach : 'assault';
+  var a = (typeof siege !== 'undefined' && siege && typeof siege === 'object') ? siege.approach : null; // P11: typeof-гвард — extract-харнессы тянут функцию поодиночке
+  return (SM && SM.SIEGE_APPROACHES && SM.SIEGE_APPROACHES[a]) ? a : 'assault';
 }
 function approachEnemyMultNow() { return (SM && typeof SM.approachEnemyMult === 'function') ? SM.approachEnemyMult(weekApproach()) : 1; }
 function approachWrathDeltaNow() { return (SM && typeof SM.approachWrathDelta === 'function') ? SM.approachWrathDelta(weekApproach()) : 0; }
@@ -3682,16 +3684,16 @@ function approachGarrisonMultNow(prov) { return (SM && typeof SM.approachGarriso
 function requestApproach(approachId) {
   if (!SM || !SM.SIEGE_APPROACHES || !SM.SIEGE_APPROACHES[approachId]) return;
   if (weekApproach() === approachId) return;
-  siegeApproach = approachId;
+  siege.approach = approachId; // P11: выбор в сейве — переживёт перезагрузку
   var meta = SM.approachMeta(approachId);
   showToast('🧭 Подход недели: ' + meta.name, meta.desc + ' · действует до воскресной осады', 'save');
-  haptic('light'); renderStrongholds();
+  haptic('light'); saveSoon(); renderStrongholds();
 }
-function requestApproachCancel() { // P10: отмена подготовки до тика — подход сбрасывается к норме «Штурм» (runtime-вар, сейва нет; склад не сгорает)
+function requestApproachCancel() { // P10/P11: отмена подготовки до тика — подход сбрасывается к норме «Штурм» (в сейве; склад не сгорает)
   if (weekApproach() === 'assault') return;
-  siegeApproach = 'assault';
+  siege.approach = 'assault';
   showToast('🧭 Подготовка отменена', 'Подход недели снова «Штурм» — воскресная осада пойдёт по норме. Осадный склад останется до штурма.', 'save');
-  haptic('light'); renderStrongholds();
+  haptic('light'); saveSoon(); renderStrongholds();
 }
 function buySiegeStore(kind) { // C4: лестницы/таран — по 25💰, тратятся при следующем штурме (siege.rams/ladders, схема v12)
   ensureStrongholdState();
@@ -5608,7 +5610,7 @@ lastWeekReset = currentMonday;
 showToast('🗓 Новая неделя', 'Путь продолжается', 'save');
 recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
 runWeeklySiege();
-siegeApproach = 'assault'; // C4: подход недели сгорает вместе с неделей — новая начинается со «Штурма»
+siege.approach = 'assault'; // P11: подход сгорает вместе с неделей — новая начинается со «Штурма» (поле в сейве, схема v14)
 siege.wkSkips = 0; siege.wkTaskFails = 0;
   siege.wkSkips = Math.max(0, siege.wkSkips - techWrathWeekReduction()); siege.wkTaskFails = Math.max(0, siege.wkTaskFails - techWrathWeekReduction()); // Г5-Т3: Обряды Усмирения −1/нед к источникам гнева
   siege.retriedThisWeek = false; // #95: контрштурм доступен снова
@@ -6178,7 +6180,7 @@ TASKS = []; taskIdCounter = 1;
 GOALS = []; goalIdCounter = 1;
 strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }; // C4: осадный склад обнуляется
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0, approach: 'assault' }; // C4: осадный склад обнуляется; P11: подход — норма «Штурм» (схема v14)
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();
 xpHistory = []; bloodOath = null;
@@ -6200,7 +6202,7 @@ HERO.lastSessionAt = Date.now(); HERO.dailyUniqueStats = {}; HERO.cardHistory = 
 Object.keys(STATS).forEach(function(k) { STATS[k].value = 3; STATS[k].attributePoints = 0; });
 strongholds = null; ensureStrongholdState();
 army = { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 0 };
-siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0 }; // C4: осадный склад обнуляется
+siege = { week: 1, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0, approach: 'assault' }; // C4: осадный склад обнуляется; P11: подход — норма «Штурм» (схема v14)
 hirePool = { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 };
 TASKS = []; taskIdCounter = 1;
 dailyQuests = null; dailyEvent = null; throne = 0; lastDayReset = null; lastWeekReset = getThisMondayKey();

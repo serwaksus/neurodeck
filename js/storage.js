@@ -66,7 +66,7 @@ function ndSnapshotChecksum(s) {
     }
     return ('0000000' + a.toString(16)).slice(-8) + ('0000000' + b.toString(16)).slice(-8);
 }
-const SCHEMA_VERSION = 13;
+const SCHEMA_VERSION = 14;
 var strongholds = null, army = null, siege = null;
 function strongholdCatalog() {
     return (typeof globalThis !== 'undefined' && globalThis.StrongholdData) || null;
@@ -182,8 +182,8 @@ MIGRATIONS[11] = function(data) {
     } catch(e) {}
 };
 // v11→v12 (Campaign 2.0 C4): осадные ресурсы — счётчики siege.rams / siege.ladders (дефолт 0).
-// Подход недели («Штурм/Осада/Хитрость») в сейве НЕ хранится: выбор в UI применяется в тике
-// и живёт только сессию, поэтому для него полей нет (план очереди D–H, пакет F).
+// Подход недели («Штурм/Осада/Хитрость») на момент v12 в сейве НЕ хранился: выбор в UI
+// применялся в тике и жил только сессию (с v14 — хранится, см. MIGRATIONS[14]).
 MIGRATIONS[12] = function(data) {
     try {
         if (!data || typeof data !== 'object') return;
@@ -211,6 +211,17 @@ MIGRATIONS[13] = function(data) {
             if (!/^\d+$/.test(k) || +k < 1 || +k > 11 || ['artifact', 'crown', 'ruin'].indexOf(bs.rewardChoice[k]) === -1) delete bs.rewardChoice[k];
         });
         if (!Number.isInteger(bs.pendingReward) || bs.pendingReward < 1 || bs.pendingReward > 11) bs.pendingReward = null;
+    } catch(e) {}
+};
+// v13→v14 (P11): персистентный подход недели — siege.approach ('assault'|'siege'|'trick',
+// дефолт 'assault'). До v14 выбор жил только в сессии и терялся на перезагрузке; теперь
+// UI уважает сохранённый выбор, но по-прежнему сгорает вместе с неделей — app.js сбрасывает
+// в 'assault' после воскресного тика, поэтому «Осада»/«Хитрость» не множат неделю вечность.
+MIGRATIONS[14] = function(data) {
+    try {
+        if (!data || typeof data !== 'object') return;
+        if (!data.siege || typeof data.siege !== 'object' || Array.isArray(data.siege)) data.siege = { week: 1, lastResult: null };
+        if (['assault', 'siege', 'trick'].indexOf(data.siege.approach) === -1) data.siege.approach = 'assault';
     } catch(e) {}
 };
 function migrateSyncData(data) {
