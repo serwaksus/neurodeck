@@ -64,3 +64,55 @@ test('hero view shows character stats', async ({ page }) => {
   await expect(page.locator('#heroXpCur')).toBeVisible();
   await expect(page.locator('#statsGrid')).toBeVisible();
 });
+
+// P21: аудио-микшер — секция настроек, персистентность в localStorage, правило 20 (без автозапуска)
+test('audio mixer: settings section, localStorage persistence, no autoplay before interaction', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('neurodeck_onboarding_done', '1'));
+  await page.goto('/');
+  await page.waitForTimeout(2000);
+
+  // правило 20: до первого взаимодействия (любого клика, включая закрытие стартовой модалки) микшер не разблокирован
+  const locked = await page.evaluate(() => typeof NDAudio !== 'undefined' && !NDAudio.unlocked());
+  expect(locked).toBe(true);
+  const musicMutedByDefault = await page.evaluate(() => NDAudio.get('music').muted === true);
+  expect(musicMutedByDefault).toBe(true);
+
+  const closeBtn = page.locator('#starterDeckModal .modal-close');
+  if (await closeBtn.isVisible()) await closeBtn.click();
+
+  await page.locator('[data-action="open-sync-modal"]').click();
+  await expect(page.locator('#audioSection')).toBeVisible();
+  await expect(page.locator('#audioSection .audio-row')).toHaveCount(5);
+  await expect(page.locator('#audio-mute-music')).toHaveAttribute('aria-pressed', 'true');
+
+  // мьют категории пишется в localStorage (не в сейв)
+  await page.locator('#audio-mute-ui').click();
+  await expect(page.locator('#audio-mute-ui')).toHaveAttribute('aria-pressed', 'true');
+  const lsAfterMute = await page.evaluate(() => JSON.parse(localStorage.getItem('neurodeck_audio')));
+  expect(lsAfterMute.ui.muted).toBe(true);
+
+  // слайдер громкости пишет vol в localStorage
+  await page.locator('#audio-vol-siege').fill('80');
+  const lsAfterVol = await page.evaluate(() => JSON.parse(localStorage.getItem('neurodeck_audio')));
+  expect(lsAfterVol.siege.vol).toBe(0.8);
+  await expect(page.locator('#audio-pct-siege')).toHaveText('80%');
+
+  // reload: мьют/громкость пережили перезагрузку (localStorage, не сейв)
+  await page.reload();
+  await page.waitForTimeout(2000);
+  const closeBtn2 = page.locator('#starterDeckModal .modal-close');
+  if (await closeBtn2.isVisible()) await closeBtn2.click();
+  await page.locator('[data-action="open-sync-modal"]').click();
+  await expect(page.locator('#audio-mute-ui')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#audio-vol-siege')).toHaveValue('80');
+
+  // первое взаимодействие (клики выше) разблокировало микшер — правило 20 соблюдено
+  const unlocked = await page.evaluate(() => NDAudio.unlocked() === true);
+  expect(unlocked).toBe(true);
+
+  // сброс возвращает дефолты правила 20 (музыка выключена)
+  await page.locator('[data-action="audio-reset"]').click();
+  const lsAfterReset = await page.evaluate(() => JSON.parse(localStorage.getItem('neurodeck_audio')));
+  expect(lsAfterReset.ui.muted).toBe(false);
+  expect(lsAfterReset.music.muted).toBe(true);
+});

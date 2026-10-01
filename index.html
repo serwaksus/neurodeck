@@ -10,8 +10,8 @@
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
     <!-- Волна 3: шрифты self-host (fonts/fonts.css) — без fonts.googleapis/gstatic -->
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=100" />
-    <link rel="stylesheet" href="css/style.css?v=100" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=101" />
+    <link rel="stylesheet" href="css/style.css?v=101" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
@@ -577,6 +577,148 @@
                 id="perfStatus"
                 style="font-size: 11px; color: var(--text-dim); margin-top: 6px"
               ></div>
+            </div>
+            <div class="sync-section" id="audioSection">
+              <div class="sync-section-title">🔊 Звук</div>
+              <div class="sync-section-desc">
+                Громкость и мьюты категорий. Музыка по умолчанию
+                выключена; звук появляется после первого касания.
+              </div>
+              <div class="audio-row">
+                <span class="audio-name">🎛 Общая</span>
+                <input
+                  type="range"
+                  class="audio-vol"
+                  id="audio-vol-master"
+                  data-cat="master"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value="50"
+                  aria-label="Громкость: общая"
+                />
+                <span class="audio-pct" id="audio-pct-master">50%</span>
+                <button
+                  class="demo-btn audio-mute-btn"
+                  id="audio-mute-master"
+                  data-action="audio-mute"
+                  data-cat="master"
+                  aria-pressed="false"
+                  title="Общая: выключить"
+                >
+                  🔊
+                </button>
+              </div>
+              <div class="audio-row">
+                <span class="audio-name">🎵 Музыка</span>
+                <input
+                  type="range"
+                  class="audio-vol"
+                  id="audio-vol-music"
+                  data-cat="music"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value="50"
+                  aria-label="Громкость: музыка"
+                />
+                <span class="audio-pct" id="audio-pct-music">50%</span>
+                <button
+                  class="demo-btn audio-mute-btn"
+                  id="audio-mute-music"
+                  data-action="audio-mute"
+                  data-cat="music"
+                  aria-pressed="true"
+                  title="Музыка: включить"
+                >
+                  🔇
+                </button>
+              </div>
+              <div class="audio-row">
+                <span class="audio-name">🖱 Интерфейс</span>
+                <input
+                  type="range"
+                  class="audio-vol"
+                  id="audio-vol-ui"
+                  data-cat="ui"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value="50"
+                  aria-label="Громкость: интерфейс"
+                />
+                <span class="audio-pct" id="audio-pct-ui">50%</span>
+                <button
+                  class="demo-btn audio-mute-btn"
+                  id="audio-mute-ui"
+                  data-action="audio-mute"
+                  data-cat="ui"
+                  aria-pressed="false"
+                  title="Интерфейс: выключить"
+                >
+                  🔊
+                </button>
+              </div>
+              <div class="audio-row">
+                <span class="audio-name">⚔ Осада</span>
+                <input
+                  type="range"
+                  class="audio-vol"
+                  id="audio-vol-siege"
+                  data-cat="siege"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value="50"
+                  aria-label="Громкость: осада"
+                />
+                <span class="audio-pct" id="audio-pct-siege">50%</span>
+                <button
+                  class="demo-btn audio-mute-btn"
+                  id="audio-mute-siege"
+                  data-action="audio-mute"
+                  data-cat="siege"
+                  aria-pressed="false"
+                  title="Осада: выключить"
+                >
+                  🔊
+                </button>
+              </div>
+              <div class="audio-row">
+                <span class="audio-name">👑 Награды</span>
+                <input
+                  type="range"
+                  class="audio-vol"
+                  id="audio-vol-reward"
+                  data-cat="reward"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value="60"
+                  aria-label="Громкость: награды"
+                />
+                <span class="audio-pct" id="audio-pct-reward">60%</span>
+                <button
+                  class="demo-btn audio-mute-btn"
+                  id="audio-mute-reward"
+                  data-action="audio-mute"
+                  data-cat="reward"
+                  aria-pressed="false"
+                  title="Награды: выключить"
+                >
+                  🔊
+                </button>
+              </div>
+              <button
+                class="demo-btn"
+                data-action="audio-reset"
+                style="margin-top: 8px"
+              >
+                ↺ Сброс звука
+              </button>
+              <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px">
+                Настройки хранятся только на устройстве — в сейв не пишутся.
+              </div>
             </div>
             <div class="sync-danger-title">⚠ Опасная зона</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px">
@@ -1505,17 +1647,18 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=100" defer></script>
-    <script src="js/perf-compat.js?v=100" defer></script>
-    <script src="js/event-bus.js?v=100" defer></script>
-    <script src="js/telemetry.js?v=100" defer></script>
-    <script src="js/stronghold-data.js?v=100" defer></script>
-<script src="js/state-guards.js?v=100" defer></script>
-    <script src="js/storage.js?v=100" defer></script>
-    <script src="js/stronghold-model.js?v=100" defer></script>
-    <script src="js/state/store.js?v=100" defer></script>
-    <script src="js/remote-config.js?v=100" defer></script>
-    <script src="js/ui/strongholds.js?v=100" defer></script>
-    <script src="js/app.js?v=100" defer></script>
+    <script src="js/perf.js?v=101" defer></script>
+    <script src="js/perf-compat.js?v=101" defer></script>
+    <script src="js/event-bus.js?v=101" defer></script>
+    <script src="js/audio.js?v=101" defer></script>
+    <script src="js/telemetry.js?v=101" defer></script>
+    <script src="js/stronghold-data.js?v=101" defer></script>
+<script src="js/state-guards.js?v=101" defer></script>
+    <script src="js/storage.js?v=101" defer></script>
+    <script src="js/stronghold-model.js?v=101" defer></script>
+    <script src="js/state/store.js?v=101" defer></script>
+    <script src="js/remote-config.js?v=101" defer></script>
+    <script src="js/ui/strongholds.js?v=101" defer></script>
+    <script src="js/app.js?v=101" defer></script>
   </body>
 </html>

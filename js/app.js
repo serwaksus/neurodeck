@@ -1,38 +1,23 @@
 // ============ СИСТЕМА LEARN BY DOING ============
-var audioCtx = null;
-function getAudioCtx() {
-    if (!audioCtx) {
-        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
-    }
-    return audioCtx;
+// P21: аудио-микшер живёт в js/audio.js (глобаль NDAudio): категории master/music/ui/siege/reward,
+// громкости/мьюты в localStorage (neurodeck_audio), никакого автозапуска до первого взаимодействия
+// (правило 20; unlock — одноразовые слушатели внутри audio.js). Тоны разнесены по категориям:
+// ui — отклик действий (карта выполнена, ковка, экипировка, ошибки), siege — военные неудачи
+// (провал штурма/боя, восстание, клятва, цель, неуплата содержания), reward — победные джинглы
+// (ранг, уровень, босс, цель, крит сундука), music — зарезервирована, по умолчанию выключена.
+function ndSfx(cat, freq, duration, type, vol, slide) {
+    if (typeof NDAudio !== 'undefined' && NDAudio && typeof NDAudio.tone === 'function') NDAudio.tone(cat, freq, duration, type, vol, slide);
 }
-function playTone(freq, duration, type, vol, slide) {
-    var ctx = getAudioCtx();
-    if (!ctx) return;
-    try {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = type || 'square';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        if (slide) osc.frequency.linearRampToValueAtTime(slide, ctx.currentTime + duration);
-        gain.gain.setValueAtTime(vol || 0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + duration);
-    } catch(e) {}
-}
-function sfxHit() { playTone(200, 0.12, 'square', 0.12, 100); }
-function sfxCrit() { playTone(400, 0.08, 'square', 0.15); setTimeout(function() { playTone(600, 0.08, 'square', 0.15); }, 60); setTimeout(function() { playTone(800, 0.15, 'square', 0.12); }, 120); }
-function sfxRankUp() { playTone(300, 0.1, 'square', 0.12); setTimeout(function() { playTone(450, 0.1, 'square', 0.12); }, 80); setTimeout(function() { playTone(600, 0.1, 'square', 0.12); }, 160); setTimeout(function() { playTone(900, 0.25, 'triangle', 0.1); }, 240); }
-function sfxLevelUp() { [400,500,600,700,800,1000].forEach(function(f, i) { setTimeout(function() { playTone(f, 0.12, 'square', 0.1); }, i * 70); }); }
-function sfxFail() { playTone(300, 0.15, 'sawtooth', 0.1, 100); }
-function sfxForge() { playTone(150, 0.1, 'square', 0.1); setTimeout(function() { playTone(250, 0.15, 'square', 0.1); }, 100); setTimeout(function() { playTone(400, 0.2, 'triangle', 0.08); }, 200); }
-function sfxGoalComplete() { playTone(500, 0.1, 'square', 0.1); setTimeout(function() { playTone(650, 0.1, 'square', 0.1); }, 80); setTimeout(function() { playTone(800, 0.1, 'square', 0.1); }, 160); setTimeout(function() { playTone(1000, 0.3, 'triangle', 0.08); }, 240); }
-function sfxBossDefeated() { [200,300,400,500,600,800,1000,1200].forEach(function(f, i) { setTimeout(function() { playTone(f, 0.15, 'square', 0.1); }, i * 100); }); }
-function sfxEquip() { playTone(350, 0.08, 'triangle', 0.1); setTimeout(function() { playTone(500, 0.12, 'triangle', 0.08); }, 60); }
-function sfxError() { playTone(150, 0.2, 'square', 0.1, 80); }
+function sfxHit() { ndSfx('ui', 200, 0.12, 'square', 0.12, 100); }
+function sfxCrit() { ndSfx('reward', 400, 0.08, 'square', 0.15); setTimeout(function() { ndSfx('reward', 600, 0.08, 'square', 0.15); }, 60); setTimeout(function() { ndSfx('reward', 800, 0.15, 'square', 0.12); }, 120); }
+function sfxRankUp() { ndSfx('reward', 300, 0.1, 'square', 0.12); setTimeout(function() { ndSfx('reward', 450, 0.1, 'square', 0.12); }, 80); setTimeout(function() { ndSfx('reward', 600, 0.1, 'square', 0.12); }, 160); setTimeout(function() { ndSfx('reward', 900, 0.25, 'triangle', 0.1); }, 240); }
+function sfxLevelUp() { [400,500,600,700,800,1000].forEach(function(f, i) { setTimeout(function() { ndSfx('reward', f, 0.12, 'square', 0.1); }, i * 70); }); }
+function sfxFail() { ndSfx('siege', 300, 0.15, 'sawtooth', 0.1, 100); }
+function sfxForge() { ndSfx('ui', 150, 0.1, 'square', 0.1); setTimeout(function() { ndSfx('ui', 250, 0.15, 'square', 0.1); }, 100); setTimeout(function() { ndSfx('ui', 400, 0.2, 'triangle', 0.08); }, 200); }
+function sfxGoalComplete() { ndSfx('reward', 500, 0.1, 'square', 0.1); setTimeout(function() { ndSfx('reward', 650, 0.1, 'square', 0.1); }, 80); setTimeout(function() { ndSfx('reward', 800, 0.1, 'square', 0.1); }, 160); setTimeout(function() { ndSfx('reward', 1000, 0.3, 'triangle', 0.08); }, 240); }
+function sfxBossDefeated() { [200,300,400,500,600,800,1000,1200].forEach(function(f, i) { setTimeout(function() { ndSfx('reward', f, 0.15, 'square', 0.1); }, i * 100); }); }
+function sfxEquip() { ndSfx('ui', 350, 0.08, 'triangle', 0.1); setTimeout(function() { ndSfx('ui', 500, 0.12, 'triangle', 0.08); }, 60); }
+function sfxError() { ndSfx('ui', 150, 0.2, 'square', 0.1, 80); }
 function haptic(type) {
     try {
         var tg = window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback;
@@ -47,7 +32,6 @@ function haptic(type) {
         }
     } catch(e) {}
 }
-document.addEventListener('click', function() { getAudioCtx(); }, { once: true });
 const ATTR_POOL_THRESHOLD = 5;
 function getStatThreshold(value) {
 return 5 + Math.floor(value * 1.5);
@@ -142,6 +126,8 @@ case 'full-wipe-all': fullWipeAll(); break;
 case 'toggle-notif': toggleNotif(); break;
 case 'deep-recovery': deepRecovery(); break;
 case 'set-perf': if (el.dataset.mode && window.NeuroDeckPerf) { var prevPerfMode = window.NeuroDeckPerf.getMode(); if (window.NeuroDeckPerf.setMode(el.dataset.mode) && prevPerfMode !== el.dataset.mode) { renderPerfStatus(); showToast('⚡ Режим изменён', { 'auto': 'Авто — эффекты зависят от системных настроек', 'eco': 'Эко — минимальная графика', 'performance': 'Все эффекты включены', 'low': 'Экономный режим — меньше анимаций', 'effects-off': 'Анимации отключены' }[el.dataset.mode] || el.dataset.mode); } } break;
+case 'audio-mute': toggleAudioMute(String(el.dataset.cat || '')); break; // P21: мьют категории микшера
+case 'audio-reset': resetAudioMixer(); break; // P21: вернуть громкости/мьюты по умолчанию
 case 'close-return-modal': closeReturnModal(); break;
 case 'return-go-deck': closeReturnModal(); switchView('deck'); showToast('⚔ Одна карточка', 'Выполни первую попавшуюся — остальное догонит', 'save'); break; // G1: comeback-план
 case 'select-evolution': (function(sel) { document.querySelectorAll('#editEvolutionChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c === sel); }); pendingEvolutionPath = sel.dataset.path || null; })(el); break;
@@ -5679,6 +5665,49 @@ function initPerf() {
     } catch(e) {}
 }
 initPerf();
+var AUDIO_CAT_LABELS = { master: '🎛 Общая', music: '🎵 Музыка', ui: '🖱 Интерфейс', siege: '⚔ Осада', reward: '👑 Награды' }; // P21: секция звука в модалке настроек
+function renderAudioSettings() { // P21: слайдеры/мьюты отражают состояние NDAudio (или дефолты до его загрузки)
+    var A = (typeof NDAudio !== 'undefined') ? NDAudio : null;
+    (A ? A.CATS : ['master', 'music', 'ui', 'siege', 'reward']).forEach(function(cat) {
+        var st = A ? A.get(cat) : { vol: 0.5, muted: cat === 'music' };
+        var inp = document.getElementById('audio-vol-' + cat);
+        if (inp) inp.value = String(Math.round(st.vol * 100));
+        var pct = document.getElementById('audio-pct-' + cat);
+        if (pct) pct.textContent = Math.round(st.vol * 100) + '%';
+        var btn = document.getElementById('audio-mute-' + cat);
+        if (btn) { btn.textContent = st.muted ? '🔇' : '🔊'; btn.setAttribute('aria-pressed', st.muted ? 'true' : 'false'); btn.title = (AUDIO_CAT_LABELS[cat] || cat) + ': ' + (st.muted ? 'включить' : 'выключить'); }
+    });
+}
+function toggleAudioMute(cat) { // P21: клик по кнопке мьюта категории
+    if (typeof NDAudio === 'undefined' || !NDAudio.toggleMute) return;
+    NDAudio.toggleMute(cat);
+    renderAudioSettings();
+}
+function resetAudioMixer() { // P21: сброс к дефолтам (музыка выключена, SFX тихо — правило 20)
+    if (typeof NDAudio === 'undefined' || !NDAudio.reset) return;
+    NDAudio.reset();
+    renderAudioSettings();
+    showToast('🔊 Звук сброшен', 'Музыка выключена, эффекты — тихо', 'save');
+}
+function initAudioSettings() {
+    renderAudioSettings();
+    document.addEventListener('input', function(e) { // P21: слайдер громкости (input = живой drag, change его не покрывает)
+        var t = e.target;
+        if (!t || !t.classList || !t.classList.contains('audio-vol') || !t.dataset.cat) return;
+        if (typeof NDAudio === 'undefined' || !NDAudio.setVol) return;
+        NDAudio.setVol(t.dataset.cat, (parseInt(t.value, 10) || 0) / 100);
+        var pct = document.getElementById('audio-pct-' + t.dataset.cat);
+        if (pct) pct.textContent = t.value + '%';
+    });
+    try { // пере-рендер при каждом открытии модалки (как renderPerfStatus)
+        var mo = new MutationObserver(function(muts){
+            for (var i=0;i<muts.length;i++) { if (muts[i].target && muts[i].target.classList && muts[i].target.classList.contains('show')) { renderAudioSettings(); break; } }
+        });
+        var sm = document.getElementById('syncModal');
+        if (sm) mo.observe(sm, { attributes: true, attributeFilter: ['class'] });
+    } catch(e) {}
+}
+initAudioSettings();
 function initNotifs() {
 updateNotifBtn();
 if (notifEnabled && Notification.permission === 'granted') scheduleNotifs();
