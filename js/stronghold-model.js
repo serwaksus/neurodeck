@@ -375,9 +375,13 @@
     // (seasonNum, week) — тот же sin-хеш, что у погоды (app.js weatherOf), с иными константами,
     // чтобы ротации не коррелировали. Каталог WEEKLY_MODS (stronghold-data.js); нет каталога → null
     // и нейтральные 1 — экономика не ломается. Диапазон (0; 3] — как у провинций.
+    // P15/C6-full: приоритет у валидированного remote-каталога (NDRemoteConfig.installWeeklyModifiers
+    // пишет StrongholdData.WEEKLY_MODS_REMOTE; js/remote-config.js); пустой/кривой remote → встроенный.
+    // Порядок записей — часть контракта (индекс хеша): remote v1 = побайтовая копия встроенного.
     function weeklyModifierOf(seasonNum, week) {
         var cat = catalog();
-        var list = (cat && Array.isArray(cat.WEEKLY_MODS)) ? cat.WEEKLY_MODS : [];
+        var list = (cat && Array.isArray(cat.WEEKLY_MODS_REMOTE) && cat.WEEKLY_MODS_REMOTE.length) ? cat.WEEKLY_MODS_REMOTE
+            : (cat && Array.isArray(cat.WEEKLY_MODS)) ? cat.WEEKLY_MODS : [];
         if (!list.length) return null;
         var s = Math.floor(Number(seasonNum)); if (!isFinite(s) || s < 0) s = 0;
         var w = Math.floor(Number(week)); if (!isFinite(w) || w < 0) w = 0;

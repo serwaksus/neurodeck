@@ -6296,6 +6296,19 @@ if (typeof NDDBus !== 'undefined' && NDDBus && typeof NDDBus.on === 'function') 
         renderTasks(); renderDashboard();
     });
 }
+// P15 / C6-full шаг 1: версионированный remote-config модификаторов недели (js/remote-config.js,
+// артефакт config/weekly-modifiers.v1.json). Тихая асинхронная попытка, безопасный фоллбэк: любой
+// сбой (сеть/битый/просрочен/checksum) оставляет встроенный каталог WEEKLY_MODS. v1 = побайтовая
+// копия встроенного каталога → визуальной разницы нет; перерисовка панели нужна только на будущие
+// версии (ротация видна лишь в эндгейме 20/20, гейт — в weeklyModifierLineHtml).
+(function initRemoteWeeklyConfig() {
+    try {
+        if (typeof NDRemoteConfig === 'undefined' || !NDRemoteConfig || typeof NDRemoteConfig.loadWeeklyConfig !== 'function') return;
+        NDRemoteConfig.loadWeeklyConfig().then(function(r) {
+            if (r && r.applied && typeof weeklyEndgame === 'function' && weeklyEndgame() && typeof renderStrongholds === 'function') renderStrongholds();
+        }).catch(function() {});
+    } catch (e) {}
+})();
 window.addEventListener('load', function(){ window.__tgReady(); });
 if (FORGED.length === 0) {
     // Пустая колода — новый игрок ИЛИ очищенное хранилище (ITP-чистка iOS после

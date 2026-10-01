@@ -5,25 +5,27 @@
    При новом деплое: бампни ?v= в index.html И VERSION ниже — старый кэш удалится в activate. */
 'use strict';
 
-const VERSION = 'nd-shell-v96';
+const VERSION = 'nd-shell-v97';
 const SHELL = [
   './',
   'index.html',
-  'css/style.css?v=96',
-  'fonts/fonts.css?v=96',
+  'css/style.css?v=97',
+  'fonts/fonts.css?v=97',
   'fonts/cinzel-var.woff2',
   'fonts/CrimsonText-400.woff2',
   'fonts/CrimsonText-400i.woff2',
   'fonts/CrimsonText-600.woff2',
-  'js/perf.js?v=96',
-  'js/perf-compat.js?v=96',
-  'js/event-bus.js?v=96',
-  'js/telemetry.js?v=96',
-  'js/stronghold-data.js?v=96',
-  'js/state-guards.js?v=96',
-  'js/storage.js?v=96',
-  'js/stronghold-model.js?v=96',
-  'js/app.js?v=96',
+  'js/perf.js?v=97',
+  'js/perf-compat.js?v=97',
+  'js/event-bus.js?v=97',
+  'js/telemetry.js?v=97',
+  'js/stronghold-data.js?v=97',
+  'js/state-guards.js?v=97',
+  'js/storage.js?v=97',
+  'js/stronghold-model.js?v=97',
+  'js/remote-config.js?v=97',
+  'config/weekly-modifiers.v1.json',
+  'js/app.js?v=97',
   'manifest.json',
   'img/icon-192.png',
   'img/icon-512.png'
