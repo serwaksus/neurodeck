@@ -946,6 +946,11 @@ textarea:focus-visible {
 .siege-prep .assault-breakdown:last-child { margin-bottom: 8px; }
 .sh-prep-cancel { border-color: rgba(199,62,77,0.55); }
 .sh-prep-cancel .km-stance-name { color: var(--blood-bright); }
+/* P22: анимация подготовки осады — вспышка панели при выборе подхода/отмене/покупке ресурса.
+   Класс .sh-prep-flash добавляет siegePrepAnimate() только при ndMotionOk() (правило 19);
+   box-shadow не двигает лэйаут → нет дрейфа visual-базлайнов и ждёт-петель Playwright. */
+.siege-prep.sh-prep-flash { animation: ndPrepPulse 0.6s ease; }
+@keyframes ndPrepPulse { 0%, 100% { box-shadow: none; } 35% { box-shadow: 0 0 16px rgba(212, 165, 116, 0.35), inset 0 0 10px rgba(212, 165, 116, 0.12); } }
 .assault-risk { margin: 6px 0 2px; padding: 5px 8px; border: 1px solid rgba(199,62,77,0.55); border-left: 3px solid var(--blood-bright); border-radius: 6px; background: rgba(199,62,77,0.1); color: var(--blood-bright); font-weight: 600; }
 @media (max-width: 420px) { .sh-build-grid { grid-template-columns: 1fr; } }
 :root.perf-eco .sh-tile, :root.perf-eco .sh-tile .sh-buy { box-shadow: none; }
@@ -1627,6 +1632,18 @@ body::before {
 .boss-reward-text b { color: var(--gold-bright); font-size: 13px; }
 .boss-reward-text em { color: var(--text-dim); font-style: normal; font-size: 11px; }
 .boss-reward-note { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 8px; }
+/* P22: reward reveal — секвенция появления наград (задержки 0.45/0.85/1.25/1.6с + 0.4с = ≤2с).
+   Класс .reveal вешает showBossRewardChoice ТОЛЬКО при ndMotionOk() (правило 19), а :root.perf-eco
+   клампит animation-duration — в eco/reduced-motion всё видно сразу. Анимируются дети кнопки:
+   сама кнопка не анимируется (opacity детей не блокирует клик, bounding-box стабилен). */
+#bossRewardModal.reveal .boss-reward-opt .boss-reward-emoji,
+#bossRewardModal.reveal .boss-reward-opt .boss-reward-text,
+#bossRewardModal.reveal .boss-reward-note { opacity: 0; animation: ndRevealFade 0.4s ease backwards; animation-delay: var(--nd-rv, 0s); }
+#bossRewardModal.reveal .modal-body .boss-reward-opt:nth-of-type(1) { --nd-rv: 0.45s; }
+#bossRewardModal.reveal .modal-body .boss-reward-opt:nth-of-type(2) { --nd-rv: 0.85s; }
+#bossRewardModal.reveal .modal-body .boss-reward-opt:nth-of-type(3) { --nd-rv: 1.25s; }
+#bossRewardModal.reveal .boss-reward-note { --nd-rv: 1.6s; }
+@keyframes ndRevealFade { from { opacity: 0; } to { opacity: 1; } }
 /* Г2-2 «Глазами ворона»: погода */
 .km-weather { font-size: 26px; }
 .km-wi-clear { fill: #d9c98a; }

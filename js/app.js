@@ -29,8 +29,41 @@ function haptic(type) {
             else if (type === 'success') tg.notificationOccurred('success');
             else if (type === 'warning') tg.notificationOccurred('warning');
             else if (type === 'error') tg.notificationOccurred('error');
+        } else { // P22: браузерный фоллбэк — navigator.vibrate (Android Chrome; iOS Safari не умеет — тихо)
+            var _vb = (typeof ND_HAPTIC_VIBES !== 'undefined' && ND_HAPTIC_VIBES && ND_HAPTIC_VIBES[type]) || null;
+            if (_vb && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(_vb);
         }
     } catch(e) {}
+}
+/* ============ P22: game feel — haptics-матрица + гейт анимаций (правила 19/21) ============ */
+var ND_HAPTIC_VIBES = { light: 15, medium: 30, heavy: 50, rigid: 10, success: [15, 40, 30], warning: [30, 40, 30], error: [60, 40, 60] }; // мс-паттерны navigator.vibrate
+var ND_HAPTICS = { // матрица «событие → тактильный тип Telegram HapticFeedback»: новые точки касания зовут hapticFor('событие'), а не сырой haptic('тип')
+    'card.complete': 'light', 'card.skip': 'warning', 'card.crit': 'success',
+    'quest.done': 'success', 'level.up': 'success', 'rank.up': 'medium',
+    'view.switch': 'light', 'sync.done': 'success',
+    'economy.build': 'medium', 'economy.hire': 'heavy', 'error.generic': 'warning',
+    'boss.defeated': 'heavy', 'boss.reward.reveal': 'success', 'boss.reward.claim': 'success',
+    'siege.prep.set': 'light', 'siege.prep.cancel': 'light', 'siege.store.buy': 'light'
+};
+function hapticFor(event) { // P22: семантический вызов из матрицы; неизвестное событие — тишина (null)
+    var t = (typeof ND_HAPTICS !== 'undefined' && ND_HAPTICS) ? ND_HAPTICS[event] : null;
+    if (t && typeof haptic === 'function') haptic(t);
+    return t || null;
+}
+function ndMotionOk() { // P22: единый гейт game-feel секвенций (правило 19): reduced-motion или eco → без анимаций
+    if (typeof ecoOn === 'function' && ecoOn()) return false;
+    if (typeof NeuroDeckPerf !== 'undefined' && NeuroDeckPerf && typeof NeuroDeckPerf.prefersReducedMotion === 'function' && NeuroDeckPerf.prefersReducedMotion()) return false;
+    return true;
+}
+function siegePrepAnimate() { // P22: вспышка панели подготовки осады — отклик на выбор подхода/покупку ресурса (гейт ndMotionOk)
+    if (typeof ndMotionOk === 'function' && !ndMotionOk()) return false;
+    var el = document.querySelector('.siege-prep');
+    if (!el) return false;
+    el.classList.remove('sh-prep-flash');
+    void el.offsetWidth; // рестарт keyframe при повторном срабатывании подряд
+    el.classList.add('sh-prep-flash');
+    setTimeout(function() { el.classList.remove('sh-prep-flash'); }, 700);
+    return true;
 }
 const ATTR_POOL_THRESHOLD = 5;
 function getStatThreshold(value) {
@@ -2262,6 +2295,14 @@ function showBossRewardChoice(b) { // C5: модалка итогов босса
     bossRewardOptionHtml('ruin', '🏗', 'Снятие 1 руины', ruinDesc, ruinOk, 'Руин нет — постройки целы') +
     '<div class="boss-reward-note">Выбор один и навсегда. Закроешь без выбора — модалка вернётся во вкладке «Твердыни».</div>';
     modal.classList.add('show');
+    // P22: reward reveal — секвенция 0.5–2с (CSS-задержки; правило 19: reduced-motion/eco → класс не вешается, всё видно сразу)
+    if (typeof ndMotionOk === 'function' && ndMotionOk()) {
+        modal.classList.add('reveal');
+        window.__ndBossRevealGen = (window.__ndBossRevealGen || 0) + 1;
+        var __rvGen = window.__ndBossRevealGen;
+        setTimeout(function() { if (window.__ndBossRevealGen === __rvGen) modal.classList.remove('reveal'); }, 2300); // секвенция кончается к 2.0с
+        if (typeof hapticFor === 'function') hapticFor('boss.reward.reveal');
+    }
 }
 function closeBossRewardModal() {
     var modal = document.getElementById('bossRewardModal');
@@ -2295,7 +2336,8 @@ function chooseBossReward(choice) { // C5: применить выбранную
         if (typeof addChronicle === 'function') addChronicle('🏗', 'Награда за ' + b.name + ': восстановлена постройка «' + BUILDINGS[r.id].name + '»');
     }
     closeBossRewardModal();
-    sfxGoalComplete(); haptic('success');
+    sfxGoalComplete();
+    if (typeof hapticFor === 'function') hapticFor('boss.reward.claim'); else haptic('success'); // P22: матрица (фоллбек — для extract-харнессов)
     if (typeof renderStrongholds === 'function') renderStrongholds();
     if (currentShIdx !== null) renderStrongholdPanel(currentShIdx);
     saveSoon();
@@ -3766,13 +3808,17 @@ function requestApproach(approachId) {
   siege.approach = approachId; // P11: выбор в сейве — переживёт перезагрузку
   var meta = SM.approachMeta(approachId);
   showToast('🧭 Подход недели: ' + meta.name, meta.desc + ' · действует до воскресной осады', 'save');
-  haptic('light'); saveSoon(); renderStrongholds();
+  if (typeof hapticFor === 'function') hapticFor('siege.prep.set'); else haptic('light'); // P22: матрица (фоллбек — для extract-харнессов)
+  saveSoon(); renderStrongholds();
+  if (typeof siegePrepAnimate === 'function') siegePrepAnimate(); // P22: отклик подготовки (гейт motion/eco)
 }
 function requestApproachCancel() { // P10/P11: отмена подготовки до тика — подход сбрасывается к норме «Штурм» (в сейве; склад не сгорает)
   if (weekApproach() === 'assault') return;
   siege.approach = 'assault';
   showToast('🧭 Подготовка отменена', 'Подход недели снова «Штурм» — воскресная осада пойдёт по норме. Осадный склад останется до штурма.', 'save');
-  haptic('light'); saveSoon(); renderStrongholds();
+  if (typeof hapticFor === 'function') hapticFor('siege.prep.cancel'); else haptic('light'); // P22: матрица (фоллбек — для extract-харнессов)
+  saveSoon(); renderStrongholds();
+  if (typeof siegePrepAnimate === 'function') siegePrepAnimate(); // P22: отклик подготовки (гейт motion/eco)
 }
 function buySiegeStore(kind) { // C4: лестницы/таран — по 25💰, тратятся при следующем штурме (siege.rams/ladders, схема v12)
   ensureStrongholdState();
@@ -3783,8 +3829,10 @@ function buySiegeStore(kind) { // C4: лестницы/таран — по 25�
   if (kind === 'ram') siege.rams = Math.min(999, (siege.rams || 0) + 1);
   else siege.ladders = Math.min(999, (siege.ladders || 0) + 1);
   showToast('🧰 Осадный склад', kind === 'ram' ? '🐏 Таран: −10% потерь при следующем штурме' : '🪜 Лестницы: +5% к соотношению при следующем штурме', 'save');
-  sfxEquip(); haptic('light');
+  sfxEquip();
+  if (typeof hapticFor === 'function') hapticFor('siege.store.buy'); else haptic('light'); // P22: матрица (фоллбек — для extract-харнессов)
   renderStrongholds(); updateHeroUI(); saveGameState();
+  if (typeof siegePrepAnimate === 'function') siegePrepAnimate(); // P22: вспышка склада (гейт motion/eco)
 }
 function siegePrepScoutHtml() { // P10: статус разведки фронта — существующая механика тени (Г2-3), отчёт консолидирован в панель
   var _today = (typeof getMSKDayKey === 'function') ? getMSKDayKey() : '';

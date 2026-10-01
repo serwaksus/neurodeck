@@ -272,3 +272,50 @@ test('perf.js file size is reasonable (<300 lines)', () => {
     var lines = perfJs.split('\n').length;
     assert.ok(lines < 300, 'perf.js is too large: ' + lines + ' lines');
 });
+
+// ===================== P22: perf-бюджет (payload холодного старта) =====================
+// Мини-апп Telegram исполняет весь JS на главном потоке телефона: парс+exec ~1МБ JS дороже
+// его загрузки. Бюджет — регрессионный гейт: превысил — режь/выноси, а не поднимай порог
+// молча (репин бюджета = осознанный коммит с комментарием, как у parity-эталонов).
+
+const P22_BUDGET_KB = { appJs: 520, styleCss: 200, precacheJsCss: 940 };
+
+function precacheLocalEntries() {
+    const sw = read('sw.js');
+    const entries = [...sw.matchAll(/'([^']+)'/g)]
+        .map((m) => m[1].split('?')[0])
+        .filter((u) => /^[a-z]+\//.test(u) && /\.(js|css)$/.test(u)); // локальные js/css из SHELL (без https:// SDK)
+    assert.ok(entries.length >= 15, 'ожидали весь локальный статик в SHELL, факт: ' + entries.length);
+    return entries;
+}
+
+test('P22 perf budget: app.js и style.css в пределах бюджета', () => {
+    const appBytes = fs.statSync(path.join(root, 'js', 'app.js')).size;
+    const cssBytes = fs.statSync(path.join(root, 'css', 'style.css')).size;
+    assert.ok(appBytes <= P22_BUDGET_KB.appJs * 1024,
+        'app.js ' + Math.round(appBytes / 1024) + 'KB > бюджета ' + P22_BUDGET_KB.appJs + 'KB — выноси модули (паттерн js/ui/strongholds.js)');
+    assert.ok(cssBytes <= P22_BUDGET_KB.styleCss * 1024,
+        'style.css ' + Math.round(cssBytes / 1024) + 'KB > бюджета ' + P22_BUDGET_KB.styleCss + 'KB');
+});
+
+test('P22 perf budget: суммарный JS+CSS из SW-прекэша в пределах бюджета', () => {
+    let total = 0;
+    const perFile = [];
+    precacheLocalEntries().forEach((entry) => {
+        const rel = entry.split('?')[0];
+        const bytes = fs.statSync(path.join(root, rel)).size;
+        total += bytes;
+        perFile.push(rel + ':' + Math.round(bytes / 1024) + 'KB');
+    });
+    assert.ok(total <= P22_BUDGET_KB.precacheJsCss * 1024,
+        'precache JS+CSS ' + Math.round(total / 1024) + 'KB > бюджета ' + P22_BUDGET_KB.precacheJsCss + 'KB (' + perFile.join(', ') + ')');
+});
+
+test('P22 perf budget: версии в SW-прекэше едины и совпадают с index.html', () => {
+    const sw = read('sw.js');
+    const versions = [...sw.matchAll(/\?v=(\d+)/g)].map((m) => m[1]);
+    assert.ok(versions.length >= 15, 'версионированных записей ≥ 15, факт: ' + versions.length);
+    assert.equal(new Set(versions).size, 1, 'все ?v= в SW одинаковы: ' + JSON.stringify(versions));
+    const htmlV = (html.match(/\?v=(\d+)/) || [])[1];
+    assert.equal(versions[0], htmlV, 'SW и index.html на одной кэш-версии');
+});

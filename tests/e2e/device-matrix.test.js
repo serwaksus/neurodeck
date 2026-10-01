@@ -102,6 +102,7 @@ test.describe('reduced motion (S9)', () => {
       bodyClass: document.body.classList.contains('reduced-motion'),
       perfEco: document.documentElement.classList.contains('perf-eco'),
       mode: document.body.getAttribute('data-perf-mode'),
+      motionOk: (typeof ndMotionOk === 'function') ? ndMotionOk() : null, // P22: гейт game-feel секвенций
     }));
     console.log('[device-matrix] S9 perf-состояние:', JSON.stringify(applied));
     // дефолтный режим auto → prm=true обязан вырасти в eco-эквивалент (правило 19)
@@ -109,6 +110,11 @@ test.describe('reduced motion (S9)', () => {
     expect(applied.prm, 'prefersReducedMotion() обязан true при системном reduce').toBe(true);
     expect(applied.bodyClass, 'тело обязано получить класс reduced-motion (CSS-гейты анимаций)').toBe(true);
     expect(applied.perfEco, 'documentElement обязан получить perf-eco (eco-эквивалент)').toBe(true);
+    expect(applied.motionOk, 'P22: ndMotionOk() обязан закрыться при reduce (секвенции не играют)').toBe(false);
+    // P22: обратная сторона гейта — без reduce и вне eco секвенции разрешены
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.waitForTimeout(150); // mql-change слушатель perf.js применяет классы асинхронно
+    expect(await page.evaluate(() => (typeof ndMotionOk === 'function') ? ndMotionOk() : null)).toBe(true);
     expect(errors.filter((e) => !e.includes('favicon') && !e.includes('Telegram'))).toEqual([]);
     expect(wrapMs).toBeLessThan(BOOT_GATE_MS);
   });
