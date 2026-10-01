@@ -1949,18 +1949,27 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 });
 // ===================== ТВЕРДЫНИ v2 (SPEC §1–§7; формулы — только js/stronghold-model.js) =====================
 var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
-// ===================== STATE STORE 2.0 — шаг 1 (P18): домен твердынь через NDStore =====================
-// js/state/store.js: команды + ЧИСТЫЙ strongholdReducer поверх ТЕХ ЖЕ данных (живые ссылки массива
-// strongholds из storage.js). Схема v14 не меняется, новых полей нет, стор применяет результат
-// команды НА МЕСТЕ — идентичность массива и объектов-твердынь сохраняется, поведение неизменно
-// (characterization P17 зелёные). Источник — accessor-функция: applySyncData заменяет strongholds
-// целиком, и стор обязан видеть актуальный массив без ре-бинда. Все обращения — typeof-гварды:
-// extract-харнессы тестов тянут функции app.js поодиночке (без NDStore) и обязаны работать как
-// раньше через фоллбек на прямое поле. Пишущие потоки тика/осады/штурма (strongholdsDailyTick /
-// runWeeklySiege / doAssault — characterization P17) остаются прямыми до шага 2 (P19).
+// ===================== STATE STORE 2.0 — шаг 2 (P19): домены strongholds/economy/siege через NDStore =====================
+// js/state/store.js: команды + ЧИСТЫЕ редьюсеры поверх ТЕХ ЖЕ данных (живые ссылки массива
+// strongholds и объектов army/siege из storage.js). Схема v14 не меняется, новых полей нет,
+// стор применяет результат команды НА МЕСТЕ — идентичность массива, объектов-твердынь и карты
+// army.units сохраняется, поведение неизменно (characterization P17 зелёные). Источник —
+// accessor-функция: applySyncData заменяет strongholds/army/siege целиком, и стор обязан видеть
+// актуальные объекты без ре-бинда. Все обращения — typeof-гварды: extract-харнессы тестов тянут
+// функции app.js поодиночке (без NDStore) и обязаны работать как раньше через фоллбек на прямое
+// поле. Пишущие потоки тика/осады/штурма (strongholdsDailyTick / runWeeklySiege / doAssault)
+// идут командами домена через САМОДОСТАТОЧНЫЕ inline-гварды (без соседних helper'ов app.js —
+// sandbox-харнессы boss-arc/characterization не получают новых идентификаторов); UI-потоки
+// (buyBuilding/hireUnit/moveStack/checkCapturedRecovery) — через обёртку shDispatch. Сеттеры
+// стойки/подхода/пропусков недели остаются прямыми (хвост P20). Снапшот сейва (storage.js)
+// собирает strongholds/army/siege из стора через NDStore.snapshot().
 function shStoreSource() {
     if (typeof ensureStrongholdState === 'function') ensureStrongholdState();
-    return { strongholds: (typeof strongholds !== 'undefined') ? strongholds : null };
+    return {
+        strongholds: (typeof strongholds !== 'undefined') ? strongholds : null,
+        army: (typeof army !== 'undefined') ? army : null,
+        siege: (typeof siege !== 'undefined') ? siege : null
+    };
 }
 try { if (typeof NDStore !== 'undefined' && NDStore && typeof NDStore.bind === 'function') NDStore.bind(shStoreSource); } catch (e) {}
 function shStoreOn() {
@@ -3012,7 +3021,9 @@ if (a && a.built && a.corruptionStage === 'ruin' && was && was.built && was.corr
 ruined.push({ sh: STRONGHOLDS[i].name, name: BUILDINGS[bid].name, debt: a.debtDays });
 }
 });
-s.buildings = res.buildings;
+// P19: экономический тик пишет постройки командой stronghold-домена (самодостаточный inline-гвард —
+// extract-харнессы characterization без NDStore идут прямым фоллбеком)
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('sh/buildings:set', i, res.buildings)) === true)) s.buildings = res.buildings;
 });
 HERO.gold = gold;
 return { income: income, upkeep: upkeep, paid: paid, ruined: ruined };
@@ -3035,7 +3046,10 @@ return -1;
 }
 function runWeeklySiege() {
 ensureStrongholdState();
-if (capturedCount() === 0) { siege.week = 1; return; }
+if (capturedCount() === 0) { // P19: команда siege-домена (inline-гвард, фоллбек — прямая правка)
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/week-reset')) === true)) siege.week = 1;
+return;
+}
 var wrath = Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + approachWrathDeltaNow()); // C4: «Осада» — гнев +1
 var rows = [];
 var fell = false;
@@ -3055,27 +3069,35 @@ var _rmW = 0, _pcW = 0;
 [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rmW += provResourceMult(p); _pcW++; } });
 if (_pcW > 0) power = Math.round(power / (_rmW / _pcW)); // Г4: склады снабжения — удар врага слабее на 2%/ед ресурса (среднее по провинциям)
 if (garDef >= power) {
-strongholds[t].garrison = applyStackLoss(strongholds[t].garrison, 0.15);
+var _g15 = applyStackLoss(strongholds[t].garrison, 0.15); // P19: гарнизон после потерь — командой домена (inline-гвард)
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('sh/garrison:set', t, _g15)) === true)) strongholds[t].garrison = _g15;
 addXpReward(100 * def.prov);
 rows.push({ name: def.name, held: true, power: power, garDef: garDef });
 break;
 }
+// P19: падение твердыни — команда sh/lose (captured=false, гарнизон [], постройки → ruin; inline-гвард)
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('sh/lose', t)) === true)) {
 strongholds[t].captured = false;
 strongholds[t].garrison = [];
 ruinAllBuildings(t);
+}
 fell = true;
 rows.push({ name: def.name, held: false, power: power, garDef: garDef });
 if (power <= 1.5 * garDef) break; // прорыва нет — каскад останавливается
 hitMult *= 0.85;
 }
 if (capturedCount() === 0) { // анти-тупик (ADR П1-13)
+// P19: прибежище — команда sh/refuge (captured=true, гарнизон [], постройки → ruin; inline-гвард)
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('sh/refuge', 0)) === true)) {
 strongholds[0].captured = true;
 strongholds[0].garrison = [];
 ruinAllBuildings(0);
+}
 rows.push({ name: STRONGHOLDS[0].name, refuge: true });
 }
-siege.week = fell ? 1 : siege.week + 1; // потеря = frontSince сброшен, след. воскресенье не каскадирует
-siege.lastResult = fell ? 'fail' : 'win'; // #95: исход недели — для контрштурма
+// P19: итог недели — команды siege-домена (inline-гварды, фоллбеки — прежние прямые правки)
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/week-advance', fell)) === true)) siege.week = fell ? 1 : siege.week + 1; // потеря = frontSince сброшен, след. воскресенье не каскадирует
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/result', fell ? 'fail' : 'win')) === true)) siege.lastResult = fell ? 'fail' : 'win'; // #95: исход недели — для контрштурма
 recalcHirePool();
 chronicleSiegeRows(rows); // Г5-Ф: осады недели в хронику
 showSiegeReport(rows, wrath);
@@ -3324,25 +3346,29 @@ confirmAssault(idx);
 }
 function doAssault(idx, f, tactic) {
 var _tc = TACTICS[tactic] ? tactic : 'normal'; // Г1-4: дефолт «Штурм» (ESC/пропуск)
-siege.assaultDay = getMSKDayKey();
+var _day = getMSKDayKey();
+// P19: лимит суток и склад — команды siege-домена (самодостаточные inline-гварды, фоллбек — прямые правки)
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/assault-day', _day)) === true)) siege.assaultDay = _day;
 if (typeof updateMainButton === 'function') updateMainButton(); // штурм использован — CTA прячется до завтра
 var _stA = stanceAtkMult(); // Г4: стойка недели — Штурм +15% / Экономия −10%
 dqProgress('assault');
-var _ram = (siege.rams || 0) > 0; if (_ram) siege.rams--; // C4: осадный склад тратится при штурме
-var _lad = (siege.ladders || 0) > 0; if (_lad) siege.ladders--;
+var _ram = (siege.rams || 0) > 0; var _lad = (siege.ladders || 0) > 0; // C4: осадный склад тратится при штурме
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/stores-spend', _ram, _lad)) === true)) { if (_ram) siege.rams--; if (_lad) siege.ladders--; }
 var out = SM.assaultOutcome(Math.round(f.atk * tacticAtkMult(_tc) * _stA), f.defN, { agi: STATS.agi.value, banner: hasSpecialOk('sp2'), rand: Math.random, ram: _ram, ladder: _lad, attritionMult: doctrineAttritionMult() * tacticAttrMult(_tc) * bossArtifactMult('attrition', STRONGHOLDS[idx].prov) * techAttrMult() }); // Г1-2: veteran ×0.7 · Г1-4: тактика · Г2-1: артефакт −10% потерь (пров.) · Г4: стойка · Г5-Т: свитки ×0.9 · C4: таран/лестницы
 var lostTotal = 0;
+var _losses = {}; // P19: дельты потерь по тирам — командой economy-домена (floor-семантика здесь, применение в редьюсере)
 SM.TIER_KEYS.forEach(function(t) {
 var n = army.units[t] || 0;
 if (n > 0) {
 var loss = Math.min(Math.floor(n * out.attritionPct), n - 1);
-army.units[t] = n - loss;
+if (loss > 0) _losses[t] = loss;
 lostTotal += loss;
 }
 });
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('eco/army-loss', _losses)) === true)) SM.TIER_KEYS.forEach(function(t) { if (_losses[t]) army.units[t] = (army.units[t] || 0) - _losses[t]; });
 if (out.win) {
-strongholds[idx].captured = true;
-siege.week = 1;
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('sh/capture', idx)) === true)) strongholds[idx].captured = true; // P19: захват — командой stronghold-домена
+if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/week-reset')) === true)) siege.week = 1; // P19: новый фронт — неделя с 1
 addChronicle('⚔', STRONGHOLDS[idx].name + ' взята штурмом: ' + lostTotal + ' потерь'); // Г5-Ф
 addXpReward(Math.round(150 * (1 + (STATS.int.value - 3) * 0.01)));
 showToast('🏰 ' + STRONGHOLDS[idx].name + ' захвачена!', 'Потери: ' + lostTotal + ' · налог +' + STRONGHOLDS[idx].tax + ' 💰/день', 'crit');
@@ -3432,9 +3458,9 @@ if (!shDispatch('sh/garrison:add', idx, tier, 1)) { // P18: команда до�
 var st = shState(idx).garrison.find(function(x) { return x.tier === tier; });
 if (st) st.count++; else shState(idx).garrison.push({ tier: tier, count: 1 });
 }
-} else {
-army.units[tier] = (army.units[tier] || 0) + 1;
-}
+	} else {
+	if (!shDispatch('eco/army-add', tier, 1)) army.units[tier] = (army.units[tier] || 0) + 1; // P19: команда economy-домена (фоллбек — прямая правка)
+	}
 showToast('⚔ Найм: ' + UNIT_TIERS[tier].name, toGarrison ? 'В гарнизон «' + STRONGHOLDS[idx].name + '»' : 'В полевую армию', 'save');
 sfxEquip(); haptic('light');
 renderStrongholds(); updateHeroUI(); saveGameState();
@@ -3444,7 +3470,7 @@ ensureStrongholdState();
 if (toGarrison) {
 var n = army.units[tier] || 0;
 if (n <= 0) return;
-army.units[tier] = 0;
+if (!shDispatch('eco/army-zero', tier)) army.units[tier] = 0; // P19: команда economy-домена (фоллбек — прямая правка)
 if (!shDispatch('sh/garrison:add', idx, tier, n)) { // P18: команда домена (фоллбек — прежняя прямая правка)
 var st = shState(idx).garrison.find(function(x) { return x.tier === tier; });
 if (st) st.count += n; else shState(idx).garrison.push({ tier: tier, count: n });
@@ -3453,7 +3479,7 @@ if (st) st.count += n; else shState(idx).garrison.push({ tier: tier, count: n })
 var g = shState(idx).garrison; // P18: чтение через стор
 var st2 = g.find(function(x) { return x.tier === tier; });
 if (!st2) return;
-army.units[tier] = (army.units[tier] || 0) + st2.count;
+if (!shDispatch('eco/army-add', tier, st2.count)) army.units[tier] = (army.units[tier] || 0) + st2.count; // P19: команда economy-домена (фоллбек — прямая правка)
 if (!shDispatch('sh/garrison:take-stack', idx, tier)) strongholds[idx].garrison = g.filter(function(x) { return x !== st2; }); // P18: команда домена (фоллбек — прежняя прямая правка)
 }
 sfxEquip();

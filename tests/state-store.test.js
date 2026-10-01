@@ -195,14 +195,18 @@ test('P18 подключение: store.js грузится в index.html до a
     const storePos = html.indexOf('js/state/store.js');
     const appPos = html.indexOf('js/app.js');
     assert.ok(storePos > -1 && appPos > storePos, 'store.js грузится раньше app.js');
-    assert.ok(sw.includes("'js/state/store.js?v=98'"), 'store.js в прекэше SW (ре-пин v98)');
-    assert.ok(/VERSION = 'nd-shell-v98'/.test(sw), 'SW-версия бампнута');
+    assert.ok(sw.includes("'js/state/store.js?v=99'"), 'store.js в прекэше SW (ре-пин v99 (P19))');
+    assert.ok(/VERSION = 'nd-shell-v99'/.test(sw), 'SW-версия бампнута');
 });
 
-test('P18 app.js: адаптер чтения + команды write-потоков; characterization-потоки P17 остаются прямыми', () => {
+test('P18→P19 app.js: адаптер чтения + команды write-потоков; тик/осада/штурм — inline-гварды стора', () => {
     const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-    // адаптер: живой источник привязан, канонические читатели идут через стор с фоллбеком
+    // адаптер: живой источник привязан (P19: расширен до army/siege), канонические читатели идут через стор с фоллбеком
     assert.ok(app.includes('NDStore.bind(shStoreSource)'), 'источник стора привязан accessor-ом');
+    const srcBody = app.slice(app.indexOf('function shStoreSource('), app.indexOf('function shStoreOn('));
+    ['strongholds', 'army', 'siege'].forEach((k) => {
+        assert.ok(srcBody.includes(k + ':'), 'accessor отдаёт домен ' + k + ' (P19)');
+    });
     ['capturedCount', 'frontIdx', 'strongholdTaxPerDay', 'weeklyScoreFacts'].forEach((fn) => {
         const body = app.slice(app.indexOf('function ' + fn + '('));
         assert.ok(body.slice(0, 400).includes('shAll()'), fn + ' читает массив через адаптер стора');
@@ -216,7 +220,12 @@ test('P18 app.js: адаптер чтения + команды write-поток�
     assert.ok(app.includes("shDispatch('sh/garrison:add'"), 'hireUnit/moveStack — команда sh/garrison:add');
     assert.ok(app.includes("shDispatch('sh/garrison:take-stack'"), 'moveStack — команда sh/garrison:take-stack');
     assert.ok(app.includes("shDispatch('sh/restore-prefix'"), 'checkCapturedRecovery — команда sh/restore-prefix');
-    // characterization P17 (strict extract-харнессы) не должны зависеть от стора: их тела — без NDStore
+    assert.ok(app.includes("shDispatch('eco/army-add'"), 'hireUnit/moveStack — команда eco/army-add (P19)');
+    assert.ok(app.includes("shDispatch('eco/army-zero'"), 'moveStack — команда eco/army-zero (P19)');
+    // P19 (ре-пин P18): пишущие потоки тика/осады/штурма идут командами доменов через
+    // САМОДОСТАТОЧНЫЕ inline-гварды (typeof NDStore — единственный новый идентификатор,
+    // безопасный в sandbox-харнессах characterization/boss-arc/province-rules), фоллбеки —
+    // прежние прямые правки. Соседние helper'ы (shDispatch/shAll) внутри НЕ используются.
     const extract = (name) => {
         const anchor = app.indexOf('function ' + name + '(');
         let depth = 0, end = -1;
@@ -226,18 +235,214 @@ test('P18 app.js: адаптер чтения + команды write-поток�
         }
         return app.slice(anchor, end + 1);
     };
-    ['strongholdsDailyTick', 'runWeeklySiege', 'doAssault', 'requestAssault', 'assaultForecast'].forEach((fn) => {
-        assert.ok(!extract(fn).includes('NDStore'), fn + ' (characterization P17) остаётся прямым — шаг 2 (P19)');
+    const flows = {
+        strongholdsDailyTick: ["NDStore.command('sh/buildings:set'", 's.buildings = res.buildings'],
+        runWeeklySiege: ["NDStore.command('siege/week-reset')", "NDStore.command('sh/garrison:set'", "NDStore.command('sh/lose'", "NDStore.command('sh/refuge'", "NDStore.command('siege/week-advance'", "NDStore.command('siege/result'", 'siege.week = fell ? 1 : siege.week + 1', 'strongholds[0].captured = true'],
+        doAssault: ["NDStore.command('siege/assault-day'", "NDStore.command('siege/stores-spend'", "NDStore.command('eco/army-loss'", "NDStore.command('sh/capture'", "NDStore.command('siege/week-reset')"]
+    };
+    Object.keys(flows).forEach((fn) => {
+        const body = extract(fn);
+        flows[fn].forEach((pin) => assert.ok(body.includes(pin), fn + ' содержит ' + pin));
+        assert.ok(!body.includes('shDispatch('), fn + ' — только inline-гварды, без соседних helper\'ов (sandbox-харнессы)');
+        assert.ok(!body.includes('shAll()'), fn + ' не читает через shAll (самодостаточность)');
     });
+    // characterization P17 (strict extract-харнессы) исполняют эти же тела БЕЗ NDStore:
+    // inline typeof-гварды обязаны коротиться на фоллбек (characterization-core зелёный без правок)
 });
 
-test('P18 store: число команд домена и неизменность схемы (никаких новых полей состояния)', () => {
+test('P18+P19 store: число команд доменов и неизменность схемы (никаких новых полей состояния)', () => {
     const src = fs.readFileSync(path.join(root, 'js', 'state', 'store.js'), 'utf8');
-    assert.equal(NDStore.COMMAND_TYPES.length, 10, '10 команд домена stronghold');
+    assert.equal(NDStore.COMMAND_TYPES.length, 18, 'ре-пин (авторизовано P19): 10 sh/* + 3 eco/* + 5 siege/*');
     // стор не создаёт полей схемы: редьюсер меняет только captured/garrison/buildings
     const live = mkList([{ idx: 0, patch: { captured: true, buildings: { zh1: bld('ok', 0, 1) } } }]);
     NDStore.bind(() => ({ strongholds: live }));
     NDStore.dispatch(NDStore.command('sh/lose', 0));
     assert.deepEqual(Object.keys(live[0]).sort(), ['buildings', 'captured', 'corruption', 'garrison', 'id'], 'набор полей объекта твердыни прежний (схема v14)');
     void src;
+});
+
+// ============================================================
+// ЧАСТЬ 4. P19 — ДОМЕНЫ economy (полевая армия) + siege: редьюсеры, селекторы, snapshot()
+// ============================================================
+
+test('P19 reducer: eco/army-loss — дельты по тирам, стопа не исчезает полностью, мусор игнорируется', () => {
+    const army = { units: { t1: 10, t2: 4, t3: 0 }, week: 2 };
+    const before = JSON.stringify(army);
+    const next = NDStore.economyReducer(army, NDStore.command('eco/army-loss', { t1: 2, t3: 5 }));
+    assert.deepEqual(next.units, { t1: 8, t2: 4, t3: 0 }, 't1 −2; t3 без стеков — не тронут');
+    assert.notEqual(next, army, 'изменение — новый объект');
+    assert.equal(next.week, 2, 'остальные поля армии перенесены');
+    assert.equal(JSON.stringify(army), before, 'вход не мутирован');
+    const one = NDStore.economyReducer(army, NDStore.command('eco/army-loss', { t1: 99 }));
+    assert.equal(one.units.t1, 1, 'зеркало floor-петли doAssault: loss клампится к n−1 (SPEC §4)');
+    assert.equal(NDStore.economyReducer(army, NDStore.command('eco/army-loss', { t9: 5, t2: 0 })), army, 'нулевые дельты/мусорные тиры — та же ссылка');
+    assert.equal(NDStore.economyReducer(null, NDStore.command('eco/army-loss', { t1: 1 })), null, 'нет армии — редьюсер не падает');
+    assert.equal(NDStore.command('eco/army-loss', 'x'), null, 'фабрика не пропускает мусор');
+});
+
+test('P19 reducer: eco/army-add / eco/army-zero — найм в поле и перевод стопы; zero при нуле — та же ссылка', () => {
+    const army = { units: { t2: 5 }, week: 3 };
+    assert.deepEqual(NDStore.economyReducer(army, NDStore.command('eco/army-add', 't2', 4)).units, { t2: 9 }, 'стопка растёт');
+    assert.equal(NDStore.economyReducer(army, NDStore.command('eco/army-add', 't7', 2)).units.t7, 2, 'новый тир появляется в карте');
+    assert.equal(NDStore.economyReducer(army, NDStore.command('eco/army-zero', 't2')).units.t2, 0, 'перевод всей стопы в гарнизон');
+    assert.equal(NDStore.economyReducer(army, NDStore.command('eco/army-zero', 't5')), army, 'нулевого тира нет — изменений нет');
+    assert.equal(NDStore.command('eco/army-add', 't2', 0), null, 'фабрика не пропускает n=0');
+    assert.equal(NDStore.command('eco/army-add', 't9', 1), null, 'фабрика не пропускает мусорный тир');
+});
+
+test('P19 reducer: siege/* — неделя/итог недели/сутки штурма/осадный склад; идемпотенты — та же ссылка', () => {
+    const sg = { week: 4, lastResult: null, assaultDay: null, wkSkips: 1, wkTaskFails: 0, retriedThisWeek: false, rams: 2, ladders: 0, approach: 'siege', stance: 'economy' };
+    const before = JSON.stringify(sg);
+    const adv = NDStore.siegeReducer(sg, NDStore.command('siege/week-advance', false));
+    assert.equal(adv.week, 5, 'победа: неделя +1');
+    assert.equal(adv.approach, 'siege', 'все ключи переносятся');
+    assert.equal(adv.stance, 'economy', 'и ленивый stance тоже (байт-стабильность сейва)');
+    assert.equal(NDStore.siegeReducer(sg, NDStore.command('siege/week-advance', true)).week, 1, 'потеря — неделя с 1');
+    const reset1 = { week: 1 };
+    assert.equal(NDStore.siegeReducer(reset1, NDStore.command('siege/week-reset')), reset1, 'неделя уже 1 — та же ссылка (dispatch вернёт false)');
+    assert.equal(NDStore.siegeReducer({ week: 9 }, NDStore.command('siege/week-reset')).week, 1);
+    assert.equal(NDStore.siegeReducer(sg, NDStore.command('siege/result', 'fail')).lastResult, 'fail', '#95: исход недели');
+    assert.equal(NDStore.siegeReducer(sg, NDStore.command('siege/result', 'fail')).rams, 2, 'прочие поля не тронуты');
+    assert.equal(NDStore.siegeReducer(sg, NDStore.command('siege/assault-day', '2026-10-04')).assaultDay, '2026-10-04', 'флаг суток');
+    assert.equal(NDStore.siegeReducer(sg, NDStore.command('siege/assault-day', null)).assaultDay, null, 'новый день — null');
+    const spend = NDStore.siegeReducer(sg, NDStore.command('siege/stores-spend', true, true));
+    assert.equal(spend.rams, 1, 'таран потрачен');
+    assert.equal(spend.ladders, 0, 'лестниц не было — в минус не уходит');
+    assert.equal(NDStore.siegeReducer(sg, NDStore.command('siege/stores-spend', false, false)), sg, 'тратить нечего — та же ссылка');
+    assert.equal(NDStore.siegeReducer(sg, NDStore.command('siege/stores-spend', true, true)).week, 4, 'неделя не тронута');
+    assert.equal(JSON.stringify(sg), before, 'вход не мутирован');
+    assert.equal(NDStore.siegeReducer(null, NDStore.command('siege/week-reset')), null, 'нет осады — редьюсер не падает');
+    assert.equal(NDStore.siegeReducer(sg, { type: 'siege/unknown' }), sg, 'неизвестный тип — тот же объект');
+    assert.equal(NDStore.command('siege/result', 'draw'), null, 'фабрика: только win|fail');
+    assert.equal(NDStore.command('siege/week-advance', 'yes'), null, 'фабрика: fell строго boolean');
+    assert.equal(NDStore.command('siege/assault-day', 42), null, 'фабрика: день — строка или null');
+});
+
+test('P19 store: dispatch eco/siege применяет НА МЕСТЕ — идентичность army, army.units и siege сохраняется', () => {
+    const live = mkList();
+    const army = { units: { t1: 10, t2: 4 }, week: 2 };
+    const sg = { week: 3, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 1, ladders: 1, approach: 'assault' };
+    const holder = { strongholds: live, army: army, siege: sg };
+    NDStore.bind(() => ({ strongholds: holder.strongholds, army: holder.army, siege: holder.siege }));
+    const armyRef = army, unitsRef = army.units, sgRef = sg;
+    // сценарий победы doAssault (числа P17 «победа — потери floor»): {t1:10,t2:4} → потери 2 → {t1:8,t2:4}
+    assert.equal(NDStore.dispatch(NDStore.command('eco/army-loss', { t1: 2 })), true);
+    assert.deepEqual(army.units, { t1: 8, t2: 4 });
+    assert.equal(army, armyRef, 'объект армии — тот же');
+    assert.equal(army.units, unitsRef, 'карта units — та же (прямые ссылки app.js валидны)');
+    assert.equal(NDStore.dispatch(NDStore.command('siege/stores-spend', true, true)), true);
+    assert.equal(sg.rams, 0, 'таран израсходован');
+    assert.equal(sg.ladders, 0, 'лестницы израсходованы');
+    assert.equal(NDStore.dispatch(NDStore.command('siege/assault-day', '2026-10-04')), true);
+    assert.equal(sg.assaultDay, '2026-10-04');
+    assert.equal(NDStore.dispatch(NDStore.command('sh/capture', 2)), true, 'штурм: захват — командой stronghold-домена');
+    assert.equal(live[2].captured, true);
+    assert.equal(NDStore.dispatch(NDStore.command('siege/week-reset')), true);
+    assert.equal(sg.week, 1, 'новый фронт — неделя с 1');
+    assert.equal(sg, sgRef, 'объект осады — тот же');
+    assert.equal(NDStore.dispatch(NDStore.command('siege/week-reset')), false, 'повтор без изменений — false');
+    assert.equal(NDStore.dispatch(NDStore.command('eco/army-loss', { t9: 1 })), false, 'мусорная команда — false, домен не тронут');
+    assert.equal(NDStore.dispatch({ type: 'xxx/nope' }), false, 'чужой префикс — no-op');
+});
+
+test('P19 store: эквивалентность dispatch-пути и прежних прямых правок (осада/штурм на одинаковых данных)', () => {
+    const mkSg = () => ({ week: 4, lastResult: null, assaultDay: null, wkSkips: 2, wkTaskFails: 1, retriedThisWeek: false, rams: 2, ladders: 3, approach: 'siege' });
+    const fell = true;
+    const direct = mkSg(); // прямой путь (код до P19): runWeeklySiege + doAssault
+    direct.week = fell ? 1 : direct.week + 1;
+    direct.lastResult = fell ? 'fail' : 'win';
+    direct.rams -= 1; direct.ladders -= 1; // склад тратится при штурме
+    const via = mkSg();
+    NDStore.bind(() => ({ strongholds: [], army: { units: {}, week: 0 }, siege: via }));
+    NDStore.dispatch(NDStore.command('siege/week-advance', fell));
+    NDStore.dispatch(NDStore.command('siege/result', fell ? 'fail' : 'win'));
+    NDStore.dispatch(NDStore.command('siege/stores-spend', true, true));
+    assert.deepEqual(via, direct, 'siege: dispatch ≡ прямые правки (байт-в-байт, ключ за ключом)');
+    // армия: floor-петля doAssault {t1:10,t2:4}×0.2079 → потери 2/0
+    const ad = { units: { t1: 10, t2: 4 }, week: 2 };
+    ad.units.t1 = 10 - 2;
+    const av = { units: { t1: 10, t2: 4 }, week: 2 };
+    NDStore.bind(() => ({ strongholds: [], army: av, siege: mkSg() }));
+    NDStore.dispatch(NDStore.command('eco/army-loss', { t1: 2, t2: 0 }));
+    assert.deepEqual(av, ad, 'army: dispatch ≡ прямая правка');
+});
+
+test('P19 store: snapshot() — живые ссылки трёх доменов; следует замене объектов (applySyncData) без ре-бинда', () => {
+    const live = mkList([{ idx: 0, patch: { captured: true } }]);
+    const army = { units: { t1: 3 }, week: 1 };
+    const sg = { week: 2, lastResult: null, assaultDay: null, wkSkips: 0, wkTaskFails: 0, retriedThisWeek: false, rams: 0, ladders: 0, approach: 'assault' };
+    const holder = { strongholds: live, army: army, siege: sg };
+    NDStore.bind(() => ({ strongholds: holder.strongholds, army: holder.army, siege: holder.siege }));
+    const snap = NDStore.snapshot();
+    assert.equal(snap.strongholds, live, 'живой массив, не копия');
+    assert.equal(snap.army, army, 'живая армия, не копия');
+    assert.equal(snap.siege, sg, 'живая осада, не копия');
+    const army2 = { units: { t2: 5 }, week: 1 };
+    holder.army = army2; // simulate: army = STATE_GUARDS.sanitizeArmy(data.army)
+    assert.equal(NDStore.snapshot().army, army2, 'accessor видит замену целиком');
+    // селекторы новых доменов
+    assert.equal(NDStore.armyState(), army2);
+    assert.equal(NDStore.armyUnits(), army2.units, 'селектор units — живая карта');
+    assert.equal(NDStore.armyTotal(), 5);
+    assert.equal(NDStore.siegeState(), sg);
+    assert.equal(NDStore.siegeWeek(), 2);
+    assert.deepEqual(NDStore.siegeStores(), { rams: 0, ladders: 0 });
+    assert.equal(NDStore.STORE_VERSION, 2, 'версия API стора — 2 (P19)');
+    // без бинда — нули, не крэш
+    const storePath2 = require.resolve('../js/state/store.js');
+    delete require.cache[storePath2];
+    const fresh = require(storePath2);
+    assert.deepEqual(fresh.snapshot(), { strongholds: null, army: null, siege: null });
+    assert.deepEqual(fresh.armyUnits(), {});
+    assert.equal(fresh.armyTotal(), 0);
+    assert.equal(fresh.siegeWeek(), 1);
+    assert.deepEqual(fresh.siegeStores(), { rams: 0, ladders: 0 });
+    assert.equal(fresh.dispatch(fresh.command('siege/week-advance', false)), false, 'без источника siege-команда — false');
+    assert.equal(fresh.dispatch(fresh.command('eco/army-add', 't1', 1)), false, 'без источника eco-команда — false');
+});
+
+test('P19 store: события nd:store:economy / nd:store:siege на NDDBus (typeof-гвард: шины может не быть)', () => {
+    const events = [];
+    const bus = { emit: (evt, p) => events.push([evt, p]) };
+    const prevBus = globalThis.NDDBus;
+    globalThis.NDDBus = bus;
+    try {
+        const army = { units: { t1: 5 }, week: 0 };
+        const sg = { week: 2 };
+        NDStore.bind(() => ({ strongholds: [], army: army, siege: sg }));
+        NDStore.dispatch(NDStore.command('eco/army-add', 't1', 3));
+        NDStore.dispatch(NDStore.command('siege/week-advance', false));
+        NDStore.dispatch(NDStore.command('siege/week-advance', false));
+        assert.deepEqual(events, [
+            ['nd:store:economy', { type: 'eco/army-add' }],
+            ['nd:store:siege', { type: 'siege/week-advance' }],
+            ['nd:store:siege', { type: 'siege/week-advance' }]
+        ], 'по событию на доменную команду (задел UI-подписок P20)');
+        assert.equal(army.units.t1, 8);
+        assert.equal(sg.week, 4);
+    } finally {
+        if (prevBus === undefined) delete globalThis.NDDBus; else globalThis.NDDBus = prevBus;
+    }
+    const army2 = { units: {}, week: 0 };
+    NDStore.bind(() => ({ strongholds: [], army: army2, siege: { week: 1 } }));
+    assert.doesNotThrow(() => NDStore.dispatch(NDStore.command('eco/army-add', 't1', 1)), 'без шины dispatch не падает');
+});
+
+test('P19 storage.js: снапшот сейва собирает strongholds/army/siege ИЗ СТОРА (typeof-гвард + прямой фоллбек)', () => {
+    const src = fs.readFileSync(path.join(root, 'js', 'storage.js'), 'utf8');
+    const at = src.indexOf('P19 (State Store 2.0');
+    const block = src.slice(at, src.indexOf('pruneAgedHistory', at));
+    assert.ok(block.includes('NDStore.snapshot()'), 'сейв читает домены через snapshot() стора');
+    assert.ok(block.includes('snapshot.strongholds = (_ndSnap && _ndSnap.strongholds) ? _ndSnap.strongholds : strongholds'), 'strongholds из стора, фоллбек — прямое поле');
+    assert.ok(block.includes('snapshot.army = (_ndSnap && _ndSnap.army) ? _ndSnap.army : army'), 'army из стора, фоллбек — прямое поле');
+    assert.ok(block.includes('snapshot.siege = (_ndSnap && _ndSnap.siege) ? _ndSnap.siege : siege'), 'siege из стора, фоллбек — прямое поле');
+    // живая эквивалентность: snapshot() отдаёт те же объекты, что прямые поля (сейв байт-в-байт)
+    const live = mkList([{ idx: 3, patch: { captured: true } }]);
+    const army = { units: { t1: 1 }, week: 0 };
+    const sg = { week: 1 };
+    NDStore.bind(() => ({ strongholds: live, army: army, siege: sg }));
+    const snap = NDStore.snapshot();
+    assert.equal(JSON.stringify(snap.strongholds), JSON.stringify(live), 'сериализация стора == сериализация прямого поля');
+    assert.equal(JSON.stringify(snap.army), JSON.stringify(army));
+    assert.equal(JSON.stringify(snap.siege), JSON.stringify(sg));
 });

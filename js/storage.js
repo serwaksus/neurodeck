@@ -312,7 +312,15 @@ lastDayReset,
 forgedIdCounter, uidCounter, goalIdCounter, xpHistory, bloodOath, lastWeekReset,
 tasks: TASKS, taskIdCounter, hirePool, savedAt: Date.now()
 };
-try { ensureStrongholdState(); snapshot.strongholds = strongholds; snapshot.army = army; snapshot.siege = siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; snapshot.TECHS = (typeof TECHS !== 'undefined') ? TECHS : {}; snapshot.TECH_PTS = (typeof TECH_PTS !== 'undefined') ? TECH_PTS : 0; snapshot.TECH_IDEA = (typeof TECH_IDEA !== 'undefined') ? TECH_IDEA : null; snapshot.TECH_ACTIVES = (typeof TECH_ACTIVES !== 'undefined') ? TECH_ACTIVES : {}; } catch(e) {}
+// P19 (State Store 2.0, шаг 2): снапшот доменов strongholds/army/siege собирается ИЗ СТОРА
+// (NDStore.snapshot() — живые ссылки, поля схемы v14 без изменений, сейв байт-в-байт тот же);
+// typeof-гвард — стор может быть не привязан (unit-харнессы storage.js без app.js) или ещё не
+// загружен (storage.js в index.html стоит раньше js/state/store.js — сейв в рантайме, не в парсе).
+try { var _ndSnap = null; try { _ndSnap = (typeof NDStore !== 'undefined' && NDStore && typeof NDStore.snapshot === 'function' && typeof NDStore.ready === 'function' && NDStore.ready() === true) ? NDStore.snapshot() : null; } catch (e2) {}
+ensureStrongholdState();
+snapshot.strongholds = (_ndSnap && _ndSnap.strongholds) ? _ndSnap.strongholds : strongholds;
+snapshot.army = (_ndSnap && _ndSnap.army) ? _ndSnap.army : army;
+snapshot.siege = (_ndSnap && _ndSnap.siege) ? _ndSnap.siege : siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; snapshot.TECHS = (typeof TECHS !== 'undefined') ? TECHS : {}; snapshot.TECH_PTS = (typeof TECH_PTS !== 'undefined') ? TECH_PTS : 0; snapshot.TECH_IDEA = (typeof TECH_IDEA !== 'undefined') ? TECH_IDEA : null; snapshot.TECH_ACTIVES = (typeof TECH_ACTIVES !== 'undefined') ? TECH_ACTIVES : {}; } catch(e) {}
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 if (FORGED.length > 0) { try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {} } // ever_saved = «игрок с карточками»: пустой сейв не должен блокировать старт-колоду (O-10)
