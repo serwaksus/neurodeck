@@ -17,7 +17,7 @@ swap-skills --budget # show token estimate
 ```
 
 ## Verification
-- `npm run check:js` — JS syntax check (covers 4 core files; stronghold-data/stronghold-model/perf-compat indirectly via tests)
+- `npm run check:js` — JS syntax check (covers 5 core files incl. js/state/store.js; stronghold-data/stronghold-model/perf-compat indirectly via tests)
 - `npm test` — full test suite
 - E2E: `npx playwright test tests/e2e/`
 - **Full chain = `npm run ci`** — check:js + unit + e2e + visual + playtest:strongholds/acceptance + qa:data/chaos/parity (same 9 steps run in GitHub Actions; visual stays continue-on-error there)

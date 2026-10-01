@@ -1949,6 +1949,38 @@ switchView(VIEW_ORDER[currentViewIndex - 1]);
 });
 // ===================== ТВЕРДЫНИ v2 (SPEC §1–§7; формулы — только js/stronghold-model.js) =====================
 var SM = window.StrongholdModel || window.NeuroDeckStrongholdModel;
+// ===================== STATE STORE 2.0 — шаг 1 (P18): домен твердынь через NDStore =====================
+// js/state/store.js: команды + ЧИСТЫЙ strongholdReducer поверх ТЕХ ЖЕ данных (живые ссылки массива
+// strongholds из storage.js). Схема v14 не меняется, новых полей нет, стор применяет результат
+// команды НА МЕСТЕ — идентичность массива и объектов-твердынь сохраняется, поведение неизменно
+// (characterization P17 зелёные). Источник — accessor-функция: applySyncData заменяет strongholds
+// целиком, и стор обязан видеть актуальный массив без ре-бинда. Все обращения — typeof-гварды:
+// extract-харнессы тестов тянут функции app.js поодиночке (без NDStore) и обязаны работать как
+// раньше через фоллбек на прямое поле. Пишущие потоки тика/осады/штурма (strongholdsDailyTick /
+// runWeeklySiege / doAssault — characterization P17) остаются прямыми до шага 2 (P19).
+function shStoreSource() {
+    if (typeof ensureStrongholdState === 'function') ensureStrongholdState();
+    return { strongholds: (typeof strongholds !== 'undefined') ? strongholds : null };
+}
+try { if (typeof NDStore !== 'undefined' && NDStore && typeof NDStore.bind === 'function') NDStore.bind(shStoreSource); } catch (e) {}
+function shStoreOn() {
+    return typeof NDStore !== 'undefined' && NDStore && typeof NDStore.dispatch === 'function' && typeof NDStore.shList === 'function' && NDStore.ready() === true;
+}
+function shState(idx) { // адаптер чтения: живой объект твердыни через стор (фоллбек — прямое поле)
+    if (shStoreOn()) { var via = NDStore.sh(idx); if (via) return via; }
+    return (typeof strongholds !== 'undefined' && strongholds && strongholds[idx]) ? strongholds[idx] : null;
+}
+function shAll() { // адаптер чтения: живой массив твердынь через стор (фоллбек — прямое поле)
+    if (shStoreOn()) { var arr = NDStore.shList(); if (Array.isArray(arr)) return arr; }
+    return (typeof strongholds !== 'undefined' && Array.isArray(strongholds)) ? strongholds : [];
+}
+function shDispatch(name, a, b, c) { // команда домена через стор; false = стора нет/не применилась
+    try {
+        if (typeof NDStore === 'undefined' || !NDStore || typeof NDStore.command !== 'function') return false;
+        var cmd = NDStore.command(name, a, b, c);
+        return cmd ? NDStore.dispatch(cmd) === true : false;
+    } catch (e) { return false; }
+}
 const PROVINCES = { 1: 'I «Пограничье»', 2: 'II «Чертожьи Холмы»', 3: 'III «Срединные Пустоши»', 4: 'IV «Терновые Пределы»' };
 // Campaign 2.0 C3: строка регионального правила провинции для панели твердыни. Текст и признаки живут
 // в каталоге StrongholdData.PROVINCES (§2 CAMPAIGN-2.0.md), модификаторы считают чистые функции
@@ -1993,7 +2025,7 @@ return '<div class="sh-trade">' + (m.icon || '🌀') + ' <b>' + m.name + '</b>: 
 function weeklyScoreFacts() {
     ensureStrongholdState();
     var held = 0, defended = 0;
-    strongholds.forEach(function(s) {
+    shAll().forEach(function(s) { // P18: чтение через стор
         if (!s || !s.captured) return;
         held++;
         if (SM && typeof SM.stackPower === 'function' && SM.stackPower(s.garrison) > 0) defended++;
@@ -2029,8 +2061,15 @@ function ensureBossesState() {
 function bossOf(num) { for (var i = 0; i < BOSSES.length; i++) if (BOSSES[i].num === num) return BOSSES[i]; return null; }
 function provCaptured(prov) {
     ensureStrongholdState();
+    // P18: чтение через стор. Самодостаточный typeof-гвард (без shAll): эта функция —
+    // extract-харнесс (boss-arc/wave-g2 ARC_FNS тянут её поодиночке, стора в песочнице нет).
+    var _st = null;
+    try {
+        if (typeof NDStore !== 'undefined' && NDStore && typeof NDStore.shList === 'function' && NDStore.ready() === true) { var _via = NDStore.shList(); if (Array.isArray(_via)) _st = _via; }
+    } catch (e) {}
+    if (!_st) _st = (typeof strongholds !== 'undefined' && Array.isArray(strongholds)) ? strongholds : [];
     for (var i = 0; i < STRONGHOLDS.length; i++) {
-        if (STRONGHOLDS[i].prov === prov && !(strongholds[i] && strongholds[i].captured)) return false;
+        if (STRONGHOLDS[i].prov === prov && !(_st[i] && _st[i].captured)) return false;
     }
     return true;
 }
@@ -2859,9 +2898,9 @@ function updateHeroAvatarSprites() {
     var mini = document.getElementById('heroAvatarMini');
     if (mini && !mini.querySelector('.icn')) { mini.innerHTML = '<svg class="icn" aria-hidden="true" style="width:18px;height:18px"><use href="#i-hero"/></svg>'; }
 }
-function capturedCount() { ensureStrongholdState(); return strongholds.filter(function(s) { return s.captured; }).length; }
-function strongholdTaxPerDay() { ensureStrongholdState(); var t = 0; strongholds.forEach(function(s, i) { if (s.captured) t += STRONGHOLDS[i].tax; }); return t; }
-function frontIdx() { ensureStrongholdState(); for (var i = 0; i < strongholds.length; i++) if (!strongholds[i].captured) return i; return -1; }
+function capturedCount() { ensureStrongholdState(); return shAll().filter(function(s) { return s.captured; }).length; } // P18: чтение через стор
+function strongholdTaxPerDay() { ensureStrongholdState(); var t = 0; shAll().forEach(function(s, i) { if (s.captured) t += STRONGHOLDS[i].tax; }); return t; } // P18: чтение через стор
+function frontIdx() { ensureStrongholdState(); var _a = shAll(); for (var i = 0; i < _a.length; i++) if (!_a[i].captured) return i; return -1; } // P18: чтение через стор
 function stageMult(stage) { return stage === 'ok' ? 1 : stage === 'worn' ? 0.5 : 0; }
 function builtList(idx) {
 var out = [], b = strongholds[idx].buildings;
@@ -3067,7 +3106,7 @@ function checkCapturedRecovery() { // #49: счётчик сезона помн�
         if (!plan) return;
         dungeonConfirm('🏰 Следы потерянных крепостей', 'Счётчик сезона помнит <b>' + plan.restoreTo + '</b> захваченных, по факту <b>' + capturedCount() + '</b>.<br><span style="color:var(--gold-bright)">Восстановить первые ' + plan.restoreTo + ' твердынь каталога?</span>').then(function(ok) {
             if (!ok) return;
-            for (var i = 0; i < plan.restoreTo; i++) strongholds[i].captured = true;
+            if (!shDispatch('sh/restore-prefix', plan.restoreTo)) for (var i = 0; i < plan.restoreTo; i++) strongholds[i].captured = true; // P18: команда домена (фоллбек — прежняя прямая правка)
             checkDoctrineOffer(); // Г1-2: восстановление тоже может открыть гейт
             showToast('🏰 Восстановлено', 'Первые ' + plan.restoreTo + ' твердынь снова под знаменем', 'save');
             haptic('success');
@@ -3323,14 +3362,13 @@ updateStrongholdProgress(); updateHeroUI(); renderStrongholds(); saveGameState()
 }
 function buyBuilding(idx, bid) {
 ensureStrongholdState();
-var d = BUILDINGS[bid], s = strongholds[idx];
+var d = BUILDINGS[bid], s = shState(idx); // P18: чтение через стор
 if (!d || !s || (!s.captured && idx !== 0) || (s.buildings[bid] && s.buildings[bid].built)) return;
 if (builtList(idx).length >= STRONGHOLDS[idx].slots) { showToast('🏰 Слоты заняты', 'Лимит твердыни: ' + STRONGHOLDS[idx].slots, 'blood'); return; }
 if (d.req && !(s.buildings[d.req] && s.buildings[d.req].built)) { showToast('🔒 Нужна постройка', 'Сначала: ' + BUILDINGS[d.req].name, 'blood'); return; }
 if ((HERO.gold || 0) < buildCostOf(bid)) { showToast('💰 Мало золота', 'Нужно ' + buildCostOf(bid) + ' 💰, в казне ' + (HERO.gold || 0), 'blood'); sfxError(); return; }
 HERO.gold -= buildCostOf(bid);
-s.buildings[bid] = { built: true, corruptionStage: 'ok', debtDays: 0 };
-strongholds[idx].buildings[bid].builtAt = Date.now();
+if (!shDispatch('sh/build', idx, bid, Date.now())) s.buildings[bid] = { built: true, corruptionStage: 'ok', debtDays: 0, builtAt: Date.now() }; // P18: команда домена (фоллбек — прежняя прямая правка; форма постройки идентична)
 dqProgress('build');
 var bdDef = BUILDINGS[bid]; if (bdDef.grow) { hirePool[bdDef.tier] += Math.round(bdDef.grow * (hasSpecialOk('sp4') ? 1.4 : 1)); showToast('⛺ Первый прирост', '+' + Math.round(bdDef.grow * (hasSpecialOk('sp4') ? 1.4 : 1)) + ' ' + UNIT_TIERS[bdDef.tier].name + ' — сразу в пул найма', 'save'); }
 recalcHirePool();
@@ -3341,7 +3379,7 @@ renderStrongholds(); updateHeroUI(); saveGameState();
 }
 // ===================== P7 «Коррупция по-человечески»: аварийный ремонт + восстановление =====================
 function emergencyMaintNeeded(idx) { // есть что лечить/обнулять в твердыне (не-ок стадия или долг)
-var s = strongholds[idx];
+var s = shState(idx); // P18: чтение через стор
 if (!s || !s.captured) return false;
 return Object.keys(s.buildings).some(function(bid) {
 var b = s.buildings[bid];
@@ -3390,8 +3428,10 @@ HERO.gold -= cost;
 hirePool[tier]--;
 dqProgress('hire');
 if (toGarrison) {
-var st = strongholds[idx].garrison.find(function(x) { return x.tier === tier; });
-if (st) st.count++; else strongholds[idx].garrison.push({ tier: tier, count: 1 });
+if (!shDispatch('sh/garrison:add', idx, tier, 1)) { // P18: команда домена (фоллбек — прежняя прямая правка)
+var st = shState(idx).garrison.find(function(x) { return x.tier === tier; });
+if (st) st.count++; else shState(idx).garrison.push({ tier: tier, count: 1 });
+}
 } else {
 army.units[tier] = (army.units[tier] || 0) + 1;
 }
@@ -3405,14 +3445,16 @@ if (toGarrison) {
 var n = army.units[tier] || 0;
 if (n <= 0) return;
 army.units[tier] = 0;
-var st = strongholds[idx].garrison.find(function(x) { return x.tier === tier; });
-if (st) st.count += n; else strongholds[idx].garrison.push({ tier: tier, count: n });
+if (!shDispatch('sh/garrison:add', idx, tier, n)) { // P18: команда домена (фоллбек — прежняя прямая правка)
+var st = shState(idx).garrison.find(function(x) { return x.tier === tier; });
+if (st) st.count += n; else shState(idx).garrison.push({ tier: tier, count: n });
+}
 } else {
-var g = strongholds[idx].garrison;
+var g = shState(idx).garrison; // P18: чтение через стор
 var st2 = g.find(function(x) { return x.tier === tier; });
 if (!st2) return;
 army.units[tier] = (army.units[tier] || 0) + st2.count;
-strongholds[idx].garrison = g.filter(function(x) { return x !== st2; });
+if (!shDispatch('sh/garrison:take-stack', idx, tier)) strongholds[idx].garrison = g.filter(function(x) { return x !== st2; }); // P18: команда домена (фоллбек — прежняя прямая правка)
 }
 sfxEquip();
 renderStrongholds(); updateHeroUI(); saveGameState();

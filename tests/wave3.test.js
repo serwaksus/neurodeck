@@ -292,7 +292,7 @@ test('wave3 Ф3 контракты [css/style.css + index.html]: башня в r
     assert.ok(cssSource().includes('.tower-card'), 'style.css: класс .tower-card существует');
     const html = htmlSource();
     const pins = (html.match(/v=(\d+)/g) || []);
-    assert.equal(pins.length, 12, 'index.html: 12 вхождений ?v= (P15: +remote-config.js)');
+    assert.equal(pins.length, 13, 'index.html: 13 вхождений ?v= (P18: +js/state/store.js)');
     assert.equal(new Set(pins).size, 1, 'все ?v= одинаковы (факт: ' + pins.join(',') + ')');
     assert.ok(!html.includes('?v=80'), 'v80 не остался');
     console.log('verified: css/style.css index.html PASS (wave3 contracts)');
@@ -302,7 +302,7 @@ test('package.json: check:ui-скрипт верификации UI-ассето
     assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
     const _pins = htmlSource().match(/v=\d+/g) || [];
-    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 12 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×12, P15: +remote-config.js)');
+    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 13 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×13, P18: +js/state/store.js)');
     assert.ok(cssSource().includes('.tower-card') && cssSource().includes('.siege-alarm'), 'css/style.css: PASS (tower-card + siege-alarm)');
     console.log('index.html: PASS');
     console.log('css/style.css: PASS');
