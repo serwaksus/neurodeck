@@ -36,10 +36,15 @@ test('getCloudStorage: заглушка вне Telegram (platform unknown) — �
 
 test('pushCloudChunks: nd_meta.t = savedAt снапшота, а не момент завершения пуша', async () => {
     const writes = [];
-    const cs = { setItem(key, val, cb) { writes.push([key, val]); cb(null); } };
+    const cs = { setItem: (key, val, cb) => { writes.push([key, val]); cb(null); }, getItem: (k, cb) => cb(null, null) };
     const json = '{"savedAt":1727500000000,"hero":{"level":3},"forged":[1,2,3]}';
-    const run = new Function('cs', 'json', 'onDone', 'CLOUD_MAX_CHUNK', 'CLOUD_META_KEY', 'CLOUD_DATA_PREFIX', 'updateSyncBadge', 'showToast', 'getCloudStorage', 'clearSurplusChunks', 'ndClosingGuard',
-        extractStorageFn('pushCloudChunks') + '; return pushCloudChunks;')(cs, json, () => {}, 4096, 'nd_meta', 'nd_', () => {}, () => {}, () => null, () => {}, () => {});
+    // R2: пуш делегирует ядру writeCloudGeneration (поколенческие ключи + CAS) —
+    // тянем ядро вместе с обёрткой, как это делает прод-код
+    const core = new Function('CLOUD_MAX_CHUNK', 'CLOUD_META_KEY', 'CLOUD_DATA_PREFIX', 'ND_CLOUD_FAULTS', 'lastCommittedCloud',
+        ['cloudGenKey', 'ndCloudFault', 'metaToPrevDesc', 'deleteGenerationChunks', 'writeCloudGeneration'].map((n) => extractBlock(storage, 'function ' + n + '(')).join('\n') + '; return writeCloudGeneration;')(
+        4096, 'nd_meta', 'nd_', null, {});
+    const run = new Function('writeCloudGeneration', 'updateSyncBadge', 'showToast', 'ndClosingGuard', 'ndTel',
+        extractStorageFn('pushCloudChunks') + '; return pushCloudChunks;')(core, () => {}, () => {}, () => {}, () => {});
     run(cs, json, () => {});
     await new Promise((r) => setTimeout(r, 10));
     const metaWrite = writes.find(([k]) => k === 'nd_meta');

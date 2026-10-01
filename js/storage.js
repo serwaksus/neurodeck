@@ -54,8 +54,8 @@ function ndTelErr(code, message, detail) {
     try { if (typeof NDTelemetry !== 'undefined' && NDTelemetry && typeof NDTelemetry.error === 'function') NDTelemetry.error(code, message, detail); } catch(e) {}
 }
 // Канонический отпечаток снапшота: 2×FNV-1a 32-bit → 64-bit hex. Детерминирован между
-// устройствами (charCodeAt по UTF-16). Вызывается typeof-гвардом из pushCloudChunks /
-// loadCloudChunks / saveToCloud (в вырезанных тестовых харнессах функции нет — проверка
+// устройствами (charCodeAt по UTF-16). Вызывается typeof-гвардом из writeCloudGeneration /
+// loadCloudChunks (в вырезанных тестовых харнессах функции нет — проверка
 // мягко пропускается). Держать синхронно с ожиданием в tests/cloud-envelope.test.js.
 function ndSnapshotChecksum(s) {
     var a = 0x811c9dc5, b = 0x811c9dc5;
@@ -382,9 +382,130 @@ function autoCloudSave(json, force, bypassConflictCheck) {
         });
     });
 }
+// ─── R2 (очередь 4): поколенческая атомарная запись в облако (envelope v3) ────
+// Чанки нового поколения пишутся под СВОИМИ ключами nd_<gen>_<i> (gen = id
+// сохранения) и физически не касаются ключей закоммиченного поколения: обрыв
+// посреди пуша больше не может смешать поколения (контракт nd_0 из envelope ≤ v2
+// не заставляет писать поверх живых чанков). nd_meta, записываемый СТРОГИМ
+// последним, — commit-pointer на поколение g с дескриптором prev для rollback.
+// Перед записью meta — CAS re-read: если другой писатель закоммитил поверх нас
+// более свежее поколение, не затираем его (writer conflict → abort). Читатель
+// при повреждении закоммиченного поколения откатывается на prev (глубина 1);
+// легаси-облака без g (плоские nd_0..) читаются как раньше.
+function cloudGenKey(gen, idx) { return CLOUD_DATA_PREFIX + gen + '_' + idx; }
+function ndCloudFault(kind, idx) { // R2 fault-injection: пер чанк/meta/concurrent; в проде хук всегда null → no-op
+    try {
+        var f = ND_CLOUD_FAULTS;
+        if (!f || typeof f !== 'object') return null;
+        if (kind === 'chunk' && (f.chunk === idx || f.chunk === 'any')) return new Error('инжект: сбой записи чанка ' + idx);
+        if (kind === 'meta' && f.meta) return new Error('инжект: сбой записи meta');
+        return null;
+    } catch(e) { return null; }
+}
+function metaToPrevDesc(meta) { // компактный дескриптор поколения для meta.prev / rollback-цепочки
+    if (!meta || typeof meta !== 'object' || !(meta.n > 0)) return null;
+    var d = { n: Math.floor(meta.n), t: (Number.isFinite(Number(meta.t)) ? Math.floor(Number(meta.t)) : 0) };
+    if (meta.g) d.g = String(meta.g);
+    if (meta.c) d.c = String(meta.c);
+    if (meta.id) d.id = String(meta.id);
+    return d;
+}
+function deleteGenerationChunks(cs, desc) { // полное удаление поколения: gen-ключи 0..n-1; легаси-плоскость — с запасом surplus
+    if (!cs || !desc || !(desc.n > 0)) return;
+    var count = desc.g ? Math.floor(desc.n) : Math.floor(desc.n) + 64;
+    for (var i = 0; i < count; i++) {
+        (function(idx) {
+            try { cs.removeItem(desc.g ? cloudGenKey(desc.g, idx) : (CLOUD_DATA_PREFIX + idx), function() {}); } catch(e) {}
+        })(i);
+    }
+}
+function writeCloudGeneration(cs, json, onDone) {
+    var settledDone = false;
+    var t0 = Date.now();
+    function finish(err, info) { if (settledDone) return; settledDone = true; if (typeof onDone === 'function') onDone(err || null, info || null); }
+    try {
+        var savedAt = Date.now(); // метка снапшота, а не завершения пуша (анти-воскрешение удалённого)
+        try { savedAt = JSON.parse(json).savedAt || savedAt; } catch(e) {}
+        var chunks = [];
+        for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK)); if (chunks.length >= 200) { var tooBig = new Error('облако: слишком много чанков'); tooBig.tooBig = true; finish(tooBig); return; } }
+        if (chunks.length === 0) { finish(new Error('облако: нет данных')); return; }
+        var checksum = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(json) : '';
+        var gen = Date.now().toString(36) + Math.random().toString(36).slice(2, 8); // id поколения = id сохранения
+        cs.getItem(CLOUD_META_KEY, function(errM, baseStr) {
+            var baseMeta = null;
+            if (!errM && baseStr) { try { baseMeta = JSON.parse(baseStr); } catch(e) { baseMeta = null; } }
+            if (typeof ndTel === 'function') ndTel('cloud_push_started', { n: chunks.length, sz: json.length });
+            var doneCount = 0;
+            var failed = false;
+            function failPush(err) {
+                if (failed) return;
+                failed = true;
+                deleteGenerationChunks(cs, { g: gen, n: chunks.length }); // свои незакоммиченные чанки — вычищаем, meta не тронута
+                if (typeof ndTelErr === 'function') ndTelErr('CLOUD_PUSH_FAILED', String(err), { n: chunks.length });
+                finish(err);
+            }
+            chunks.forEach(function(chunk, idx) {
+                if (failed) return;
+                var fault = ndCloudFault('chunk', idx);
+                if (fault) { failPush(fault); return; } // инжект: запись чанка сбоит ДО облака
+                cs.setItem(cloudGenKey(gen, idx), chunk, function(err) {
+                    if (failed) return;
+                    doneCount++;
+                    if (err) { failPush(err); return; } // meta не тронута: закоммиченное поколение живо
+                    if (doneCount === chunks.length) commitMeta();
+                });
+            });
+            function commitMeta() {
+                cs.getItem(CLOUD_META_KEY, function(errC, casStr) { // CAS re-read: не закоммитил ли другой писатель поверх нас?
+                    var f = null;
+                    try { f = ND_CLOUD_FAULTS; } catch(e) { f = null; }
+                    if (f && f.concurrent) casStr = JSON.stringify(f.concurrent);
+                    var current = null;
+                    if (!errC && casStr) { try { current = JSON.parse(casStr); } catch(e) { current = null; } }
+                    var changed = !!(current && (!baseMeta || (current.id || current.g) !== (baseMeta.id || baseMeta.g)));
+                    if (changed && (Number(current.t) || 0) > savedAt + 10000) {
+                        // писательский конфликт: в облаке уже более свежее поколение — не затираем его
+                        if (typeof ndTel === 'function') ndTel('cloud_push_conflict', { theirT: Number(current.t) || 0, ourT: savedAt });
+                        var cErr = new Error('облако занято более свежим сохранением');
+                        cErr.conflict = true;
+                        failPush(cErr);
+                        return;
+                    }
+                    writeMeta(changed ? metaToPrevDesc(current) : metaToPrevDesc(baseMeta));
+                });
+            }
+            function writeMeta(prevDesc) {
+                var metaObj = { v: 3, g: gen, n: chunks.length, t: savedAt, c: checksum, id: gen, sz: json.length };
+                if (prevDesc) metaObj.prev = prevDesc;
+                var metaFault = ndCloudFault('meta');
+                if (metaFault) { // инжект: запись commit-pointer сбоит ДО облака — поколение не коммитится
+                    if (typeof ndTelErr === 'function') ndTelErr('CLOUD_META_WRITE_FAILED', String(metaFault), { n: chunks.length });
+                    failPush(metaFault);
+                    return;
+                }
+                cs.setItem(CLOUD_META_KEY, JSON.stringify(metaObj), function(err2) {
+                    if (err2) {
+                        if (typeof ndTelErr === 'function') ndTelErr('CLOUD_META_WRITE_FAILED', String(err2), { n: chunks.length });
+                        failPush(err2);
+                        return;
+                    }
+                    lastCommittedCloud = { cur: { g: gen, n: chunks.length }, prev: prevDesc || null };
+                    // rollback-глубина — одно поколение: всё старше prev больше не нужно
+                    if (baseMeta && baseMeta.prev) deleteGenerationChunks(cs, metaToPrevDesc(baseMeta.prev));
+                    if (baseMeta && !baseMeta.g) { // коммит поверх легаси-плоскости: nd_0..n-1 остаются как rollback-копия, surplus — вычищаем
+                        var keepN = Math.floor(baseMeta.n) || 0;
+                        for (var s = keepN; s < keepN + 64; s++) { (function(idx) { try { cs.removeItem(CLOUD_DATA_PREFIX + idx, function() {}); } catch(e) {} })(s); }
+                    }
+                    if (typeof ndTel === 'function') ndTel('cloud_push_ok', { n: chunks.length, g: gen, ms: Date.now() - t0 });
+                    finish(null, { gen: gen, n: chunks.length });
+                });
+            }
+        });
+    } catch(e) { if (typeof ndTelErr === 'function') ndTelErr('CLOUD_PUSH_FAILED', String(e), {}); finish(e); }
+}
 function pushCloudChunks(cs, json, onDone) {
     var settled = false;
-    var pushOk = false;
+    var completed = false;
     var t0 = Date.now();
     ndClosingGuard(true); // пуш в облаке — не даём свайп-закрытию оборвать его молча
     var hangTimer = setTimeout(function() { settle(); }, 15000);
@@ -393,48 +514,22 @@ function pushCloudChunks(cs, json, onDone) {
         settled = true;
         ndClosingGuard(false);
         clearTimeout(hangTimer);
-        if (!pushOk && typeof ndTel === 'function') ndTel('cloud_push_interrupted', { ms: Date.now() - t0 }); // meta не перезаписан — старое поколение живо
+        if (!completed && typeof ndTel === 'function') ndTel('cloud_push_interrupted', { ms: Date.now() - t0 }); // meta не перезаписан — закоммиченное поколение живо
         if (typeof onDone === 'function') onDone();
     }
-    try {
-        var savedAt = Date.now(); // метка времени снапшота, а не завершения пуша:
-        try { savedAt = JSON.parse(json).savedAt || savedAt; } catch(e) {} // иначе поздний старый пуш выглядит «новее» локального удаления (анти-воскрешение)
-        var chunks = [];
-        for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
-        { if (chunks.length >= 200) { updateSyncBadge('offline'); if (typeof showToast === 'function') showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); settle(); return; } } }
-        // Envelope v2 («Trust»): чанки пишутся первыми, nd_meta — ПОСЛЕДНИМ как commit-pointer
-        // с отпечатком c, id поколения и размером. Обрыв прошлого пуша, поверх старых данных,
-        // больше не читается как валидный сейв — контрольная сумма его отсекает.
-        var saveId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        var checksum = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(json) : '';
-        if (typeof ndTel === 'function') ndTel('cloud_push_started', { n: chunks.length, sz: json.length });
-        var doneCount = 0;
-        var aborted = false;
-        function failChunk(err) {
-            if (aborted) return;
-            aborted = true;
+    writeCloudGeneration(cs, json, function(err) {
+        completed = true;
+        if (err) {
             updateSyncBadge('offline');
-            if (typeof showToast === 'function') showToast('⚠ Ошибка облака', 'Часть данных не сохранена: ' + String(err), 'blood');
-            if (typeof ndTelErr === 'function') ndTelErr('CLOUD_PUSH_FAILED', String(err), { n: chunks.length });
+            if (err.conflict) { if (typeof showToast === 'function') showToast('☁ Облако занято', 'В облаке сохранение новее — оно и осталось актуальным', 'save'); }
+            else if (err.tooBig) { if (typeof showToast === 'function') showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); }
+            else if (typeof showToast === 'function') showToast('⚠ Ошибка облака', 'Часть данных не сохранена: ' + String((err && err.message) || err), 'blood');
             settle();
+            return;
         }
-        chunks.forEach(function(chunk, idx) {
-            cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err) {
-                doneCount++;
-                if (err) { failChunk(err); return; }
-                if (!aborted && doneCount === chunks.length) {
-                    cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt, c: checksum, id: saveId, sz: json.length}), function(err2) {
-                        if (err2 || aborted) { updateSyncBadge('offline'); settle(); return; }
-                        pushOk = true;
-                        clearSurplusChunks(chunks.length);
-                        updateSyncBadge('synced');
-                        if (typeof ndTel === 'function') ndTel('cloud_push_ok', { n: chunks.length, ms: Date.now() - t0 });
-                        settle();
-                    });
-                }
-            });
-        });
-    } catch(e) { if (typeof ndTelErr === 'function') ndTelErr('CLOUD_PUSH_FAILED', String(e), {}); settle(); }
+        updateSyncBadge('synced');
+        settle();
+    });
 }
 function forceCloudSave(bypassConflictCheck) {
     var cs = getCloudStorage();
@@ -682,7 +777,9 @@ showToast('⚠ Ничего не найдено', 'Нет сохранений �
 }
 const CLOUD_MAX_CHUNK = 4096;
 const CLOUD_META_KEY = 'nd_meta';
-const CLOUD_DATA_PREFIX = 'nd_';
+const CLOUD_DATA_PREFIX = 'nd_'; // легаси-плоскость (envelope ≤ v2) и база поколенческих ключей nd_<gen>_<i> (R2)
+var ND_CLOUD_FAULTS = null; // R2 fault-injection ({chunk:idx|'any'} | {meta:true} | {concurrent:metaObj}); в проде всегда null
+var lastCommittedCloud = null; // R2: дескрипторы последнего известного поколения — для вайпа облака в resetAllData
 function getCloudStorage() {
     try {
         var tg = window.Telegram && window.Telegram.WebApp;
@@ -696,8 +793,6 @@ function getCloudStorage() {
 function loadCloudChunks(meta, onDone, timeoutMs) {
     var cs = getCloudStorage();
     if (!cs || !meta || !(meta.n > 0)) { onDone(new Error('облако недоступно или плохие метаданные'), null); return; }
-    var parts = new Array(meta.n);
-    var loaded = 0;
     var settled = false;
     var timer = null;
     function settle(err, data) {
@@ -707,46 +802,55 @@ function loadCloudChunks(meta, onDone, timeoutMs) {
         onDone(err, data);
     }
     if (timeoutMs) timer = setTimeout(function() { if (typeof ndTelErr === 'function') ndTelErr('CLOUD_LOAD_TIMEOUT', String(timeoutMs), {}); settle(new Error('таймаут загрузки из облака'), null); }, timeoutMs);
-    function check() {
-        if (loaded < meta.n) return;
-        for (var i = 0; i < meta.n; i++) {
-            if (typeof parts[i] !== 'string') {
-                if (typeof ndTelErr === 'function') ndTelErr('CLOUD_CHUNK_MISSING', String(i), { n: meta.n });
-                settle(new Error('чанк ' + i + '/' + meta.n + ' отсутствует'), null); return;
+    // R2: v3-meta с поколением g читает поколенческие ключи nd_<g>_<i> с rollback на prev
+    // (глубина 1); легаси-meta без g читает плоские nd_<i> как раньше (envelope ≤ v2).
+    var rootDesc = { n: meta.n, t: (Number(meta.t) || 0), c: (meta.c ? String(meta.c) : ''), id: (meta.id ? String(meta.id) : '') };
+    if (meta.g) {
+        rootDesc.g = String(meta.g);
+        if (meta.prev && meta.prev.n > 0) rootDesc.prev = meta.prev;
+        lastCommittedCloud = { cur: { g: rootDesc.g, n: Math.floor(rootDesc.n) }, prev: rootDesc.prev || null };
+    }
+    function attempt(desc) {
+        var n = Math.floor(desc.n);
+        var parts = new Array(n);
+        var loaded = 0;
+        function check() {
+            if (loaded < n) return;
+            for (var i = 0; i < n; i++) {
+                if (typeof parts[i] !== 'string') { rejectGen('CLOUD_CHUNK_MISSING', 'чанк ' + i + '/' + n + ' отсутствует'); return; }
             }
-        }
-        var joined = parts.join('');
-        // Envelope v2 («Trust»): если в meta есть отпечаток c — сверяем его со склеенными
-        // чанками. Несовпадение = смешанное поколение (обрыв пуша поверх старых данных)
-        // или повреждение: такой сейв не отдаём, работают recovery-потоки.
-        if (meta.c) {
-            var got = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(joined) : '';
-            if (got && got !== meta.c) {
-                if (typeof ndTelErr === 'function') ndTelErr('CLOUD_CHECKSUM_MISMATCH', got, { id: String(meta.id || ''), n: meta.n });
-                settle(new Error('контрольная сумма облака не совпала'), null); return;
+            var joined = parts.join('');
+            // отпечаток c (envelope ≥ v2): несовпадение = повреждение/смешение — сначала
+            // попытка rollback на prev (R2), потом уже ошибка наружу
+            if (desc.c) {
+                var got = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(joined) : '';
+                if (got && got !== desc.c) { rejectGen('CLOUD_CHECKSUM_MISMATCH', 'контрольная сумма облака не совпала'); return; }
             }
+            try { settle(null, JSON.parse(joined)); }
+            catch(e) { settle(e, null); }
         }
-        try { settle(null, JSON.parse(joined)); }
-        catch(e) { settle(e, null); }
+        for (var i = 0; i < n; i++) {
+            (function(idx) {
+                cs.getItem(desc.g ? cloudGenKey(desc.g, idx) : (CLOUD_DATA_PREFIX + idx), function(e2, val) {
+                    loaded++;
+                    if (!e2 && typeof val === 'string') parts[idx] = val;
+                    check();
+                });
+            })(i);
+        }
     }
-    for (var i = 0; i < meta.n; i++) {
-        (function(idx) {
-            cs.getItem(CLOUD_DATA_PREFIX + idx, function(e2, val) {
-                loaded++;
-                if (!e2 && typeof val === 'string') parts[idx] = val;
-                check();
-            });
-        })(i);
+    function rejectGen(code, msg) {
+        if (!settled && rootDesc.g && rootDesc.prev) { // R2 rollback: закоммиченное поколение нечитаемо → предыдущее живо в облаке
+            if (typeof ndTel === 'function') ndTel('cloud_rollback_used', { bad: String(rootDesc.g), reason: String(msg).slice(0, 60), prevT: Number(rootDesc.prev.t) || 0 });
+            var prevDesc = rootDesc.prev;
+            rootDesc.prev = null; // глубина rollback — одно поколение
+            attempt(prevDesc);
+            return;
+        }
+        if (typeof ndTelErr === 'function') ndTelErr(code, msg, { n: rootDesc.n, g: String(rootDesc.g || '') });
+        settle(new Error(msg), null);
     }
-}
-function clearSurplusChunks(n) {
-    var cs = getCloudStorage();
-    if (!cs || !(n > 0)) return;
-    for (var i = n; i < n + 64; i++) {
-        (function(idx) {
-            try { cs.removeItem(CLOUD_DATA_PREFIX + idx, function() {}); } catch(e) {}
-        })(i);
-    }
+    attempt(rootDesc);
 }
 function buildSyncData() {
 var data = {
@@ -801,13 +905,6 @@ ndClosingGuard(true);
 var el = document.getElementById('cloudStatus');
 if (el) el.textContent = '☁ Сохраняю...';
 var json = JSON.stringify(buildSyncData());
-var savedAt = Date.now();
-try { savedAt = JSON.parse(json).savedAt || savedAt; } catch(e) {}
-var checksum = (typeof ndSnapshotChecksum === 'function') ? ndSnapshotChecksum(json) : ''; // envelope v2, как в pushCloudChunks
-var saveId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-var chunks = [];
-for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) { chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
-        { if (chunks.length >= 200) { finished = true; ndClosingGuard(false); if (el) el.textContent = '⚠ Слишком много данных'; showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); return; } } }
 var finished = false;
 setTimeout(function() {
 if (!finished) {
@@ -816,40 +913,23 @@ if (el) el.textContent = '⚠ Таймаут облака — используй
 showToast('⚠ Таймаут', 'Облако не ответило. Скачайте файл.', 'blood');
 }
 }, 10000);
-var doneCount = 0;
-function saveMeta() {
-    if (finished) return;  // belt-and-suspenders, никогда не nullаем ненулевой finished
-cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt, c: checksum, id: saveId, sz: json.length}), function(err) {
-if (finished) return;
+// R2: ручное сохранение пишет той же поколенческой атомарной цепочкой, что и автопуш
+writeCloudGeneration(cs, json, function(err) {
+if (finished) return;  // belt-and-suspenders, никогда не nullаем ненулевой finished
 finished = true; ndClosingGuard(false);
 if (!err) {
-clearSurplusChunks(chunks.length);
 updateCloudStatus();
 ndSyncHaptic();
 showToast('☁ Сохранено в облако', 'Доступно на всех устройствах');
 spiritSay('«Облако запомнило твой путь.»');
-} else {
-updateSyncBadge('offline');
-if (el) el.textContent = '⚠ Ошибка записи метаданных';
-showToast('⚠ Ошибка', String(err), 'blood');
-}
-});
-}
-chunks.forEach(function(chunk, idx) {
-cs.setItem(CLOUD_DATA_PREFIX + idx, chunk, function(err) {
-if (finished) return;
-if (err) {
-finished = true; ndClosingGuard(false);
-updateSyncBadge('offline');
-if (el) el.textContent = '⚠ Ошибка записи в облако';
-showToast('⚠ Ошибка облака', String(err), 'blood');
 return;
 }
-doneCount++;
-if (doneCount === chunks.length) saveMeta();
+updateSyncBadge('offline');
+if (err.conflict) { if (el) el.textContent = '⚠ Облако занято сохранением новее'; showToast('☁ Облако занято', 'Сохранение новее уже в облаке — оно и осталось актуальным', 'save'); return; }
+if (err.tooBig) { if (el) el.textContent = '⚠ Слишком много данных'; showToast('⚠ Слишком много данных', 'Сейв не помещается в облако — используйте файл', 'blood'); return; }
+if (el) el.textContent = '⚠ Ошибка записи в облако';
+showToast('⚠ Ошибка облака', String((err && err.message) || err), 'blood');
 });
-});
-if (chunks.length === 0) { finished = true; ndClosingGuard(false); if (el) el.textContent = '⚠ Нет данных'; }
 }
 function loadFromCloud() {
 var cs = getCloudStorage();
@@ -1089,14 +1169,27 @@ if (typeof NDDBus !== 'undefined' && NDDBus && typeof NDDBus.emit === 'function'
 function resetAllData() {
 dungeonConfirm('🗑 Удалить ВСЕ данные?', 'Это действие <b>нельзя отменить</b>. Весь прогресс будет потерян навсегда.').then(function(ok) {
 if (!ok) return;
-// Clear all NeuroDeck keys (covers current and future keys; performant for the <=20 keys we use).
-try {
-    for (var i = localStorage.length - 1; i >= 0; i--) {
-        var k = localStorage.key(i);
-        if (k && k.indexOf('neurodeck_') === 0) localStorage.removeItem(k);
-    }
-} catch(e) {}
-try { var csR = getCloudStorage(); if (csR) csR.removeItem(CLOUD_META_KEY, function() {}); } catch(e) {}
+	// Clear all NeuroDeck keys (covers current and future keys; performant for the <=20 keys we use).
+	try {
+	    for (var i = localStorage.length - 1; i >= 0; i--) {
+	        var k = localStorage.key(i);
+	        if (k && k.indexOf('neurodeck_') === 0) localStorage.removeItem(k);
+	    }
+	} catch(e) {}
+	// R2: облако — commit-pointer вниз первым (облако сразу «пустое»), затем best-effort
+	// вычистка чанков поколений, известных этой вкладке (lastCommittedCloud). Чанки чужих
+	// сессий, если вкладка не знала о них, остаются orphan-ключами без meta — не читаются.
+	try {
+	    var csR = getCloudStorage();
+	    if (csR) {
+	        csR.removeItem(CLOUD_META_KEY, function() {});
+	        var wipeGens = lastCommittedCloud;
+	        if (wipeGens && typeof wipeGens === 'object') {
+	            if (wipeGens.cur && wipeGens.cur.g) deleteGenerationChunks(csR, wipeGens.cur);
+	            if (wipeGens.prev && wipeGens.prev.n > 0) deleteGenerationChunks(csR, wipeGens.prev);
+	        }
+	    }
+	} catch(e) {}
 try {
     if (!idb) { location.reload(); return; }
     var tx = idb.transaction('saves', 'readwrite');

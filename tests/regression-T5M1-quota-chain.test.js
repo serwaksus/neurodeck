@@ -94,9 +94,11 @@ test('T5-M1: quota на full_save — backup/IDB/cloud записаны, тос�
     // 2) IDB получил снапшот
     assert.ok(sandbox.window._lastIDBSaveAt > 0, 'saveToIDB выполнился (window._lastIDBSaveAt)');
     assert.ok(idb.latest && idb.latest.data, 'снапшот лежит в IndexedDB');
-    // 3) облако получило данные: чанк + метаданные
+    // 3) облако получило данные: поколенческий чанк + метаданные
+    // R2 (queue 4): чанки пишутся под поколенческими ключами nd_<gen>_<i> —
+    // плоский контракт nd_0 пересмотрен (TELEMETRY.md, backlog п.2)
     const setKeys = cs.log.filter((x) => x[0] === 'setItem').map((x) => x[1]);
-    assert.ok(setKeys.includes('nd_0'), 'облако: nd_0 записан, got: ' + setKeys.join(','));
+    assert.ok(setKeys.some((k) => /^nd_[0-9a-z]+_0$/.test(k)), 'облако: поколенческий чанк nd_<gen>_0 записан, got: ' + setKeys.join(','));
     assert.ok(setKeys.includes('nd_meta'), 'облако: nd_meta записан');
     // 4) ошибка квоты НЕ проглочена молча — юзер предупреждён
     assert.ok(toasts.some((t) => t.kind === 'blood'), 'тост «Хранилище переполнено» показан');

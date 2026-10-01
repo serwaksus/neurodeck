@@ -1,0 +1,337 @@
+TAP version 13
+# Subtest: writeCloudGeneration: чанки под nd_<gen>_<i>, плоские nd_<i> не пишутся, nd_meta — строго последняя с v3-полями
+ok 1 - writeCloudGeneration: чанки под nd_<gen>_<i>, плоские nd_<i> не пишутся, nd_meta — строго последняя с v3-полями
+  ---
+  duration_ms: 13.511962
+  type: 'test'
+  ...
+# Subtest: writeCloudGeneration → loadCloudChunks: roundtrip и отсечение подменённого чанка
+ok 2 - writeCloudGeneration → loadCloudChunks: roundtrip и отсечение подменённого чанка
+  ---
+  duration_ms: 16.386658
+  type: 'test'
+  ...
+# Subtest: loadCloudChunks: легаси-meta без g читает плоские nd_<i> как раньше (обратная совместимость)
+ok 3 - loadCloudChunks: легаси-meta без g читает плоские nd_<i> как раньше (обратная совместимость)
+  ---
+  duration_ms: 0.706928
+  type: 'test'
+  ...
+# Subtest: loadCloudChunks: отсутствующий чанк → ошибка (commit-pointer указывает на неполные данные)
+ok 4 - loadCloudChunks: отсутствующий чанк → ошибка (commit-pointer указывает на неполные данные)
+  ---
+  duration_ms: 0.379713
+  type: 'test'
+  ...
+# Subtest: сбой записи чанка (инжект): meta не сдвинута, закоммиченное поколение физически нетронуто и читается
+ok 5 - сбой записи чанка (инжект): meta не сдвинута, закоммиченное поколение физически нетронуто и читается
+  ---
+  duration_ms: 23.304192
+  type: 'test'
+  ...
+# Subtest: сбой записи meta (инжект): свои чанки вычищены, meta не сдвинута — облако остаётся на прошлом поколении
+ok 6 - сбой записи meta (инжект): свои чанки вычищены, meta не сдвинута — облако остаётся на прошлом поколении
+  ---
+  duration_ms: 22.444853
+  type: 'test'
+  ...
+# Subtest: writer conflict (CAS): чужое более свежее поколение не затирается, свои чанки вычищены
+ok 7 - writer conflict (CAS): чужое более свежее поколение не затирается, свои чанки вычищены
+  ---
+  duration_ms: 22.385293
+  type: 'test'
+  ...
+# Subtest: writer conflict: чужое более старое поколение → коммитим, prev указывает на него (цепочка цела)
+ok 8 - writer conflict: чужое более старое поколение → коммитим, prev указывает на него (цепочка цела)
+  ---
+  duration_ms: 21.381827
+  type: 'test'
+  ...
+# Subtest: ndSnapshotChecksum: детерминирован и чувствителен к одному символу
+ok 9 - ndSnapshotChecksum: детерминирован и чувствителен к одному символу
+  ---
+  duration_ms: 0.776513
+  type: 'test'
+  ...
+# Subtest: прод-код не пишет плоские облачные чанки и держит fault-хуки выключенными
+ok 10 - прод-код не пишет плоские облачные чанки и держит fault-хуки выключенными
+  ---
+  duration_ms: 0.671284
+  type: 'test'
+  ...
+# Subtest: pushCloudChunks (обёртка): конфликт прокидывается, badge offline, onDone зовётся
+ok 11 - pushCloudChunks (обёртка): конфликт прокидывается, badge offline, onDone зовётся
+  ---
+  duration_ms: 11.898272
+  type: 'test'
+  ...
+# Subtest: rollback: закоммиченное поколение повреждено → читатель получает prev (cloud_rollback_used)
+ok 12 - rollback: закоммиченное поколение повреждено → читатель получает prev (cloud_rollback_used)
+  ---
+  duration_ms: 27.163735
+  type: 'test'
+  ...
+# Subtest: rollback исчерпан: оба поколения повреждены → ошибка наружу (работают recovery-потоки)
+ok 13 - rollback исчерпан: оба поколения повреждены → ошибка наружу (работают recovery-потоки)
+  ---
+  duration_ms: 23.252025
+  type: 'test'
+  ...
+# Subtest: retention: живы ровно два последних поколения, чанки старшего вычищены
+ok 14 - retention: живы ровно два последних поколения, чанки старшего вычищены
+  ---
+  duration_ms: 34.628036
+  type: 'test'
+  ...
+# Subtest: первый v3-коммит поверх легаси-плоскости: nd_0..n-1 остаются как rollback-копия, surplus вычищен
+ok 15 - первый v3-коммит поверх легаси-плоскости: nd_0..n-1 остаются как rollback-копия, surplus вычищен
+  ---
+  duration_ms: 12.894157
+  type: 'test'
+  ...
+# Subtest: интеграция конфликта: чужой коммит В ПОЛЁТЕ наших чанков → более свежее поколение не затёрто
+ok 16 - интеграция конфликта: чужой коммит В ПОЛЁТЕ наших чанков → более свежее поколение не затёрто
+  ---
+  duration_ms: 22.111498
+  type: 'test'
+  ...
+# Subtest: onDone зовётся ровно один раз на всех путях (успех / ошибка чанка / конфликт)
+ok 17 - onDone зовётся ровно один раз на всех путях (успех / ошибка чанка / конфликт)
+  ---
+  duration_ms: 44.253834
+  type: 'test'
+  ...
+# Subtest: resetAllData: облако вайпается — commit-pointer первым, чанки cur- и prev-поколений
+ok 18 - resetAllData: облако вайпается — commit-pointer первым, чанки cur- и prev-поколений
+  ---
+  duration_ms: 32.462765
+  type: 'test'
+  ...
+# Subtest: App.js no longer declares storage functions (extracted to storage.js)
+ok 19 - App.js no longer declares storage functions (extracted to storage.js)
+  ---
+  duration_ms: 7.011377
+  type: 'test'
+  ...
+# Subtest: Storage.js declares all storage functions
+ok 20 - Storage.js declares all storage functions
+  ---
+  duration_ms: 0.647138
+  type: 'test'
+  ...
+# Subtest: App.js no longer has dead Canvas 2D combat code
+ok 21 - App.js no longer has dead Canvas 2D combat code
+  ---
+  duration_ms: 2.40114
+  type: 'test'
+  ...
+# Subtest: App.js: tract economy removed, stronghold systems present
+ok 22 - App.js: tract economy removed, stronghold systems present
+  ---
+  duration_ms: 1.956176
+  type: 'test'
+  ...
+# Subtest: No combat bridge remnants in app.js
+ok 23 - No combat bridge remnants in app.js
+  ---
+  duration_ms: 1.37003
+  type: 'test'
+  ...
+# Subtest: Rank-up flow chains single unified edit modal (A2: banner -> one modal)
+ok 24 - Rank-up flow chains single unified edit modal (A2: banner -> one modal)
+  ---
+  duration_ms: 0.478103
+  type: 'test'
+  ...
+# Subtest: Unified rank-up modal: evolution section lives inside editCardModal
+ok 25 - Unified rank-up modal: evolution section lives inside editCardModal
+  ---
+  duration_ms: 0.175785
+  type: 'test'
+  ...
+# Subtest: Evolution handlers wired in app.js event delegation + save applies path
+ok 26 - Evolution handlers wired in app.js event delegation + save applies path
+  ---
+  duration_ms: 0.697675
+  type: 'test'
+  ...
+# Subtest: Forge card locks starting rank to C (anti-exploit)
+ok 27 - Forge card locks starting rank to C (anti-exploit)
+  ---
+  duration_ms: 0.308305
+  type: 'test'
+  ...
+# Subtest: Forge card mints evolutionPath correctly
+ok 28 - Forge card mints evolutionPath correctly
+  ---
+  duration_ms: 0.4893
+  type: 'test'
+  ...
+# Subtest: All data-action handlers wired in app.js click delegation
+ok 29 - All data-action handlers wired in app.js click delegation
+  ---
+  duration_ms: 0.505163
+  type: 'test'
+  ...
+# Subtest: Storage.js references STATE_GUARDS but only inside function bodies
+ok 30 - Storage.js references STATE_GUARDS but only inside function bodies
+  ---
+  duration_ms: 8.249458
+  type: 'test'
+  ...
+# Subtest: State guards UMD wrapper is present
+ok 31 - State guards UMD wrapper is present
+  ---
+  duration_ms: 0.159381
+  type: 'test'
+  ...
+# Subtest: Database schema survives JSON round-trip
+ok 32 - Database schema survives JSON round-trip
+  ---
+  duration_ms: 1.781672
+  type: 'test'
+  ...
+# Subtest: All Animation API references in app.js use window globals
+ok 33 - All Animation API references in app.js use window globals
+  ---
+  duration_ms: 2.622973
+  type: 'test'
+  ...
+# Subtest: No estus (removed in v25) references remain
+ok 34 - No estus (removed in v25) references remain
+  ---
+  duration_ms: 0.54909
+  type: 'test'
+  ...
+# Subtest: Cache bust versions are consistent
+ok 35 - Cache bust versions are consistent
+  ---
+  duration_ms: 0.264159
+  type: 'test'
+  ...
+# Subtest: State-guards sanitizeCard skips unknown fields safely
+ok 36 - State-guards sanitizeCard skips unknown fields safely
+  ---
+  duration_ms: 0.199953
+  type: 'test'
+  ...
+# Subtest: Stat values are clamped during import to safe range
+ok 37 - Stat values are clamped during import to safe range
+  ---
+  duration_ms: 0.189687
+  type: 'test'
+  ...
+# Subtest: Forge form does not expose SSS rank option in HTML
+ok 38 - Forge form does not expose SSS rank option in HTML
+  ---
+  duration_ms: 0.185139
+  type: 'test'
+  ...
+# Subtest: Storage snapshot includes all critical game fields
+ok 39 - Storage snapshot includes all critical game fields
+  ---
+  duration_ms: 0.241514
+  type: 'test'
+  ...
+# Subtest: Storage: chunks.push loop has emergency cap at 200 iterations
+ok 40 - Storage: chunks.push loop has emergency cap at 200 iterations
+  ---
+  duration_ms: 0.261996
+  type: 'test'
+  ...
+# Subtest: Storage: saveToIDB sets window._lastIDBSaveAt hook
+ok 41 - Storage: saveToIDB sets window._lastIDBSaveAt hook
+  ---
+  duration_ms: 0.128965
+  type: 'test'
+  ...
+# Subtest: Storage: saveMeta guards against finished=true (defensive)
+ok 42 - Storage: saveMeta guards against finished=true (defensive)
+  ---
+  duration_ms: 0.133833
+  type: 'test'
+  ...
+# Subtest: Regression: lastWeekReset is declared (was silently killing all saves after combat removal)
+ok 43 - Regression: lastWeekReset is declared (was silently killing all saves after combat removal)
+  ---
+  duration_ms: 0.206542
+  type: 'test'
+  ...
+# Subtest: Regression: checkDailyReset guards fresh install (no save before onboarding)
+ok 44 - Regression: checkDailyReset guards fresh install (no save before onboarding)
+  ---
+  duration_ms: 0.168384
+  type: 'test'
+  ...
+# Subtest: Regression: tract economy fully removed
+ok 45 - Regression: tract economy fully removed
+  ---
+  duration_ms: 1.236729
+  type: 'test'
+  ...
+# Subtest: getCloudStorage: заглушка вне Telegram (platform unknown) — не облако
+ok 46 - getCloudStorage: заглушка вне Telegram (platform unknown) — не облако
+  ---
+  duration_ms: 2.690958
+  type: 'test'
+  ...
+# Subtest: pushCloudChunks: nd_meta.t = savedAt снапшота, а не момент завершения пуша
+ok 47 - pushCloudChunks: nd_meta.t = savedAt снапшота, а не момент завершения пуша
+  ---
+  duration_ms: 12.289774
+  type: 'test'
+  ...
+# Subtest: autoCloudSave: форс-пуш во время летящего — в очередь, без второго параллельного пуша
+ok 48 - autoCloudSave: форс-пуш во время летящего — в очередь, без второго параллельного пуша
+  ---
+  duration_ms: 0.552636
+  type: 'test'
+  ...
+# Subtest: tryCloudRecovery: работает после ITP-чистки (без ever_saved), помнит отказ, держит старт-колоду
+ok 49 - tryCloudRecovery: работает после ITP-чистки (без ever_saved), помнит отказ, держит старт-колоду
+  ---
+  duration_ms: 37.19201
+  type: 'test'
+  ...
+# Subtest: deepRecovery и smartCloudSync: гварды согласованы с новым recovery-потоком
+ok 50 - deepRecovery и smartCloudSync: гварды согласованы с новым recovery-потоком
+  ---
+  duration_ms: 0.421236
+  type: 'test'
+  ...
+# Subtest: validDisplayText: «только эмодзи» и пустота отклоняются, длина обрезается
+ok 51 - validDisplayText: «только эмодзи» и пустота отклоняются, длина обрезается
+  ---
+  duration_ms: 1.395298
+  type: 'test'
+  ...
+# Subtest: boot: старт-колода придерживается до ответа облака, else-ветка без глубокого автоскана
+ok 52 - boot: старт-колода придерживается до ответа облака, else-ветка без глубокого автоскана
+  ---
+  duration_ms: 0.373575
+  type: 'test'
+  ...
+# Save failed: QuotaErr [QuotaExceededError]: QuotaExceededError
+#     at Object.setItem (/root/neurodeck/tests/regression-T5M1-quota-chain.test.js:29:57)
+#     at saveGameState (storage.js:335:14)
+#     at evalmachine.<anonymous>:1:1
+#     at Script.runInContext (node:vm:149:12)
+#     at Object.runInContext (node:vm:301:6)
+#     at TestContext.<anonymous> (/root/neurodeck/tests/regression-T5M1-quota-chain.test.js:87:8)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# Subtest: T5-M1: quota на full_save — backup/IDB/cloud записаны, тост показан
+ok 53 - T5-M1: quota на full_save — backup/IDB/cloud записаны, тост показан
+  ---
+  duration_ms: 62.351106
+  type: 'test'
+  ...
+1..53
+# tests 53
+# suites 0
+# pass 53
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 767.29663

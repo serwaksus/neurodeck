@@ -1,0 +1,15 @@
+
+Running 10 tests using 1 worker
+
+  ✓   1 tests/e2e/regression-audit-fixes.test.js:41:1 › T2-H1: endgame 20/20 — strongholds tab renders, Фронт anchor present (3.5s)
+  ✓   2 tests/e2e/regression-audit-fixes.test.js:67:1 › T1-H2: multi-tab — tab B adopts A’s newer generation on save (6.8s)
+  ✓   3 tests/e2e/regression-audit-fixes.test.js:119:1 › T1-H3: beforeunload exit-sync writes to cloud (setItem logged) (3.2s)
+  ✓   4 tests/e2e/remote-config.test.js:8:1 › boot requests real config, applies it and resets builtin (903ms)
+  ✓   5 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: checksum (1.0s)
+  ✓   6 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: expired (997ms)
+  ✓   7 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: size (1.0s)
+  ✓   8 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: timeout (1.1s)
+  ✓   9 tests/e2e/remote-config.test.js:17:3 › real global fetch fallback: network (1.2s)
+  ✓  10 tests/e2e/remote-config.test.js:34:1 › service worker config uses network, not poisoned shell cache; offline falls back (1.4s)
+
+  10 passed (23.3s)

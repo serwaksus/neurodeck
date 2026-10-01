@@ -1,6 +1,6 @@
 ---
 name: neurodeck-data-sync
-description: Data synchronization and persistence guardian for NeuroDeck. Use when editing saveGameState(), loadGameState(), applySyncData(), autoCloudSave(), tryCloudRecovery(), saveToCloud(), loadFromCloud(), generateShareLink(), importFromHash(), downloadSyncFile(), importSyncFile(), or any code touching localStorage, Telegram CloudStorage, or data import/export. Covers the multi-level backup strategy (full_save + backup + cloud + goals), CloudStorage chunking (4096 char chunks with nd_meta + nd_N keys), auto-save throttling (2 min), share link base64 encoding, .ndsync file format, and the critical applySyncData() sanitization guards. Prevents data loss, corruption from bad imports, and CloudStorage callback signature errors.
+description: Data synchronization and persistence guardian for NeuroDeck. Use when editing saveGameState(), loadGameState(), applySyncData(), autoCloudSave(), tryCloudRecovery(), saveToCloud(), loadFromCloud(), generateShareLink(), importFromHash(), downloadSyncFile(), importSyncFile(), or any code touching localStorage, Telegram CloudStorage, or data import/export. Covers the multi-level backup strategy (full_save + backup + cloud + goals), CloudStorage chunking (envelope v3: generation-isolated nd_<gen>_<i> chunk keys with nd_meta commit-pointer, CAS writer conflicts, prev-rollback, legacy nd_N read path), auto-save throttling (30 s), share link base64 encoding, .ndsync file format, and the critical applySyncData() sanitization guards. Prevents data loss, corruption from bad imports, and CloudStorage callback signature errors.
 ---
 
 # NeuroDeck Data Sync Guide
@@ -30,9 +30,11 @@ saveGameState()
 
 ## Telegram CloudStorage
 
-### Key Structure
-- Meta: `nd_meta` → `JSON.stringify({ n: chunkCount, t: timestamp })`
-- Data: `nd_0`, `nd_1`, `nd_2`, ... → each ≤ 4096 chars (`CLOUD_MAX_CHUNK`)
+### Key Structure (envelope v3, R2 — очередь 4)
+- Meta (commit-pointer): `nd_meta` → `JSON.stringify({ v: 3, g: gen, n: chunkCount, t: savedAt, c: checksum64, id: gen, sz: size, prev?: prevDescriptor })`
+- Data (поколенческие): `nd_<gen>_0`, `nd_<gen>_1`, ... → each ≤ 4096 chars (`CLOUD_MAX_CHUNK`); `gen` = id сохранения
+- Legacy (envelope ≤ v2, только ЧТЕНИЕ): плоские `nd_0`, `nd_1`, ... — meta без `g`
+- Гарантии: чанки нового поколения не трогают ключи закоммиченного (изоляция); `nd_meta` пишется строго ПОСЛЕДНИМ; перед meta — CAS re-read (writer conflict: чужое более свежее поколение не затираем); читатель при повреждении откатывается на `prev` (глубина 1). Никогда не пиши в плоские `nd_<i>` — только поколенческие ключи через `writeCloudGeneration()`.
 
 ### CRITICAL: Callback Signature
 ```js
@@ -46,10 +48,11 @@ cs.setItem(key, value, function(result, error) { ... });
 
 ### autoCloudSave() Throttling
 ```js
-function autoCloudSave(json) {
-    if (Date.now() - (window._lastCloudSave || 0) < 120000) return; // 2 MIN
+function autoCloudSave(json, force, bypassConflictCheck) {
+    if (_pushInFlight) { if (force) window._pendingCloudForce = {...}; return; } // без параллельных пушей
+    if (!force && Date.now() - (window._lastCloudSave || 0) < 30000) return; // 30 c
     window._lastCloudSave = Date.now();
-    // ... chunk and save
+    // ... conflict pre-check по meta.t, затем pushCloudChunks → writeCloudGeneration
 }
 ```
 - Fires automatically inside `saveGameState()`
@@ -60,17 +63,18 @@ function autoCloudSave(json) {
 ```js
 var chunks = [];
 for (var i = 0; i < json.length; i += CLOUD_MAX_CHUNK) {
-    chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));
+    chunks.push(json.slice(i, i + CLOUD_MAX_CHUNK));  // cap: 200 чанков
 }
-// Save each chunk as nd_0, nd_1, ...
-// After all saved: save nd_meta with chunk count
+// Save each chunk as nd_<gen>_0, nd_<gen>_1, ... (fresh gen per push)
+// CAS re-read nd_meta (writer conflict) → save nd_meta LAST as commit-pointer {v:3,g,n,t,c,id,sz,prev}
 ```
 
 ### Loading from Cloud
 ```js
-// 1. Read nd_meta → get chunk count
-// 2. Read nd_0..nd_N → assemble parts array
-// 3. parts.join('') → JSON.parse → applySyncData
+// 1. Read nd_meta → { g, n, c, prev? } (v3) или { n } (legacy ≤ v2)
+// 2. v3: read nd_<g>_0..nd_<g>_(n-1); legacy: read nd_0..nd_(n-1)
+// 3. parts.join('') → checksum `c` verify → JSON.parse
+// 4. Повреждение текущего поколения (v3) → rollback на prev (глубина 1)
 ```
 
 ## Share Link System

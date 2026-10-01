@@ -1,0 +1,75 @@
+{
+  "package": "R2",
+  "status": "complete",
+  "base_head": "a8186d63ad39b77b777d6aa1cdfe6024981aa791",
+  "summary": "Generation-atomic cloud save (envelope v3): new pushes write chunks under generation-isolated keys nd_<gen>_<i> that never touch the committed generation's keys; nd_meta stays the atomic commit-pointer (written strictly last, {v:3,g,n,t,c,id,sz,prev}); CAS re-read before the meta write aborts our push when a concurrent writer committed a newer generation (conflict surfaces as err.conflict, own chunks cleaned, theirs left current); the reader rolls back to meta.prev (depth 1) when the committed generation is corrupt, keeping the legacy flat nd_<i> read path for envelopes <= v2 (first v3 commit over a legacy cloud keeps nd_0..n-1 as the rollback copy and sweeps surplus); saveToCloud now uses the same atomic core (no flat writes anywhere); resetAllData wipes the cloud by last-known generation descriptors; fault injection hooks per chunk/meta/concurrent writer (ND_CLOUD_FAULTS, always null in production) drive the new contract tests; TELEMETRY.md and the neurodeck-data-sync skill document the v3 envelope, new telemetry events/codes, and the revised nd_0 contracts (regression-T5M1, e2e T1-H3); runtime pins bumped 103->104 (index.html ?v=104 x15, sw.js nd-shell-v104) with exact assertions repinned.",
+  "changed_files": [
+    "js/storage.js",
+    "index.html",
+    "sw.js",
+    "tests/cloud-generation.test.js",
+    "tests/cloud-envelope.test.js",
+    "tests/recovery-cloud.test.js",
+    "tests/integration.test.js",
+    "tests/regression-T5M1-quota-chain.test.js",
+    "tests/e2e/regression-audit-fixes.test.js",
+    "tests/e2e/remote-config.test.js",
+    "tests/state-store.test.js",
+    "tests/audio-mixer.test.js",
+    "tests/event-bus.test.js",
+    "docs/operations/TELEMETRY.md",
+    ".opencode/skills/neurodeck-data-sync/SKILL.md"
+  ],
+  "tests": [
+    {
+      "command": "npm run check:js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R2-check-js.log"
+    },
+    {
+      "command": "node --test tests/cloud-envelope.test.js tests/cloud-generation.test.js tests/recovery-cloud.test.js tests/integration.test.js tests/regression-T5M1-quota-chain.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R2-cloud-narrow.log"
+    },
+    {
+      "command": "npm test",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R2-unit.log"
+    },
+    {
+      "command": "npx playwright test tests/e2e/regression-audit-fixes.test.js tests/e2e/remote-config.test.js",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R2-e2e.log"
+    },
+    {
+      "command": "npm run test:qa:data",
+      "exit": 0,
+      "log": "docs/plan/queue4-evidence/R2-qa-data.log"
+    }
+  ],
+  "artifacts": [
+    "docs/plan/queue4-evidence/R2-check-js.log",
+    "docs/plan/queue4-evidence/R2-cloud-narrow.log",
+    "docs/plan/queue4-evidence/R2-unit.log",
+    "docs/plan/queue4-evidence/R2-e2e.log",
+    "docs/plan/queue4-evidence/R2-qa-data.log"
+  ],
+  "schema_version": "14",
+  "app_version": "104",
+  "version_sources": {
+    "schema": {
+      "path": "js/storage.js",
+      "value": "const SCHEMA_VERSION = 14"
+    },
+    "app": {
+      "path": "index.html",
+      "value": "?v=104"
+    }
+  },
+  "limitations": [
+    "Physical device tests TBD (real Telegram CloudStorage client behavior verified only via contract stubs and browser e2e with stubbed CloudStorage).",
+    "Old cached app versions (shell <= v103) read a v3 cloud as corrupt and fall back to local/IDB layers; no data loss, fresh client reads everything - documented in docs/operations/TELEMETRY.md section 6.",
+      "Writer conflict detection is best-effort CAS (re-read before commit), not a cloud-side atomic compare-and-swap; Telegram CloudStorage has no CAS primitive.",
+    "Driver runs the full 9-step CI (npm run ci) after exit; this package ran check:js, narrow cloud tests, full unit suite, affected e2e files, and qa:data."
+  ]
+}

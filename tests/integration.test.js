@@ -284,10 +284,12 @@ test('Storage snapshot includes all critical game fields', () => {
 // ============================================================
 
 test('Storage: chunks.push loop has emergency cap at 200 iterations', function () {
-    // Verify that the chunk-slice loop has the emergency guard
+    // R2 (queue 4): единственный цикл нарезки — в ядре writeCloudGeneration;
+    // pushCloudChunks и saveToCloud делегируют ему (раньше плоские копии цикла
+    // жили в автопуше и ручном сохранении)
     const matches = storage.match(/chunks\.push\(json\.slice\(i, i \+ CLOUD_MAX_CHUNK\)\);/g);
-    assert.ok(matches && matches.length >= 2, 'should have at least 2 chunk loops');
-    assert.ok(matches.length === 2, 'expected exactly 2: in autoCloudSave and saveToCloud');
+    assert.ok(matches, 'цикл нарезки чанков присутствует');
+    assert.ok(matches.length === 1, 'ровно один цикл — в writeCloudGeneration (единый писатель), got: ' + matches.length);
     // Check the emergency cap exists
     const cap = storage.match(/chunks\.length >= 200.*?return/);
     assert.ok(cap, 'chunk-loop emergency cap should exist');

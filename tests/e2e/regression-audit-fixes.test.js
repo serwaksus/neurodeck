@@ -155,8 +155,9 @@ test('T1-H3: beforeunload exit-sync writes to cloud (setItem logged)', async ({ 
   const pageLog = await page.context().newPage();
   await pageLog.goto('/robots.txt');
   const writes = await pageLog.evaluate(() => JSON.parse(localStorage.getItem('__cs_writes') || '[]'));
-  // Фикс: savedAt=now в buildSyncData → конфликт-чек пропускает → nd_0 записан.
-  // До фикса: savedAt||0 → meta.t(вчера) > 0+10000 → return без записи → 0 setItem.
-  expect(writes.some(l => l === 'setItem nd_0')).toBe(true);
+  // Фикс: savedAt=now в buildSyncData → конфликт-чек пропускает → чанки записаны.
+  // R2 (queue 4): чанки пишутся под поколенческими ключами nd_<gen>_<i>; плоский
+  // контракт «setItem nd_0» пересмотрен — изоляция поколений не пишет поверх живых чанков.
+  expect(writes.some(l => /^setItem nd_[0-9a-z]+_0$/.test(l))).toBe(true);
   expect(writes.some(l => l === 'setItem nd_meta')).toBe(true);
 });
