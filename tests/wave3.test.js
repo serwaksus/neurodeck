@@ -311,7 +311,7 @@ test('wave3 Ф3 контракты [css/style.css + index.html]: башня в r
 });
 test('package.json: check:ui-скрипт верификации UI-ассетов подключён, JSON валиден', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-    assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
+    assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html && node tools/css-lint.cjs', 'check:ui вызывает верификатор и храповик css-lint');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
     const _pins = htmlSource().match(/v=\d+/g) || [];
     assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 15 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×15, P21: +js/audio.js)');
