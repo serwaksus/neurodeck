@@ -273,3 +273,38 @@ test('Фаза 5: тосты и реплики духа видны поверх 
     expect(r.spirit, 'реплика духа — верхний элемент').toBe(true);
     expect(r.parents.every(Boolean), 'слой эффектов — на уровне body, вне .app-wrap').toBe(true);
 });
+
+// ---------- Доступность (фаза 7) ----------
+test('Фаза 7: цели нажатия ≥ 44 px на всех вкладках (мелкие иконки — с расширенной зоной ::after), у фокуса есть видимая рамка', async ({ page }) => {
+    await bootSeed(page, seedWithRanks());
+    const small = [];
+    for (const v of ['deck', 'quests', 'hero', 'inv', 'strongholds', 'stats']) {
+        await page.evaluate((vv) => document.querySelector('.bnav-btn[data-view="' + vv + '"]').click(), v);
+        await page.waitForTimeout(500);
+        const bad = await page.evaluate(() => {
+            const out = [];
+            document.querySelectorAll('button,a[href],[role=button],input,select,textarea').forEach((e) => {
+                const r = e.getBoundingClientRect(); const cs = getComputedStyle(e);
+                if (!r.width || !r.height || cs.visibility === 'hidden' || cs.pointerEvents === 'none' || e.closest('.modal-overlay:not(.show)')) return;
+                const hit = getComputedStyle(e, '::after').content !== 'none';
+                if ((r.width < 44 || r.height < 44) && !(hit && r.width >= 24 && r.height >= 24)) out.push((e.id || e.className || e.tagName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+            });
+            return out;
+        });
+        bad.forEach((b) => small.push(v + ': ' + b));
+    }
+    expect(small, 'цели < 44 px').toEqual([]);
+    await page.evaluate(() => document.querySelector('.bnav-btn[data-view="deck"]').click());
+    const noRing = [];
+    await page.keyboard.press('Tab');
+    for (let i = 0; i < 40; i++) {
+        const r = await page.evaluate(() => {
+            const e = document.activeElement; if (!e || e === document.body) return null;
+            const cs = getComputedStyle(e); const b = e.getBoundingClientRect();
+            return { n: String(e.id || e.className || e.tagName), vis: b.width > 0, ol: cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0, bs: cs.boxShadow !== 'none' };
+        });
+        if (r && r.vis && !r.ol && !r.bs) noRing.push(r.n);
+        await page.keyboard.press('Tab');
+    }
+    expect(noRing, 'элементы без рамки фокуса').toEqual([]);
+});

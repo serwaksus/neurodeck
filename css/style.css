@@ -752,7 +752,7 @@ textarea:focus-visible {
 .task-body { flex: 1; min-width: 0; }
 .task-name { font-size: 12.5px; color: var(--text-bright); word-break: break-word; }
 .task-card.ghost .task-name { text-decoration: line-through; color: var(--text-dim); }
-.task-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
+.task-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 .task-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .task-btn { min-height: 36px; min-width: 36px; padding: 4px 8px; font-size: 13px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; color: var(--text-bright); cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
 .task-btn.primary { color: var(--green); border-color: rgba(52,211,153,0.5); }
@@ -779,11 +779,11 @@ textarea:focus-visible {
 .sh-build-icon { width: 30px; text-align: center; font-size: 18px; flex-shrink: 0; }
 .sh-build-body { flex: 1; min-width: 0; }
 .sh-build-name { font-size: 12px; color: var(--text-bright); }
-.sh-build-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 1px; }
+.sh-build-meta { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
 .sh-req { color: var(--blood-bright); font-size: var(--fs-secondary); }
 .sh-buy { min-height: 44px; padding: 6px 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--gold); border-radius: 3px; color: var(--gold-bright); font-family: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; transition: box-shadow 0.2s; }
 .sh-buy:hover { box-shadow: 0 0 12px rgba(251,191,36,0.35); }
-.sh-mini { min-height: 40px; min-width: 44px; padding: 5px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: inherit; font-size: 10.5px; cursor: pointer; transition: border-color 0.2s; }
+.sh-mini { min-height: 40px; min-width: 44px; padding: 5px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: inherit; font-size: 11px; cursor: pointer; transition: border-color 0.2s; }
 .sh-mini:hover { border-color: var(--gold); color: var(--gold-bright); }
 .sh-hire-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .sh-stage { font-size: var(--fs-secondary); letter-spacing: 1px; padding: 2px 7px; border-radius: 2px; white-space: nowrap; flex-shrink: 0; }
@@ -797,10 +797,10 @@ textarea:focus-visible {
 .sh-tile-icon { height: 64px; display: flex; align-items: center; justify-content: center; font-size: 40px; background: rgba(0,0,0,0.25); border-radius: 2px; overflow: hidden; }
 .sh-tile-icon img { width: 64px; height: 64px; object-fit: contain; }
 .sh-tile-name { font-size: 12px; color: var(--text-bright, #e8e4dc); }
-.sh-tile-meta { font-size: 10.5px; color: var(--text-dim); }
+.sh-tile-meta { font-size: 11px; color: var(--text-dim); }
 .sh-tile-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.sh-tile-cost { font-size: 10.5px; color: var(--gold-bright); }
-.sh-tile-upkeep { font-size: 10.5px; color: var(--blood-bright); }
+.sh-tile-cost { font-size: 11px; color: var(--gold-bright); }
+.sh-tile-upkeep { font-size: 11px; color: var(--blood-bright); }
 .sh-tile .sh-buy { width: 100%; }
 .sh-tile.locked { opacity: 0.75; }
 /* P7 «Коррупция по-человечески»: прогноз до руины, аварийный ремонт, восстановление */
@@ -812,7 +812,7 @@ textarea:focus-visible {
 .sh-rebuild:hover { box-shadow: 0 0 12px rgba(52,211,153,0.35); }
 .sh-tile.built { border-left-color: var(--green); }
 /* P6: брейкдауны экономики — строка тайла покупки и блок подтверждения штурма (статичный текст, без анимаций) */
-.sh-tile-break { font-size: 10.5px; color: var(--text-dim); border-top: 1px dashed var(--border); padding-top: 4px; }
+.sh-tile-break { font-size: 11px; color: var(--text-dim); border-top: 1px dashed var(--border); padding-top: 4px; }
 .assault-breakdown { margin: 8px 0; padding: 6px 10px; background: rgba(0,0,0,0.25); border: 1px dashed var(--border); border-radius: var(--radius-1); font-size: 12px; color: var(--text-bright, #e8e4dc); text-align: left; }
 .assault-breakdown div { margin: 2px 0; }
 /* P10: консолидированная панель подготовки осады + «рискованно»-пометка (статичный текст, без анимаций) */
@@ -1519,13 +1519,13 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .st-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .st-kpi { background: linear-gradient(160deg, rgba(0,0,0,0.42), rgba(0,0,0,0.22)); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; text-align: center; position: relative; overflow: hidden; }
 .st-kpi::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--hairline), transparent); }
-.st-kpi-label { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.st-kpi-label { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
 .st-kpi-val { font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px; font-variant-numeric: tabular-nums; }
 .st-panel { background: linear-gradient(160deg, rgba(0,0,0,0.42), rgba(0,0,0,0.22)); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 16px; margin-bottom: 20px; }
 .st-panel-title { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
 .st-chart .st-bar { fill: url(#stBarGrad); }
-.st-chart .st-bar-label { font-size: 9px; fill: var(--text-dim); }
-.st-chart .st-bar-val { font-size: 9px; fill: var(--gold-bright); }
+.st-chart .st-bar-label { font-size: 10px; fill: var(--text-dim); }
+.st-chart .st-bar-val { font-size: 10px; fill: var(--gold-bright); }
 .st-chart .st-gridline { stroke: rgba(212,165,116,0.12); stroke-width: 1; }
 .st-rank-chip { background: var(--rc-bg); border: 1px solid var(--rc-border); padding: 6px 12px; border-radius: 6px; font-size: 12px; }
 .st-rank-chip b { color: var(--rc-color); }
@@ -1641,11 +1641,11 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
   background: radial-gradient(circle at 50% 32%, var(--item-bg, rgba(212,165,116,0.15)), transparent 72%), linear-gradient(165deg, #1c1510, #0e0b08);
   box-shadow: inset 0 0 0 1.5px var(--item-color, var(--gold)), inset 0 0 20px var(--item-glow, transparent), 0 0 18px var(--item-glow, transparent), 0 4px 12px rgba(0, 0, 0, 0.5);
   text-shadow: 0 0 14px var(--item-glow, transparent), 0 2px 3px rgba(0, 0, 0, 0.85); }
-.item-preview-rank { border: 1px solid rgba(0, 0, 0, 0.5); border-radius: 4px; font-size: 9px; padding: 1px 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
+.item-preview-rank { border: 1px solid rgba(0, 0, 0, 0.5); border-radius: 4px; font-size: 10px; padding: 1px 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
 .item-name { font-family: var(--font-display) !important; letter-spacing: 1.2px; font-size: 15px !important; text-shadow: 0 0 12px var(--item-glow, transparent); }
 .item-lore { font-family: var(--font-body) !important; font-style: italic; color: var(--text-dim) !important; border-left: 2px solid var(--hairline) !important; padding-left: 10px !important; line-height: 1.55; }
 .item-bonuses { border: 1px solid var(--border); border-radius: var(--radius-card); background: rgba(0, 0, 0, 0.28); padding: 10px 12px !important; box-shadow: inset 0 1px 0 rgba(244, 200, 150, 0.06); }
-.item-bonuses-title { letter-spacing: 2px; text-transform: uppercase; font-size: 10px !important; color: var(--gold) !important; margin-bottom: 6px; }
+.item-bonuses-title { letter-spacing: 2px; text-transform: uppercase; font-size: 11px !important; color: var(--gold) !important; margin-bottom: 6px; }
 .item-bonus { border-bottom: 1px dashed rgba(212, 165, 116, 0.14); }
 .item-bonus:last-child { border-bottom: none; }
 .item-bonus-val { color: var(--gold-bright) !important; font-variant-numeric: tabular-nums; font-weight: bold; }
@@ -2149,3 +2149,9 @@ body[data-view="quests"] { --amb-h: 32; --amb-s: 55%; }
 }
 /* баннеры церемоний: тёмная подложка — текст не сливается с интерфейсом под ними */
 .levelup-banner, .rankup-banner { padding: var(--sp-8) var(--sp-10); background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--s0) 94%, transparent) 55%, transparent 100%); }
+
+/* ================================================================
+   A11Y v3 (визуал-план, фаза 7): цель нажатия ≥ 44 px у основных кнопок вкладок
+   ================================================================ */
+.forge-btn, .goals-add, .demo-btn, .backpack-tab, .sh-mini, .km-cam-reset { min-height: 44px; min-width: 44px; }
+.treasury-chip { min-height: 44px; }
