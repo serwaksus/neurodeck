@@ -287,7 +287,7 @@ test('P17 экономика: превью казны == тик (нейтрал�
 // ================================================================
 
 function siegeDecls() {
-    return [extractFn('lastCapturedIdx'), extractFn('applyStackLoss'), extractFn('ruinAllBuildings'), extractFn('runWeeklySiege')];
+    return [extractFn('lastCapturedIdx'), extractFn('applyStackLoss'), extractFn('ruinAllBuildings'), extractFn('runWeeklySiege'), extractFn('wkSkipWrath')];
 }
 function runSiege(stubExtra) {
     const rec = { reports: [], chron: [], xp: [] };

@@ -59,7 +59,7 @@ test('wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка
 // ----------------------------------------------------------------
 test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio', () => {
     const p = buildIn({
-        decls: [extractFn('siegeWrathNow'), extractFn('siegeAlarmVerdict'), extractFn('weatherOf'), extractFn('weatherNorth'), extractFn('weatherSouth'), extractFn('weatherFog'), extractFn('weatherSeasonWeek'), extractFn('scoutFresh'), extractFn('daysBetween'), extractFn('siegeAlarmPreview')],
+        decls: [extractFn('siegeWrathNow'), extractFn('wkSkipWrath'), extractFn('siegeAlarmVerdict'), extractFn('weatherOf'), extractFn('weatherNorth'), extractFn('weatherSouth'), extractFn('weatherFog'), extractFn('weatherSeasonWeek'), extractFn('scoutFresh'), extractFn('daysBetween'), extractFn('siegeAlarmPreview')],
         stubs: {
             SM: {
                 siegePower: (front, week, cap, wrath) => Math.round(front * 0.6 * (1 + 0.12 * wrath)),
@@ -92,7 +92,7 @@ test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гар�
     assert.ok(Math.abs(p.ratio - 20 / 134) < 1e-9);
     assert.equal(p.advice, 'Гарнизон тонкий — вложись в казармы');
     const none = buildIn({
-        decls: [extractFn('siegeWrathNow'), extractFn('siegeAlarmPreview')],
+        decls: [extractFn('siegeWrathNow'), extractFn('wkSkipWrath'), extractFn('siegeAlarmPreview')],
         stubs: { SM: null, army: { units: {} }, strongholds: [], STRONGHOLDS: [], siege: {}, capturedCount: () => 0, countGhostTasks: () => 0, lastCapturedIdx: () => -1 },
         body: 'siegeAlarmPreview()'
     });

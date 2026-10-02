@@ -156,7 +156,7 @@ test('P5: provinceSiegeMult — превью осадной тревоги и т
     const runTick = (sm) => {
         const out = {};
         buildIn({
-            decls: [extractFn('runWeeklySiege')],
+            decls: [extractFn('runWeeklySiege'), extractFn('wkSkipWrath')],
             stubs: {
                 ensureStrongholdState: () => {}, capturedCount: () => 1, countGhostTasks: () => 0,
                 approachWrathDeltaNow: () => 0, lastCapturedIdx: () => 0,

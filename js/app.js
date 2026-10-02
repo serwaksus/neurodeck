@@ -173,7 +173,7 @@ case 'close-season-report': document.getElementById('seasonModal').classList.rem
 case 'throne-invest': investThrone(); break;
 case 'ascend': requestAscension(); break; // Г2-5: Вознесение
 case 'asc-doctrine': pickAscensionDoctrine(el.dataset.id); break; // Г2-5: выбор сохраняемой доктрины
-case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
+case 'sh-daily-quest': completeDailyQuest(el.dataset.qid); break;
 case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); hintOnce('shpanel', 'Жильё даёт недельный пул найма. Стройка занимает дни — планируй заранее.'); if (typeof maybeBossIntro === 'function') maybeBossIntro(currentShIdx); break; // C5: лор-вступление босса (одноразово)
 case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(currentShIdx); break;
 case 'boss-challenge': requestBossChallenge(parseInt(el.dataset.num)); break; // Г2-1: вызов босса провинции
@@ -813,7 +813,7 @@ if (nextRank) {
 const oldRank = card.rank;
 card.rank = nextRank;
 card.mastery = card.mastery - card.masteryThreshold;
-card.masteryThreshold = Math.max(2, Math.round(card.masteryThreshold * 1.2));
+card.masteryThreshold = Math.max(MASTERY_MIN, Math.round(card.masteryThreshold * 1.2));
 if (card.stat && STATS[card.stat]) {
 STATS[card.stat].attributePoints = (STATS[card.stat].attributePoints || 0) + 1;
 checkAttributePoolGrowth(card.stat);
@@ -847,6 +847,29 @@ sfxHit(); haptic('light');
 saveGameState();
 onBloodOathComplete(id);
 }
+// Ф0.1 (кампания 3.0): честность выгоднее молчания. Молчаливый пропуск = 1 гнев и −1 💰, честный = 0.5 гнева (−1 💰, как раньше).
+// Гнев недели от пропусков = целые молчаливые (wkSkips) + половина честных (wkHonest, округление вниз).
+function wkSkipWrath() { return (siege.wkSkips || 0) + Math.floor((siege.wkHonest || 0) / 2); }
+var SILENT_MISS_CAP = 3; // в сутки: молчание не должно в один день выжигать всю казну и весь гнев
+function ndSilentMisses(dayKey) { // карточки с историей, к которым в сутки dayKey не было ни выполнения, ни честной отметки
+    var n = 0;
+    FORGED.forEach(function(c) {
+        if (!c.firstCompletedAt) return; // не начатые не наказываем
+        if (c.lastFailDay === dayKey) return;
+        if (c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === dayKey) return;
+        n++;
+    });
+    return Math.min(SILENT_MISS_CAP, n);
+}
+function applySilentMisses(dayKey) {
+    var n = ndSilentMisses(dayKey);
+    if (n <= 0) return 0;
+    siege.wkSkips = (siege.wkSkips || 0) + n;
+    HERO.gold = Math.max(0, (HERO.gold || 0) - n);
+    showToast('🌫 Молчание — тоже пропуск', n + ' ' + (n === 1 ? 'дело' : 'дел') + ' без отметки: −' + n + ' 💰 и гнев +' + n + '. Честная отметка ✕ стоит вдвое меньше гнева.', 'blood');
+    return n;
+}
+var MASTERY_MIN = 5; // Ф0.3
 function failCard(e, id) {
 const card = findCard(id);
 if (!card) return;
@@ -861,7 +884,7 @@ var oathBreak = bloodOath && bloodOath.status === 'active' && bloodOath.cardId =
  screenShake(6, 300);
  sfxFail(); haptic('error');
  HERO.dailySkips++;
- siege.wkSkips = (siege.wkSkips || 0) + 1;
+ siege.wkHonest = (siege.wkHonest || 0) + 1; // Ф0.1: честный пропуск весит половину молчаливого (см. wkSkipWrath)
  if ((HERO.streakShields || 0) > 0) {
 showToast('🛡 Стрик сохранён щитом!', 'Осталось щитов: ' + HERO.streakShields, 'save');
 } else {
@@ -887,7 +910,7 @@ HERO.gold = Math.max(0, undo.gold - 1);
 card.streak = undo.streak;
 card.lastFailDay = null;
 HERO.dailySkips = Math.max(0, (HERO.dailySkips || 0) - 1);
-siege.wkSkips = Math.max(0, (siege.wkSkips || 0) - 1);
+siege.wkHonest = Math.max(0, (siege.wkHonest || 0) - 1);
 HERO.streakShields = undo.shields;
 showToast('↩ Отменено', '«' + card.name + '» — стрик восстановлен, пошлина −1 💰', 'save');
 renderCards(); updateHeroUI(); renderDashboard(); saveGameState();
@@ -1217,7 +1240,10 @@ const selectedStatChip = document.querySelector('#editStatChips .stat-chip.selec
 const newStat = selectedStatChip ? selectedStatChip.dataset.stat : card.stat;
 const newTime = document.getElementById('editCardTime').value;
 const newDuration = parseInt(document.getElementById('editCardDuration').value) || 15;
-const newMastery = Math.max(2, parseInt(document.getElementById('editCardMastery').value) || 7);
+var _wantMastery = parseInt(document.getElementById('editCardMastery').value) || 7;
+// Ф0.3: порог ранг-апа — не ниже MASTERY_MIN и правится только вверх: иначе «2 выполнения до ранга» превращают ранги (и допуск к артефактам) в бесплатные
+const newMastery = Math.max(MASTERY_MIN, card.masteryThreshold || 0, _wantMastery);
+if (_wantMastery < newMastery) showToast('🔒 Порог не снижается', 'Выполнений до ранг-апа можно только увеличить (сейчас ' + newMastery + ')', 'blood');
 const st = STATS[newStat];
 const oldMeta = card.meta, oldStat = card.stat;
 card.name = name;
@@ -1808,7 +1834,7 @@ if (!name) { showToast('⚠ Ошибка', 'Название: добавь бу�
 const time = document.getElementById('forgeTime').value;
 const duration = parseInt(document.getElementById('forgeDuration').value) || 15;
 const rank = 'C';
-const masteryThreshold = Math.max(2, parseInt(document.getElementById('forgeMastery').value) || 5);
+const masteryThreshold = Math.max(MASTERY_MIN, parseInt(document.getElementById('forgeMastery').value) || 5);
 const st = STATS[selectedStat];
 const card = {
 id: forgedIdCounter++, name, meta: st.icon + ' ' + duration + ' мин · ' + time,
@@ -2864,12 +2890,22 @@ function goldGain(n, src) {
 }
 var DAILY_GOLD_BASE = 50; // #71: цель дня по золоту
 function dailyGoldGoal() { return Math.min(200 * Math.pow(1.2, HERO.ascension || 0), Math.round((DAILY_GOLD_BASE + 10 * capturedCount()) * Math.pow(1.2, HERO.ascension || 0))); } // #71: 50+10×captured, кап 200 · Г2-5: ×1.2^N (кап тоже ×1.2^N → 600 при N=3+)
-function checkDailyGoldGoal() { // #71: однократный бонус за цель дня — флаг дня в localStorage (в сейв не пишем)
+// Ф0.5: флаги суток живут в сейве (HERO.dayFlags), а не только в localStorage — очистка site data больше не «перезаряжает» дневные награды.
+function dayFlags() {
+    var k = getMSKDayKey();
+    if (!HERO.dayFlags || HERO.dayFlags.day !== k) HERO.dayFlags = { day: k, chests: 0, reroll: false, goal: false };
+    return HERO.dayFlags;
+}
+var TASK_CHEST_DAILY_CAP = 5; // Ф0.2: сундуков с наградой в сутки; сверх — только XP (иначе «создал-выполнил» = бесконечное золото)
+function checkDailyGoldGoal() { // #71: однократный бонус за цель дня — флаг дня в сейве (+ зеркало в localStorage для старых сейвов)
     var goal = dailyGoldGoal();
     var p = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
     if (p < goal) return;
     var tk = getMSKDayKey();
-    try { if (localStorage.getItem('nd_dailgoaldone_' + tk)) return; localStorage.setItem('nd_dailgoaldone_' + tk, '1'); } catch (e) { return; }
+    var _df = dayFlags();
+    if (_df.goal) return;
+    try { if (localStorage.getItem('nd_dailgoaldone_' + tk)) return; localStorage.setItem('nd_dailgoaldone_' + tk, '1'); } catch (e) {}
+    _df.goal = true;
     HERO.gold = (HERO.gold || 0) + 10; // напрямую: goldGain зациклил бы проверку
     showToast('🎯 Цель дня!', 'Заработано ' + p + ' 💰 (цель ' + goal + '): +10 💰 бонус', 'crit');
     sfxGoalComplete(); haptic('success');
@@ -2880,10 +2916,13 @@ function dqQuestById(qid) {
     ((dailyQuests && dailyQuests.quests) || []).forEach(function(x) { if (x.id === qid) q = x; });
     return q;
 }
-function completeDailyQuest(qid, reward) {
+function completeDailyQuest(qid) { // Ф0.4: награда — из каталога DQ_POOL по id; значение из DOM (data-reward) не принимается, его можно подделать в DevTools
 if (dailyQuests.done[qid]) return;
 var _q = dqQuestById(qid);
 if (!_q) return;
+var _cat = null; DQ_POOL.forEach(function(x) { if (x.id === qid) _cat = x; });
+if (!_cat) return;
+var reward = _cat.reward;
 var _p = (dailyQuests.progress || {})[_q.counter] || 0;
 if (_p < _q.goal) { showToast('📋 Ещё не выполнено', 'Прогресс: ' + Math.min(_p, _q.goal) + '/' + _q.goal, 'blood'); return; }
 dailyQuests.done[qid] = true;
@@ -3083,7 +3122,7 @@ if (capturedCount() === 0) { // P19: команда siege-домена (inline-�
 if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/week-reset')) === true)) siege.week = 1;
 return;
 }
-var wrath = Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + approachWrathDeltaNow()); // C4: «Осада» — гнев +1
+var wrath = Math.min(10, 2 * countGhostTasks() + wkSkipWrath() + (siege.wkTaskFails || 0) + approachWrathDeltaNow()); // C4: «Осада» — гнев +1
 var rows = [];
 var fell = false;
 var hitMult = 1;
@@ -3763,7 +3802,7 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 // Ревизия 30.09 (economy-sim аудит): раньше суббота давала 7, а ветка d===0 («Осада сегодня»)
 // была недостижима — тост срабатывал только по четвергам. Теперь: Вс→0, Пн→6 … Пт→2, Сб→1.
 function daysToSiegeNow(ts) { var dow = new Date((ts || Date.now()) + 3 * 3600000).getUTCDay(); return dow === 0 ? 0 : 7 - dow; }
-function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + ((typeof approachWrathDeltaNow === 'function') ? approachWrathDeltaNow() : 0)); } // Г5-Т2: Железный Закон — кап гнева 7; C4: «Осада» честно показывает +1 гнев (typeof-гвард: extract-харнессы тянут функцию поодиночке)
+function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + wkSkipWrath() + (siege.wkTaskFails || 0) + ((typeof approachWrathDeltaNow === 'function') ? approachWrathDeltaNow() : 0)); } // Г5-Т2: Железный Закон — кап гнева 7; C4: «Осада» честно показывает +1 гнев (typeof-гвард: extract-харнессы тянут функцию поодиночке)
 /* ===================== Г4 «Total War: управление провинциями» — ядро (чистые функции) ===================== */
 function ensureSeasonFields(k) { var s = ensureSeason(); if (k) { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; } return s; } // Г4: материализуем ТОЛЬКО записываемый контейнер — байт-стабильный раундтрип сейвов
 function provKey(p) { return String(p); }
@@ -4536,6 +4575,13 @@ var t = findTask(id);
 if (!t || t.status !== 'done') return;
 if (tryResolveRevoltTask(t)) { renderTasks(); renderDashboard(); saveGameState(); return; } // Г4: revolt-задача без сундука — снятие штрафа и есть награда
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
+var _fl = dayFlags();
+var _capped = _fl.chests >= TASK_CHEST_DAILY_CAP;
+_fl.chests++;
+if (_capped) { // Ф0.2: лимит наград дня исчерпан — сундук даёт только XP
+choice = 'xp';
+showToast('📦 Лимит наград дня', 'Больше ' + TASK_CHEST_DAILY_CAP + ' сундуков в сутки дают только XP', 'blood');
+}
 if (choice === 'gold') {
 goldGain(tier.gold, 'chest');
 showToast('🎁 Сундук открыт', '+' + tier.gold + ' 💰 в казну', 'save');
@@ -5459,12 +5505,13 @@ function rollDailyEvent() { // #41: базовые 3 — по индексам 0
 function rerollDailyEvent() { // #48: переролл события дня, 1/день, 50💰 — флаг дня в localStorage (в сейв не пишем)
     if (!dailyEvent) return;
     var tk = getMSKDayKey();
-    try { if (localStorage.getItem('neurodeck_reroll_day') === tk) { showToast('🎲 Реролл уже был', 'Один переролл события в день', 'blood'); return; } } catch (e) {}
+    var _rf = dayFlags(); var _rls = false; try { _rls = localStorage.getItem('neurodeck_reroll_day') === tk; } catch (e) {}
+    if (_rf.reroll || _rls) { showToast('🎲 Реролл уже был', 'Один переролл события в день', 'blood'); return; }
     if ((HERO.gold || 0) < 50) { showToast('💰 Мало золота', 'Переролл события: 50 💰', 'blood'); sfxError(); return; }
     HERO.gold -= 50;
     var pool = buildDailyEvents().filter(function(x) { return x.id !== dailyEvent.id; });
     dailyEvent = pool[Math.floor(Math.random() * pool.length)];
-    try { localStorage.setItem('neurodeck_reroll_day', tk); } catch (e) {}
+    _rf.reroll = true; try { localStorage.setItem('neurodeck_reroll_day', tk); } catch (e) {}
     showToast(dailyEvent.icon + ' ' + dailyEvent.name, dailyEvent.text, 'save');
     sfxHit(); haptic('light');
     renderDashboard(); renderStrongholds(); updateHeroUI(); saveGameState();
@@ -5546,6 +5593,7 @@ burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#34d
 } else {
 HERO.consecutivePerfectDays = 0;
 }
+applySilentMisses(yesterdayKey); // Ф0.1: итоги вчерашнего дня — до сброса дневных счётчиков и стриков
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
 HERO.dailyUniqueStats = {};
@@ -5558,7 +5606,7 @@ showToast('🗓 Новая неделя', 'Путь продолжается', '
 recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
 runWeeklySiege();
 siege.approach = 'assault'; // P11: подход сгорает вместе с неделей — новая начинается со «Штурма» (поле в сейве, схема v14)
-siege.wkSkips = 0; siege.wkTaskFails = 0;
+siege.wkSkips = 0; siege.wkHonest = 0; siege.wkTaskFails = 0;
   siege.wkSkips = Math.max(0, siege.wkSkips - techWrathWeekReduction()); siege.wkTaskFails = Math.max(0, siege.wkTaskFails - techWrathWeekReduction()); // Г5-Т3: Обряды Усмирения −1/нед к источникам гнева
   siege.retriedThisWeek = false; // #95: контрштурм доступен снова
   Object.keys(TECH_ACTIVES).forEach(function(k) { delete TECH_ACTIVES[k]; }); // Г5-Т3 Ф2: приказы недели сгорают в понедельник
