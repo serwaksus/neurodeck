@@ -2155,3 +2155,16 @@ body[data-view="quests"] { --amb-h: 32; --amb-s: 55%; }
    ================================================================ */
 .forge-btn, .goals-add, .demo-btn, .backpack-tab, .sh-mini, .km-cam-reset { min-height: 44px; min-width: 44px; }
 .treasury-chip { min-height: 44px; }
+/* баннер церемонии затемняет весь экран (тень-«скрим» того же цвета, что край подложки — без видимого шва),
+   при reduced-motion анимации нет, но сама церемония видна (правило 19) */
+.levelup-banner, .rankup-banner { --cer-scrim: color-mix(in srgb, var(--s0) 74%, transparent); border-radius: 50%;
+  background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--s0) 94%, transparent) 55%, var(--cer-scrim) 100%); }
+.levelup-banner.show, .rankup-banner.show { box-shadow: 0 0 0 200vmax var(--cer-scrim); }
+body.reduced-motion .levelup-banner.show, body.reduced-motion .rankup-banner.show { opacity: 1; }
+/* шёпот духа: подложка, чтобы фраза читалась поверх карточек; без анимации — просто виден, снимается из JS */
+.spirit-msg { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-md); background: color-mix(in srgb, var(--s0) 86%, transparent); border: 1px solid var(--hairline); }
+body.reduced-motion .spirit-msg.show { animation: none; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { /* системный reduce без класса на body: анимации сокращены до 0.001 мс — конечный кадр не должен прятать церемонию */
+  .levelup-banner.show, .rankup-banner.show { animation: none; opacity: 1; transform: translate(-50%, -50%); }
+  .spirit-msg.show { animation: none; opacity: 1; }
+}

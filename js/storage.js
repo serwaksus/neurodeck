@@ -1010,34 +1010,50 @@ return;
 }
 // R2 M5: импорт/загрузка из облака перезаписывают все слои сохранения разом — перед применением кладём
 // прежнее состояние в отдельный ключ (1 шт.) и даём откатить: тост с действием + кнопка в окне синхронизации.
+// Откат живёт 7 дней и всегда спрашивает подтверждение с датой: иначе через месяц одно нажатие молча стирает месяц прогресса.
 var PRE_IMPORT_KEY = 'neurodeck_pre_import';
+var PRE_IMPORT_TTL = 7 * 86400000;
 function ndSnapshotBeforeImport() {
     try {
         if (!FORGED || FORGED.length === 0) return false; // терять нечего
-        localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify(buildSyncData()));
+        localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify({ t: Date.now(), data: buildSyncData() }));
         return true;
     } catch(e) { return false; } // квота — импорт всё равно возможен, просто без отката
 }
+function ndReadUndoImport() { // { t, data } или null; устаревший/битый снимок удаляется
+    var snap = null;
+    try { snap = JSON.parse(localStorage.getItem(PRE_IMPORT_KEY) || 'null'); } catch(e) {}
+    var ok = snap && typeof snap === 'object' && snap.data && typeof snap.data === 'object' && Number(snap.t) > 0 && Date.now() - Number(snap.t) < PRE_IMPORT_TTL;
+    if (!ok) { try { localStorage.removeItem(PRE_IMPORT_KEY); } catch(e) {} return null; }
+    return snap;
+}
 function ndOfferUndoImport(what) {
-    try { if (!localStorage.getItem(PRE_IMPORT_KEY)) return; } catch(e) { return; }
+    if (!ndReadUndoImport()) return;
     if (typeof showToast === 'function') showToast('📥 ' + (what || 'Импорт') + ' применён', 'Прежнее состояние сохранено — откат в окне «Синхронизация»', 'save', { label: '↩ Отменить', fn: ndUndoImport });
 }
 function ndUndoImport() {
-    var data = null;
-    try { data = JSON.parse(localStorage.getItem(PRE_IMPORT_KEY) || 'null'); } catch(e) {}
-    if (!data || typeof data !== 'object') { showToast('⚠ Нет точки отката', 'Прежнее состояние не найдено', 'blood'); return; }
-    applySyncData(data);
-    saveGameState();
-    try { localStorage.removeItem(PRE_IMPORT_KEY); } catch(e) {}
-    ndRefreshUndoSection();
-    showToast('↩ Импорт отменён', 'Состояние до импорта восстановлено', 'save');
+    var snap = ndReadUndoImport();
+    if (!snap) { showToast('⚠ Нет точки отката', 'Прежнее состояние не найдено', 'blood'); ndRefreshUndoSection(); return; }
+    var n = (snap.data.forged && snap.data.forged.length) || 0;
+    dungeonConfirm('↩ Откатить импорт?',
+        'Вернуть состояние от <b>' + new Date(snap.t).toLocaleString('ru') + '</b> (' + n + ' карт.).<br><br>' +
+        '<span style="color:var(--blood-bright)">Всё, что сделано после импорта, будет потеряно.</span>'
+    ).then(function(ok) {
+        if (!ok) return;
+        applySyncData(snap.data);
+        saveGameState();
+        try { localStorage.removeItem(PRE_IMPORT_KEY); } catch(e) {}
+        ndRefreshUndoSection();
+        showToast('↩ Импорт отменён', 'Состояние до импорта восстановлено', 'save');
+    });
 }
 function ndRefreshUndoSection() {
     var sec = document.getElementById('undoImportSection');
     if (!sec) return;
-    var has = false;
-    try { has = !!localStorage.getItem(PRE_IMPORT_KEY); } catch(e) {}
-    sec.style.display = has ? '' : 'none';
+    var snap = ndReadUndoImport();
+    sec.style.display = snap ? '' : 'none';
+    var desc = document.getElementById('undoImportDesc');
+    if (desc && snap) desc.textContent = 'Состояние до импорта от ' + new Date(snap.t).toLocaleString('ru') + ' (' + ((snap.data.forged && snap.data.forged.length) || 0) + ' карт.) — хранится 7 дней.';
 }
 function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); ndRefreshUndoSection(); }
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }

@@ -89,6 +89,29 @@ test('M8: сети нет — кэш; кэша тоже нет и сеть ви�
     assert.equal((await ev.promise).body, 'LATE');
 });
 
+test('M8: сервер ответил 5xx/404 — отдаём кэш, ошибку в кэш не кладём', async () => {
+    const sw = loadSw({ fetchImpl: async () => ({ body: 'ERR', ok: false, status: 503, clone() { return this; } }), cacheEntries: { 'index.html': { body: 'CACHED', ok: true } } });
+    const ev = fetchEvent(nav('https://x.test/'));
+    sw.listeners.fetch(ev);
+    assert.equal((await ev.promise).body, 'CACHED');
+    await new Promise((r) => setTimeout(r, 5));
+    assert.equal(sw.store.get('index.html').body, 'CACHED', 'кэш не испорчен ответом об ошибке');
+});
+
+test('M8: ошибка сервера и кэша нет — отдаём ответ сервера как есть', async () => {
+    const sw = loadSw({ fetchImpl: async () => ({ body: 'ERR', ok: false, status: 503, clone() { return this; } }) });
+    const ev = fetchEvent(nav('https://x.test/'));
+    sw.listeners.fetch(ev);
+    assert.equal((await ev.promise).body, 'ERR');
+});
+
+test('M8: редирект навигации (opaqueredirect) не подменяется кэшем', async () => {
+    const sw = loadSw({ fetchImpl: async () => ({ body: 'REDIR', ok: false, status: 0, type: 'opaqueredirect', clone() { return this; } }), cacheEntries: { 'index.html': { body: 'CACHED', ok: true } } });
+    const ev = fetchEvent(nav('https://x.test/'));
+    sw.listeners.fetch(ev);
+    assert.equal((await ev.promise).body, 'REDIR');
+});
+
 test('M6: config/*.json — сеть первая (cache-first закрепил бы первую версию навсегда), офлайн — кэш', async () => {
     let online = true;
     const sw = loadSw({ fetchImpl: async () => { if (!online) throw new Error('offline'); return { body: online === true ? 'NEW' : '', ok: true, clone() { return this; } }; }, cacheEntries: { 'https://x.test/config/weekly-modifiers.v1.json': { body: 'OLD', ok: true } } });

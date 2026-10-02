@@ -99,6 +99,14 @@ test('M2: временный сбой (таймаут) НЕ выключает �
     assert.ok(bot.isPermanentSendError(new Error('sendMessage: Bad Request: chat not found')));
 });
 
+test('M2: 403 не от Telegram (HTML-заглушка прокси/блокировки) НЕ отписывает всех разом', async () => {
+    write({ A: daily(), B: daily() });
+    bot.setApiForTests(async () => { throw new Error('sendMessage: плохой ответ 403'); });
+    await bot.schedulerTick(NOW);
+    assert.equal(read().A.mode, 'daily');
+    assert.equal(read().B.mode, 'daily');
+});
+
 test('M2: у HTTPS-запроса есть таймаут (req.setTimeout) — pollLoop не виснет навсегда', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'bot', 'polling.js'), 'utf8');
     assert.match(src, /req\.setTimeout\(/);

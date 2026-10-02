@@ -182,8 +182,10 @@ async function sendReminder(chatId, mode) {
 function _resetForTests() { /* lastFire теперь персистится в chats.json — сброс через фикстуру */ }
 
 // Постоянный отказ доставки: пользователь заблокировал бота / чат удалён — повторять бессмысленно.
+// Решаем только по описанию ошибки из JSON-ответа Telegram: голый HTTP 403 без JSON (заглушка прокси,
+// блокировка) — сбой канала, а не отказ пользователя; иначе один такой тик выключил бы напоминания всем.
 function isPermanentSendError(err) {
-  return /\b403\b|forbidden|bot was blocked|chat not found|user is deactivated/i.test(String(err && err.message || err));
+  return /forbidden: bot was blocked|forbidden: user is deactivated|forbidden: bot was kicked|forbidden: bot can't initiate|chat not found/i.test(String(err && err.message || err));
 }
 
 let tickRunning = false; // setInterval не должен запускать второй тик поверх идущего (дубли рассылки)

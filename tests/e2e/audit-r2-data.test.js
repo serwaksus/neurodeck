@@ -130,9 +130,23 @@ test('M5: импорт файлом сохраняет точку отката; 
     await expect.poll(() => page.evaluate(() => FORGED.map((c) => c.name).join('|'))).toBe('Чужая карточка|Чужая вторая');
     await page.evaluate(() => openSyncModal());
     await expect(page.locator('#undoImportSection')).toBeVisible();
+    await expect(page.locator('#undoImportDesc')).toContainText('1 карт');
     await page.locator('[data-action="undo-import"]').click();
+    await expect.poll(async () => (await ui(page)).confirm, { timeout: 3000 }).toContain('Откатить импорт');
+    expect(await page.evaluate(() => FORGED.length), 'без подтверждения ничего не меняется').toBe(2);
+    await page.evaluate(() => document.getElementById('confirmYes').click());
     await expect.poll(() => page.evaluate(() => FORGED.map((c) => c.name).join('|'))).toBe('Карточка');
     expect(await page.evaluate(() => localStorage.getItem('neurodeck_pre_import')), 'точка отката использована').toBeNull();
+});
+
+test('M5: точка отката старше 7 дней не предлагается и удаляется', async ({ page }) => {
+    await page.addInitScript(SEED_IN_PAGE, { save: JSON.stringify(seedSave()) });
+    await page.goto('/');
+    await page.waitForTimeout(1200);
+    await page.evaluate(() => localStorage.setItem('neurodeck_pre_import', JSON.stringify({ t: Date.now() - 8 * 86400000, data: buildSyncData() })));
+    await page.evaluate(() => openSyncModal());
+    expect(await page.locator('#undoImportSection').isVisible(), 'устаревший откат скрыт').toBe(false);
+    expect(await page.evaluate(() => localStorage.getItem('neurodeck_pre_import')), 'устаревший снимок удалён').toBeNull();
 });
 
 test('M6: на загрузке реально запрашивается config/weekly-modifiers.v1.json и каталог применяется', async ({ page }) => {

@@ -5,12 +5,12 @@
    При новом деплое: бампни ?v= в index.html И VERSION ниже — старый кэш удалится в activate. */
 'use strict';
 
-const VERSION = 'nd-shell-v133';
+const VERSION = 'nd-shell-v136';
 const SHELL = [
   './',
   'index.html',
-  'css/style.css?v=133',
-  'fonts/fonts.css?v=133',
+  'css/style.css?v=136',
+  'fonts/fonts.css?v=136',
   'fonts/cinzel-var.woff2',
   'fonts/Philosopher-400-cyrillic.woff2',
   'fonts/Philosopher-400-latin.woff2',
@@ -20,20 +20,20 @@ const SHELL = [
   'fonts/Alegreya-latin.woff2',
   'fonts/Alegreya-italic-cyrillic.woff2',
   'fonts/Alegreya-italic-latin.woff2',
-  'js/perf.js?v=133',
-  'js/perf-compat.js?v=133',
-  'js/event-bus.js?v=133',
-  'js/audio.js?v=133',
-  'js/telemetry.js?v=133',
-  'js/stronghold-data.js?v=133',
-  'js/state-guards.js?v=133',
-  'js/storage.js?v=133',
-  'js/stronghold-model.js?v=133',
-  'js/state/store.js?v=133',
-  'js/remote-config.js?v=133',
-  'js/ui/strongholds.js?v=133',
+  'js/perf.js?v=136',
+  'js/perf-compat.js?v=136',
+  'js/event-bus.js?v=136',
+  'js/audio.js?v=136',
+  'js/telemetry.js?v=136',
+  'js/stronghold-data.js?v=136',
+  'js/state-guards.js?v=136',
+  'js/storage.js?v=136',
+  'js/stronghold-model.js?v=136',
+  'js/state/store.js?v=136',
+  'js/remote-config.js?v=136',
+  'js/ui/strongholds.js?v=136',
   'config/weekly-modifiers.v1.json',
-  'js/app.js?v=133',
+  'js/app.js?v=136',
   'manifest.json',
   'img/fog.webp',
   'img/icon-192.png',
@@ -72,16 +72,19 @@ self.addEventListener('fetch', (e) => {
     // на «флапающем» github.io запрос может висеть десятки секунд — тогда отдаём кэш, а ответ сети
     // всё равно обновит кэш в фоне (аудит R2 M8)
     const net = fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(VERSION).then((c) => c.put('index.html', copy)).catch(() => {});
+      if (res && res.ok) { // 404/5xx «флапающего» хостинга не должен стать закэшированной оболочкой
+        const copy = res.clone();
+        caches.open(VERSION).then((c) => c.put('index.html', copy)).catch(() => {});
+      }
       return res;
     });
     net.catch(() => {}); // отложенный отказ после таймаута не должен быть unhandled rejection
     const timed = new Promise((_, reject) => setTimeout(() => reject(new Error('nav timeout')), NAV_TIMEOUT_MS));
+    const fromCache = () => caches.match('index.html').then((r) => r || caches.match('./'));
     e.respondWith(
-      Promise.race([net, timed]).catch(() =>
-        caches.match('index.html').then((r) => r || caches.match('./')).then((r) => r || net)
-      )
+      Promise.race([net, timed])
+        .then((res) => (res && (res.ok || res.type === 'opaqueredirect')) ? res : fromCache().then((r) => r || res)) // ошибка сервера — кэш, если он есть; редирект — как есть
+        .catch(() => fromCache().then((r) => r || net))
     );
     return;
   }

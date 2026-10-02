@@ -1079,8 +1079,10 @@ sfxLevelUp(); haptic('success');
 document.getElementById('lvlNum').textContent = HERO.level;
 const ov = document.getElementById('lvlOverlay'), bn = document.getElementById('lvlBanner');
 document.getElementById('lvlSub').textContent = (HERO.level - 1) + ' → ' + HERO.level;
+// одна церемония за раз: ранг-ап и уровень от одного выполнения не накладываются друг на друга (о втором сообщает тост)
+const _rkBusy = document.getElementById('rankupBanner').classList.contains('show');
 ov.classList.remove('show'); bn.classList.remove('show'); void ov.offsetWidth;
-ov.classList.add('show'); bn.classList.add('show');
+if (!_rkBusy) { ov.classList.add('show'); bn.classList.add('show'); }
 const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 burstParticles(cx, cy, 100, { color: '#fbbf24', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12, life: 1.3 });
 screenShake(8, 400);
@@ -1115,11 +1117,11 @@ poolHint.style.display = 'inline-block';
 } else {
 poolHint.style.display = 'none';
 }
+const _lvlBusy = document.getElementById('lvlBanner').classList.contains('show'); // одна церемония за раз (см. onLevelUp)
 rankupOverlay.classList.remove('show');
 rankupBanner.classList.remove('show');
 void rankupOverlay.offsetWidth;
-rankupOverlay.classList.add('show');
-rankupBanner.classList.add('show');
+if (!_lvlBusy) { rankupOverlay.classList.add('show'); rankupBanner.classList.add('show'); }
 burstParticles(x, y, 80, { color: visual.color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
 burstParticles(x, y, 50, { color: visual.color, speed: 8, decay: 0.012, size: 2, gravity: 0.05 });
 if (newRank === 'SSS') {
@@ -6067,7 +6069,8 @@ el.style.borderColor = type === 'blood' ? 'var(--blood)' : type === 'crit' || ty
 el.classList.remove('show'); void el.offsetWidth; el.dataset.ttype = type; el.classList.add('show');
 setTimeout(() => { el.classList.remove('show'); setTimeout(playNextToast, 200); }, t.action ? 5000 : 2500);
 }
-function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+var _spiritT = null;
+function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(_spiritT); _spiritT = setTimeout(function() { el.classList.remove('show'); }, 4000); } // явное снятие: при reduced-motion анимации нет, иначе шёпот висел бы вечно
 function dungeonConfirm(title, body, yesLabel, noLabel) {
 return new Promise(function(resolve) {
 var overlay = document.getElementById('confirmOverlay');

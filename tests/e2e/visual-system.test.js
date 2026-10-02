@@ -308,3 +308,19 @@ test('Фаза 7: цели нажатия ≥ 44 px на всех вкладка
     }
     expect(noRing, 'элементы без рамки фокуса').toEqual([]);
 });
+
+test('Фаза 5: церемонии — один баннер за раз, затемнение фона, видны и при reduced-motion; шёпот духа на подложке', async ({ page }) => {
+    await bootSeed(page, seedWithRanks()); // reduced-motion
+    await page.evaluate(() => { onLevelUp(); triggerRankUpEffect(FORGED[0], 'C', 'CC', 100, 100); });
+    await page.waitForTimeout(400);
+    const r = await page.evaluate(() => {
+        const vis = (id) => { const cs = getComputedStyle(document.getElementById(id)); return cs.display !== 'none' && parseFloat(cs.opacity) > 0.5; };
+        const lvl = document.getElementById('lvlBanner');
+        const sp = getComputedStyle(document.getElementById('spiritMsg'));
+        return { lvl: vis('lvlBanner'), rank: vis('rankupBanner'), scrim: getComputedStyle(lvl).boxShadow, spiritBg: sp.backgroundColor, spiritBorder: sp.borderTopStyle };
+    });
+    expect(r.lvl, 'первая церемония видна и при reduced-motion').toBe(true);
+    expect(r.rank, 'вторая церемония не накладывается на первую (о ней сообщает тост)').toBe(false);
+    expect(r.scrim, 'баннер затемняет фон').toMatch(/\d+px 0px 0px \d{3,}px|0px 0px 0px \d{3,}px/);
+    expect(r.spiritBg).not.toBe('rgba(0, 0, 0, 0)');
+});
