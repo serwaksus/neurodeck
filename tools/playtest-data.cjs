@@ -290,7 +290,7 @@ async function nodePhase() {
       ];
       taskIdCounter = 3;
       season = { num: 2, start: getMSKDayKey(), snapshot: { totalXp: 500, gold: 400, captured: 2, completions: 7, level: 4 } };
-      dailyQuests = { day: getMSKDayKey(), done: { q1: true }, progress: { q1: 2 }, quests: [{ id: 'q1', name: 'QA квест' }] };
+      dailyQuests = { day: getMSKDayKey(), done: { dq_cards: true }, progress: { cards: 2 }, quests: [DQ_POOL[0]] }; // аудит P0: импорт собирает задания по каталогу — сид из реального DQ_POOL
       lastDayReset = getMSKDayKey();
       lastWeekReset = getThisMondayKey();
       saveGameState();
@@ -324,7 +324,7 @@ async function nodePhase() {
       saved: !!localStorage.getItem('neurodeck_full_save'),
       v: JSON.parse(localStorage.getItem('neurodeck_full_save') || '{}').v,
       gold: HERO.gold, cards: FORGED.length, cap: strongholds.filter((s) => s.captured).length,
-      season: season.num, quests: dailyQuests && dailyQuests.progress.q1,
+      season: season.num, quests: dailyQuests && dailyQuests.progress.cards,
     }));
     if (!st.saved || st.v !== 14) throw new Error('сейв v14 не записан: ' + JSON.stringify(st)); // P11 re-pin: v14
     if (st.gold !== 777 || st.cards !== 3 || st.cap !== 2 || st.season !== 2 || st.quests !== 2) throw new Error('состояние: ' + JSON.stringify(st));
