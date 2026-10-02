@@ -79,8 +79,9 @@ if (_alarm) {
     if (_alarm.ratio !== null && _alarm.ratio < 1) _agenda.push('найм/постройки обороны до штурма');
     if ((siegeWrathNow() || 0) >= 4) _agenda.push('закрыть призраки и задачи — гнев ' + siegeWrathNow() + '/10');
     var _stW = weatherSeasonWeek();
-    var _frontProv = STRONGHOLDS[frontIdx()].prov;
-    if (weatherOf(_frontProv, _stW.sn, _stW.wk).id === 'blizzard' && weatherNorth(_frontProv)) _agenda.push('метель: содержание ×2 — не нанимай лишнего');
+    var _frontI = frontIdx(); // при 20/20 фронта нет (−1)
+    var _frontProv = (_frontI >= 0 && STRONGHOLDS[_frontI]) ? STRONGHOLDS[_frontI].prov : null;
+    if (_frontProv !== null && weatherOf(_frontProv, _stW.sn, _stW.wk).id === 'blizzard' && weatherNorth(_frontProv)) _agenda.push('метель: содержание ×2 — не нанимай лишнего');
     html += '<div class="siege-alarm">⚠ <b>Осадная тревога</b> · враг ~<b>' + _alarm.power + '</b> · оборона <b>' + _alarm.def + '</b>' + (_alarm.ratio === null ? '' : ' (' + Math.round(_alarm.ratio * 100) + '%)') + ' — ' + _alarm.advice + (_agenda.length ? '<br><span style="color:var(--text-dim)">Повестка: ' + _agenda.join(' · ') + '</span>' : '') + '</div>';
 }
 html += renderTowerCard(cap); // Ф3: башня-марафон (только при 20/20)
@@ -112,7 +113,16 @@ var html = '<div class="kingdom-banner">' +
 '</div>';
 root.innerHTML = html;
 }
-function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" loading="lazy" decoding="async" onerror="this.outerHTML=\'' + emoji + '\'">'; } // волна 3: спрайты вне критического пути
+function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" loading="lazy" decoding="async" data-nd-fb="' + String(emoji).replace(/[&<>"']/g, function(c) { return '&#' + c.charCodeAt(0) + ';'; }) + '">'; } // волна 3: спрайты вне критического пути · CSP: без inline onerror, фолбэк — делегированный capture-обработчик ниже
+if (typeof document !== 'undefined' && document && typeof document.addEventListener === 'function') {
+    document.addEventListener('error', function(e) { // error у <img> не всплывает — capture-фаза
+        var t = e && e.target;
+        if (!t || t.tagName !== 'IMG' || typeof t.getAttribute !== 'function') return;
+        var fb = t.getAttribute('data-nd-fb');
+        if (fb === null) return;
+        try { t.replaceWith(document.createTextNode(fb)); } catch (err) {}
+    }, true);
+}
 function catClass(bd) { // ФАЗА F: категорийная рамка тайла постройки
 return 'cat-' + (bd.cat === 'house' ? 'zh' : bd.cat === 'econ' ? 'ec' : bd.cat === 'defense' ? 'df' : 'sp');
 }

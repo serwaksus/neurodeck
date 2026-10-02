@@ -7,6 +7,7 @@
     var RANK_PROGRESSION = ['C', 'CC', 'CCC', 'B', 'BB', 'BBB', 'A', 'AA', 'AAA', 'S', 'SS', 'SSS'];
     var VALID_STATS = Object.assign(Object.create(null), { str: true, end: true, int: true, cha: true, wil: true, agi: true });
     var GOAL_TYPES = Object.assign(Object.create(null), { short: true, medium: true, long: true });
+    var DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/; // ключ МСК-дня; всё, что идёт в innerHTML, обязано пройти через него
     var EQUIP_SLOTS = ['head', 'amulet', 'chest', 'cape', 'weapon', 'shield', 'ring1', 'ring2', 'boots'];
     var EQUIP_SLOT_SET = EQUIP_SLOTS.reduce(function(acc, slot) { acc[slot] = true; return acc; }, Object.create(null));
 
@@ -57,11 +58,12 @@
     }
 
     function sanitizeArtifactItem(item, catalog, forcedSlot, fallbackUid) {
-        if (!item || typeof item !== 'object' || !catalog || !catalog[item.id]) return null;
+        if (!item || typeof item !== 'object' || !catalog || typeof item.id !== 'string' || !Object.prototype.hasOwnProperty.call(catalog, item.id) || !catalog[item.id]) return null;
         var canonical = catalog[item.id];
         var targetSlot = forcedSlot || item.slot || canonical.slot;
         if (!EQUIP_SLOT_SET[targetSlot]) return null;
         var uid = safeString(item.uid, fallbackUid || ('i' + Date.now()), 40);
+        if (!/^[A-Za-z0-9_-]{1,40}$/.test(uid)) uid = fallbackUid || ('i' + Date.now()); // uid попадает в data-атрибуты/innerHTML
         return Object.assign({}, canonical, { uid: uid, slot: targetSlot });
     }
 
@@ -264,7 +266,7 @@
             var e = input[i];
             if (!e || typeof e !== 'object') continue;
             var xp = Math.round(clampNumber(e.xp, 0, 1e8, 0));
-            var day = typeof e.date === 'string' || typeof e.date === 'number' ? String(e.date).slice(0, 32) : null;
+            var day = (typeof e.date === 'string' && DAY_KEY_RE.test(e.date)) ? e.date : null; // только ГГГГ-ММ-ДД: дата рисуется в графике через innerHTML
             if (day === null) continue;
             out.push({ date: day, xp: xp });
         }
@@ -461,6 +463,52 @@
         return out;
     }
 
+    // Аудит 2026-10-02 (P0): дневные задания из импорта/облака — по каталогу, не как есть (icon/text рисуются через innerHTML)
+    function sanitizeDailyQuests(input, pool) {
+        var src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+        var day = (typeof src.day === 'string' && DAY_KEY_RE.test(src.day)) ? src.day : null;
+        var byId = Object.create(null);
+        (Array.isArray(pool) ? pool : []).forEach(function(q) { if (q && typeof q.id === 'string') byId[q.id] = q; });
+        var quests = [];
+        var seen = Object.create(null);
+        (Array.isArray(src.quests) ? src.quests : []).forEach(function(q) {
+            var id = q && typeof q === 'object' ? q.id : null;
+            if (typeof id !== 'string' || !byId[id] || seen[id] || quests.length >= 6) return;
+            seen[id] = true;
+            quests.push(byId[id]);
+        });
+        var done = {};
+        if (src.done && typeof src.done === 'object' && !Array.isArray(src.done)) {
+            Object.keys(byId).forEach(function(id) { if (src.done[id] === true) done[id] = true; });
+        }
+        var progress = {};
+        if (src.progress && typeof src.progress === 'object' && !Array.isArray(src.progress)) {
+            ['cards', 'gold', 'hire', 'build', 'quest', 'assault'].forEach(function(k) {
+                var n = Number(src.progress[k]);
+                if (Number.isFinite(n) && n > 0) progress[k] = Math.min(1e9, Math.round(n));
+            });
+        }
+        return { day: day, quests: quests, done: done, progress: progress };
+    }
+
+    // Аудит 2026-10-02 (P0): клятва на крови из импорта/облака — только известные поля и типы
+    function sanitizeBloodOath(input) {
+        if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+        if (['active', 'completed', 'failed'].indexOf(input.status) < 0) return null;
+        var cardId = Number(input.cardId);
+        if (!Number.isFinite(cardId) || cardId < 1) return null;
+        var requiredDays = Math.round(clampNumber(input.requiredDays, 1, 30, 5));
+        return {
+            cardId: Math.round(cardId),
+            cardName: safeString(input.cardName, '', 80),
+            streak: Math.round(clampNumber(input.streak, 0, requiredDays, 0)),
+            requiredDays: requiredDays,
+            status: input.status,
+            assignedMonday: (typeof input.assignedMonday === 'string' && DAY_KEY_RE.test(input.assignedMonday)) ? input.assignedMonday : null,
+            lastCompletedDay: (typeof input.lastCompletedDay === 'string' && DAY_KEY_RE.test(input.lastCompletedDay)) ? input.lastCompletedDay : null
+        };
+    }
+
     return {
         RANK_PROGRESSION: RANK_PROGRESSION,
         EQUIP_SLOTS: EQUIP_SLOTS,
@@ -478,6 +526,8 @@
         sanitizeSiege: sanitizeSiege,
         sanitizeHirePool: sanitizeHirePool,
         sanitizeSeason: sanitizeSeason,
+        sanitizeDailyQuests: sanitizeDailyQuests,
+        sanitizeBloodOath: sanitizeBloodOath,
         sanitizeStorm: sanitizeStorm // Г1-5
     };
 });

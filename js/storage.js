@@ -1005,14 +1005,16 @@ if (data.hero && typeof data.hero === 'object') {
 var sanitizedHero = STATE_GUARDS.sanitizeHero(data.hero);
 Object.keys(sanitizedHero).forEach(function(k) { HERO[k] = sanitizedHero[k]; });
 }
-if (data.stats) {
+if (data.stats && typeof data.stats === 'object') {
 Object.keys(data.stats).forEach(k => {
 if (!Object.prototype.hasOwnProperty.call(STATS, k)) return;
+var srcStat = data.stats[k];
+if (!srcStat || typeof srcStat !== 'object') return;
+// P0 аудита: только числовые поля — name/icon/color статов рисуются через innerHTML, из импорта их брать нельзя
 var maxCap = STATS[k].max;
-Object.assign(STATS[k], data.stats[k]);
-if (data.stats[k] && typeof data.stats[k].max === 'number') {
-STATS[k].max = Math.max(1, Math.min(maxCap, Math.round(data.stats[k].max)));
-}
+if (typeof srcStat.max === 'number' && Number.isFinite(srcStat.max)) STATS[k].max = Math.max(1, Math.min(maxCap, Math.round(srcStat.max)));
+if (Number.isFinite(Number(srcStat.value))) STATS[k].value = Number(srcStat.value);
+if (Number.isFinite(Number(srcStat.attributePoints))) STATS[k].attributePoints = Number(srcStat.attributePoints);
 STATS[k].value = Math.max(0, Math.min(STATS[k].max || 100, STATS[k].value || 0));
 STATS[k].attributePoints = Math.max(0, STATS[k].attributePoints || 0);
 });
@@ -1038,8 +1040,7 @@ if (data.goalIdCounter) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(da
 else if (data.counter != null) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.counter, 1), maxExistingId(GOALS) + 1);
 if (Array.isArray(data.xpHistory)) xpHistory = STATE_GUARDS.sanitizeXpHistory(data.xpHistory);
 if (data.bloodOath !== undefined) {
-bloodOath = (data.bloodOath && typeof data.bloodOath === 'object' && typeof data.bloodOath.status === 'string' && data.bloodOath.cardId !== undefined)
-? data.bloodOath : null;
+bloodOath = STATE_GUARDS.sanitizeBloodOath(data.bloodOath);
 }
 // QA3-M2: только строго датированные строки; мусор → null (= «сброс»: дневной/
 // недельный цикл сам выставит свежий ключ при следующем тике, app.js:2820)
@@ -1050,8 +1051,15 @@ if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongho
 if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
 if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
-    if (typeof dailyQuests !== 'undefined' && dailyQuests && data.dailyQuests && typeof data.dailyQuests === 'object' && data.dailyQuests.day) { dailyQuests.day = data.dailyQuests.day; dailyQuests.done = data.dailyQuests.done || {}; dailyQuests.progress = data.dailyQuests.progress || {}; dailyQuests.quests = Array.isArray(data.dailyQuests.quests) ? data.dailyQuests.quests : []; }
-if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEvent === 'object' && data.dailyEvent.id) dailyEvent = data.dailyEvent;
+    if (typeof dailyQuests !== 'undefined' && data.dailyQuests && typeof data.dailyQuests === 'object') {
+        var _dq = STATE_GUARDS.sanitizeDailyQuests(data.dailyQuests, (typeof DQ_POOL !== 'undefined') ? DQ_POOL : null); // P0: квесты по каталогу, не как есть
+        if (_dq.day) dailyQuests = { day: _dq.day, quests: _dq.quests, done: _dq.done, progress: _dq.progress };
+    }
+if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEvent === 'object' && typeof data.dailyEvent.id === 'string') { // P0: событие дня — объект из каталога, не из импорта
+    var _evId = data.dailyEvent.id;
+    var _evCat = (typeof buildDailyEvents === 'function') ? buildDailyEvents().filter(function(x) { return x.id === _evId; }) : [];
+    if (_evCat.length) dailyEvent = _evCat[0];
+}
 if (typeof season !== 'undefined' && data.season && typeof data.season === 'object') { season = STATE_GUARDS.sanitizeSeason(data.season, (typeof getMSKDayKey === 'function') ? getMSKDayKey() : null); }
 if (typeof throne !== 'undefined' && typeof data.throne === 'number' && Number.isFinite(data.throne)) throne = Math.max(0, Math.min(5, Math.round(data.throne)));
 if (typeof TECHS !== 'undefined' && data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) {

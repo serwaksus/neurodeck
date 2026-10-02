@@ -4892,8 +4892,9 @@ function checkBloodOathDaily() {
     if (!card) { bloodOath = null; return; }
     var cardDoneToday = card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === todayKey;
     if (!cardDoneToday) {
-        var lastResetKey = lastDayReset || getMSKDayKey();
-        var cardDoneLastDay = bloodOath.lastCompletedDay === lastResetKey;
+        // Аудит 2026-10-02: сверка идёт со ВЧЕРАШНИМ днём (lastDayReset уже = сегодня к моменту вызова из checkDailyReset)
+        var yesterdayKey = getMSKDayKey(Date.now() - 86400000);
+        var cardDoneLastDay = bloodOath.lastCompletedDay === yesterdayKey;
         if (!cardDoneLastDay) {
             failBloodOath('Карточка клятвы не была выполнена! Контракт нарушен.');
         }
