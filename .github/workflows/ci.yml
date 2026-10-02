@@ -43,6 +43,7 @@ jobs:
       - run: npm run test:qa:chaos
       - run: npm run test:qa:parity
       - run: npm run test:sim:economy
+      - run: npm run test:sim:c3
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

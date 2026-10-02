@@ -278,7 +278,8 @@ test('perf.js file size is reasonable (<300 lines)', () => {
 // его загрузки. Бюджет — регрессионный гейт: превысил — режь/выноси, а не поднимай порог
 // молча (репин бюджета = осознанный коммит с комментарием, как у parity-эталонов).
 
-const P22_BUDGET_KB = { appJs: 520, styleCss: 200, precacheJsCss: 940 };
+// РЕПИН бюджета прекэша 940 → 1000 КБ (кампания 3.0 Ф1): новые модули js/campaign3/* + ui + css ≈ 40 КБ, запас на Ф2. app.js и style.css лимитов не меняют.
+const P22_BUDGET_KB = { appJs: 520, styleCss: 200, precacheJsCss: 1000 };
 
 function precacheLocalEntries() {
     const sw = read('sw.js');

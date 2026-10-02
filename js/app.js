@@ -792,6 +792,7 @@ card.streak = (card.streak || 0) + 1;
 card.lastCompletedAt = Date.now();
 HERO.dailyCompletions++;
 bossProgressTick(); // Г2-1: фазы боссов (cards/streak)
+if (window.NDC3 && NDC3.enabled()) NDC3.onDeed({ kind: 'habit', stat: card.stat, rank: card.rank }); // кампания 3.0: ОД только из дел (флаг nd_c3)
 HERO.dailyUniqueStats = HERO.dailyUniqueStats || {};
 HERO.dailyUniqueStats[card.stat] = true;
 HERO.dayStatCounts = HERO.dayStatCounts || {}; // Г2-4: счётчик статов дня для комбо
@@ -865,6 +866,7 @@ function applySilentMisses(dayKey) {
     var n = ndSilentMisses(dayKey);
     if (n <= 0) return 0;
     siege.wkSkips = (siege.wkSkips || 0) + n;
+    if (window.NDC3 && NDC3.enabled()) NDC3.onSilentMisses(n); // кампания 3.0: молчание = тень
     HERO.gold = Math.max(0, (HERO.gold || 0) - n);
     showToast('🌫 Молчание — тоже пропуск', n + ' ' + (n === 1 ? 'дело' : 'дел') + ' без отметки: −' + n + ' 💰 и гнев +' + n + '. Честная отметка ✕ стоит вдвое меньше гнева.', 'blood');
     return n;
@@ -885,6 +887,7 @@ var oathBreak = bloodOath && bloodOath.status === 'active' && bloodOath.cardId =
  sfxFail(); haptic('error');
  HERO.dailySkips++;
  siege.wkHonest = (siege.wkHonest || 0) + 1; // Ф0.1: честный пропуск весит половину молчаливого (см. wkSkipWrath)
+ if (window.NDC3 && NDC3.enabled()) NDC3.onHonestSkip(); // кампания 3.0: 0.5 тени
  if ((HERO.streakShields || 0) > 0) {
 showToast('🛡 Стрик сохранён щитом!', 'Осталось щитов: ' + HERO.streakShields, 'save');
 } else {
@@ -1961,6 +1964,7 @@ try {
 document.querySelector('.content').scrollTop = 0; // V-7: смена вкладки всегда сверху
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'strongholds') renderStrongholds();
+if (view === 'strongholds' && typeof renderCampaign3 === 'function') renderCampaign3(); // кампания 3.0 (флаг nd_c3)
 if (view === 'strongholds' && typeof maybePendingBossReward === 'function') maybePendingBossReward(); // C5: вернуть незакрытый выбор награды босса
 if (view === 'quests') renderTasks();
 if (view === 'deck') renderDashboard();
@@ -4563,6 +4567,7 @@ if (t.name.indexOf('🔥 Восстание:') === 0) {
   if (!_ok) { showToast('🔥 Мятеж ещё бушует', 'Восстанови ≥2 постройки в мятежной провинции — тогда штраф снимут.', 'blood'); sfxError(); return; }
 }
 t.status = 'done'; t.doneAt = Date.now();
+if (window.NDC3 && NDC3.enabled() && t.name.indexOf('🔥 Восстание:') !== 0) NDC3.onDeed({ kind: 'task' }); // кампания 3.0
 HERO.lastActiveDay = getMSKDayKey(); // #19: активность дня
 sfxGoalComplete(); haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: '#fbbf24', speed: 10, decay: 0.01, size: 3, shape: 'star', gravity: 0.08 });
@@ -4631,6 +4636,7 @@ showToast('👻 Призрак ушёл', '«' + t.name + '» растворил
 });
 TASKS = TASKS.filter(function(t) { return t.status !== 'gone' && t.status !== 'chest_open'; });
 if (newGhosts > 0) siege.wkTaskFails = (siege.wkTaskFails || 0) + newGhosts;
+if (newGhosts > 0 && window.NDC3 && NDC3.enabled()) NDC3.onTaskOverdue(newGhosts); // кампания 3.0: просрочка = тень Прокрастинации/Лени
 if (ghostFree) return { ghostNights: 0, free: true }; // «Духи дремлют»: переходы и уходы работают, списаний нет
 var ghostNights = 0;
 TASKS.forEach(function(t) { if (t.status === 'ghost') ghostNights++; });
@@ -5594,6 +5600,7 @@ burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#34d
 HERO.consecutivePerfectDays = 0;
 }
 applySilentMisses(yesterdayKey); // Ф0.1: итоги вчерашнего дня — до сброса дневных счётчиков и стриков
+if (window.NDC3 && NDC3.enabled()) NDC3.dayEnd(todayKey); // кампания 3.0: закрыть сутки (и пропущенные дни) — тени, доход, недельный ход
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
 HERO.dailyUniqueStats = {};

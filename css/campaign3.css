@@ -1,0 +1,42 @@
+/* Кампания 3.0, Ф1 — панель среза (js/ui/campaign3.js). Только токены дизайн-системы; без анимаций — eco и reduced-motion идентичны. */
+.c3 { margin: 0 0 var(--sp-4); padding: var(--sp-3); background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border-hi); border-radius: var(--r-lg); box-shadow: var(--elev-1); }
+.c3-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.c3-title { font-family: var(--font-display); font-size: var(--t-lg); color: var(--gold-bright); letter-spacing: 1px; }
+.c3-beta { margin-left: var(--sp-1); padding: 1px var(--sp-2); font-size: var(--t-xs); color: var(--ac-arcane); border: 1px solid var(--ac-arcane); border-radius: var(--r-pill); letter-spacing: 0; }
+.c3-week { font-size: var(--t-sm); color: var(--tx-2); }
+.c3-stats { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.c3-chip { display: inline-flex; align-items: baseline; gap: var(--sp-1); min-height: 28px; padding: var(--sp-1) var(--sp-2); font-size: var(--t-sm); color: var(--tx-1); background: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-md); }
+.c3-chip b { color: var(--gold-bright); }
+.c3-chip i { font-style: normal; font-size: var(--t-xs); color: var(--tx-2); }
+.c3-done { margin-bottom: var(--sp-3); padding: var(--sp-3); font-size: var(--t-sm); color: var(--ac-success); border: 1px solid var(--ac-success); border-radius: var(--r-md); background: color-mix(in srgb, var(--ac-success) 10%, var(--s1)); }
+
+.c3-map { position: relative; width: 100%; aspect-ratio: 1 / 1.05; margin-bottom: var(--sp-3); background: radial-gradient(ellipse at 30% 80%, color-mix(in srgb, var(--ac-success) 8%, var(--s1)), var(--s0) 70%); border: 1px solid var(--hairline); border-radius: var(--r-md); }
+.c3-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.c3-edges line { stroke: var(--hairline); stroke-width: 2; stroke-dasharray: 4 4; }
+.c3-node { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; width: 48px; height: 48px; min-width: 44px; min-height: 44px; padding: 0; background: transparent; border: 0; border-radius: 50%; cursor: pointer; --tone: var(--mat-iron-edge); }
+.c3-node .nd-medal { width: 40px; height: 40px; --tone: var(--mat-iron-edge); }
+.c3-node.is-own .nd-medal { --tone: var(--mat-gilded-edge); }
+.c3-node.is-hostile .nd-medal { --tone: var(--ac-threat); }
+.c3-node .c3-hero { --tone: var(--ac-reward); width: 44px; height: 44px; box-shadow: 0 0 0 3px var(--s1), 0 0 14px var(--ac-reward); }
+.c3-node.is-sel .nd-medal { box-shadow: 0 0 0 3px var(--s1), 0 0 0 5px var(--ac-info); }
+.c3-node.is-fog { opacity: 0.45; cursor: default; }
+.c3-node.is-fog::after { content: '?'; position: absolute; font-size: var(--t-md); color: var(--tx-2); }
+.c3-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--tx-3); border: 2px solid var(--s1); }
+.c3-node.is-own .c3-dot { background: var(--mat-gilded-edge); }
+.c3-node:focus-visible { outline: 2px solid var(--ac-info); outline-offset: 2px; }
+
+.c3-detail { margin-bottom: var(--sp-3); padding: var(--sp-3); font-size: var(--t-sm); color: var(--tx-1); background: var(--s1); border: 1px solid var(--hairline); border-radius: var(--r-md); }
+.c3-hint { color: var(--tx-2); }
+.c3-dname { font-family: var(--font-display); font-size: var(--t-md); color: var(--gold-bright); margin-bottom: var(--sp-1); }
+.c3-dtype { margin-left: var(--sp-1); font-family: inherit; font-size: var(--t-xs); color: var(--tx-2); }
+.c3-dline { margin: var(--sp-1) 0; color: var(--tx-1); }
+.c3-ok { color: var(--ac-success); }
+.c3-bad { color: var(--ac-threat); }
+.c3-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.c3-acts .demo-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.c3-shadow { margin-bottom: var(--sp-2); font-size: var(--t-sm); color: var(--tx-2); }
+.c3-shadow b { color: var(--ac-threat); }
+.c3-log { margin: 0 0 var(--sp-2); padding: 0; list-style: none; font-size: var(--t-xs); color: var(--tx-2); }
+.c3-log li { padding: var(--sp-1) 0; border-top: 1px dashed var(--hairline); }
+.c3-log i { font-style: normal; color: var(--tx-3); margin-right: var(--sp-1); }
+.c3-note { font-size: var(--t-xs); color: var(--tx-3); line-height: 1.4; }
