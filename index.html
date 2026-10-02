@@ -15,8 +15,8 @@
     <link rel="preload" href="fonts/Philosopher-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/Alegreya-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=124" />
-    <link rel="stylesheet" href="css/style.css?v=124" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=125" />
+    <link rel="stylesheet" href="css/style.css?v=125" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
@@ -58,50 +58,7 @@
     <div class="app-wrap">
       <div class="dungeon-bg"></div>
       <div class="light-rays"></div>
-      <div class="mist-layer" id="mistLayer">
-        <svg preserveAspectRatio="none" viewBox="0 0 1920 1080">
-          <defs>
-            <filter id="mist">
-              <feTurbulence
-                type="fractalNoise"
-                baseFrequency="0.008"
-                numOctaves="3"
-                seed="5"
-              />
-              <feColorMatrix
-                values="0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.75  0 0 0 0.5 0"
-              />
-              <feGaussianBlur stdDeviation="20" />
-            </filter>
-            <filter id="mist2">
-              <feTurbulence
-                type="fractalNoise"
-                baseFrequency="0.004"
-                numOctaves="2"
-                seed="13"
-              />
-              <feColorMatrix
-                values="0 0 0 0 0.7  0 0 0 0 0.6  0 0 0 0 0.8  0 0 0 0.3 0"
-              />
-              <feGaussianBlur stdDeviation="30" />
-            </filter>
-          </defs>
-          <rect
-            id="mistRect1"
-            width="100%"
-            height="100%"
-            filter="url(#mist)"
-            opacity="0.5"
-          />
-          <rect
-            id="mistRect2"
-            width="100%"
-            height="100%"
-            filter="url(#mist2)"
-            opacity="0.3"
-          />
-        </svg>
-      </div>
+      <div class="mist-layer" id="mistLayer" aria-hidden="true"></div>
       <canvas id="dustCanvas"></canvas>
       <div class="torch-flicker"></div>
       <canvas id="particles"></canvas>
@@ -1627,18 +1584,18 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=124" defer></script>
-    <script src="js/perf-compat.js?v=124" defer></script>
-    <script src="js/event-bus.js?v=124" defer></script>
-    <script src="js/audio.js?v=124" defer></script>
-    <script src="js/telemetry.js?v=124" defer></script>
-    <script src="js/stronghold-data.js?v=124" defer></script>
-<script src="js/state-guards.js?v=124" defer></script>
-    <script src="js/storage.js?v=124" defer></script>
-    <script src="js/stronghold-model.js?v=124" defer></script>
-    <script src="js/state/store.js?v=124" defer></script>
-    <script src="js/remote-config.js?v=124" defer></script>
-    <script src="js/ui/strongholds.js?v=124" defer></script>
-    <script src="js/app.js?v=124" defer></script>
+    <script src="js/perf.js?v=125" defer></script>
+    <script src="js/perf-compat.js?v=125" defer></script>
+    <script src="js/event-bus.js?v=125" defer></script>
+    <script src="js/audio.js?v=125" defer></script>
+    <script src="js/telemetry.js?v=125" defer></script>
+    <script src="js/stronghold-data.js?v=125" defer></script>
+<script src="js/state-guards.js?v=125" defer></script>
+    <script src="js/storage.js?v=125" defer></script>
+    <script src="js/stronghold-model.js?v=125" defer></script>
+    <script src="js/state/store.js?v=125" defer></script>
+    <script src="js/remote-config.js?v=125" defer></script>
+    <script src="js/ui/strongholds.js?v=125" defer></script>
+    <script src="js/app.js?v=125" defer></script>
   </body>
 </html>

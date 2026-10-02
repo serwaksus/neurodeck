@@ -105,8 +105,6 @@ radial-gradient(ellipse 300px 700px at 70% 0%, rgba(255, 240, 200, 0.12), transp
 radial-gradient(ellipse 200px 500px at 50% 0%, rgba(255, 245, 220, 0.08), transparent 70%);
 mix-blend-mode: screen;
 }
-.mist-layer { position: fixed; inset: -50px; z-index: 2; pointer-events: none; opacity: var(--mist-opacity); transition: opacity 1.5s; mix-blend-mode: screen; }
-.mist-layer svg { width: 100%; height: 100%; }
 .torch-flicker {
 position: fixed; inset: 0; z-index: 3;
 pointer-events: none;
@@ -1030,8 +1028,6 @@ h1, h2, h3, .view-title, .modal-header h3,
 .hero-avatar { font-size: 64px !important; }
 
 /* ---- У2.1: Параллакс тумана (2 слоя, разные скорости) ---- */
-.mist-layer { will-change: transform; }
-.mist-layer svg { transition: transform 0.1s linear; }
 body::before {
   content: '';
   position: fixed;
@@ -2094,3 +2090,30 @@ button.dash-stat:hover { border-color: var(--ac-reward); }
 .sh-tile.locked .nd-medal { filter: grayscale(0.9); opacity: 0.6; }
 .sh-build-icon .nd-medal { width: 38px; height: 38px; border-width: 1.5px; }
 .sh-tile-icon .nd-medal { width: 54px; height: 54px; }
+
+/* ================================================================
+   ATMOSPHERE v3 (визуал-план, фаза 4): туман — готовая текстура вместо полноэкранных SVG-фильтров; свет по вкладкам;
+   прогрессия «из мрака к свету» по числу захваченных твердынь (без новых данных в сейве).
+   ================================================================ */
+.mist-layer { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; opacity: var(--mist-opacity); transition: opacity 1.5s; mix-blend-mode: screen; }
+.mist-layer::before, .mist-layer::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; background: url(../img/fog.webp) 0 0 / 768px 768px repeat; }
+.mist-layer::before { width: calc(100% + 768px); opacity: 0.8; }
+.mist-layer::after { width: calc(100% + 1152px); background-size: 1152px 1152px; opacity: 0.5; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.effects-off) .mist-layer::before { animation: fogDriftA 140s linear infinite; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.effects-off) .mist-layer::after { animation: fogDriftB 220s linear infinite reverse; }
+}
+@keyframes fogDriftA { to { transform: translate3d(-768px, 0, 0); } }
+@keyframes fogDriftB { to { transform: translate3d(-1152px, 0, 0); } }
+
+/* свет по вкладкам: каждая комната — свой оттенок нижнего свечения (кузня / стол карт / алтарь / сокровищница) */
+body { --amb-h: 24; --amb-s: 60%; }
+body[data-view="strongholds"] { --amb-h: 212; --amb-s: 38%; }
+body[data-view="hero"] { --amb-h: 268; --amb-s: 34%; }
+body[data-view="inv"] { --amb-h: 42; --amb-s: 62%; }
+body[data-view="stats"] { --amb-h: 200; --amb-s: 18%; }
+body[data-view="quests"] { --amb-h: 32; --amb-s: 55%; }
+.app-wrap { background:
+  radial-gradient(ellipse at 50% 100%, hsla(calc(var(--amb-h) + var(--atmosphere-hue)), var(--amb-s), calc(8% + var(--atmosphere-light) * 0.15), 0.6), transparent 60%),
+  radial-gradient(ellipse at 20% 20%, hsla(calc(280 + var(--atmosphere-hue)), 40%, calc(6% + var(--atmosphere-light) * 0.1), 0.4), transparent 50%),
+  linear-gradient(180deg, var(--s1) 0%, var(--s0) 100%); }

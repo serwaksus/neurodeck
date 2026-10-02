@@ -1920,6 +1920,7 @@ if (tabEl) tabEl.classList.add('active');
 if (bnavEl) bnavEl.classList.add('active');
 var _dsTarget = document.getElementById('view-' + view);
 _dsTarget.classList.add('active');
+try { document.body.dataset.view = view; } catch (e) {} // свет по вкладкам (CSS body[data-view])
 try {
     var _dsTo = VIEW_ORDER.indexOf(view);
     if (_dsFrom > -1 && _dsTo !== _dsFrom) {
@@ -3719,8 +3720,17 @@ function buildingBreakdownHtml(idx, bid) {
 	else if (b.dUpkeep !== 0 || b.dIncome !== 0) parts.push('⏳ ' + b.cost + '💰 золотом не окупается');
 	return parts.length ? '<div class="sh-tile-break">' + parts.join(' · ') + '</div>' : '';
 }
+function applyKingdomAtmosphere(n) { // визуал-план фаза 4: чем больше твердынь, тем светлее и теплее мир (мрак → свет); 0..20 → 4 ступени, плавно
+    try {
+        var f = Math.max(0, Math.min(1, (n || 0) / 20)), r = document.documentElement.style;
+        r.setProperty('--atmosphere-light', String(Math.round(f * 30)));
+        r.setProperty('--light-rays-opacity', (f * 0.35).toFixed(2));
+        r.setProperty('--torch-intensity', (0.3 + f * 0.4).toFixed(2));
+    } catch (e) {}
+}
 function updateStrongholdProgress() {
 var n = capturedCount();
+applyKingdomAtmosphere(n);
 var el = document.getElementById('progressVal');
 if (el) el.textContent = n + '/' + STRONGHOLDS.length;
 var chip = document.getElementById('seasonChip');
@@ -6091,16 +6101,7 @@ if (fillEl) fillEl.style.width = pct + '%';
 const sliderEl = document.getElementById('progressSlider');
 if (sliderEl) sliderEl.setAttribute('aria-valuenow', String(Math.round(pct)));
 }
-document.addEventListener('mousemove', (e) => {
-if (ecoOn()) return;
-const r1 = document.getElementById('mistRect1');
-const r2 = document.getElementById('mistRect2');
-if (!r1 || !r2) return;
-const x = (e.clientX / window.innerWidth - 0.5) * 40;
-const y = (e.clientY / window.innerHeight - 0.5) * 25;
-r1.setAttribute('transform', 'translate(' + x + ', ' + y + ')');
-r2.setAttribute('transform', 'translate(' + (-x * 0.5) + ', ' + (-y * 0.5) + ')');
-});
+// туман — готовая бесшовная текстура img/fog.webp, дрейф чистым CSS-transform (прежний SVG feTurbulence+blur на весь экран и parallax по mousemove убраны)
 var pendingOnboarding = false;
 function hintOnce(key, text) {
 var flag = null;

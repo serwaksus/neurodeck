@@ -110,11 +110,12 @@ function seedWithRanks() {
     s.forgedIdCounter = 300;
     return s;
 }
-async function bootSeed(page, seed, viewport) {
+async function bootSeed(page, seed, viewport, fx) {
     await page.setViewportSize(viewport || { width: 390, height: 844 });
     await page.route('**/telegram-web-app.js', (r) => r.abort());
-    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.emulateMedia({ reducedMotion: fx ? 'no-preference' : 'reduce' });
     await page.addInitScript(SEED_IN_PAGE, JSON.stringify(seed));
+    if (fx) await page.addInitScript(() => { localStorage.setItem('neurodeck_perf_mode', 'auto'); }); // полные эффекты: иначе eco прячет туман
     await page.addInitScript(() => { localStorage.setItem('nd_force_compact', '1'); }); // в webdriver сжатие шапки выключено по умолчанию
     await page.goto('/');
     await page.waitForSelector('.app-wrap');
@@ -223,4 +224,37 @@ test('Фаза 3: «Твердыни» — порядок: казна → кар
     expect(r.anchor.join('|')).toContain('Гнев:');
     expect(r.assaultH).toBeGreaterThanOrEqual(44);
     expect(r.over).toBeLessThanOrEqual(1);
+});
+
+// ---------- Атмосфера v3 ----------
+test('Фаза 4: туман — текстура, а не SVG-фильтры; свет меняется по вкладкам; мир светлеет с числом твердынь', async ({ page }) => {
+    const reqs = [];
+    page.on('request', (r) => { if (r.url().includes('fog.webp')) reqs.push(r.url()); });
+    const poor = seedWithRanks();
+    await bootSeed(page, poor, null, true);
+    const r = await page.evaluate(() => ({
+        svgInMist: document.querySelectorAll('#mistLayer svg, #mistLayer feTurbulence, #mistRect1').length,
+        bg: getComputedStyle(document.getElementById('mistLayer'), '::before').backgroundImage,
+        light: getComputedStyle(document.documentElement).getPropertyValue('--atmosphere-light').trim(),
+    }));
+    expect(r.svgInMist).toBe(0);
+    expect(r.bg).toContain('fog.webp');
+    expect(reqs.length, 'текстура тумана загружена').toBeGreaterThan(0);
+    const hues = {};
+    for (const v of ['deck', 'strongholds', 'hero', 'inv']) {
+        await page.evaluate((vv) => document.querySelector('.bnav-btn[data-view="' + vv + '"]').click(), v);
+        hues[v] = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--amb-h').trim());
+    }
+    expect(new Set(Object.values(hues)).size, 'у каждой вкладки свой оттенок: ' + JSON.stringify(hues)).toBe(4);
+    // прогрессия: 0 твердынь → тьма, 10 → светлее
+    const rich = seedWithRanks();
+    for (let i = 0; i < 10; i++) rich.strongholds[i].captured = true;
+    const p2 = await page.context().newPage();
+    await p2.route('**/telegram-web-app.js', (x) => x.abort());
+    await p2.addInitScript(SEED_IN_PAGE, JSON.stringify(rich));
+    await p2.goto('/');
+    await p2.waitForTimeout(2500);
+    const l2 = await p2.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--atmosphere-light')));
+    expect(l2).toBeGreaterThan(Number(r.light || 0));
+    expect(l2).toBe(15);
 });
