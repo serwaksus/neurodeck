@@ -288,7 +288,7 @@ test('P17 экономика: превью казны == тик (единая ф
 // ================================================================
 
 function siegeDecls() {
-    return [extractFn('lastCapturedIdx'), extractFn('applyStackLoss'), extractFn('ruinAllBuildings'), extractFn('runWeeklySiege')];
+    return [extractFn('lastCapturedIdx'), extractFn('applyStackLoss'), extractFn('ruinAllBuildings'), extractFn('siegeWrathCap'), extractFn('siegeWrathNow'), extractFn('runWeeklySiege')];
 }
 function runSiege(stubExtra) {
     const rec = { reports: [], chron: [], xp: [] };
@@ -300,6 +300,7 @@ function runSiege(stubExtra) {
         // capturedCount — ЖИВОЙ счётчик по состоянию: каскад осады пересчитывает его после падения
         capturedCount: () => stubs.strongholds.filter(function(s) { return s.captured; }).length,
         countGhostTasks: () => 0, approachWrathDeltaNow: () => 0, approachEnemyMultNow: () => 1,
+        techWrathWeekReduction: () => 0, // аудит 2.4: гнев осады считает siegeWrathNow (кап w6, Обряды s3)
         recalcHirePool: () => {},
         chronicleSiegeRows: (rows) => rec.chron.push(rows),
         showSiegeReport: (rows, wrath) => rec.reports.push({ rows: rows, wrath: wrath }),

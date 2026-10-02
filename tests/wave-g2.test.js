@@ -55,6 +55,7 @@ function bossEnv({ day = 'D1', capturedN = 20, hero = null, quests = null, goldG
         dailyQuests: quests, currentShIdx: null,
         showToast: (t, b, k) => calls.toast.push({ t: t, b: b, k: k }),
         sfxError: () => {}, sfxGoalComplete: () => {}, haptic: () => {}, saveSoon: () => {},
+        techArtifactMult: () => 1, // аудит 2.4: Реликварий (s2) подключён в bossArtifactMult
         renderStrongholdPanel: (i) => calls.panel.push(i)
     };
     const keys = Object.keys(stubs);

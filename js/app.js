@@ -2205,7 +2205,7 @@ function bossArtifactMult(kind, prov) { // провинциальные пасс
         if (HERO.bosses.pendingReward === a.num) continue; // C5: выбор ещё не сделан — пассив не активен
         if ((_rc[a.num] || 'artifact') !== 'artifact') continue; // легаси-дефолт: побеждённые до C5 сохраняют артефакт
         if ((kind === 'tax' || kind === 'attrition' || kind === 'def') && a.prov !== prov) continue;
-        return 1 + (base - 1) * half;
+        return 1 + (base - 1) * half * techArtifactMult(); // аудит 2.4: Реликварий (s2) усиливает пассив артефакта ×1.25
     }
     return 1;
 }
@@ -2485,10 +2485,10 @@ function techUpkeepMult() { return (hasTech('g2') ? 0.9 : 1) * (hasTech('g8') ? 
 function techGrowMult() { return hasTech('g3') ? 1.25 : 1; } // Г5-Т3 Ф1: функция (проводка recalcHirePool — Ф3)
 function techGraceBonus() { return hasTech('g4') ? 2 : 0; } // Г5-Т3 Ф1: функция (проводка grace — Ф3)
 function techXpMult() { return (hasTech('s1') ? 1.05 : 1) * (hasTech('s5') ? 1.15 : 1) * (hasTech('s7') ? 1.25 : 1); } // Г5-Т3 Ф1: функция (проводка completeCard — Ф3)
-function techArtifactMult() { return hasTech('s2') ? 1.25 : 1; } // Г5-Т3 Ф1: функция (проводка bossArtifactMult — Ф3)
-function techWrathWeekReduction() { return hasTech('s3') ? 1 : 0; } // Г5-Т3 Ф1: функция (проводка понедельника — Ф3)
-function techSeesSiege() { return hasTech('s4'); } // Г5-Т3 Ф1: функция (проводка siegeAlarmPreview — Ф3)
-function techFogPierceAlways() { return hasTech('s6'); } // Г5-Т3 Ф1: функция (проводка stanceFogPierce — Ф3)
+function techArtifactMult() { return hasTech('s2') ? 1.25 : 1; } // Г5-Т3: Реликварий; аудит 2.4: подключена в bossArtifactMult
+function techWrathWeekReduction() { return hasTech('s3') ? 1 : 0; } // Г5-Т3: Обряды Усмирения; аудит 2.4: подключена в siegeWrathNow
+function techSeesSiege() { return hasTech('s4'); } // Г5-Т3: Пророчества Вех; аудит 2.4: подключена в siegeAlarmPreview
+function techFogPierceAlways() { return hasTech('s6'); } // Г5-Т3: Око Ворона; подключена в stanceFogPierce
 function techPtsBonus() { return (hasTech('c7') ? 1 : 0) + (hasTech('s8') ? 1 : 0); } // Г5-Т3: Канцелярия + Корона Тьмы
 function techCorrSlow() { return hasTech('g6') ? 0.5 : 1; } // Г5-Т3 Ф1: функция (проводка corruptionTick — Ф3)
 function techTradeMult() { return (hasTech('e2') ? 1.4 : 1) * (hasTech('d6') ? 1.15 : 1); } // Г5-Т3: пути ×1.61 (кап 61.2%)
@@ -3058,7 +3058,7 @@ if (capturedCount() === 0) { // P19: команда siege-домена (inline-�
 if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/week-reset')) === true)) siege.week = 1;
 return;
 }
-var wrath = Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + approachWrathDeltaNow()); // C4: «Осада» — гнев +1
+var wrath = siegeWrathNow(); // аудит 2.4: тот же расчёт, что у превью (кап w6 = 7, Обряды s3 −1; «Осада» C4 — +1 гнев внутри)
 var rows = [];
 var fell = false;
 var hitMult = 1;
@@ -3147,7 +3147,7 @@ function checkCapturedRecovery() { // #49: счётчик сезона помн�
 function showSiegeReport(rows, wrath) {
 var modal = document.getElementById('siegeReportModal');
 if (!modal) return;
-var html = '<div class="sh-siege-wrath">😤 Гнев: ' + wrath + '/10 · призраки задач и пропуски усилили удар</div>';
+var html = '<div class="sh-siege-wrath">😤 Гнев: ' + wrath + '/' + siegeWrathCap() + ' · призраки задач и пропуски усилили удар</div>';
 if (!rows.length) html += '<div class="empty-state">Враг не пришёл.</div>';
 rows.forEach(function(r) {
 if (r.refuge) html += '<div class="sh-siege-row refuge">🏰 <b>' + esc(r.name) + '</b> — прибежище восстановлено (анти-тупик): гарнизон 0, постройки в руине. Путь возврата открыт.</div>';
@@ -3734,7 +3734,11 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 // Ревизия 30.09 (economy-sim аудит): раньше суббота давала 7, а ветка d===0 («Осада сегодня»)
 // была недостижима — тост срабатывал только по четвергам. Теперь: Вс→0, Пн→6 … Пт→2, Сб→1.
 function daysToSiegeNow(ts) { var dow = new Date((ts || Date.now()) + 3 * 3600000).getUTCDay(); return dow === 0 ? 0 : 7 - dow; }
-function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + ((typeof approachWrathDeltaNow === 'function') ? approachWrathDeltaNow() : 0)); } // Г5-Т2: Железный Закон — кап гнева 7; C4: «Осада» честно показывает +1 гнев (typeof-гвард: extract-харнессы тянут функцию поодиночке)
+function siegeWrathCap() { return hasTech('w6') ? 7 : 10; } // Г5-Т2: Железный Закон — кап гнева 7; экраны («Гнев: N/кап») и расчёт читают одно число
+function siegeWrathNow() { // аудит 2.4: ЕДИНЫЙ расчёт гнева — экран, тревога, превью и сама осада (runWeeklySiege) берут его же
+  var raw = 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + ((typeof approachWrathDeltaNow === 'function') ? approachWrathDeltaNow() : 0); // C4: «Осада» честно показывает +1 гнев (typeof-гвард: extract-харнессы тянут функцию поодиночке)
+  return Math.max(0, Math.min(siegeWrathCap(), raw) - techWrathWeekReduction()); // Г5-Т3: Обряды Усмирения −1 (раньше вычиталось из уже обнулённых в понедельник счётчиков — не работало)
+}
 /* ===================== Г4 «Total War: управление провинциями» — ядро (чистые функции) ===================== */
 function ensureSeasonFields(k) { var s = ensureSeason(); if (k) { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; } return s; } // Г4: материализуем ТОЛЬКО записываемый контейнер — байт-стабильный раундтрип сейвов
 function provKey(p) { return String(p); }
@@ -3997,7 +4001,7 @@ function siegeAlarmPreview() { // Ф1: превью сил следующей о
     def = Math.round(def);
     var _sw = weatherSeasonWeek();
     var _known = scoutFresh(HERO.scouts, getMSKDayKey()) === 'fresh' && HERO.scouts.idx === t; // Г2-3: свежая тень прокалывает туман
-    if (weatherFog(STRONGHOLDS[t].prov, _sw.sn, _sw.wk) && !_known && !stanceFogPierce()) return { power: '🌫 ?', def: def, ratio: null, advice: 'Туман: точная сила скрыта — отправь тень (50💰) или стойка Разведка' }; // Г2-2: туман; Г4: Разведка прокалывает
+    if (weatherFog(STRONGHOLDS[t].prov, _sw.sn, _sw.wk) && !_known && !stanceFogPierce() && !techSeesSiege()) return { power: '🌫 ?', def: def, ratio: null, advice: 'Туман: точная сила скрыта — отправь тень (50💰) или стойка Разведка' }; // Г2-2: туман; Г4: Разведка прокалывает
     return { power: power, def: def, ratio: def / power, advice: siegeAlarmVerdict(def / power) };
 }
 function checkSiegeAlarmToast() { // Ф1: тост+haptic в день N-2 и день N, однократно/день
@@ -5526,8 +5530,7 @@ showToast('🗓 Новая неделя', 'Путь продолжается', '
 recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
 runWeeklySiege();
 siege.approach = 'assault'; // P11: подход сгорает вместе с неделей — новая начинается со «Штурма» (поле в сейве, схема v14)
-siege.wkSkips = 0; siege.wkTaskFails = 0;
-  siege.wkSkips = Math.max(0, siege.wkSkips - techWrathWeekReduction()); siege.wkTaskFails = Math.max(0, siege.wkTaskFails - techWrathWeekReduction()); // Г5-Т3: Обряды Усмирения −1/нед к источникам гнева
+siege.wkSkips = 0; siege.wkTaskFails = 0; // Обряды Усмирения (s3) вычитаются в siegeWrathNow — из только что обнулённых счётчиков вычитать нечего
   siege.retriedThisWeek = false; // #95: контрштурм доступен снова
   Object.keys(TECH_ACTIVES).forEach(function(k) { delete TECH_ACTIVES[k]; }); // Г5-Т3 Ф2: приказы недели сгорают в понедельник
 if (siege.lastResult || siege.wkSkips > 0 || siege.wkTaskFails > 0) scheduleModal(showWeeklyReport, 2000); // Г5-Ф: пассивный отчёт только неделе с событиями — свежий бут не завешивает UI (гонка extended-e2e)

@@ -160,6 +160,7 @@ test('P5: provinceSiegeMult — превью осадной тревоги и т
             stubs: {
                 ensureStrongholdState: () => {}, capturedCount: () => 1, countGhostTasks: () => 0,
                 approachWrathDeltaNow: () => 0, lastCapturedIdx: () => 0,
+                siegeWrathNow: () => 0, // аудит 2.4: runWeeklySiege берёт гнев из единого siegeWrathNow
                 STRONGHOLDS: [{ total: 200, prov: 7, name: 'Синт' }],
                 strongholds: [{ captured: true, garrison: [{ tier: 't1', count: 2 }] }],
                 STATS: { end: { value: 3 } }, defBonusOf: () => 0,

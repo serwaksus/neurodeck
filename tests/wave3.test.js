@@ -59,7 +59,7 @@ test('wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка
 // ----------------------------------------------------------------
 test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio', () => {
     const p = buildIn({
-        decls: [extractFn('siegeWrathNow'), extractFn('siegeAlarmVerdict'), extractFn('weatherOf'), extractFn('weatherNorth'), extractFn('weatherSouth'), extractFn('weatherFog'), extractFn('weatherSeasonWeek'), extractFn('scoutFresh'), extractFn('daysBetween'), extractFn('siegeAlarmPreview')],
+        decls: [extractFn('siegeWrathCap'), extractFn('siegeWrathNow'), extractFn('siegeAlarmVerdict'), extractFn('weatherOf'), extractFn('weatherNorth'), extractFn('weatherSouth'), extractFn('weatherFog'), extractFn('weatherSeasonWeek'), extractFn('scoutFresh'), extractFn('daysBetween'), extractFn('siegeAlarmPreview')],
         stubs: {
             SM: {
                 siegePower: (front, week, cap, wrath) => Math.round(front * 0.6 * (1 + 0.12 * wrath)),
@@ -81,6 +81,7 @@ test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гар�
             ascEnemyMult: () => 1,
             weeklyModsNow: () => ({ income: 1, upkeep: 1, siege: 1 }), // C6-lite: стаб 2/20 захватов — вне эндгейма ротация нейтральна
             hasTech: () => false, // Г5-Т2: технологий нет в стабе — ×1 (гнев кап 10)
+            techWrathWeekReduction: () => 0, techSeesSiege: () => false, // аудит 2.4: s3/s4 подключены в siegeWrathNow/siegeAlarmPreview
             TECH_IDEA: null, // Г5-Т2: идея не выбрана
             ensureSeason: () => ({ num: 1 }),
             getMSKDayKey: () => '2026-01-01'
