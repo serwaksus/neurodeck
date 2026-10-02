@@ -52,10 +52,10 @@
             reset: function() { state = null; },
 
             // ----- хуки из app.js (все под enabled()) -----
-            onDeed: function(deed) { // deed: {kind:'habit'|'task', stat?, rank?}
+            onDeed: function(deed) { // deed: {kind:'habit', stat, rank} | {kind:'task', sphere?}
                 if (!ensure()) return null;
-                var d = { kind: deed.kind, sphere: deed.kind === 'habit' ? (D.SPHERE_OF_STAT[deed.stat] || null) : 'body', rank: deed.rank };
-                var r = M.applyDeed(state, d);
+                var sphere = deed.kind === 'habit' ? (D.SPHERE_OF_STAT[deed.stat] || null) : (D.SPHERES.indexOf(deed.sphere) >= 0 ? deed.sphere : 'mind');
+                var r = M.applyDeed(state, { kind: deed.kind, sphere: sphere, rank: deed.rank });
                 if (r.comeback) env.toast('🗺 Возвращение', 'Первое дело после перерыва даёт ×2 очков движения');
                 env.render();
                 return r;
@@ -87,15 +87,17 @@
 
             // ----- действия игрока (UI) -----
             act: {
-                travel: function(node) { if (!ensure()) return null; var r = M.travel(state, node); env.save(); env.render(); return r; },
-                engage: function(node) {
+                travel: function(h, node) { if (!ensure()) return null; var r = M.travel(state, h, node); env.save(); env.render(); return r; },
+                engage: function(h, node) {
                     if (!ensure()) return null;
-                    var r = M.engage(state, node); env.save(); env.render();
+                    var r = M.engage(state, h, node); env.save(); env.render();
                     if (r.ok) env.toast(r.win ? '⚔ Победа' : '💢 Штурм отбит', state.log.length ? state.log[state.log.length - 1].t : '', r.win ? 'save' : 'blood');
                     return r;
                 },
-                hire: function(tier, n) { if (!ensure()) return null; var r = M.hire(state, tier, n); env.save(); env.render(); return r; },
-                forge: function() { if (!ensure()) return null; var r = M.buyForge(state); env.save(); env.render(); return r; }
+                hire: function(h, tier, n) { if (!ensure()) return null; var r = M.hire(state, h, tier, n); env.save(); env.render(); return r; },
+                hall: function(h) { if (!ensure()) return null; var r = M.buyHall(state, h); env.save(); env.render(); return r; },
+                dwelling: function(h, tier) { if (!ensure()) return null; var r = M.buildDwelling(state, h, tier); env.save(); env.render(); return r; },
+                gather: function(from, to) { if (!ensure()) return null; var r = M.transferAll(state, from, to); env.save(); env.render(); return r; }
             }
         };
         return api;

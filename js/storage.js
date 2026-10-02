@@ -1251,7 +1251,9 @@ TASKS = data.tasks.filter(function(t) {
 return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&
 ['active', 'done', 'ghost', 'chest_open'].indexOf(t.status) >= 0;
 }).map(function(t, i) {
-return { id: (Number.isFinite(Number(t.id)) && Number(t.id) >= 1) ? Math.min(1000000000, Math.round(Number(t.id))) : (i + 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: safeTs(t.deadline), status: t.status, createdAt: safeTs(t.createdAt, Date.now()), doneAt: safeTs(t.doneAt), ghostSince: safeTs(t.ghostSince) };
+var _tk = { id: (Number.isFinite(Number(t.id)) && Number(t.id) >= 1) ? Math.min(1000000000, Math.round(Number(t.id))) : (i + 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: safeTs(t.deadline), status: t.status, createdAt: safeTs(t.createdAt, Date.now()), doneAt: safeTs(t.doneAt), ghostSince: safeTs(t.ghostSince) };
+if (['body', 'mind', 'spirit', 'ties'].indexOf(t.sphere) >= 0) _tk.sphere = t.sphere; // кампания 3.0: сфера задачи (лениво — старые сейвы байт-стабильны)
+return _tk;
 });
 }
 TASKS = TASKS.filter(function(t, i) { return TASKS.findIndex(function(x) { return x.id === t.id; }) === i; });

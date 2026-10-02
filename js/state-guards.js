@@ -432,36 +432,40 @@
         return out;
     }
 
-    // Кампания 3.0, Ф1: состояние среза c3 (9 узлов). Невосстановимое → null (рантайм начнёт срез заново).
+    // Кампания 3.0, Ф2: состояние c3 (33 узла, 4 героя-сферы). Невосстановимое (в т.ч. v1 среза Ф1) → null: рантайм начнёт карту заново.
     function sanitizeC3(input) {
         if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
-        var N = 9, DATE = /^\d{4}-\d{2}-\d{2}$/;
-        if (typeof input.own !== 'string' || !/^[012]{9}$/.test(input.own) || typeof input.day !== 'string' || !DATE.test(input.day)) return null;
-        function num(v, lo, hi, d) { return clampNumber(v, lo, hi, d); }
+        var N = 33, DATE = /^\d{4}-\d{2}-\d{2}$/;
+        if (input.v !== 2 || typeof input.own !== 'string' || input.own.length !== N || !/^[012]+$/.test(input.own) || typeof input.day !== 'string' || !DATE.test(input.day)) return null;
         function int(v, lo, hi, d) { return Math.round(clampNumber(v, lo, hi, d)); }
-        var src = input, hero = (src.hero && typeof src.hero === 'object') ? src.hero : {}, army = (hero.army && typeof hero.army === 'object') ? hero.army : {};
-        var res = (src.res && typeof src.res === 'object') ? src.res : {}, town = (src.town && typeof src.town === 'object') ? src.town : {};
-        var pool = (town.pool && typeof town.pool === 'object') ? town.pool : {}, pend = (src.pend && typeof src.pend === 'object') ? src.pend : {};
-        var fac = (src.fac && typeof src.fac === 'object') ? src.fac : {};
-        var gar = [], sh = [], i;
-        for (i = 0; i < N; i++) gar.push(int(Array.isArray(src.gar) ? src.gar[i] : 0, 0, 100000, 0));
-        for (i = 0; i < 7; i++) sh.push(num(Array.isArray(fac.sh) ? fac.sh[i] : 0, 0, 100, 0));
-        var log = (Array.isArray(src.log) ? src.log : []).slice(-5).filter(function(e) { return e && typeof e === 'object'; }).map(function(e) {
+        function arr(a, len, lo, hi, d) { var out = []; for (var i = 0; i < len; i++) out.push(int(Array.isArray(a) ? a[i] : d, lo, hi, d)); return out; }
+        var src = input, res = (src.res && typeof src.res === 'object') ? src.res : {}, pend = (src.pend && typeof src.pend === 'object') ? src.pend : {};
+        var fac = (src.fac && typeof src.fac === 'object') ? src.fac : {}, i;
+        var heroes = [], towns = [];
+        for (i = 0; i < 4; i++) {
+            var h = (Array.isArray(src.heroes) && src.heroes[i] && typeof src.heroes[i] === 'object') ? src.heroes[i] : {};
+            var army = (h.army && typeof h.army === 'object') ? h.army : {};
+            heroes.push({ node: int(h.node, 0, N - 1, 8 * i), lvl: int(h.lvl, 1, 99, 1), xp: int(h.xp, 0, 100000, 0),
+                army: { t1: int(army.t1, 0, 1e6, 0), t3: int(army.t3, 0, 1e6, 0), t5: int(army.t5, 0, 1e6, 0) } });
+            var t = (Array.isArray(src.towns) && src.towns[i] && typeof src.towns[i] === 'object') ? src.towns[i] : {};
+            var pool = (t.pool && typeof t.pool === 'object') ? t.pool : {}, dw = (t.dw && typeof t.dw === 'object') ? t.dw : {};
+            towns.push({ pool: { t1: int(pool.t1, 0, 1000, 0), t3: int(pool.t3, 0, 1000, 0), t5: int(pool.t5, 0, 1000, 0) },
+                dw: { t3: dw.t3 ? 1 : 0, t5: (dw.t3 && dw.t5) ? 1 : 0 }, hall: int(t.hall, 0, 3, 0) });
+        }
+        var sh = []; for (i = 0; i < 7; i++) sh.push(clampNumber(Array.isArray(fac.sh) ? fac.sh[i] : 0, 0, 100, 0));
+        var log = (Array.isArray(src.log) ? src.log : []).slice(-6).filter(function(e) { return e && typeof e === 'object'; }).map(function(e) {
             return { d: DATE.test(String(e.d)) ? e.d : src.day, t: safeString(e.t, '', 90) };
         });
-        var own = '1' + src.own.slice(1); // город всегда игрока
+        var own = src.own; // города (индексы 0, 8, 16, 24) всегда игрока
+        [0, 8, 16, 24].forEach(function(c) { own = own.slice(0, c) + '1' + own.slice(c + 1); });
         return {
-            v: 1, day: src.day, wk: int(src.wk, 0, 520, 0),
-            ap: int(src.ap, 0, 20, 0), apDay: int(src.apDay, 0, 6, 0), apWeek: int(src.apWeek, 0, 1000, 0),
+            v: 2, day: src.day, wk: int(src.wk, 0, 520, 0), idle: int(src.idle, 0, 100000, 0), bc: int(src.bc, 0, 10000000, 0),
             tasksToday: int(src.tasksToday, 0, 5, 0), deedsToday: int(src.deedsToday, 0, 1000, 0),
-            idle: int(src.idle, 0, 100000, 0), bc: int(src.bc, 0, 10000000, 0),
+            ap: arr(src.ap, 4, 0, 20, 0), apDay: arr(src.apDay, 4, 0, 6, 0), apWeek: arr(src.apWeek, 4, 0, 1000, 0),
             pend: { s: int(pend.s, 0, 1000, 0), h: int(pend.h, 0, 1000, 0), o: int(pend.o, 0, 1000, 0) },
-            res: { g: int(res.g, 0, 1e9, 0), s: int(res.s, 0, 1e6, 0) },
-            hero: { node: int(hero.node, 0, N - 1, 0), lvl: int(hero.lvl, 1, 99, 1), xp: int(hero.xp, 0, 100000, 0),
-                army: { t1: int(army.t1, 0, 1e6, 0), t3: int(army.t3, 0, 1e6, 0) } },
-            own: own, seen: (typeof src.seen === 'string' && /^[01]{9}$/.test(src.seen)) ? src.seen : '0'.repeat(N), gar: gar,
-            town: { pool: { t1: int(pool.t1, 0, 1000, 0), t3: int(pool.t3, 0, 1000, 0) }, forge: int(town.forge, 0, 3, 0) },
-            fac: { sh: sh }, log: log, done: src.done === true
+            res: { g: int(res.g, 0, 1e9, 0), st: int(res.st, 0, 1e6, 0), kn: int(res.kn, 0, 1e6, 0), wl: int(res.wl, 0, 1e6, 0), in: int(res['in'], 0, 1e6, 0) },
+            heroes: heroes, own: own, seen: (typeof src.seen === 'string' && src.seen.length === N && /^[01]+$/.test(src.seen)) ? src.seen : '0'.repeat(N),
+            gar: arr(src.gar, N, 0, 100000, 0), towns: towns, fac: { sh: sh }, log: log, done: src.done === true
         };
     }
 
@@ -565,7 +569,7 @@
         sanitizeSiege: sanitizeSiege,
         sanitizeHirePool: sanitizeHirePool,
         sanitizeSeason: sanitizeSeason,
-        sanitizeC3: sanitizeC3, // Кампания 3.0, Ф1
+        sanitizeC3: sanitizeC3, // Кампания 3.0, Ф2
         sanitizeDailyQuests: sanitizeDailyQuests,
         sanitizeBloodOath: sanitizeBloodOath,
         sanitizeStorm: sanitizeStorm // Г1-5

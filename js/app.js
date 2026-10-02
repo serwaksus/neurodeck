@@ -247,6 +247,7 @@ break;
 case 'open-task-modal': openTaskModal(); break;
 case 'close-task-modal': closeTaskModal(); break;
 case 'select-task-tier': selectedTaskTier = el.dataset.tier; updateTaskTierSelection(); break;
+case 'select-task-sphere': selectedTaskSphere = el.dataset.sphere; updateTaskSphereSelection(); break; // кампания 3.0
 case 'create-task': createTask(); break;
 case 'complete-task': completeTask(parseInt(el.dataset.id)); break;
 case 'claim-task-gold': claimTaskChest(parseInt(el.dataset.id), 'gold'); break;
@@ -4530,6 +4531,12 @@ urgent: { icon: '🔥', name: 'Срочная', color: '#c73e4d', gold: 20, xp: 
 let TASKS = [];
 let taskIdCounter = 1;
 let selectedTaskTier = 'normal';
+let selectedTaskSphere = 'mind'; // кампания 3.0: сфера задачи (по умолчанию Разум)
+function updateTaskSphereSelection() {
+    var row = document.getElementById('taskSphereRow');
+    if (row) row.hidden = !(window.NDC3 && NDC3.enabled()); // выбор сферы виден только при включённой кампании 3.0
+    document.querySelectorAll('#taskSphereChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c.dataset.sphere === selectedTaskSphere); });
+}
 function findTask(id) { return TASKS.find(function(t) { return t.id === id; }); }
 function countGhostTasks() { return TASKS.filter(function(t) { return t.status === 'ghost'; }).length; }
 function updateTaskTierSelection() { document.querySelectorAll('#taskTierChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c.dataset.tier === selectedTaskTier); }); }
@@ -4538,14 +4545,14 @@ document.getElementById('taskModal').classList.add('show');
 var d = getMSKDate();
 document.getElementById('taskDeadline').value = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
 document.getElementById('taskDeadlineTime').value = '19:00';
-updateTaskTierSelection();
+updateTaskTierSelection(); updateTaskSphereSelection();
 setTimeout(function() { document.getElementById('taskName').focus(); }, 100);
 }
 function closeTaskModal() {
 document.getElementById('taskModal').classList.remove('show');
 document.getElementById('taskName').value = '';
-selectedTaskTier = 'normal';
-updateTaskTierSelection();
+selectedTaskTier = 'normal'; selectedTaskSphere = 'mind';
+updateTaskTierSelection(); updateTaskSphereSelection();
 }
 function createTask() {
 var name = validDisplayText(document.getElementById('taskName').value, 120);
@@ -4555,6 +4562,7 @@ var timeVal = document.getElementById('taskDeadlineTime').value || '19:00';
 var deadline = dateVal ? new Date(dateVal + 'T' + timeVal + ':00').getTime() : null;
 if (deadline && isNaN(deadline)) deadline = null;
 TASKS.unshift({ id: taskIdCounter++, name: name, tier: selectedTaskTier, deadline: deadline, status: 'active', createdAt: Date.now(), doneAt: null, ghostSince: null });
+if (window.NDC3 && NDC3.enabled()) TASKS[0].sphere = selectedTaskSphere; // кампания 3.0: задача идёт герою своей сферы
 closeTaskModal(); renderTasks(); renderDashboard(); saveGameState();
 sfxForge(); haptic('medium');
 showToast('📋 Задача поставлена', TASK_TIERS[selectedTaskTier].name + ': ' + name, 'save');
@@ -4567,7 +4575,7 @@ if (t.name.indexOf('🔥 Восстание:') === 0) {
   if (!_ok) { showToast('🔥 Мятеж ещё бушует', 'Восстанови ≥2 постройки в мятежной провинции — тогда штраф снимут.', 'blood'); sfxError(); return; }
 }
 t.status = 'done'; t.doneAt = Date.now();
-if (window.NDC3 && NDC3.enabled() && t.name.indexOf('🔥 Восстание:') !== 0) NDC3.onDeed({ kind: 'task' }); // кампания 3.0
+if (window.NDC3 && NDC3.enabled() && t.name.indexOf('🔥 Восстание:') !== 0) NDC3.onDeed({ kind: 'task', sphere: t.sphere }); // кампания 3.0: ОД герою сферы задачи
 HERO.lastActiveDay = getMSKDayKey(); // #19: активность дня
 sfxGoalComplete(); haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: '#fbbf24', speed: 10, decay: 0.01, size: 3, shape: 'star', gravity: 0.08 });
