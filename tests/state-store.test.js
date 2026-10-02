@@ -195,8 +195,10 @@ test('P18 подключение: store.js грузится в index.html до a
     const storePos = html.indexOf('js/state/store.js');
     const appPos = html.indexOf('js/app.js');
     assert.ok(storePos > -1 && appPos > storePos, 'store.js грузится раньше app.js');
-    assert.ok(sw.includes("'js/state/store.js?v=103'"), 'store.js в прекэше SW (ре-пин v102 (P22 game feel); v101 (P21); v100 — P20)');
-    assert.ok(/VERSION = 'nd-shell-v103'/.test(sw), 'SW-версия бампнута');
+    const pin = (html.match(/js\/state\/store\.js\?v=(\d+)/) || [])[1];
+    assert.ok(pin, 'store.js подключён в index.html с пином ?v=');
+    assert.ok(sw.includes("'js/state/store.js?v=" + pin + "'"), 'store.js в прекэше SW с тем же пином, что в index.html');
+    assert.ok(sw.includes("'nd-shell-v" + pin + "'"), 'SW-версия бампнута вместе с пинами');
 });
 
 test('P18→P19 app.js: адаптер чтения + команды write-потоков; тик/осада/штурм — inline-гварды стора', () => {

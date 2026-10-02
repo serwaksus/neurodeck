@@ -248,7 +248,7 @@ test('Г1-3: source-контракты — синергии встроены в 
     assert.ok(extractFn('runWeeklySiege').indexOf('synergyDefMult') !== -1, 'гарнизон +5% в каскаде');
     assert.ok(extractFn('assaultForecast').indexOf('synergyAtkMult') !== -1, 'атака +5% в штурме');
     assert.ok(extractFn('requestTowerClimb').indexOf('synergyAtkMult') !== -1, 'атака +5% в башне');
-    assert.ok(extractFn('strongholdsDailyTick').indexOf('synergyEcMult') !== -1, 'тик: местный налог');
+    assert.ok(extractFn('strongholdsDailyTick').indexOf('shIncomePerDay()') !== -1, 'тик: доход — из единой формулы (аудит 2.2)');
     assert.ok(extractFn('shIncomePerDay').indexOf('synergyEcMult') !== -1, 'доход: местный налог');
     assert.ok(app.indexOf('✦ Синергия') !== -1, 'панель твердыни: строки синергий');
     assert.ok(extractFn('showTreasuryBreakdown').indexOf('Синергии') !== -1, 'разбивка казны: сводка синергий');

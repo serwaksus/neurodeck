@@ -2983,7 +2983,7 @@ hirePool = pool;
 }
 // День твердынь: налоги+эконом → содержание + коррапшн (upkeep первым, SPEC §6). Золото уже в HERO.gold.
 // P7: corruptionStepNow/corruptionTickOpts — единые параметры коррупшн-тика (step + upkeep-множители):
-// ночной тик, превью и аварийный ремонт считают одной формулой, без дублей.
+// ночной тик, превью (shUpkeepPerDay) и аварийный ремонт считают одной формулой, без дублей. Аудит 2.1: множитель >1 (метель, стойки) теперь реально списывается.
 function corruptionStepNow() {
 var stepOpt = hasSpecialOk('sp3') ? 4 : 2;
 return Math.max(1, Math.round((stepOpt + techGraceBonus()) * techCorrSlow())); // П3 → 4; Г5-Т3: grace +2, ветшание ×0.5
@@ -2999,32 +2999,9 @@ provinceUpkeepMult: (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i
 function strongholdsDailyTick() {
 ensureStrongholdState();
 if (!SM) return { income: 0, upkeep: 0, paid: true };
-var _sw = weatherSeasonWeek();
-var taxes = 0, econ = 0, market = 0, upkeep = 0, paid = true;
+var upkeep = 0, paid = true;
 var gold = HERO.gold || 0;
-strongholds.forEach(function(s, i) {
-if (!s.captured) return; // стартовый лагерь sh01 до захвата освобождён от содержания и коррапшна (решение совета)
-    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov) * (SM.provinceIncomeMult ? SM.provinceIncomeMult(STRONGHOLDS[i].prov) : 1)); // Г1-3/Г2-1/Г2-2; Г4: эдикт провинции; C3: правило провинции (Пепел +10% налог)
-builtList(i).forEach(function(id) {
-var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
-if (d.gold) econ += d.gold * m;
-if (d.market) market += d.market * m + techMarketBonus(); // Г5-Т3: Ярмарочные Площади
-});
-});
-var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) + techVirtualRoutes() : techVirtualRoutes(); // Г5-Т3: Старые Тропы +1
-    var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
-    if (hasTech('e2')) tBonus += 0.01 * tRoutes * techTradeMult() / 1.4; // Г5-Т: гильдии (×1.4 база учтена) + Консульства
-    taxes = Math.round(taxes * (1 + tBonus));
-    taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
-    taxes = Math.round(taxes * weeklyModsNow().income); // C6-lite: модификатор недели (эндгейм 20/20) — parity с превью
-    taxes = Math.round(taxes * totemGoldMult()); // Ф2: тотем Волк +5% золота тика
-    var _hol = holidayBonus(); if (_hol && _hol.tickMult) taxes = Math.round(taxes * _hol.tickMult); // #8: Новый год — казначейский кэшбэк ×1.5
-if (techOrderActive('sac')) taxes = Math.round(taxes * 1.3); // Г5-Т3 Ф2: Великая жатва ×1.3 на неделю
-    var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
-    income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% ВСЁ золото (и тик казны)
-    var _rm = 0, _pc = 0;
-    [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rm += provResourceMult(p); _pc++; } });
-    if (_pc > 0) income = Math.round(income * (_rm / _pc) * techIdeaMult()); // Г4: ресурсы +2%/ед; Г5-Т2: Путь Богатства ×1.15
+var income = shIncomePerDay(); // аудит 2.2: единая формула дохода — тик, превью, брейкдаун (P6) и прогноз руины (P7) читают одну функцию
 gold += income;
 dqProgress('gold', income);
 checkDailyGoldGoal(); // #71: тик тоже двигает цель дня
@@ -3616,44 +3593,49 @@ showToast('🌙 Тень ушла: ' + STRONGHOLDS[idx].name, 'Завтра пр
 haptic('light'); saveSoon();
 renderStrongholds();
 }
+// Аудит 2.2: ЕДИНАЯ формула дневного дохода королевства (SPEC §6 + волны Г1–Г5). Её вызывает ночной тик (strongholdsDailyTick),
+// она же даёт строку «Налоги», брейкдаун покупки (P6) и прогноз «до руины» (P7): расхождение превью/тика невозможно по построению
+// (раньше — две копии; в превью не хватало тотема, праздника, «Великой жатвы», Пути Богатства, techMarketBonus/VirtualRoutes/TradeMult).
 function shIncomePerDay() {
 ensureStrongholdState();
 var _sw = weatherSeasonWeek();
 var taxes = 0, econ = 0, market = 0;
 strongholds.forEach(function(s, i) {
-if (!s.captured) return;
-    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov) * (SM.provinceIncomeMult ? SM.provinceIncomeMult(STRONGHOLDS[i].prov) : 1)); // Г1-3/Г2-1/Г2-2; Г4: эдикт — parity с тиком; C3: правило провинции — parity с тиком
-        builtList(i).forEach(function(id) {
-            var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
-            if (d.gold) econ += d.gold * m;
-            if (d.market) market += d.market * m;
-        });
-    });
-    var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0;
-    var tB = (SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0) + (hasTech('e2') ? 0.01 * tRoutes : 0); // Г5-Т: parity с тиком
-    taxes = Math.round(taxes * (1 + tB));
-    taxes = Math.round(taxes * taxMultiplier()); // parity с тиком (восстановлено: утрачено при правке e2 — паритет контроль-теста)
-    taxes = Math.round(taxes * weeklyModsNow().income); // C6-lite: модификатор недели (эндгейм 20/20) — parity с тиком
+if (!s.captured) return; // стартовый лагерь sh01 до захвата освобождён от содержания и коррапшна (решение совета)
+    taxes += Math.round(STRONGHOLDS[i].tax * synergyEcMult(i) * bossArtifactMult('tax', STRONGHOLDS[i].prov) * weatherTaxMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * edictTaxMult(STRONGHOLDS[i].prov) * (SM.provinceIncomeMult ? SM.provinceIncomeMult(STRONGHOLDS[i].prov) : 1)); // Г1-3/Г2-1/Г2-2; Г4: эдикт провинции; C3: правило провинции (Пепел +10% налог)
+builtList(i).forEach(function(id) {
+var d = BUILDINGS[id], b = s.buildings[id], m = stageMult(b.corruptionStage);
+if (d.gold) econ += d.gold * m;
+if (d.market) market += d.market * m + techMarketBonus(); // Г5-Т3: Ярмарочные Площади
+});
+});
+var tRoutes = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) + techVirtualRoutes() : techVirtualRoutes(); // Г5-Т3: Старые Тропы +1
+    var tBonus = SM.tradeBonus ? SM.tradeBonus(tRoutes) : 0;
+    if (hasTech('e2')) tBonus += 0.01 * tRoutes * techTradeMult() / 1.4; // Г5-Т: гильдии (×1.4 база учтена) + Консульства
+    taxes = Math.round(taxes * (1 + tBonus));
+    taxes = Math.round(taxes * taxMultiplier()); // Ярмарка + венцы сезонов + Вечный трон
+    taxes = Math.round(taxes * weeklyModsNow().income); // C6-lite: модификатор недели (эндгейм 20/20)
+    taxes = Math.round(taxes * totemGoldMult()); // Ф2: тотем Волк +5% золота тика
+    var _hol = holidayBonus(); if (_hol && _hol.tickMult) taxes = Math.round(taxes * _hol.tickMult); // #8: Новый год — казначейский кэшбэк ×1.5
+if (techOrderActive('sac')) taxes = Math.round(taxes * 1.3); // Г5-Т3 Ф2: Великая жатва ×1.3 на неделю
     var income = Math.round((taxes + Math.round(econ)) * (1 + Math.min(0.5, market)));
-    income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% — parity с тиком (поймано контроль-тестом)
-    var _rm2 = 0, _pc2 = 0;
-    [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rm2 += provResourceMult(p); _pc2++; } });
-    if (_pc2 > 0) income = Math.round(income * (_rm2 / _pc2)); // Г4: ресурсы — parity с тиком
-    return income;
+    income = Math.round(income * doctrineCrownMult()); // Г1-2: корона +10% ВСЁ золото (и тик казны)
+    var _rm = 0, _pc = 0;
+    [1, 2, 3, 4].forEach(function(p) { if (provCapturedCount(p) > 0) { _rm += provResourceMult(p); _pc++; } });
+    if (_pc > 0) income = Math.round(income * (_rm / _pc) * techIdeaMult()); // Г4: ресурсы +2%/ед; Г5-Т2: Путь Богатства ×1.15
+return income;
 }
+// Аудит 2.1/2.2: содержание — ТА ЖЕ сумма, что списывает ночной тик: по каждой захваченной твердыне SM.dailyUpkeep с множителями
+// corruptionTickOpts(i) (доктрина × метель × стойка × тех × правило провинции × модификатор недели), округление по-твердынно как в тике.
 function shUpkeepPerDay() {
 ensureStrongholdState();
-var _sw = weatherSeasonWeek();
+if (!SM || typeof SM.dailyUpkeep !== 'function') return 0;
 var u = 0;
 strongholds.forEach(function(s, i) {
 if (!s.captured) return;
-    var _wm = weatherUpkeepMult(STRONGHOLDS[i].prov, _sw.sn, _sw.wk) * stanceUpkeepMult() * (SM.provinceUpkeepMult ? SM.provinceUpkeepMult(STRONGHOLDS[i].prov) : 1) * weeklyModsNow().upkeep; // Г2-2: метель севера ×2; Г4: стойка недели; C3: правило провинции — parity с тиком; C6-lite: модификатор недели (эндгейм 20/20) — parity с тиком
-Object.keys(s.buildings).forEach(function(id) {
-var b = s.buildings[id];
-if (b && b.built && b.corruptionStage !== 'ruin' && BUILDINGS[id]) u += BUILDINGS[id].upkeep * _wm;
+u += SM.dailyUpkeep(s.buildings, corruptionTickOpts(i));
 });
-});
-return Math.round(u);
+return u;
 }
 // P7: прогноз «до руины N дн.» — худший долг содержания по королевству (иммунитет <7 дн. не
 // учитываем — прогноз консервативен) в симуляцию модели; null = руина не грозит.

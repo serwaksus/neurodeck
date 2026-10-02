@@ -107,12 +107,12 @@ test('corruptionTick: provinceUpkeepMult перемножается с докт�
     assert.equal(paid.gold, 1000 - Math.round(base * 1.1), 'списание золота = итоговому содержанию');
 });
 
-test('app.js: модификаторы применены ровно в 2 местах каждый (тик + превью) — parity тик/превью не расходится', () => {
+test('app.js: модификаторы дохода/содержания — по одному месту (единая формула), осада — 2; parity тик/превью по построению', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
-    assert.equal((app.match(/SM\.provinceIncomeMult\(/g) || []).length, 2, 'доход: strongholdsDailyTick + shIncomePerDay');
-    assert.equal((app.match(/SM\.provinceUpkeepMult\(/g) || []).length, 2, 'содержание: strongholdsDailyTick + shUpkeepPerDay');
+    assert.equal((app.match(/SM\.provinceIncomeMult\(/g) || []).length, 1, 'доход: единая формула shIncomePerDay (тик её вызывает)');
+    assert.equal((app.match(/SM\.provinceUpkeepMult\(/g) || []).length, 1, 'содержание: единые опты corruptionTickOpts');
     assert.equal((app.match(/SM\.provinceSiegeMult\(/g) || []).length, 2, 'P5 осада врага: runWeeklySiege + siegeAlarmPreview');
     assert.ok(/SM\.provinceIncomeMult \? SM\.provinceIncomeMult\(/.test(app), 'typeof-гвард вызова дохода');
     assert.ok(/SM\.provinceUpkeepMult \? SM\.provinceUpkeepMult\(/.test(app), 'typeof-гвард вызова содержания');

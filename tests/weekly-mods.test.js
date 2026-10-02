@@ -111,12 +111,12 @@ test('parity ре-пин C6: (сезон 1, неделя 1) = «Жадность
     assert.equal(Math.round(taxes * 1.10), 17729, 'пин 1b-доход + корона III');
 });
 
-test('app.js: множители применены ровно в 2 местах каждый (тик+превью / осада+тревога), гварды и гейт на месте', () => {
+test('app.js: множители применены ровно по разу в единой формуле (доход/содержание) и в 2 местах осады, гварды и гейт на месте', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
-    assert.equal((app.match(/weeklyModsNow\(\)\.income/g) || []).length, 2, 'доход: strongholdsDailyTick + shIncomePerDay');
-    assert.equal((app.match(/weeklyModsNow\(\)\.upkeep/g) || []).length, 2, 'содержание: strongholdsDailyTick + shUpkeepPerDay');
+    assert.equal((app.match(/weeklyModsNow\(\)\.income/g) || []).length, 1, 'доход: единая формула shIncomePerDay (тик её вызывает — аудит 2.2)');
+    assert.equal((app.match(/weeklyModsNow\(\)\.upkeep/g) || []).length, 1, 'содержание: единые опты corruptionTickOpts (тик, shUpkeepPerDay и аварийный ремонт — аудит 2.1/2.2)');
     assert.equal((app.match(/weeklyModsNow\(\)\.siege/g) || []).length, 2, 'осада врага: runWeeklySiege + siegeAlarmPreview');
     ['weeklyIncomeMult', 'weeklyUpkeepMult', 'weeklySiegeMult'].forEach((k) => {
         assert.ok(app.includes('(SM && SM.' + k + ') ? SM.' + k + '('), 'typeof-гвард вызова ' + k);
