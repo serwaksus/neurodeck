@@ -135,6 +135,19 @@
                 dwelling: function(h, tier) { if (!ensure()) return null; var r = M.buildDwelling(state, h, tier); env.save(); env.render(); return r; },
                 lazaret: function(on) { if (!ensure()) return null; var r = on ? M.lazaretStart(state) : M.lazaretEnd(state); env.save(); env.render(); return r; },
                 truce: function(f, on) { if (!ensure()) return null; var r = on ? M.declareTruce(state, f) : M.revokeTruce(state, f); env.save(); env.render(); return r; },
+                obelisk: function(h, claim) {
+                    if (!ensure()) return null;
+                    var r = claim ? M.obeliskClaim(state, h) : M.obeliskActivate(state, h);
+                    env.save(); env.render();
+                    if (r.ok && claim) env.toast('🗿 Обелиск отвечает', state.log.length ? state.log[state.log.length - 1].t : '');
+                    return r;
+                },
+                newMap: function() {
+                    if (!ensure() || !M.seasonOver(state)) return null;
+                    state = M.newMap(state); env.save(); env.render();
+                    env.toast('🗺 Карта ' + state.mp, state.cyc > 0 ? 'Пороки сильнее на ' + Math.round(D.C.CYC_K * 100 * state.cyc) + '%: перенесено наследие прошлой карты' : 'Новый сезон: перенесено наследие прошлой карты');
+                    return { ok: true };
+                },
                 gather: function(from, to) { if (!ensure()) return null; var r = M.transferAll(state, from, to); env.save(); env.render(); return r; }
             }
         };

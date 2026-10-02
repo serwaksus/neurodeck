@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф5 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, фракции пороков, лазарет, журнал.
+// Кампания 3.0, Ф6 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, фракции пороков, лазарет, журнал.
 // Рисует только когда включён флаг nd_c3 (иначе панель пуста и скрыта). Логика — js/campaign3/*, здесь только вид и клики.
 (function() {
     'use strict';
@@ -9,8 +9,8 @@
     var TONE = { body: 'steel', mind: 'arcane', spirit: 'gilded', ties: 'ec' };
     var HERO_ART = { body: 'broadsword', mind: 'book-pile', spirit: 'lotus', ties: 'trade' };
     var TOWN_ART = { body: 'anvil', mind: 'bookshelf', spirit: 'church', ties: 'coins-pile' };
-    var TYPE_ART = { mine: 'gold-mine', camp: 'watchtower', bastion: 'guarded-tower', cache: 'cut-diamond', swamp: 'swamp', lair: 'crowned-skull' };
-    var TYPE_NAME = { town: 'Город', mine: 'Шахта', camp: 'Застава нейтралов', bastion: 'Оплот порока', cache: 'Тайник', swamp: 'Топь', lair: 'Цитадель пороков', path: 'Дорога' };
+    var TYPE_ART = { obelisk: 'magic-gate', mine: 'gold-mine', camp: 'watchtower', bastion: 'guarded-tower', cache: 'cut-diamond', swamp: 'swamp', lair: 'crowned-skull' };
+    var TYPE_NAME = { town: 'Город', mine: 'Шахта', camp: 'Застава нейтралов', bastion: 'Оплот порока', cache: 'Тайник', swamp: 'Топь', lair: 'Цитадель пороков', path: 'Дорога', obelisk: 'Обелиск' };
     var FAC_LETTER = ['Л', 'Р', 'У', 'О'];
     var REASON = { away: 'Герой не в своём городе', pool: 'Пул недели исчерпан', gold: 'Не хватает золота', res: 'Не хватает ресурса', nodwelling: 'Нужно жилище', built: 'Уже построено', prereq: 'Сначала жилище Лучников', max: 'Максимальный уровень' };
 
@@ -39,6 +39,7 @@
             label += ' — ' + here.map(function(i) { return D.HERO_NAME[SPH[i]]; }).join(', ');
         } else if (vis && n.type === 'town') inner = medal(TOWN_ART[n.sphere], TONE[n.sphere]);
         else if (vis && n.type === 'mine') inner = medal(TYPE_ART.mine, TONE[n.sphere]);
+        else if (vis && n.type === 'obelisk') inner = medal(TYPE_ART.obelisk, TONE[n.sphere], s.ob[SPH.indexOf(n.sphere)] === 2 ? 'c3-done-ob' : '');
         else if (vis && TYPE_ART[n.type]) inner = medal(TYPE_ART[n.type], hostile ? 'iron' : 'iron');
         else inner = '<span class="c3-dot" aria-hidden="true"></span>';
         if (vis && fo >= 0) { inner += '<span class="c3-fbadge" aria-hidden="true">' + FAC_LETTER[fo] + '</span>'; label += ' — под властью «' + D.FACTIONS[fo].name + '»'; }
@@ -78,6 +79,12 @@
         acts += btn('🔨 ' + e(hallInfo.name) + (town.hall >= D.C.HALL_MAX ? '' : ' (' + M.hallCost(s, t) + D.RES_ICON[key] + ')'), { data: 'data-c3="hall"' }, hr.ok, REASON[hr.reason] || '');
         return html + '<div class="c3-acts">' + acts + '</div>';
     }
+    function obeliskHtml(s, h, k) {
+        var sp = SPH[k], st = s.ob[k], left = M.obeliskLeft(s, k), need = D.OBELISK.NEED, html = '<div class="c3-dline">🗿 Обелиск «' + e(D.SPHERE_NAME[sp]) + '»: ';
+        if (st === 2) return html + '<span class="c3-ok">ответил — награда получена</span></div>';
+        if (st === 0) return html + 'принять испытание — сегодня сделай <b>' + need + '</b> дела сферы «' + e(D.SPHERE_NAME[sp]) + '». Награда: +' + D.OBELISK.RES + ' ' + D.RES_ICON[D.RES_KEY[sp]] + ' и открытая карта.</div><div class="c3-acts">' + btn('🗿 Принять испытание', { primary: true, data: 'data-c3="ob-on"' }, true, '') + '</div>';
+        return html + (left > 0 ? 'осталось дел сферы сегодня: <b>' + left + '</b> (испытание сгорит в полночь)' : '<span class="c3-ok">условие выполнено</span>') + '</div><div class="c3-acts">' + btn('🗿 Забрать награду', { primary: true, data: 'data-c3="ob-claim"' }, left === 0, 'Сделай ещё дела сферы') + '</div>';
+    }
     function tacticsHtml(s, h, id) {
         var offer = NDC3.act.offer(h), base = M.forecast(s, h, id), cards = offer.map(function(t, i) {
             var T = D.TACTICS[t.kind], f = M.forecast(s, h, id, t), eff = Math.round(t.p * 100);
@@ -95,6 +102,8 @@
             html += '<div class="c3-dline">' + e(D.HERO_NAME[SPH[h]]) + ' здесь.</div>';
             var t = M.townAt(s, h);
             if (t >= 0) html += townHtml(s, h, t);
+            var ok = M.obeliskAt(s, h);
+            if (ok >= 0) html += obeliskHtml(s, h, ok);
         } else if (M.isHostile(s, selN)) {
             var f = M.forecast(s, h, selN), fo2 = M.facOf(s.own.charAt(selN));
             if (fo2 >= 0) html += '<div class="c3-dline c3-bad">Под властью «' + e(D.FACTIONS[fo2].name) + '»' + (n.type === 'town' ? ' — освободи город: он снова растит армию' : (selN === D.FACTIONS[fo2].bastion ? ' — разгром оплота обезвредит фракцию' : '')) + '.</div>';
@@ -157,11 +166,12 @@
             return '<button type="button" class="c3-tab' + (i === selH ? ' is-active' : '') + '" data-c3="hero" data-h="' + i + '" aria-pressed="' + (i === selH) + '">' + medal(HERO_ART[sp], TONE[sp], 'c3-tabicon') + '<span class="c3-tabname">' + e(D.SPHERE_NAME[sp]) + '</span><span class="c3-tabap" title="Очки движения">' + s.ap[i] + ' ОД</span></button>';
         }).join('');
         var html = '<section class="c3" aria-label="Кампания 3.0 (бета)">' +
-            '<div class="c3-head"><span class="c3-title">🗺 Кампания 3.0 <span class="c3-beta">бета</span></span><span class="c3-week">нед. ' + (s.wk + 1) + '</span></div>' +
+            '<div class="c3-head"><span class="c3-title">🗺 Кампания 3.0 <span class="c3-beta">бета</span></span><span class="c3-week">карта ' + s.mp + (s.cyc ? ' (+' + Math.round(D.C.CYC_K * 100 * s.cyc) + '%)' : '') + ' · нед. ' + (s.wk + 1) + '/' + D.C.SEASON_WEEKS + '</span></div>' +
             '<div class="c3-tabs" role="group" aria-label="Герои">' + tabs + '</div>' +
             '<div class="c3-stats">' + resChips(s) + '</div>' +
             '<div class="c3-hline"><b>' + e(D.HERO_NAME[SPH[selH]]) + '</b> ур. ' + hero.lvl + ' · сила <b>' + M.armyPower(s, selH) + '</b> · ' + armyLine(hero.army) + ' · ОД сегодня +' + s.apDay[selH] + '/' + D.C.AP_CAP_DAY + '<br>' + skillLine(s, selH) + '</div>' +
             (s.done ? '<div class="c3-done">🏆 Цитадель Пороков пала — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
+            (M.seasonOver(s) ? '<div class="c3-done">' + (s.done ? 'Следующая карта сложнее на ' + Math.round(D.C.CYC_K * 100 * ((s.cyc || 0) + 1)) + '%, часть силы перенесётся.' : 'Сезон (' + D.C.SEASON_WEEKS + ' недель) закончился.') + ' <button type="button" class="c3-mini" data-c3="newmap">🗺 Новая карта</button></div>' : '') +
             '<div class="c3-mapwrap"><div class="c3-map">' + edgesHtml(s) + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' +
             detailHtml(s) +
             facPanel(s) + legacyPanel(s) +
@@ -192,6 +202,13 @@
             var on = el.dataset.on === '1';
             if (!on || typeof dungeonConfirm !== 'function') { NDC3.act.lazaret(on); return; }
             dungeonConfirm('🏥 Объявить лазарет?', 'Тени не копятся, фракции пороков затаятся. Запас — ' + s.lz.left + ' дн. за сезон; дни тратятся, пока лазарет идёт. Только для болезни или отпуска.').then(function(ok) { if (ok) NDC3.act.lazaret(true); });
+            return;
+        }
+        if (act === 'ob-on') { NDC3.act.obelisk(selH, false); return; }
+        if (act === 'ob-claim') { NDC3.act.obelisk(selH, true); return; }
+        if (act === 'newmap') {
+            var go = function() { selN = null; tacOpen = null; NDC3.act.newMap(); };
+            if (typeof dungeonConfirm === 'function') dungeonConfirm('🗺 Начать новую карту?', 'Текущая карта закончится. Перенесётся часть казны, залов, навыков и армии' + (s.done ? '; пороки станут сильнее' : '') + '. Карточки и ранги не меняются.').then(function(ok) { if (ok) go(); }); else go();
             return;
         }
         if (act === 'gather') { NDC3.act.gather(parseInt(el.dataset.from, 10), selH); return; }

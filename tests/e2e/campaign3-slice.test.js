@@ -347,3 +347,41 @@ test('наследие твердынь 2.0: при создании карты 
     await page.click('.c3-legacy > summary');
     await expect(page.locator('.c3-legacy')).toContainText('+500');
 });
+
+test('обелиск: принять испытание, сделать 2 реальных дела сферы, забрать награду — один раз за карту', async ({ page }) => {
+    await boot(page, true, [card(1, 'str', 'C'), card(5, 'end', 'C'), card(2, 'int', 'C')]);
+    await openStrongholds(page);
+    await patch(page, 's.heroes[0].node = 3; s.seen = "1".repeat(33);');
+    await page.click('[data-c3="select"][data-n="3"]');
+    await expect(page.locator('#c3Root .c3-detail')).toContainText('принять испытание');
+    await page.click('[data-c3="ob-on"]');
+    await expect(page.locator('#c3Root .c3-detail')).toContainText('осталось дел сферы сегодня: 2');
+    await expect(page.locator('[data-c3="ob-claim"]')).toBeDisabled();
+    await complete(page, 2); // дело Разума не засчитывается
+    await expect(page.locator('#c3Root .c3-detail')).toContainText('осталось дел сферы сегодня: 2');
+    await complete(page, 1); await complete(page, 5);
+    await expect(page.locator('#c3Root .c3-detail')).toContainText('условие выполнено');
+    const st0 = (await c3(page)).res.st;
+    await page.click('[data-c3="ob-claim"]');
+    const s = await c3(page);
+    expect(s.res.st).toBe(st0 + 6); expect(s.ob[0]).toBe(2);
+    await expect(page.locator('#c3Root .c3-detail')).toContainText('награда получена');
+});
+
+test('новая карта: после победы появляется кнопка, подтверждение переносит наследие и усложняет карту', async ({ page }) => {
+    await boot(page, true);
+    await openStrongholds(page);
+    await expect(page.locator('[data-c3="newmap"]')).toHaveCount(0);
+    await patch(page, 's.done = true; s.res.g = 800; s.towns[0].hall = 3;');
+    await expect(page.locator('[data-c3="newmap"]')).toBeVisible();
+    await page.click('[data-c3="newmap"]');
+    await page.click('#confirmNo');
+    expect((await c3(page)).mp).toBe(1);
+    await page.click('[data-c3="newmap"]');
+    await page.click('#confirmYes');
+    await page.waitForTimeout(300);
+    const s = await c3(page);
+    expect(s.mp).toBe(2); expect(s.cyc).toBe(1); expect(s.done).toBe(false); expect(s.wk).toBe(0);
+    expect(s.res.g).toBe(40 + 200); expect(s.towns[0].hall).toBe(1);
+    await expect(page.locator('.c3-week')).toContainText('карта 2 (+15%)');
+});

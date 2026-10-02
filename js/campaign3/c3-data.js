@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф5 — данные карты: 4 региона-сферы × 8 узлов + Цитадель Пороков в центре, 4 героя, 5 ресурсов, 4 города, 4 фракции пороков.
+// Кампания 3.0, Ф6 — данные карты: 4 региона-сферы × 8 узлов + Цитадель Пороков в центре, 4 героя, 5 ресурсов, 4 города, 4 фракции пороков.
 // Чистые данные без DOM; UMD как js/stronghold-model.js. Дизайн: docs/plan/CAMPAIGN-3.0.md.
 (function(root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -25,12 +25,12 @@
 
     // ---------- карта ----------
     // Шаблон региона (Юго-запад = Тело): 8 локальных узлов; остальные регионы — зеркала. Узел = {t:type, x, y, c:вход, g:оборона}.
-    //   0 город — 1 тропа — 2 шахта сферы; 1 — 3 перекрёсток — 4 застава (граница); 3 — 5 топь — 6 тайник (граница), 5 — 7 оплот фракции порока этой сферы
+    //   0 город — 1 тропа — 2 шахта сферы; 1 — 3 обелиск сферы — 4 застава (граница); 3 — 5 топь — 6 тайник (граница), 5 — 7 оплот фракции порока этой сферы
     var TEMPLATE = [
         { t: 'town',   x: 8,  y: 92, c: 1, g: 0 },
         { t: 'path',   x: 22, y: 86, c: 1, g: 0 },
         { t: 'mine',   x: 8,  y: 72, c: 1, g: 15 },
-        { t: 'path',   x: 30, y: 74, c: 1, g: 0 },
+        { t: 'obelisk', x: 30, y: 74, c: 1, g: 0 },
         { t: 'camp',   x: 22, y: 58, c: 1, g: 40 },
         { t: 'swamp',  x: 42, y: 78, c: 2, g: 0 },
         { t: 'cache',  x: 46, y: 92, c: 1, g: 25 },
@@ -40,7 +40,7 @@
     var NAMES = {
         town:  { body: 'Кузня', mind: 'Академия', spirit: 'Монастырь', ties: 'Ярмарка' },
         mine:  { body: 'Сталелитейная шахта', mind: 'Библиотека-копи', spirit: 'Родник воли', ties: 'Торговая жила' },
-        path: 'Дорога', camp: 'Застава', swamp: 'Топь', cache: 'Святилище',
+        path: 'Дорога', obelisk: 'Обелиск', camp: 'Застава', swamp: 'Топь', cache: 'Святилище',
         bastion: { body: 'Оплот Лени', mind: 'Оплот Рассеянности', spirit: 'Оплот Уныния', ties: 'Оплот Отчуждения' }
     };
     function mirror(k, p) { // k: 0 Тело(ЮЗ), 1 Разум(СЗ), 2 Дух(СВ), 3 Связи(ЮВ)
@@ -102,6 +102,8 @@
     // Наследие твердынь 2.0 (бонусы старта, не 1:1): сила юнитов 2.0 для конвертации армии
     var LEGACY_POWER = { t1: 2, t2: 6, t3: 16, t4: 45, t5: 140, t6: 450, t7: 1400 };
     var LEGACY = { GOLD_MAX: 2000, GOLD_SEASON: 100, GOLD_THRONE: 300, GOLD_ASC: 300, CAPTURED_PER_HALL: 5, HALL_MAX: 3, BOSSES_PER_SKILL: 3, ARMY_SHARE: 0.1, ARMY_POWER_MAX: 600, LVL_MAX: 4, STAT_BASE: 3, STAT_PER_LVL: 8 };
+    // Обелиски (по одному в регионе): реальный челлендж — после активации сделай OB_NEED дел СФЕРЫ обелиска в тот же день, забери награду один раз за карту.
+    var OBELISK = { NEED: 2, RES: 6, REVEAL: 3, XP: 4 };
     var C = {
         AP_CAP_DAY: 6,        // очков движения в сутки на героя
         AP_CARRY: 1,          // переносится на следующий день (на героя)
@@ -127,6 +129,8 @@
         SKILL_MAX: 3,
         SHRINE_STREAK: 3,     // дней подряд с делами сферы героя, чтобы святилище дало навык
         DIPLO_LOOT: 0.25,     // +к золоту добычи за уровень «Дипломатии»
+        CYC_K: 0.15,          // сложность каждой следующей карты: натиск фракций и оборона оплотов/цитадели ×(1 + CYC_K × пройденных карт)
+        CARRY_GOLD_SHARE: 0.25, CARRY_GOLD_MAX: 1000, // перенос на новую карту: доля казны и потолок
         LAZARET_DAYS: 7,      // дней лазарета за сезон (болезнь/отпуск): тени не копятся, фракции не ходят
         SEASON_WEEKS: 12,
         NODE_DEF: 40,         // оборона занятого игроком узла
@@ -147,5 +151,5 @@
 
     return { SPHERES: SPHERES, SPHERE_NAME: SPHERE_NAME, HERO_NAME: HERO_NAME, RES_KEY: RES_KEY, RES_NAME: RES_NAME, RES_ICON: RES_ICON,
         SPHERE_OF_STAT: SPHERE_OF_STAT, HALL: HALL, NODES: NODES, EDGES: EDGES, LAIR: LAIR, TOWNS: TOWNS, MINES: MINES, LOOT: LOOT,
-        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, FACTIONS: FACTIONS, LEGACY_POWER: LEGACY_POWER, LEGACY: LEGACY, RANKS: RANKS, TACTICS: TACTICS, TACTIC_KEYS: TACTIC_KEYS, SKILL: SKILL, C: C };
+        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, FACTIONS: FACTIONS, OBELISK: OBELISK, LEGACY_POWER: LEGACY_POWER, LEGACY: LEGACY, RANKS: RANKS, TACTICS: TACTICS, TACTIC_KEYS: TACTIC_KEYS, SKILL: SKILL, C: C };
 });

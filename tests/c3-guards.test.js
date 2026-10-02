@@ -10,7 +10,7 @@ const R = require('../js/campaign3/c3-runtime.js');
 const fresh = () => M.newState('2026-10-05');
 
 test('sanitizeC3: мусор и чужие типы → null', () => {
-    [null, undefined, 0, 'x', [], {}, { v: 5, own: '000', day: '2026-10-05' }, { v: 5, own: '1'.repeat(33), day: 'вчера' }, { v: 5, own: '1'.repeat(34), day: '2026-10-05' }, { v: 5, own: '7'.repeat(33), day: '2026-10-05' }, { v: 4, own: '1'.repeat(33), day: '2026-10-05' }, { v: 3, own: '1'.repeat(33), day: '2026-10-05' }, { v: 2, own: '1'.repeat(33), day: '2026-10-05' }, { v: 1, own: '100000002', day: '2026-10-05' }]
+    [null, undefined, 0, 'x', [], {}, { v: 6, own: '000', day: '2026-10-05' }, { v: 6, own: '1'.repeat(33), day: 'вчера' }, { v: 6, own: '1'.repeat(34), day: '2026-10-05' }, { v: 6, own: '7'.repeat(33), day: '2026-10-05' }, { v: 5, own: '1'.repeat(33), day: '2026-10-05' }, { v: 4, own: '1'.repeat(33), day: '2026-10-05' }, { v: 3, own: '1'.repeat(33), day: '2026-10-05' }, { v: 2, own: '1'.repeat(33), day: '2026-10-05' }, { v: 1, own: '100000002', day: '2026-10-05' }]
         .forEach((v) => assert.equal(SG.sanitizeC3(v), null, JSON.stringify(v)));
 });
 
@@ -138,7 +138,7 @@ test('рантайм: load принимает валидный c3 и отвер�
     assert.equal(c3.serialize().res.g, 77);
     assert.equal(c3.load({ nope: 1 }), false);
     assert.equal(c3.load({ v: 1, own: '100000002', day: '2026-10-05' }), false, 'старый срез Ф1 отвергается');
-    assert.equal(c3.load(Object.assign(fresh(), { v: 4 })), false, 'состояние Ф4 отвергается');
+    assert.equal(c3.load(Object.assign(fresh(), { v: 5 })), false, 'состояние Ф5 отвергается');
     assert.equal(c3.serialize().res.g, 77, 'мусор не затирает прежнее состояние');
 });
 
@@ -191,4 +191,23 @@ test('рантайм: boot подхватывает отложенный сей�
     assert.ok(calls.render >= 1);
     c3.boot(); // повтор безопасен
     const off = R.create(env({ getFlag: () => false, takeStash: () => JSON.parse(JSON.stringify(base)) }).e); off.boot(); assert.equal(off.getState().day, '2026-10-03', 'без флага сутки не закрываются');
+});
+
+test('Ф6: sanitizeC3 зажимает обелиски, счётчик дел, номер и сложность карты', () => {
+    const s = fresh(); s.ob = [1, 9, -1, 2]; s.obb = [500, 1]; s.dc = [200, 'x']; s.cyc = 500; s.mp = 0;
+    const o = SG.sanitizeC3(s);
+    assert.deepEqual(o.ob, [1, 2, 0, 2]); assert.deepEqual(o.obb, [99, 1, 0, 0]); assert.deepEqual(o.dc, [99, 0, 0, 0]); assert.equal(o.cyc, 99); assert.equal(o.mp, 1);
+});
+
+test('Ф6: рантайм — обелиск и новая карта через действия UI; новая карта только когда сезон окончен', () => {
+    const { e, calls } = env({ legacySource: undefined }); const c3 = R.create(e);
+    const st = c3.ensure();
+    assert.equal(c3.act.newMap(), null, 'сезон не окончен');
+    st.heroes[0].node = 3;
+    assert.equal(c3.act.obelisk(0, false).ok, true);
+    c3.onDeed({ kind: 'habit', stat: 'str', rank: 'C' }); c3.onDeed({ kind: 'habit', stat: 'end', rank: 'C' });
+    assert.equal(c3.act.obelisk(0, true).ok, true); assert.ok(calls.toasts.includes('🗿 Обелиск отвечает'));
+    st.done = true;
+    assert.deepEqual(c3.act.newMap(), { ok: true });
+    assert.equal(c3.getState().mp, 2); assert.equal(c3.getState().cyc, 1); assert.ok(calls.toasts.some((t) => t.startsWith('🗺 Карта 2')));
 });

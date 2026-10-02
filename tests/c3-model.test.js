@@ -539,3 +539,70 @@ test('наследие не ломает C4: ОД не появляются, г�
     for (let i = 0; i < 20; i++) M.dayEnd(s, '2026-11-' + String(i + 1).padStart(2, '0'), {});
     assert.deepEqual(s.ap, [0, 0, 0, 0]);
 });
+
+// ---------- Ф6: обелиски и новая карта ----------
+const OB_BODY = 3; // обелиск Тела — локальный узел 3 региона
+test('данные: по обелиску в регионе, проходимы без боя', () => {
+    D.SPHERES.forEach((sp, k) => { const n = D.NODES[k * 8 + 3]; assert.equal(n.type, 'obelisk'); assert.equal(n.sphere, sp); assert.equal(n.gar, 0); });
+    const s = fresh(); assert.equal(M.isHostile(s, OB_BODY), false);
+});
+
+test('обелиск: принять → сделать 2 дела сферы за сутки → забрать награду один раз; награда — ресурс сферы, XP и открытая карта', () => {
+    const s = fresh(); s.heroes[BODY].node = OB_BODY;
+    assert.equal(M.obeliskAt(s, BODY), BODY); assert.equal(M.obeliskAt(s, MIND), -1);
+    assert.equal(M.obeliskClaim(s, BODY).reason, 'idle');
+    assert.equal(M.obeliskActivate(s, BODY).ok, true); assert.equal(M.obeliskActivate(s, BODY).reason, 'active');
+    assert.equal(M.obeliskClaim(s, BODY).reason, 'left'); assert.equal(M.obeliskLeft(s, BODY), 2);
+    M.applyDeed(s, deed('mind')); assert.equal(M.obeliskLeft(s, BODY), 2, 'дела чужой сферы не считаются');
+    M.applyDeed(s, deed('body')); assert.equal(M.obeliskLeft(s, BODY), 1);
+    M.applyDeed(s, deed('body')); assert.equal(M.obeliskLeft(s, BODY), 0);
+    const st0 = s.res.st, xp0 = s.heroes[BODY].xp;
+    assert.equal(M.obeliskClaim(s, BODY).ok, true);
+    assert.equal(s.res.st, st0 + D.OBELISK.RES); assert.ok(s.heroes[BODY].xp > xp0 || s.heroes[BODY].lvl > 1);
+    assert.equal(s.seen.charAt(D.LAIR), '1', 'радиус 3 от обелиска открывает путь к центру');
+    assert.equal(M.obeliskClaim(s, BODY).reason, 'claimed'); assert.equal(M.obeliskActivate(s, BODY).reason, 'claimed');
+});
+
+test('обелиск: дела, сделанные ДО принятия, не засчитываются; непринятый за сутки сгорает, полученный — остаётся; нужно стоять на обелиске', () => {
+    const s = fresh(); s.heroes[BODY].node = OB_BODY;
+    M.applyDeed(s, deed('body')); M.applyDeed(s, deed('body'));
+    M.obeliskActivate(s, BODY);
+    assert.equal(M.obeliskLeft(s, BODY), 2, 'засчитываются только дела после принятия');
+    M.dayEnd(s, '2026-10-06', {});
+    assert.equal(s.ob[BODY], 0, 'сгорело в полночь');
+    M.obeliskActivate(s, BODY); M.applyDeed(s, deed('body')); M.applyDeed(s, deed('body'));
+    s.heroes[BODY].node = 1;
+    assert.equal(M.obeliskClaim(s, BODY).reason, 'away');
+    s.heroes[BODY].node = OB_BODY; M.obeliskClaim(s, BODY);
+    M.dayEnd(s, '2026-10-07', {}); assert.equal(s.ob[BODY], 2, 'награда за карту — разовая');
+});
+
+test('обелиск не даёт ОД (C4) и не лечит срывы', () => {
+    const s = fresh(); s.heroes[BODY].node = OB_BODY; s.ob[BODY] = 1; s.dc[BODY] = 5;
+    M.obeliskClaim(s, BODY); assert.deepEqual(s.ap, [0, 0, 0, 0]);
+});
+
+test('новая карта: сезон окончен по победе или 12 неделям; перенос части силы; победа повышает сложность', () => {
+    const s = fresh();
+    assert.equal(M.seasonOver(s), false);
+    s.res.g = 2000; s.towns[BODY].hall = 3; s.towns[MIND].hall = 1; s.heroes[SPIRIT].sk = 2; s.heroes[TIES].lvl = 6; s.heroes[BODY].army = { t1: 400, t3: 0, t5: 0 };
+    const cl = M.carryLegacy(s);
+    assert.equal(cl.g, 500); assert.deepEqual(cl.hall, [1, 0, 0, 0]); assert.deepEqual(cl.sk, [0, 0, 1, 0]); assert.equal(cl.l[TIES], 4); assert.ok(cl.a > 0);
+    s.wk = D.C.SEASON_WEEKS; assert.equal(M.seasonOver(s), true);
+    const lost = M.newMap(s);
+    assert.equal(lost.mp, 2); assert.equal(lost.cyc, 0, 'без победы сложность не растёт'); assert.equal(lost.wk, 0); assert.equal(lost.done, false);
+    assert.equal(lost.res.g, D.C.START_GOLD + 500); assert.equal(lost.towns[BODY].hall, 1); assert.equal(lost.heroes[SPIRIT].sk, 1);
+    s.done = true; s.cyc = 1;
+    const won = M.newMap(s); assert.equal(won.cyc, 2); assert.equal(won.mp, 2);
+    assert.ok(won.log[won.log.length - 1].t.includes('сильнее на 30%'));
+    assert.equal(won.own, fresh().own, 'карта пересоздана: города игрока, оплоты фракций');
+});
+
+test('сложность: следующие карты усиливают натиск фракций и оплоты/цитадель на 15% за пройденную карту', () => {
+    const a = fresh(), b = fresh(); b.cyc = 2;
+    assert.equal(M.cycMult(b), 1.3);
+    assert.equal(M.nodeDefense(b, D.LAIR), Math.round(1400 * 1.3)); assert.equal(M.nodeDefense(b, 7), Math.round(120 * 1.3));
+    a.fac[0].sh = [1, 1, 1, 1, 1, 1, 1]; b.fac[0].sh = [1, 1, 1, 1, 1, 1, 1];
+    assert.ok(M.facPower(b, 0) > M.facPower(a, 0));
+    assert.equal(M.nodeDefense(b, 4), a.gar[4], 'нейтральные узлы не усиливаются');
+});

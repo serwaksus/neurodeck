@@ -111,3 +111,24 @@ test('M2: у HTTPS-запроса есть таймаут (req.setTimeout) — p
     const src = fs.readFileSync(path.join(__dirname, '..', 'bot', 'polling.js'), 'utf8');
     assert.match(src, /req\.setTimeout\(/);
 });
+
+test('Ф6: /beta3 on включает воскресную строку про кампанию 3.0 только у этого чата; off убирает; запись без флага байт-стабильна', async () => {
+    write({ A: { mode: 'daily', hour: 21, minute: 30, lastFire: '' }, B: { mode: 'daily', hour: 21, minute: 30, lastFire: '' } });
+    const sent = [];
+    bot.setApiForTests(async (method, body) => { if (method === 'sendMessage') sent.push({ id: body.chat_id, text: body.text }); return {}; });
+    await bot.handleMessage({ chat: { id: 'A' }, text: '/beta3 on' });
+    assert.equal(read().A.c3, true); assert.equal('c3' in read().B, false);
+    sent.length = 0;
+    const SUNDAY = Date.UTC(2026, 9, 4, 18, 31, 0); // воскресенье 21:31 МСК
+    await bot.schedulerTick(SUNDAY);
+    const a = sent.find((x) => x.id === 'A'), b = sent.find((x) => x.id === 'B');
+    assert.ok(a && a.text.includes('Кампания 3.0'), 'у подписанного на бету — строка');
+    assert.ok(b && !b.text.includes('Кампания 3.0'), 'у остальных строки нет');
+    // не воскресенье — строки нет и у беты
+    write({ A: { mode: 'daily', hour: 21, minute: 30, lastFire: '', c3: true } });
+    sent.length = 0;
+    await bot.schedulerTick(NOW);
+    assert.ok(!sent[0].text.includes('Кампания 3.0'));
+    await bot.handleMessage({ chat: { id: 'A' }, text: '/beta3 off' });
+    assert.equal('c3' in read().A, false);
+});

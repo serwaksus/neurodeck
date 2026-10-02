@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф5 — чистая модель: 4 героя-сферы и 4 ИИ-фракции пороков на карте из 33 узлов (без DOM, Date.now и Math.random).
+// Кампания 3.0, Ф6 — чистая модель: 4 героя-сферы и 4 ИИ-фракции пороков на карте из 33 узлов (без DOM, Date.now и Math.random).
 // Время и случайность приходят снаружи: dayKey и сидированный mulberry32 — модель детерминирована (гейт C7).
 // ИНВАРИАНТ C4: очки движения (state.ap[]) растут ТОЛЬКО в applyDeed. Любая другая функция ap лишь тратит или обнуляет.
 (function(root, factory) {
@@ -62,7 +62,7 @@
             own += ch; gar.push(n.gar);
         });
         var s = {
-            v: 5, day: String(dayKey), wk: 0, idle: 0, bc: 0, stk: zeros(4), tasksToday: 0, deedsToday: 0,
+            v: 6, day: String(dayKey), wk: 0, idle: 0, bc: 0, stk: zeros(4), dc: zeros(4), ob: zeros(4), obb: zeros(4), cyc: 0, mp: 1, tasksToday: 0, deedsToday: 0,
             ap: zeros(4), apDay: zeros(4), apWeek: zeros(4),
             pend: { s: zeros(4), h: zeros(4), o: zeros(4) }, // срывы закрываемых суток ПО СФЕРАМ из хуков Ф0 — ждут dayEnd
             res: { g: C.START_GOLD, st: 0, kn: 0, wl: 0, in: 0 },
@@ -106,7 +106,8 @@
     function shadowMult(s) { return lairMult(s); } // совместимость: множитель цитадели
     function playerShare(s) { var n = 0; for (var i = 0; i < N; i++) if (s.own.charAt(i) === '1') n++; return n / N; }
     function rubber(s) { return playerShare(s) < C.RUBBER_SHARE ? C.RUBBER_MULT : 1; }
-    function facPower(s, f, truceBroken) { return Math.round(C.FAC_BASE * facMult(s, f) * rubber(s) * (truceBroken ? C.TRUCE_BREAK_MULT : 1)); }
+    function cycMult(s) { return 1 + C.CYC_K * (s.cyc || 0); } // сложность следующих карт
+    function facPower(s, f, truceBroken) { return Math.round(C.FAC_BASE * facMult(s, f) * rubber(s) * cycMult(s) * (truceBroken ? C.TRUCE_BREAK_MULT : 1)); }
     function armyPower(s, h) {
         var hero = s.heroes[h], p = 0;
         D.UNIT_KEYS.forEach(function(k) { p += (hero.army[k] || 0) * D.UNITS[k].power; });
@@ -115,9 +116,9 @@
     function nodeDefense(s, id) {
         var o = s.own.charAt(id);
         if (o === '1') return (NODES[id].type === 'town' ? C.TOWN_DEF : C.NODE_DEF) + C.HALL_DEF * hall(s, 'spirit');
-        if (id === LAIR) return Math.round(s.gar[id] * lairMult(s));
+        if (id === LAIR) return Math.round(s.gar[id] * lairMult(s) * cycMult(s));
         var f = facOf(o);
-        if (f >= 0 && id === FAC[f].bastion) return Math.round(s.gar[id] * facMult(s, f));
+        if (f >= 0 && id === FAC[f].bastion) return Math.round(s.gar[id] * facMult(s, f) * cycMult(s));
         return s.gar[id];
     }
     function isHostile(s, id) {
@@ -152,7 +153,7 @@
         if (comeback) amount *= 2;
         amount = Math.min(amount, C.AP_CAP_DAY - s.apDay[h]);
         if (amount <= 0) return { gained: 0, reason: 'cap', hero: h };
-        s.ap[h] += amount; s.apDay[h] += amount; s.apWeek[h] += amount; s.deedsToday++;
+        s.ap[h] += amount; s.apDay[h] += amount; s.apWeek[h] += amount; s.deedsToday++; s.dc[h]++;
         s.res[D.RES_KEY[sphere]] += 1;
         addXp(s, h, amount);
         return { gained: amount, hero: h, sphere: sphere, comeback: comeback };
@@ -379,10 +380,64 @@
         s.res.g += C.GOLD_TOWN_DAY * townsOwned(s) + C.HALL_GOLD * hall(s, 'ties');
         for (var m = 0; m < 4; m++) if (s.own.charAt(D.MINES[m]) === '1') s.res[D.RES_KEY[SPHERES[m]]] += C.MINE_DAY;
         for (var q = 0; q < 4; q++) s.stk[q] = s.apDay[q] > 0 ? Math.min(99, s.stk[q] + 1) : 0; // дней подряд с делами сферы (святилища)
-        s.apDay = zeros(4); s.tasksToday = 0; s.deedsToday = 0;
+        s.apDay = zeros(4); s.tasksToday = 0; s.deedsToday = 0; s.dc = zeros(4);
+        for (var o = 0; o < 4; o++) if (s.ob[o] === 1) { s.ob[o] = 0; s.obb[o] = 0; } // непринятый за сутки челлендж обелиска сгорает; взятая награда (2) остаётся
         s.day = String(nextDay);
         return { shadows: shadows };
     }
+
+    // ---------- обелиски: реальные челленджи ----------
+    function obeliskAt(s, h) { var id = s.heroes[h].node; return NODES[id].type === 'obelisk' ? SPHERES.indexOf(NODES[id].sphere) : -1; } // индекс обелиска (= сфера региона) под героем, иначе -1
+    function obeliskLeft(s, k) { return Math.max(0, D.OBELISK.NEED - (s.dc[k] - s.obb[k])); }
+    function obeliskActivate(s, h) {
+        var k = obeliskAt(s, h);
+        if (k < 0) return { ok: false, reason: 'away' };
+        if (s.ob[k] === 2) return { ok: false, reason: 'claimed' };
+        if (s.ob[k] === 1) return { ok: false, reason: 'active' };
+        s.ob[k] = 1; s.obb[k] = s.dc[k];
+        pushLog(s, 'Обелиск «' + D.SPHERE_NAME[SPHERES[k]] + '»: сделай ' + D.OBELISK.NEED + ' дела сферы сегодня');
+        return { ok: true };
+    }
+    function revealAround(s, id, radius) { // открывает узлы в радиусе по рёбрам
+        var seen = s.seen, frontier = [id], dist = {}; dist[id] = 0;
+        while (frontier.length) {
+            var u = frontier.shift();
+            if (seen.charAt(u) !== '1') seen = strSet(seen, u, '1');
+            if (dist[u] >= radius) continue;
+            ADJ[u].forEach(function(v) { if (dist[v] === undefined) { dist[v] = dist[u] + 1; frontier.push(v); } });
+        }
+        s.seen = seen;
+    }
+    function obeliskClaim(s, h) {
+        var k = obeliskAt(s, h);
+        if (k < 0) return { ok: false, reason: 'away' };
+        if (s.ob[k] !== 1) return { ok: false, reason: s.ob[k] === 2 ? 'claimed' : 'idle' };
+        if (obeliskLeft(s, k) > 0) return { ok: false, reason: 'left', left: obeliskLeft(s, k) };
+        s.ob[k] = 2; s.res[D.RES_KEY[SPHERES[k]]] += D.OBELISK.RES; addXp(s, h, D.OBELISK.XP);
+        revealAround(s, s.heroes[h].node, D.OBELISK.REVEAL);
+        pushLog(s, 'Обелиск «' + D.SPHERE_NAME[SPHERES[k]] + '» отвечает: +' + D.OBELISK.RES + ' ' + D.RES_ICON[D.RES_KEY[SPHERES[k]]] + ', карта открыта');
+        return { ok: true };
+    }
+
+    // ---------- новая карта-сезон ----------
+    // Перенос с завершённой карты в формате «наследия» (казна, залы, навыки, армия, уровни); победа повышает сложность следующей карты
+    function carryLegacy(s) {
+        var power = 0; s.heroes.forEach(function(hh, i) { power += armyPower(s, i); });
+        return {
+            g: Math.min(C.CARRY_GOLD_MAX, Math.floor(s.res.g * C.CARRY_GOLD_SHARE)),
+            hall: s.towns.map(function(t) { return t.hall >= 2 ? 1 : 0; }),
+            sk: s.heroes.map(function(hh) { return hh.sk >= 1 ? 1 : 0; }),
+            a: Math.floor(Math.min(D.LEGACY.ARMY_POWER_MAX, Math.floor(power * D.LEGACY.ARMY_SHARE)) / 2 / 4),
+            l: s.heroes.map(function(hh) { return Math.min(D.LEGACY.LVL_MAX, hh.lvl); })
+        };
+    }
+    function newMap(s) {
+        var n = newState(s.day, carryLegacy(s));
+        n.cyc = s.done ? (s.cyc || 0) + 1 : (s.cyc || 0); n.mp = (s.mp || 1) + 1;
+        pushLog(n, 'Карта ' + n.mp + (n.cyc > s.cyc ? ': пороки сильнее на ' + Math.round(C.CYC_K * 100 * n.cyc) + '%' : ': новый сезон'));
+        return n;
+    }
+    function seasonOver(s) { return s.done || s.wk >= C.SEASON_WEEKS; }
 
     // ---------- лазарет и перемирие ----------
     function lazaretStart(s) {
@@ -484,7 +539,8 @@
 
     return {
         mulberry32: mulberry32, hashStr: hashStr, stateHash: stateHash,
-        newState: newState, legacyFromV14: legacyFromV14, pushLog: pushLog, markSeen: markSeen,
+        newState: newState, legacyFromV14: legacyFromV14, carryLegacy: carryLegacy, newMap: newMap, seasonOver: seasonOver, cycMult: cycMult,
+        obeliskAt: obeliskAt, obeliskLeft: obeliskLeft, obeliskActivate: obeliskActivate, obeliskClaim: obeliskClaim, pushLog: pushLog, markSeen: markSeen,
         hall: hall, townOwned: townOwned, townsOwned: townsOwned, facSum: facSum, facMult: facMult, lairMult: lairMult, facPower: facPower, playerShare: playerShare, facOf: facOf, facCode: facCode,
         shadowSum: shadowSum, shadowMult: shadowMult, armyPower: armyPower, nodeDefense: nodeDefense, isHostile: isHostile, nodeSphere: nodeSphere,
         rankBonus: rankBonus, deedAp: deedAp, applyDeed: applyDeed,

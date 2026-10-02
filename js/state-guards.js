@@ -432,11 +432,11 @@
         return out;
     }
 
-    // Кампания 3.0, Ф5: состояние c3 (33 узла, 4 героя-сферы, 4 фракции, навыки, наследие 2.0). Невосстановимое (v1–v4 прежних фаз беты) → null: рантайм начнёт карту заново.
+    // Кампания 3.0, Ф6: состояние c3 (33 узла, 4 героя-сферы, 4 фракции, навыки, наследие, обелиски, номер карты). Невосстановимое (v1–v5 прежних фаз беты) → null: рантайм начнёт карту заново.
     function sanitizeC3(input) {
         if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
         var N = 33, DATE = /^\d{4}-\d{2}-\d{2}$/;
-        if (input.v !== 5 || typeof input.own !== 'string' || input.own.length !== N || !/^[0-6]+$/.test(input.own) || typeof input.day !== 'string' || !DATE.test(input.day)) return null;
+        if (input.v !== 6 || typeof input.own !== 'string' || input.own.length !== N || !/^[0-6]+$/.test(input.own) || typeof input.day !== 'string' || !DATE.test(input.day)) return null;
         function int(v, lo, hi, d) { return Math.round(clampNumber(v, lo, hi, d)); }
         function arr(a, len, lo, hi, d) { var out = []; for (var i = 0; i < len; i++) out.push(int(Array.isArray(a) ? a[i] : d, lo, hi, d)); return out; }
         var src = input, res = (src.res && typeof src.res === 'object') ? src.res : {}, pend = (src.pend && typeof src.pend === 'object') ? src.pend : {};
@@ -466,7 +466,7 @@
         var own = src.own; // города (индексы 0, 8, 16, 24) всегда игрока
         [0, 8, 16, 24].forEach(function(c) { own = own.slice(0, c) + '1' + own.slice(c + 1); });
         var out = {
-            v: 5, day: src.day, wk: int(src.wk, 0, 520, 0), idle: int(src.idle, 0, 100000, 0), bc: int(src.bc, 0, 10000000, 0), stk: arr(src.stk, 4, 0, 99, 0),
+            v: 6, day: src.day, wk: int(src.wk, 0, 520, 0), idle: int(src.idle, 0, 100000, 0), bc: int(src.bc, 0, 10000000, 0), stk: arr(src.stk, 4, 0, 99, 0), dc: arr(src.dc, 4, 0, 99, 0), ob: arr(src.ob, 4, 0, 2, 0), obb: arr(src.obb, 4, 0, 99, 0), cyc: int(src.cyc, 0, 99, 0), mp: int(src.mp, 1, 999, 1),
             tasksToday: int(src.tasksToday, 0, 5, 0), deedsToday: int(src.deedsToday, 0, 1000, 0),
             ap: arr(src.ap, 4, 0, 20, 0), apDay: arr(src.apDay, 4, 0, 6, 0), apWeek: arr(src.apWeek, 4, 0, 1000, 0),
             pend: { s: arr(pend.s, 4, 0, 1000, 0), h: arr(pend.h, 4, 0, 1000, 0), o: arr(pend.o, 4, 0, 1000, 0) },
@@ -578,7 +578,7 @@
         sanitizeSiege: sanitizeSiege,
         sanitizeHirePool: sanitizeHirePool,
         sanitizeSeason: sanitizeSeason,
-        sanitizeC3: sanitizeC3, // Кампания 3.0, Ф4
+        sanitizeC3: sanitizeC3, // Кампания 3.0, Ф6
         sanitizeDailyQuests: sanitizeDailyQuests,
         sanitizeBloodOath: sanitizeBloodOath,
         sanitizeStorm: sanitizeStorm // Г1-5

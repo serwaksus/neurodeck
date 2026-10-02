@@ -67,12 +67,14 @@ function clampInt(v, lo, hi, dflt) {
 }
 function normEntry(v) {
   if (v && typeof v === 'object') {
-    return {
+    const out = {
       mode: ['daily', 'sunday', 'off'].indexOf(v.mode) >= 0 ? v.mode : 'daily',
       hour: clampInt(v.hour, 0, 23, REMIND_HOUR),
       minute: clampInt(v.minute, 0, 59, REMIND_MIN),
       lastFire: typeof v.lastFire === 'string' ? v.lastFire : ''
     };
+    if (v.c3 === true) out.c3 = true; // бета «Кампания 3.0»: лениво — записи без неё байт-стабильны
+    return out;
   }
   if (v === true) return { mode: 'daily', hour: REMIND_HOUR, minute: REMIND_MIN, lastFire: '' };
   return { mode: 'off', hour: REMIND_HOUR, minute: REMIND_MIN, lastFire: '' };
@@ -170,11 +172,11 @@ function keyboard(ctx) {
   return { inline_keyboard: rows };
 }
 
-async function sendReminder(chatId, mode) {
+async function sendReminder(chatId, mode, c3Sunday) {
   const siege = mode === 'sunday';
   await api('sendMessage', {
     chat_id: chatId,
-    text: siege ? SIEGE_TEXT : REMINDER_TEXT,
+    text: (siege ? SIEGE_TEXT : REMINDER_TEXT) + (c3Sunday ? C3_TEXT : ''),
     reply_markup: keyboard(siege ? { label: '🏰 К твердыням', startapp: 'strongholds' } : null)
   });
 }
@@ -209,7 +211,7 @@ async function schedulerTick(now = Date.now()) {
       const catchup = minutesNow >= target + FIRE_WINDOW_MIN && minutesNow < target + CATCHUP_MIN; // бот был мёртв в окне
       if ((!inWindow && !catchup) || e.lastFire === p.key) continue;
       try {
-        await sendReminder(id, e.mode);
+        await sendReminder(id, e.mode, e.c3 === true && p.dow === 'Sun');
         // Пишем ТОЛЬКО эту запись поверх свежего файла и сразу — рестарт не дублирует, чужие правки не затираются.
         const db1 = loadChats();
         if (Object.prototype.hasOwnProperty.call(db1, id)) {
@@ -232,12 +234,14 @@ async function schedulerTick(now = Date.now()) {
   } finally { tickRunning = false; }
 }
 
+const C3_TEXT = '\n\n🗺 Кампания 3.0: в понедельник фракции пороков делают ход. Тени растут от срывов — отметь дела сфер или честно пропусти (✕); лазарет и обет перемирия — в панели «Твердыни».';
 const HELP_TEXT = [
   '🏰 NeuroDeck — напоминания.',
   '/start — напоминание каждый день в 21:30 МСК',
   '/start daily | sunday | off — режим: каждый день / только воскресные осады / выключить',
   '/start ЧЧ:ММ — время напоминания в МСК, например /start 20:00',
-  '/stop — выключить, /status — текущие настройки, /help — это меню'
+  '/stop — выключить, /status — текущие настройки, /help — это меню',
+  '/beta3 on | off — воскресная строка про ход фракций кампании 3.0 (бета)'
 ].join('\n');
 
 async function handleMessage(msg) {
@@ -287,6 +291,13 @@ async function handleMessage(msg) {
     const cur = normEntry(db[chatId]);
     const state = cur.mode === 'off' ? '🔕 ВЫКЛ' : '🔔 ВКЛ (' + (cur.mode === 'sunday' ? 'воскресные осады' : 'каждый день') + ', ' + hhmm(cur) + ' МСК)';
     await api('sendMessage', { chat_id: chatId, text: 'Напоминания: ' + state + '. /help — все команды.', reply_markup: kb });
+  } else if (text === '/beta3 on' || text === '/beta3 off' || text === '/beta3') {
+    const db = loadChats();
+    const cur = normEntry(db[chatId]);
+    if (text === '/beta3 on') cur.c3 = true; else if (text === '/beta3 off') delete cur.c3;
+    db[chatId] = cur;
+    saveChats(db);
+    await api('sendMessage', { chat_id: chatId, text: 'Кампания 3.0 (бета): строка про ход фракций ' + (cur.c3 ? 'включена' : 'выключена') + '. /beta3 on | off.', reply_markup: kb });
   } else if (text === '/help') {
     await api('sendMessage', { chat_id: chatId, text: HELP_TEXT, reply_markup: kb });
   }
