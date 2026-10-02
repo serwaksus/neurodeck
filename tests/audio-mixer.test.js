@@ -170,7 +170,7 @@ test('P21 подключение: audio.js грузится до app.js и в SW
     const appPos = html.indexOf('js/app.js');
     assert.ok(aPos > -1 && appPos > aPos, 'audio.js грузится раньше app.js');
     assert.ok(/js\/audio\.js\?v=\d+/.test(html), 'версионированный тег скрипта');
-    assert.ok(swSrc().includes("'js/audio.js?v=119'"), 'audio.js в SW-прекэше (v102, ре-пин P22; v101 — P21)');
+    assert.ok(swSrc().includes("'js/audio.js?v=124'"), 'audio.js в SW-прекэше (v102, ре-пин P22; v101 — P21)');
     const storage = fs.readFileSync(path.join(root, 'js', 'storage.js'), 'utf8');
     assert.ok(!storage.includes('neurodeck_audio'), 'ключ микшера НЕ в storage.js (сейв не трогаем)');
     assert.ok(!storage.includes('NDAudio'), 'storage.js не зависит от микшера');

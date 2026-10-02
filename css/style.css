@@ -713,9 +713,7 @@ textarea:focus-visible {
 :root.perf-eco .torch-flicker,
 :root.perf-eco .light-rays {
   display: none !important;
-}
-:root.perf-eco .sh-card,
-:root.perf-eco .sh-prov {
+}:root.perf-eco .sh-prov {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }.combat-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -769,27 +767,9 @@ textarea:focus-visible {
 .task-btn.del:hover { color: var(--blood-bright); border-color: var(--blood); }
 .task-ghost-info { font-size: var(--fs-secondary); color: var(--text-dim); }
 .ghosts-title { font-size: 11px; color: var(--blood-bright); margin: 12px 0 8px; }
-
-/* ===================== ТВЕРДЫНИ v2 (souls-стиль, SPEC §1/§6) ===================== */
-.sh-treasury { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid var(--gold); border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: var(--text-dim); }
-.sh-treasury b { color: var(--gold-bright); }
 .sh-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .sh-prov { background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 4px; padding: 10px; }
 .sh-prov-title { font-size: 11px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-.sh-card { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin-bottom: 6px; }
-.sh-card.owned { border-color: rgba(52,211,153,0.35); cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
-.sh-card.owned:hover { border-color: var(--green); box-shadow: 0 0 12px rgba(52,211,153,0.2); }
-.sh-card.front { border-color: var(--gold); background: rgba(251,191,36,0.05); }
-.sh-card.locked { opacity: 0.4; }
-.sh-icon { width: 44px; min-height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
-.sh-icon img { width: 40px; height: auto; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
-:root.perf-eco .sh-icon img { filter: none; }
-.sh-body { flex: 1; min-width: 0; }
-.sh-name { font-size: 12.5px; color: var(--text-bright); }
-.sh-card.owned .sh-name { color: var(--gold-bright); }
-.sh-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
-.sh-assault { min-height: 44px; padding: 6px 12px; background: linear-gradient(180deg, rgba(199,62,77,0.25), rgba(139,38,53,0.2)); border: 1px solid var(--blood-bright); border-radius: 4px; color: var(--blood-bright); font-family: inherit; font-size: 11px; letter-spacing: 1px; cursor: pointer; white-space: nowrap; transition: box-shadow 0.2s; }
-.sh-assault:hover { box-shadow: 0 0 14px rgba(199,62,77,0.4); }
 .sh-back { display: inline-block; margin-bottom: 10px; padding: 7px 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 3px; color: var(--text-dim); font-family: inherit; font-size: 11px; letter-spacing: 1px; cursor: pointer; }
 .sh-back:hover { color: var(--gold-bright); border-color: var(--gold); }
 .sh-panel-head { margin-bottom: 12px; }
@@ -948,8 +928,7 @@ h1, h2, h3, .view-title, .modal-header h3,
 .sh-panel-title, .sh-prov-title, .sh-quest-title, .logo,
 .header, .tab, .demo-btn, .forge-btn, .goals-add {
   font-family: var(--font-display) !important;
-}.sh-meta,
-.sh-req,
+}.sh-req,
 .goal-filter,
 .stat-bar-label,
 .stat-attr-label,
@@ -959,9 +938,7 @@ h1, h2, h3, .view-title, .modal-header h3,
 }
 
 .view-title { font-size: 20px !important; letter-spacing: 2px; }
-.view-subtitle { font-size: 13px !important; }
-.sh-name, .sh-build-name { font-size: 14px !important; }.sh-card,
-.sh-prov,
+.view-subtitle { font-size: 13px !important; }.sh-build-name { font-size: 14px !important; }.sh-prov,
 .stat-card,
 .goal-card,
 .task-card,
@@ -973,7 +950,6 @@ h1, h2, h3, .view-title, .modal-header h3,
 .forge-btn,
 .goals-add,
 .goal-filter,
-.sh-assault,
 .sh-buy,
 .sh-mini,
 .task-btn,
@@ -985,12 +961,10 @@ h1, h2, h3, .view-title, .modal-header h3,
 }
 .modal, .confirm-modal, .onboarding-card {
   border-radius: var(--radius-modal) !important;
-}.sh-card,
-.stat-card,
+}.stat-card,
 .goal-card,
 .task-card,
 .sh-quest-board,
-.sh-treasury,
 .sh-prov {
   box-shadow: var(--shadow-card) !important;
 }
@@ -1003,16 +977,14 @@ h1, h2, h3, .view-title, .modal-header h3,
 .map-progress-fill,
 .tract-build-fill {
   box-shadow: 0 0 8px rgba(212,165,116,0.3);
-}.sh-card:hover,
-.goal-card:hover,
+}.goal-card:hover,
 .task-card:hover,
 .stat-card:hover,
 .sh-prov:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-card-hover) !important;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
-}.sh-card,
-.goal-card,
+}.goal-card,
 .task-card,
 .stat-card,
 .sh-prov {
@@ -1053,13 +1025,9 @@ h1, h2, h3, .view-title, .modal-header h3,
 :root.perf-eco .stat-attr-progress::after {
   animation: none; display: none;
 }
-
-/* ---- У1.7: Спрайты крупнее ---- */
-.sh-icon img { width: 52px !important; height: auto !important; }
 .sh-build-icon img { width: 48px !important; height: auto !important; }
 .hero-avatar-img { width: 88px !important; height: 88px !important; }
 .hero-avatar { font-size: 64px !important; }
-.sh-icon { font-size: 32px; width: 52px; }
 
 /* ---- У2.1: Параллакс тумана (2 слоя, разные скорости) ---- */
 .mist-layer { will-change: transform; }
@@ -1087,15 +1055,13 @@ body::before {
 :root.perf-eco .view { animation: none; }
 
 /* ---- Eco mode: отключить все новые анимации ---- */
-:root.perf-eco .sh-kingdom-path { animation: none; }:root.perf-eco .sh-card:hover,
-:root.perf-eco .goal-card:hover,
+:root.perf-eco .sh-kingdom-path { animation: none; }:root.perf-eco .goal-card:hover,
 :root.perf-eco .stat-card:hover {
   transform: none;
 }
 
 /* ---- Мобильная адаптация ---- */
 @media (max-width: 400px) {
-  .sh-icon img { width: 44px !important; }
   .sh-build-icon img { width: 40px !important; }
   .hero-avatar-img { width: 72px !important; height: 72px !important; }
   .view-title { font-size: 18px !important; }
@@ -1120,18 +1086,7 @@ body::before {
 .sh-prov:nth-child(2) { border-top: 2px solid #4682b4; }
 .sh-prov:nth-child(3) { border-top: 2px solid #8b4513; }
 .sh-prov:nth-child(4) { border-top: 2px solid #800000; }
-
-/* Твердыня — карточка в карте */
-.sh-card { position: relative; overflow: hidden; }
-.sh-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.3)); pointer-events: none; }
-.sh-card.owned { border: 1px solid rgba(212,165,116,0.4); }
-.sh-card.owned .sh-icon { filter: drop-shadow(0 0 8px rgba(212,165,116,0.3)); }
-.sh-card.front { border: 1px solid var(--blood-bright); animation: shFrontPulse 2s ease-in-out infinite; }
-.sh-card.front .sh-icon { font-size: 36px; }
 @keyframes shFrontPulse { 0%,100% { box-shadow: 0 0 8px rgba(199,62,77,0.2); } 50% { box-shadow: 0 0 20px rgba(199,62,77,0.5); } }
-.sh-card.locked { opacity: 0.35; filter: grayscale(0.8) blur(0.5px); }
-.sh-card.locked::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
-:root.perf-eco .sh-card.front { animation: none; }
 
 /* Квесты — крупнее и заметнее */
 .sh-quest-board { border: 1px solid rgba(212,165,116,0.3); background: linear-gradient(180deg, rgba(30,20,10,0.6), rgba(10,10,15,0.8)); }
@@ -1202,12 +1157,12 @@ body::before {
 /* ================================================================
    ФАЗА A «ТЁМНАЯ СТАЛЬ»: применение дизайн-токенов (панели, шрифт)
    ================================================================ */
-.header, .content, .tabs { box-shadow: var(--shadow-key); }
-.sh-treasury, .sh-quest-board, .sh-prov, .kingdom-banner { box-shadow: var(--shadow-key) !important; }
+.header, .content, .tabs { box-shadow: var(--shadow-key); }.sh-quest-board,
+.sh-prov,
+.kingdom-banner { box-shadow: var(--shadow-key) !important; }
 .view-title { letter-spacing: 5px; }
 .modal-header h3 { letter-spacing: 5px; }.progress-control .val,
 #progressVal,
-.sh-treasury,
 .goal-progress-label,
 .stat-bar-label,
 .hero-summary,
@@ -1397,15 +1352,6 @@ body::before {
 .km-node:focus-visible .km-ring { stroke: var(--gold-5); stroke-width: 5; stroke-opacity: 1; }
 @keyframes kmPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 :root.perf-eco .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, :root.perf-eco .km-connector.owned { animation: none !important; }
-.km-front-card { margin: 0 0 12px; }
-/* Г4: стойки недели + эдикты + чипы провинций */
-.km-stance-row { display: flex; gap: 8px; margin: 0 0 12px; flex-wrap: wrap; }
-.km-stance { flex: 1 1 40%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: rgba(12, 10, 8, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; color: var(--text); }
-.km-stance.active { border-color: var(--gold); background: rgba(212, 165, 116, 0.12); }
-.km-stance:disabled { cursor: default; opacity: 0.75; }
-.km-stance-ico { font-size: 18px; }
-.km-stance-name { font-size: 13px; font-weight: 600; color: var(--gold-bright); }
-.km-stance-desc { font-size: 11px; color: var(--text-dim); }
 .km-edict-block { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; }
 .km-edict-warn { font-size: 12px; color: var(--blood-bright); margin: 4px 0 8px; }
 .km-edict-row { display: flex; flex-direction: column; gap: 6px; }
@@ -2073,3 +2019,78 @@ button.dash-stat:hover { border-color: var(--ac-reward); }
   .dash-stat { position: relative; grid-template-areas: "ic val"; padding: var(--sp-2); }
   .dash-stat > span, .dash-stat em { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+
+/* ================================================================
+   KINGDOM v3 (визуал-план, фаза 3): карта — первый объект экрана, затем фронт и действие; казна и якорь — чипы.
+   Заменяет легаси-правила sh-card, sh-treasury, km-stance и sh-assault (десять слоёв, !important).
+   ================================================================ */
+.sh-treasury { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2) var(--sp-4); padding: var(--sp-3); margin-bottom: var(--sp-3); font-size: var(--t-sm); color: var(--tx-2);
+  background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid color-mix(in srgb, var(--ac-reward) 40%, transparent); border-radius: var(--r-lg); box-shadow: var(--inner-light), var(--elev-1); font-variant-numeric: tabular-nums; }
+.tr-cell { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1); }
+.tr-cell b { color: var(--tx-1); }
+.tr-cell b.up { color: var(--ac-success); }
+.tr-cell b.down { color: var(--ac-threat); }
+.tr-gold { font-size: var(--t-lg); }
+.tr-gold .icn { width: 20px; height: 20px; color: var(--ac-reward); }
+.tr-gold b { color: var(--ac-reward); }
+.tr-cell .icn { width: 16px; height: 16px; }
+@media (min-width: 640px) { .sh-treasury { grid-template-columns: repeat(4, auto); justify-content: space-between; } }
+
+.sh-context-anchor { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.ctx { display: inline-flex; align-items: center; gap: var(--sp-1); padding: 3px var(--sp-3); font-size: var(--t-sm); color: var(--tx-2); background: var(--s2); border: 1px solid var(--border); border-radius: var(--r-pill); }
+.ctx b { color: var(--tx-1); }
+.ctx .icn { width: 15px; height: 15px; color: var(--ac-threat); }
+.ctx.warn { color: var(--ac-threat); border-color: color-mix(in srgb, var(--ac-threat) 45%, transparent); }
+.ctx.warn b { color: var(--ac-threat); }
+
+/* фронт: карточка цели со «штурмом» — главное действие экрана */
+.sh-card.km-front-card { display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ac-threat) 14%, var(--s2)), var(--s1)); border: 1px solid color-mix(in srgb, var(--ac-threat) 50%, transparent); box-shadow: var(--elev-2), var(--inner-light); }
+.km-front-card .sh-icon { display: grid; place-items: center; font-size: 32px; }
+.km-front-card .sh-icon img { width: 48px; height: auto; filter: drop-shadow(0 2px 3px black); }
+.km-front-card .sh-body { grid-column: 2 / -1; min-width: 0; }
+.km-front-card .sh-name { font-family: var(--font-display); font-size: var(--t-md); line-height: 1.25; color: var(--tx-1); }
+.km-front-card .sh-meta { margin-top: 2px; font-size: var(--t-sm); color: var(--tx-2); }
+.km-front-card .sh-req { color: var(--ac-threat); font-size: var(--t-xs); }
+.km-front-card > .sh-assault { grid-column: 1 / 3; }
+.km-front-card > .sh-assault:last-child { grid-column: 1 / -1; }
+.km-front-card > .sh-scout-btn { grid-column: 3; margin: 0; min-height: 44px; }
+
+.sh-assault { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); padding: 0 var(--sp-4); cursor: pointer;
+  font-family: var(--font-display); font-weight: 700; font-size: var(--t-sm); letter-spacing: 0.8px; text-transform: uppercase; color: var(--tx-1);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ac-threat) 55%, var(--s2)), color-mix(in srgb, var(--ac-threat) 28%, var(--s1)));
+  border: 1px solid var(--ac-threat); border-radius: var(--r-md); box-shadow: var(--inner-light); transition: box-shadow var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+.sh-assault .icn { width: 16px; height: 16px; }
+.sh-assault:hover { box-shadow: 0 0 16px color-mix(in srgb, var(--ac-threat) 55%, transparent); }
+.sh-assault:active { transform: scale(0.97); }
+
+/* стойки/подходы недели и «Хроника/Технологии»: тактические плитки */
+.km-stance-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.km-stance { display: grid; align-content: start; justify-items: start; gap: 2px; padding: var(--sp-3); text-align: left; cursor: pointer; color: var(--tx-1);
+  background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--inner-light); transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out); }
+.km-stance:hover:not(:disabled) { border-color: var(--ac-reward); }
+.km-stance.active { border-color: var(--ac-reward); background: linear-gradient(180deg, var(--mat-gilded-fill), var(--s1)); box-shadow: var(--inner-light), 0 0 12px var(--mat-gilded-glow); }
+.km-stance:disabled { cursor: default; }
+.km-stance-ico { font-size: var(--t-xl); line-height: 1; }
+.km-stance-name { font-family: var(--font-display); font-weight: 700; font-size: var(--t-md); color: var(--ac-reward); }
+.km-stance-desc { font-size: var(--t-xs); color: var(--tx-2); line-height: 1.35; }
+.km-chron-btn .km-stance-name { color: var(--tx-1); }
+
+/* медальон-силуэт: здания и юниты (game-icons, CC BY 3.0) — тон по категории/тиру, не по PNG-палитре */
+.nd-medal { --tone: var(--mat-iron-edge); position: relative; display: inline-grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--tone) 30%, var(--s3)), var(--s1) 75%); border: 2px solid var(--tone);
+  box-shadow: inset 0 0 0 3px var(--s1), 0 0 10px color-mix(in srgb, var(--tone) 35%, transparent); }
+.nd-medal::before { content: ''; width: 60%; height: 60%; background: color-mix(in srgb, var(--tone) 55%, white);
+  -webkit-mask: var(--art) center / contain no-repeat; mask: var(--art) center / contain no-repeat; }
+.nd-medal.tone-zh { --tone: var(--mat-gilded-edge); }
+.nd-medal.tone-ec { --tone: var(--ac-success); }
+.nd-medal.tone-df { --tone: var(--ac-info); }
+.nd-medal.tone-sp { --tone: var(--ac-arcane); }
+.nd-medal.tone-iron { --tone: var(--mat-iron-edge); }
+.nd-medal.tone-steel { --tone: var(--mat-steel-edge); }
+.nd-medal.tone-arcane { --tone: var(--mat-arcane-edge); }
+.nd-medal.tone-gilded { --tone: var(--mat-gilded-edge); }
+.sh-tile-icon, .sh-build-icon { display: grid; place-items: center; }
+.sh-tile.locked .nd-medal { filter: grayscale(0.9); opacity: 0.6; }
+.sh-build-icon .nd-medal { width: 38px; height: 38px; border-width: 1.5px; }
+.sh-tile-icon .nd-medal { width: 54px; height: 54px; }

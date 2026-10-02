@@ -45,6 +45,19 @@ function metrics() {
     };
 }
 
+// Защита от «съеденных» правил: преждевременный `*/` внутри комментария (напр. в перечислении «.a/.b*/.c») оставляет остаток
+// комментария как мусорный селектор и тихо глушит СЛЕДУЮЩЕЕ правило. Селекторы с кириллицей = мусор.
+(function sanity() {
+    const css = stripComments(fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8'));
+    const bad = [];
+    css.replace(/(^|[};])\s*([^{};@]+)\{/g, (m, a, sel) => { if (/[А-Яа-яЁё]/.test(sel)) bad.push(sel.trim().slice(0, 80)); return m; });
+    let depth = 0; for (const ch of css) { if (ch === '{') depth++; else if (ch === '}') depth--; }
+    if (bad.length || depth !== 0) {
+        console.error('css-lint FAIL — битый CSS: ' + (depth !== 0 ? 'несбалансированные скобки (' + depth + ')' : '') + (bad.length ? ' селекторы с кириллицей (след обрезанного комментария?): ' + JSON.stringify(bad.slice(0, 3)) : ''));
+        process.exit(1);
+    }
+})();
+
 const cur = metrics();
 const mode = process.argv[2] || '';
 if (mode === '--report') { console.table(cur); process.exit(0); }

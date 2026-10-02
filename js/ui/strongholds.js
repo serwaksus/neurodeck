@@ -30,22 +30,17 @@ if (!root) return;
 kmCamInit();
 var front = frontIdx();
 var cap = capturedCount();
-// Королевский баннер
-html_strongholds_banner(root, cap);
+// (баннер «Королевство Владыки» перезаписывался итоговым root.innerHTML — вызов убран; функция осталась для совместимости)
+var _ic = function(n) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; };
 var html = '<div class="sh-treasury">' +
-'<div>💰 <b>' + (HERO.gold || 0) + '</b></div>' +
-'<div>Налоги: <b style="color:var(--green)">+' + shIncomePerDay() + ' 💰/день</b></div>' +
-'<div>Содержание: <b style="color:var(--blood-bright)">−' + shUpkeepPerDay() + ' 💰/день</b></div>' +
-'<div>⚔ Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
+'<div class="tr-cell tr-gold">' + _ic('gold') + '<b>' + (HERO.gold || 0) + '</b></div>' +
+'<div class="tr-cell">Налоги: <b class="up">+' + shIncomePerDay() + ' 💰/день</b></div>' +
+'<div class="tr-cell">Содержание: <b class="down">−' + shUpkeepPerDay() + ' 💰/день</b></div>' +
+'<div class="tr-cell">' + _ic('sword') + ' Армия: <b>' + SM.armyPower(army.units) + '</b></div></div>';
 html += corruptionForecastLineHtml(); // P7: прогноз «до руины N дн.» (только при реальной угрозе)
 var fi = frontIdx();
 var daysToSiege = daysToSiegeNow();
-html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
-html += '<div class="km-stance-row">' + '<button class="km-stance km-chron-btn" data-action="km-chronicle-open"><span class="km-stance-ico">📜</span><span class="km-stance-name">Хроника</span><span class="km-stance-desc">летопись кампании</span></button>' + '<button class="km-stance km-chron-btn" data-action="km-techs-open"><span class="km-stance-ico">🔬</span><span class="km-stance-name">Технологии</span><span class="km-stance-desc">🔬' + TECH_PTS + ' · 📦' + resPool() + '</span></button>' + Object.keys(STANCES).map(function(sid) {
-  var st = STANCES[sid], act = weekStance() === sid;
-  return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-stance" data-stance="' + sid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + st.icon + '</span><span class="km-stance-name">' + st.name + '</span><span class="km-stance-desc">' + st.desc + '</span></button>';
-}).join('') + '</div>';
-html += siegePrepBlockHtml(); // C4: подготовка осады — подход недели + осадный склад
+html += '<div class="sh-context-anchor"><span class="ctx">' + _ic('siege') + ' Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b></span><span class="ctx warn">Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b></span><span class="ctx">Гнев: <b>' + siegeWrathNow() + '/10</b></span></div>';
 // ФАЗА E: карта королевства заменяет ленту провинций (панели твердыни не тронуты)
 html += kingdomMapHtml(daysToSiege);
 // Фронт: штурмовая карточка под картой (штурм остаётся доступным из обзорного состояния)
@@ -59,8 +54,13 @@ var _tiLabel = (ti === 0) ? ' <span class="sh-req">стартовый лагер
 html += '<div class="sh-card' + (ti === front ? ' front' : '') + ' km-front-card"><div class="sh-icon">' + fd.icon + '</div>' +
 '<div class="sh-body"><div class="sh-name">' + fd.name + _tiLabel + '</div>' +
 '<div class="sh-meta">' + frontPowerText(ti) + '</div></div>' +
-'<button class="sh-assault" data-action="sh-assault" data-idx="' + ti + '">⚔ Штурм</button>' + scoutButtonHtml(ti) + '</div>';
+'<button class="sh-assault" data-action="sh-assault" data-idx="' + ti + '">' + _ic('sword') + ' Штурм</button>' + scoutButtonHtml(ti) + '</div>';
 });
+html += '<div class="km-stance-row">' + '<button class="km-stance km-chron-btn" data-action="km-chronicle-open"><span class="km-stance-ico">📜</span><span class="km-stance-name">Хроника</span><span class="km-stance-desc">летопись кампании</span></button>' + '<button class="km-stance km-chron-btn" data-action="km-techs-open"><span class="km-stance-ico">🔬</span><span class="km-stance-name">Технологии</span><span class="km-stance-desc">🔬' + TECH_PTS + ' · 📦' + resPool() + '</span></button>' + Object.keys(STANCES).map(function(sid) {
+  var st = STANCES[sid], act = weekStance() === sid;
+  return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-stance" data-stance="' + sid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + st.icon + '</span><span class="km-stance-name">' + st.name + '</span><span class="km-stance-desc">' + st.desc + '</span></button>';
+}).join('') + '</div>';
+html += siegePrepBlockHtml(); // C4: подготовка осады — подход недели + осадный склад
 var tRoutesUI = SM.tradeRoutes ? SM.tradeRoutes(strongholds.map(function(s) { return !!s.captured; })) : 0; // P10: отчёт тени консолидирован в панель подготовки (siegePrepScoutHtml) — и для не-фронтальных целей
 if (tRoutesUI > 0) html += '<div class="sh-trade">🛃 Торговые пути: <b>' + tRoutesUI + '</b> · налоги <b>+' + Math.round((SM.tradeBonus(tRoutesUI)) * 100) + '%</b></div>';
 var _season = ensureSeason();
@@ -113,7 +113,19 @@ var html = '<div class="kingdom-banner">' +
 '</div>';
 root.innerHTML = html;
 }
-function shSpriteImg(path, emoji) { return '<img src="' + path + '" alt="" loading="lazy" decoding="async" data-nd-fb="' + String(emoji).replace(/[&<>"']/g, function(c) { return '&#' + c.charCodeAt(0) + ';'; }) + '">'; } // волна 3: спрайты вне критического пути · CSP: без inline onerror, фолбэк — делегированный capture-обработчик ниже
+function shSpriteImg(path, emoji) {
+// Визуал-план фаза 3: единый язык иконок — силуэты game-icons (CC BY 3.0, см. ART_MANIFEST) в медальонах вместо смеси
+// изометрии Kenney и пиксельных юнитов. Таблица внутри функции: харнессы извлекают её поодиночке.
+var M = { zh1: ['huts-village', 'zh'], zh2: ['barracks', 'zh'], zh3: ['archery-target', 'zh'], zh4: ['sword-smithing', 'zh'], zh5: ['stable', 'zh'], zh6: ['church', 'zh'], zh7: ['castle', 'zh'],
+ec1: ['trade', 'ec'], ec2: ['barn', 'ec'], ec3: ['gold-mine', 'ec'], ec4: ['coins-pile', 'ec'], ec5: ['coins', 'ec'],
+df1: ['wooden-fence', 'df'], df2: ['watchtower', 'df'], df3: ['stone-wall', 'df'], df4: ['guarded-tower', 'df'],
+sp1: ['spyglass', 'sp'], sp2: ['tattered-banner', 'sp'], sp3: ['saint-basil-cathedral', 'sp'], sp4: ['magic-gate', 'sp'],
+t1: ['pitchfork', 'iron'], t2: ['spears', 'iron'], t3: ['archer', 'steel'], t4: ['sword-brandish', 'steel'], t5: ['cavalry', 'arcane'], t6: ['hooded-figure', 'arcane'], t7: ['imperial-crown', 'gilded'] };
+var m = /^img\/(?:tract\/buildings\/([a-z0-9]+)|units\/tier([1-7]))\.png$/.exec(String(path));
+var hit = m ? M[m[1] || ('t' + m[2])] : null;
+if (hit) return '<span class="nd-medal tone-' + hit[1] + '" aria-hidden="true" style="--art:url(../img/gameicons/' + hit[0] + '.svg)"></span>';
+return '<img src="' + path + '" alt="" loading="lazy" decoding="async" data-nd-fb="' + String(emoji).replace(/[&<>"']/g, function(c) { return '&#' + c.charCodeAt(0) + ';'; }) + '">';
+}
 if (typeof document !== 'undefined' && document && typeof document.addEventListener === 'function') {
     document.addEventListener('error', function(e) { // error у <img> не всплывает — capture-фаза
         var t = e && e.target;

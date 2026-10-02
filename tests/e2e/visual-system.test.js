@@ -198,3 +198,29 @@ test('Фаза 1: «Приоритет дня» — героическая ка�
     expect(r.tiles).toBeGreaterThanOrEqual(5);
     expect(r.inline, 'inline-стили убраны из дашборда').toBe(0);
 });
+
+// ---------- Королевство v3 ----------
+test('Фаза 3: «Твердыни» — порядок: казна → карта → фронт → тактика; казна и якорь — чипы на токенах', async ({ page }) => {
+    const s = seedWithRanks();
+    for (let i = 0; i < 7; i++) s.strongholds[i].captured = true;
+    await bootSeed(page, s);
+    await page.evaluate(() => document.querySelector('.bnav-btn[data-view="strongholds"]').click());
+    await page.waitForTimeout(600);
+    const r = await page.evaluate(() => {
+        const root = document.getElementById('strongholdsRoot');
+        const q = (sel) => root.querySelector(sel);
+        const map = q('.km-node') && q('.km-node').closest('svg');
+        const els = { treasury: q('.sh-treasury'), map, front: q('.km-front-card'), stance: q('.km-stance-row') };
+        const order = Object.entries(els).filter(([, e]) => e).sort((a, b) => (a[1].compareDocumentPosition(b[1]) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)).map(([k]) => k);
+        const tr = getComputedStyle(els.treasury);
+        const anchor = [...root.querySelectorAll('.sh-context-anchor .ctx')].map((c) => c.textContent.trim());
+        const btn = q('.sh-assault').getBoundingClientRect();
+        return { order, trDisplay: tr.display, anchor, assaultH: btn.height, over: root.scrollWidth - root.clientWidth };
+    });
+    expect(r.order).toEqual(['treasury', 'map', 'front', 'stance']);
+    expect(r.trDisplay).toBe('grid');
+    expect(r.anchor.join('|')).toContain('Фронт:');
+    expect(r.anchor.join('|')).toContain('Гнев:');
+    expect(r.assaultH).toBeGreaterThanOrEqual(44);
+    expect(r.over).toBeLessThanOrEqual(1);
+});
