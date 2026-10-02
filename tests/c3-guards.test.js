@@ -10,7 +10,7 @@ const R = require('../js/campaign3/c3-runtime.js');
 const fresh = () => M.newState('2026-10-05');
 
 test('sanitizeC3: мусор и чужие типы → null', () => {
-    [null, undefined, 0, 'x', [], {}, { v: 4, own: '000', day: '2026-10-05' }, { v: 4, own: '1'.repeat(33), day: 'вчера' }, { v: 4, own: '1'.repeat(34), day: '2026-10-05' }, { v: 4, own: '7'.repeat(33), day: '2026-10-05' }, { v: 3, own: '1'.repeat(33), day: '2026-10-05' }, { v: 2, own: '1'.repeat(33), day: '2026-10-05' }, { v: 1, own: '100000002', day: '2026-10-05' }]
+    [null, undefined, 0, 'x', [], {}, { v: 5, own: '000', day: '2026-10-05' }, { v: 5, own: '1'.repeat(33), day: 'вчера' }, { v: 5, own: '1'.repeat(34), day: '2026-10-05' }, { v: 5, own: '7'.repeat(33), day: '2026-10-05' }, { v: 4, own: '1'.repeat(33), day: '2026-10-05' }, { v: 3, own: '1'.repeat(33), day: '2026-10-05' }, { v: 2, own: '1'.repeat(33), day: '2026-10-05' }, { v: 1, own: '100000002', day: '2026-10-05' }]
         .forEach((v) => assert.equal(SG.sanitizeC3(v), null, JSON.stringify(v)));
 });
 
@@ -138,7 +138,7 @@ test('рантайм: load принимает валидный c3 и отвер�
     assert.equal(c3.serialize().res.g, 77);
     assert.equal(c3.load({ nope: 1 }), false);
     assert.equal(c3.load({ v: 1, own: '100000002', day: '2026-10-05' }), false, 'старый срез Ф1 отвергается');
-    assert.equal(c3.load(Object.assign(fresh(), { v: 3 })), false, 'состояние Ф3 отвергается');
+    assert.equal(c3.load(Object.assign(fresh(), { v: 4 })), false, 'состояние Ф4 отвергается');
     assert.equal(c3.serialize().res.g, 77, 'мусор не затирает прежнее состояние');
 });
 
@@ -161,4 +161,34 @@ test('рантайм: тактики предлагаются по рангам 
     const rush = { kind: 'rush', p: 0.25 };
     const r = c3.act.engage(0, 4, rush);
     assert.equal(r.win, true); assert.equal(r.tactic.kind, 'rush');
+});
+
+test('наследие: sanitizeC3 сохраняет и зажимает lg; без lg ключа нет', () => {
+    const s = fresh(); assert.equal('lg' in SG.sanitizeC3(s), false);
+    s.lg = { g: 99999, hall: [1, 5, 0, 1], sk: [1, 0, 0, 0], a: 5000, l: [9, 0, 2, 4], evil: 1 };
+    const o = SG.sanitizeC3(s);
+    assert.deepEqual(o.lg, { g: 2000, hall: [1, 1, 0, 1], sk: [1, 0, 0, 0], a: 1000, l: [4, 1, 2, 4] });
+    const lg = M.legacyFromV14({ captured: 12, seasonNum: 3, throne: 1, bosses: 4, units: { t1: 100, t4: 10 }, stats: { str: { value: 20 }, end: { value: 20 }, agi: { value: 20 }, int: { value: 3 } } });
+    const st = M.newState('2026-10-05', lg); assert.deepEqual(SG.sanitizeC3(JSON.parse(JSON.stringify(st))), st, 'раундтрип с наследием байт-стабилен');
+});
+
+test('рантайм: наследие применяется один раз при создании карты и только если есть что переносить', () => {
+    const src = { captured: 10, seasonNum: 2, throne: 0, bosses: 0, units: { t1: 50 }, stats: { str: { value: 11 }, end: { value: 11 }, agi: { value: 11 } } };
+    const { e } = env({ legacySource: () => src }); const c3 = R.create(e);
+    const st = c3.ensure();
+    assert.ok(st.lg); assert.equal(st.lg.hall[0], 1); assert.equal(st.lg.hall[2], 0); assert.equal(st.res.g, D.C.START_GOLD + 100);
+    assert.equal(st.heroes[0].lvl, 2); assert.equal(st.heroes[1].lvl, 1);
+    const empty = R.create(env({ legacySource: () => ({}) }).e); assert.equal('lg' in empty.ensure(), false, 'пустое наследие не пишется');
+    const none = R.create(env().e); assert.equal('lg' in none.ensure(), false, 'без источника наследия — чистая карта');
+});
+
+test('рантайм: boot подхватывает отложенный сейв и закрывает сутки; без флага — ничего', () => {
+    const base = fresh(); base.day = '2026-10-03'; base.res.g = 77;
+    let stash = JSON.parse(JSON.stringify(base)); const { e, calls } = env({ takeStash: () => { const r = stash; stash = undefined; return r; } });
+    const c3 = R.create(e);
+    c3.boot();
+    assert.equal(c3.getState().res.g >= 77, true); assert.equal(c3.getState().day, '2026-10-05', 'сутки догнаны');
+    assert.ok(calls.render >= 1);
+    c3.boot(); // повтор безопасен
+    const off = R.create(env({ getFlag: () => false, takeStash: () => JSON.parse(JSON.stringify(base)) }).e); off.boot(); assert.equal(off.getState().day, '2026-10-03', 'без флага сутки не закрываются');
 });

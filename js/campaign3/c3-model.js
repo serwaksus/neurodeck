@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф4 — чистая модель: 4 героя-сферы и 4 ИИ-фракции пороков на карте из 33 узлов (без DOM, Date.now и Math.random).
+// Кампания 3.0, Ф5 — чистая модель: 4 героя-сферы и 4 ИИ-фракции пороков на карте из 33 узлов (без DOM, Date.now и Math.random).
 // Время и случайность приходят снаружи: dayKey и сидированный mulberry32 — модель детерминирована (гейт C7).
 // ИНВАРИАНТ C4: очки движения (state.ap[]) растут ТОЛЬКО в applyDeed. Любая другая функция ap лишь тратит или обнуляет.
 (function(root, factory) {
@@ -35,7 +35,25 @@
     // Владельцы узлов (символы строки own): '0' нейтрал, '1' игрок, '2'..'5' фракция по индексу (код = 2 + f), '6' цитадель
     function facCode(f) { return String(2 + f); }
     function facOf(ch) { var n = ch.charCodeAt(0) - 50; return (n >= 0 && n <= 3) ? n : -1; }
-    function newState(dayKey) {
+    // Наследие 2.0 → стартовые бонусы c3. src: {stats:{str:{value}…}, captured, units:{t1..t7}, bosses, seasonNum, throne, ascension}; всё необязательно
+    function num(v) { v = Number(v); return isFinite(v) && v > 0 ? v : 0; }
+    function legacyFromV14(src) {
+        var L = D.LEGACY; src = src || {};
+        var stats = src.stats || {}, units = src.units || {};
+        var gold = Math.min(L.GOLD_MAX, L.GOLD_SEASON * Math.max(0, Math.floor(num(src.seasonNum)) - 1) + L.GOLD_THRONE * Math.floor(num(src.throne)) + L.GOLD_ASC * Math.floor(num(src.ascension)));
+        var halls = Math.min(L.HALL_MAX, Math.floor(num(src.captured) / L.CAPTURED_PER_HALL)), hall = [0, 1, 2, 3].map(function(i) { return i < halls ? 1 : 0; });
+        var skills = Math.min(4, Math.ceil(Math.floor(num(src.bosses)) / L.BOSSES_PER_SKILL)), sk = [0, 1, 2, 3].map(function(i) { return i < skills ? 1 : 0; });
+        var power = 0; Object.keys(D.LEGACY_POWER).forEach(function(k) { power += Math.floor(num(units[k])) * D.LEGACY_POWER[k]; });
+        var army = Math.floor(Math.min(L.ARMY_POWER_MAX, Math.floor(power * L.ARMY_SHARE)) / 2 / 4); // t1 каждому герою
+        var groups = [['str', 'end', 'agi'], ['int'], ['wil'], ['cha']];
+        var lvl = groups.map(function(g) {
+            var sum = 0; g.forEach(function(k) { sum += num(stats[k] && stats[k].value); });
+            var v = sum / g.length;
+            return Math.min(L.LVL_MAX, 1 + Math.floor(Math.max(0, v - L.STAT_BASE) / L.STAT_PER_LVL));
+        });
+        return { g: gold, hall: hall, sk: sk, a: army, l: lvl };
+    }
+    function newState(dayKey, legacy) {
         var own = '', gar = [];
         NODES.forEach(function(n) {
             var ch = '0';
@@ -44,7 +62,7 @@
             own += ch; gar.push(n.gar);
         });
         var s = {
-            v: 4, day: String(dayKey), wk: 0, idle: 0, bc: 0, stk: zeros(4), tasksToday: 0, deedsToday: 0,
+            v: 5, day: String(dayKey), wk: 0, idle: 0, bc: 0, stk: zeros(4), tasksToday: 0, deedsToday: 0,
             ap: zeros(4), apDay: zeros(4), apWeek: zeros(4),
             pend: { s: zeros(4), h: zeros(4), o: zeros(4) }, // срывы закрываемых суток ПО СФЕРАМ из хуков Ф0 — ждут dayEnd
             res: { g: C.START_GOLD, st: 0, kn: 0, wl: 0, in: 0 },
@@ -55,6 +73,11 @@
             sg: zeros(4), lz: { on: 0, left: C.LAZARET_DAYS },
             log: [], done: false
         };
+        if (legacy && typeof legacy === 'object') { // Ф5: наследие 2.0 — один раз при создании карты, хранится для экрана «Наследие»
+            s.lg = { g: legacy.g | 0, hall: legacy.hall.slice(0, 4), sk: legacy.sk.slice(0, 4), a: legacy.a | 0, l: legacy.l.slice(0, 4) };
+            s.res.g += s.lg.g;
+            s.heroes.forEach(function(h, i) { h.lvl = s.lg.l[i]; h.sk = s.lg.sk[i]; h.army.t1 += s.lg.a; s.towns[i].hall = s.lg.hall[i]; });
+        }
         markSeen(s);
         return s;
     }
@@ -461,7 +484,7 @@
 
     return {
         mulberry32: mulberry32, hashStr: hashStr, stateHash: stateHash,
-        newState: newState, pushLog: pushLog, markSeen: markSeen,
+        newState: newState, legacyFromV14: legacyFromV14, pushLog: pushLog, markSeen: markSeen,
         hall: hall, townOwned: townOwned, townsOwned: townsOwned, facSum: facSum, facMult: facMult, lairMult: lairMult, facPower: facPower, playerShare: playerShare, facOf: facOf, facCode: facCode,
         shadowSum: shadowSum, shadowMult: shadowMult, armyPower: armyPower, nodeDefense: nodeDefense, isHostile: isHostile, nodeSphere: nodeSphere,
         rankBonus: rankBonus, deedAp: deedAp, applyDeed: applyDeed,

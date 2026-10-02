@@ -23,6 +23,15 @@
                 } catch (e) { return false; }
             },
             dayKey: function() { return w.getMSKDayKey(); },
+            takeStash: function() { var r = w.__ndC3Raw; w.__ndC3Raw = undefined; return r; },
+            legacySource: function() { // что осталось от твердынь 2.0 — для «Наследия» (читается один раз при создании карты)
+                try {
+                    var cap = 0; (typeof strongholds !== 'undefined' && strongholds ? strongholds : []).forEach(function(x) { if (x && x.captured) cap++; });
+                    return { stats: typeof STATS !== 'undefined' ? STATS : {}, captured: cap, units: (typeof army !== 'undefined' && army && army.units) ? army.units : {},
+                        bosses: (typeof HERO !== 'undefined' && HERO.bosses && HERO.bosses.defeated) ? HERO.bosses.defeated.length : 0,
+                        seasonNum: (typeof season !== 'undefined' && season) ? season.num : 1, throne: typeof throne !== 'undefined' ? throne : 0, ascension: (typeof HERO !== 'undefined' && HERO.ascension) || 0 };
+                } catch (e) { return {}; }
+            },
             sphereRanks: function(sphere) { // ранги лучших карточек сферы (до 3, от сильной) — сила тактик перед боем
                 var D2 = w.NeuroDeckC3Data, out = [];
                 try { (typeof FORGED !== 'undefined' ? FORGED : []).forEach(function(c) { if (c && D2.SPHERE_OF_STAT[c.stat] === sphere && D2.RANKS.indexOf(c.rank) >= 0) out.push(c.rank); }); } catch (e) {}
@@ -49,7 +58,11 @@
         function enabled() { if (flag === null) flag = !!env.getFlag(); return flag; }
         function ensure() {
             if (!enabled()) return null;
-            if (!state) state = M.newState(env.dayKey());
+            if (!state) {
+                var lg = (typeof env.legacySource === 'function') ? M.legacyFromV14(env.legacySource()) : null;
+                if (lg && !(lg.g || lg.a || lg.hall.some(Boolean) || lg.sk.some(Boolean) || lg.l.some(function(v) { return v > 1; }))) lg = null; // нечего переносить
+                state = M.newState(env.dayKey(), lg);
+            }
             return state;
         }
         function addPend(target, by) {
@@ -63,6 +76,12 @@
             serialize: function() { return state || undefined; }, // нет состояния → ключа в сейве нет (флаг никогда не включали)
             load: function(raw) { var s = env.sanitize(raw); if (s) state = s; return !!s; },
             reset: function() { state = null; },
+            // ленивая загрузка: модули подгружены после старта игры — подхватить отложенный сейв (storage.js кладёт его в window.__ndC3Raw) и закрыть сутки
+            boot: function() {
+                if (!state && env.takeStash) { var raw = env.takeStash(); if (raw) api.load(raw); }
+                if (enabled() && state) api.dayEnd(env.dayKey());
+                env.render();
+            },
 
             // ----- хуки из app.js (все под enabled()) -----
             onDeed: function(deed) { // deed: {kind:'habit', stat, rank} | {kind:'task', sphere?}

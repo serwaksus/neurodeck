@@ -365,7 +365,7 @@ ensureStrongholdState();
 snapshot.strongholds = (_ndSnap && _ndSnap.strongholds) ? _ndSnap.strongholds : strongholds;
 snapshot.army = (_ndSnap && _ndSnap.army) ? _ndSnap.army : army;
 snapshot.siege = (_ndSnap && _ndSnap.siege) ? _ndSnap.siege : siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; snapshot.TECHS = (typeof TECHS !== 'undefined') ? TECHS : {}; snapshot.TECH_PTS = (typeof TECH_PTS !== 'undefined') ? TECH_PTS : 0; snapshot.TECH_IDEA = (typeof TECH_IDEA !== 'undefined') ? TECH_IDEA : null; snapshot.TECH_ACTIVES = (typeof TECH_ACTIVES !== 'undefined') ? TECH_ACTIVES : {}; } catch(e) {}
-try { var _c3s = (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.serialize === 'function') ? NDC3.serialize() : undefined; if (_c3s) snapshot.c3 = _c3s; } catch(e) {} // кампания 3.0
+try { var _c3s = (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.serialize === 'function') ? NDC3.serialize() : window.__ndC3Raw; if (_c3s) snapshot.c3 = _c3s; } catch(e) {} // кампания 3.0
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 if (FORGED.length > 0) { try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {} } // ever_saved = «игрок с карточками»: пустой сейв не должен блокировать старт-колоду (O-10)
@@ -882,7 +882,7 @@ try {
     data.army = army;
     data.siege = siege;
 } catch(e) {}
-try { var _c3 = (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.serialize === 'function') ? NDC3.serialize() : undefined; if (_c3) data.c3 = _c3; } catch(e) {} // кампания 3.0: ключа нет, пока флаг не включали
+try { var _c3 = (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.serialize === 'function') ? NDC3.serialize() : window.__ndC3Raw; if (_c3) data.c3 = _c3; } catch(e) {} // кампания 3.0: ключа нет, пока флаг не включали
 return data;
 }
 function updateCloudStatus() {
@@ -1057,7 +1057,7 @@ function ndRefreshUndoSection() {
     var desc = document.getElementById('undoImportDesc');
     if (desc && snap) desc.textContent = 'Состояние до импорта от ' + new Date(snap.t).toLocaleString('ru') + ' (' + ((snap.data.forged && snap.data.forged.length) || 0) + ' карт.) — хранится 7 дней.';
 }
-function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); ndRefreshUndoSection(); }
+function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); ndRefreshUndoSection(); if (typeof ndRefreshC3Toggle === 'function') ndRefreshC3Toggle(); }
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }
 function generateShareLink() {
 var data = buildSyncData();
@@ -1218,7 +1218,7 @@ if (typeof data.lastDayReset === 'string') lastDayReset = RESET_DATE_RE.test(dat
 if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongholds(data.strongholds, strongholdCatalog());
 if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
-if (data.c3 !== undefined && typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.load === 'function') NDC3.load(data.c3); // кампания 3.0: необязательный ключ, схема v14 не меняется
+if (data.c3 !== undefined) { if (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.load === 'function') NDC3.load(data.c3); else window.__ndC3Raw = data.c3; } // кампания 3.0: необязательный ключ, схема v14 не меняется; модули грузятся лениво — до их загрузки сейв ждёт в window.__ndC3Raw
 if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
     if (typeof dailyQuests !== 'undefined' && data.dailyQuests && typeof data.dailyQuests === 'object') {
         var _dq = STATE_GUARDS.sanitizeDailyQuests(data.dailyQuests, (typeof DQ_POOL !== 'undefined') ? DQ_POOL : null); // P0: квесты по каталогу, не как есть

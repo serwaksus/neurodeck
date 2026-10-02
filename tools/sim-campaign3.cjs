@@ -14,6 +14,7 @@
 //  C2 дисциплина 40 %: карта проходима ≤ 26 недель, города целы;
 //  C8 дисциплина окупается (медианы недель победы монотонны);
 //  C3 дисциплина 10 %: игра не «умирает» — хотя бы один город цел (последний не падает), армии живы, герои выходят за город; при 40 % остаётся ≥ 3 городов;
+//  C12 наследие твердынь 2.0 ускоряет умеренно (не раньше 5-й недели);
 //  C11 тактики ускоряют карту умеренно (не позже, чем без них, и не более чем на 4 недели);
 //  C10 фракции отвечают на срывы СВОЕЙ сферы: без дел Духа Уныние занимает заметно больше узлов остальных.
 // Выход 1 при провале любого гейта.
@@ -124,7 +125,7 @@ function bot(s) {
 function run(p, seed, opts) {
   opts = opts || {};
   const rng = M.mulberry32(seed * 7919 + Math.round(p * 100));
-  const s = M.newState(dayKey(0));
+  const s = M.newState(dayKey(0), opts.legacy ? M.legacyFromV14(opts.legacy) : null);
   const out = { doneWeek: null, maxActions: 0, apGained: [0, 0, 0, 0], maxFar: [0, 0, 0, 0], falls: 0, takes: 0 };
   for (let i = 0; i < DAYS; i++) {
     const missedBy = [0, 0, 0, 0], overdue = [0, 0, 0, 0];
@@ -201,6 +202,11 @@ const noTac = SEEDS.map((seed) => run(0.7, seed).doneWeek === null ? Infinity : 
 OPTS.tactics = true;
 const withTac = med(0.7);
 gate('C11', withTac <= noTac && noTac - withTac <= 4, 'тактики: медиана победы при 70 % — с тактиками ' + withTac + ' нед., без ' + noTac + ' нед. (выигрыш 0…4)');
+
+// C12: наследие 2.0 помогает, но не заменяет дела: при максимальном наследии победа при 70 % не раньше 5-й недели и не позже, чем без наследия
+const MAX_LEGACY = { captured: 20, seasonNum: 99, throne: 5, ascension: 9, bosses: 11, units: { t7: 999 }, stats: { str: { value: 99 }, end: { value: 99 }, agi: { value: 99 }, int: { value: 99 }, wil: { value: 99 }, cha: { value: 99 } } };
+const legWeeks = SEEDS.map((seed) => run(0.7, seed, { legacy: MAX_LEGACY }).doneWeek === null ? Infinity : run(0.7, seed, { legacy: MAX_LEGACY }).doneWeek).sort((a, b) => a - b)[1];
+gate('C12', legWeeks >= 5 && legWeeks <= med(0.7), 'наследие: медиана победы при 70 % — с максимальным наследием ' + legWeeks + ' нед., без ' + med(0.7) + ' нед. (≥ 5 и не позже)');
 
 console.log(failed ? '\nГЕЙТЫ КАМПАНИИ 3.0: ПРОВАЛ (' + failed + ')' : '\nИТОГО: гейты кампании 3.0 пройдены');
 process.exit(failed ? 1 : 0);

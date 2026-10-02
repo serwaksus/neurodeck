@@ -4,7 +4,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "check:js": "node --check js/state-guards.js && node --check js/state/store.js && node --check js/ui/strongholds.js && node --check js/perf.js && node --check js/audio.js && node --check js/storage.js && node --check js/campaign3/c3-data.js && node --check js/campaign3/c3-model.js && node --check js/campaign3/c3-runtime.js && node --check js/ui/campaign3.js && node --check js/app.js",
+    "check:js": "node --check js/state-guards.js && node --check js/state/store.js && node --check js/ui/strongholds.js && node --check js/perf.js && node --check js/audio.js && node --check js/storage.js && node --check js/campaign3/c3-data.js && node --check js/campaign3/c3-model.js && node --check js/campaign3/c3-runtime.js && node --check js/campaign3/c3-loader.js && node --check js/ui/campaign3.js && node --check js/app.js",
     "check:ui": "node tests/verify-ui-assets.cjs css/style.css index.html && node tools/css-lint.cjs",
     "test": "node --test tests/*.test.js",
     "ci": "npm run check:js && npm run check:ui && npm test && npm run test:e2e && npm run test:e2e:visual && npm run test:playtest:strongholds && npm run test:playtest:acceptance && npm run test:qa:data && npm run test:qa:chaos && npm run test:qa:parity && npm run test:sim:economy && npm run test:sim:c3",

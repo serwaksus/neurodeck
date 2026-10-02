@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф4 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, фракции пороков, лазарет, журнал.
+// Кампания 3.0, Ф5 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, фракции пороков, лазарет, журнал.
 // Рисует только когда включён флаг nd_c3 (иначе панель пуста и скрыта). Логика — js/campaign3/*, здесь только вид и клики.
 (function() {
     'use strict';
@@ -120,6 +120,17 @@
         var sp = SPH[h], K = D.SKILL[sp], hero = s.heroes[h], need = D.C.SHRINE_STREAK;
         return '🎓 ' + e(K.name) + ' ' + hero.sk + '/' + D.C.SKILL_MAX + (K.kind ? ' (' + e(D.TACTICS[K.kind].name) + ' +' + Math.round(D.C.SKILL_STEP * 100 * hero.sk) + '%)' : ' (+' + Math.round(D.C.DIPLO_LOOT * 100 * hero.sk) + '% золота добычи)') + ' · серия дел сферы: <b>' + s.stk[h] + '</b>/' + need + (s.stk[h] >= need ? ' — святилище даст навык' : '');
     }
+    function legacyPanel(s) {
+        var lg = s.lg; if (!lg) return '';
+        var halls = SPH.filter(function(sp, i) { return lg.hall[i]; }).map(function(sp) { return D.HALL[sp].name; });
+        var sks = SPH.filter(function(sp, i) { return lg.sk[i]; }).map(function(sp) { return D.HERO_NAME[sp] + ': ' + D.SKILL[sp].name; });
+        return '<details class="c3-facs c3-legacy"><summary>🏺 Наследие твердынь 2.0</summary><ul class="c3-flist">' +
+            '<li class="c3-frow"><span class="c3-fname">Казна</span><span class="c3-fstat">+' + lg.g + ' 💰 к старту</span></li>' +
+            '<li class="c3-frow"><span class="c3-fname">Залы</span><span class="c3-fstat">' + (halls.length ? e(halls.join(', ')) + ' (1 ур.)' : '—') + '</span></li>' +
+            '<li class="c3-frow"><span class="c3-fname">Навыки</span><span class="c3-fstat">' + (sks.length ? e(sks.join(' · ')) : '—') + '</span></li>' +
+            '<li class="c3-frow"><span class="c3-fname">Армия</span><span class="c3-fstat">+' + lg.a + ' 🗡 каждому герою</span></li>' +
+            '<li class="c3-frow"><span class="c3-fname">Уровни героев</span><span class="c3-fstat">' + lg.l.join(' / ') + ' — от твоих характеристик</span></li></ul></details>';
+    }
     function facPanel(s) {
         var anyTruce = s.fac.some(function(f) { return f.truce; });
         var rows = D.FACTIONS.map(function(F, f) {
@@ -153,7 +164,7 @@
             (s.done ? '<div class="c3-done">🏆 Цитадель Пороков пала — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
             '<div class="c3-mapwrap"><div class="c3-map">' + edgesHtml(s) + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' +
             detailHtml(s) +
-            facPanel(s) +
+            facPanel(s) + legacyPanel(s) +
             '<div class="c3-shadow">🌑 Тени пороков за 7 дней: <b>' + (Math.round(sum * 10) / 10) + '</b> → сила цитадели ×' + M.lairMult(s).toFixed(2) + '</div>' +
             (s.log.length ? '<ul class="c3-log">' + s.log.slice().reverse().map(function(l) { return '<li><i>' + e(l.d.slice(5)) + '</i> ' + e(l.t) + '</li>'; }).join('') + '</ul>' : '') +
             '<div class="c3-note">Очки движения героя дают только дела его сферы (Тело: Сила/Стойкость/Ловкость · Разум: Интеллект · Дух: Воля · Связи: Харизма); задача идёт сфере, выбранной при создании. Срыв дела сферы усиливает ЕЁ фракцию порока: она ходит раз в неделю (понедельник) и берёт соседние узлы, а затем и города.</div>' +

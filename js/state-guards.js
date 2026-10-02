@@ -432,11 +432,11 @@
         return out;
     }
 
-    // Кампания 3.0, Ф4: состояние c3 (33 узла, 4 героя-сферы, 4 фракции, навыки). Невосстановимое (v1–v3 прежних фаз беты) → null: рантайм начнёт карту заново.
+    // Кампания 3.0, Ф5: состояние c3 (33 узла, 4 героя-сферы, 4 фракции, навыки, наследие 2.0). Невосстановимое (v1–v4 прежних фаз беты) → null: рантайм начнёт карту заново.
     function sanitizeC3(input) {
         if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
         var N = 33, DATE = /^\d{4}-\d{2}-\d{2}$/;
-        if (input.v !== 4 || typeof input.own !== 'string' || input.own.length !== N || !/^[0-6]+$/.test(input.own) || typeof input.day !== 'string' || !DATE.test(input.day)) return null;
+        if (input.v !== 5 || typeof input.own !== 'string' || input.own.length !== N || !/^[0-6]+$/.test(input.own) || typeof input.day !== 'string' || !DATE.test(input.day)) return null;
         function int(v, lo, hi, d) { return Math.round(clampNumber(v, lo, hi, d)); }
         function arr(a, len, lo, hi, d) { var out = []; for (var i = 0; i < len; i++) out.push(int(Array.isArray(a) ? a[i] : d, lo, hi, d)); return out; }
         var src = input, res = (src.res && typeof src.res === 'object') ? src.res : {}, pend = (src.pend && typeof src.pend === 'object') ? src.pend : {};
@@ -465,8 +465,8 @@
         });
         var own = src.own; // города (индексы 0, 8, 16, 24) всегда игрока
         [0, 8, 16, 24].forEach(function(c) { own = own.slice(0, c) + '1' + own.slice(c + 1); });
-        return {
-            v: 4, day: src.day, wk: int(src.wk, 0, 520, 0), idle: int(src.idle, 0, 100000, 0), bc: int(src.bc, 0, 10000000, 0), stk: arr(src.stk, 4, 0, 99, 0),
+        var out = {
+            v: 5, day: src.day, wk: int(src.wk, 0, 520, 0), idle: int(src.idle, 0, 100000, 0), bc: int(src.bc, 0, 10000000, 0), stk: arr(src.stk, 4, 0, 99, 0),
             tasksToday: int(src.tasksToday, 0, 5, 0), deedsToday: int(src.deedsToday, 0, 1000, 0),
             ap: arr(src.ap, 4, 0, 20, 0), apDay: arr(src.apDay, 4, 0, 6, 0), apWeek: arr(src.apWeek, 4, 0, 1000, 0),
             pend: { s: arr(pend.s, 4, 0, 1000, 0), h: arr(pend.h, 4, 0, 1000, 0), o: arr(pend.o, 4, 0, 1000, 0) },
@@ -474,6 +474,8 @@
             heroes: heroes, own: own, seen: (typeof src.seen === 'string' && src.seen.length === N && /^[01]+$/.test(src.seen)) ? src.seen : '0'.repeat(N),
             gar: arr(src.gar, N, 0, 100000, 0), towns: towns, fac: facs, sg: arr(src.sg, 4, 0, 10, 0), lz: { on: lz.on ? 1 : 0, left: int(lz.left, 0, 30, 7) }, log: log, done: src.done === true
         };
+        if (src.lg && typeof src.lg === 'object') out.lg = { g: int(src.lg.g, 0, 2000, 0), hall: arr(src.lg.hall, 4, 0, 1, 0), sk: arr(src.lg.sk, 4, 0, 1, 0), a: int(src.lg.a, 0, 1000, 0), l: arr(src.lg.l, 4, 1, 4, 1) }; // наследие 2.0 — для экрана «Наследие»
+        return out;
     }
 
     function sanitizeSeason(input, todayKey) {

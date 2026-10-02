@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф4 — данные карты: 4 региона-сферы × 8 узлов + Цитадель Пороков в центре, 4 героя, 5 ресурсов, 4 города, 4 фракции пороков.
+// Кампания 3.0, Ф5 — данные карты: 4 региона-сферы × 8 узлов + Цитадель Пороков в центре, 4 героя, 5 ресурсов, 4 города, 4 фракции пороков.
 // Чистые данные без DOM; UMD как js/stronghold-model.js. Дизайн: docs/plan/CAMPAIGN-3.0.md.
 (function(root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -99,6 +99,9 @@
         spirit: { name: 'Стойкость',      kind: 'formation' },
         ties:   { name: 'Дипломатия',     kind: null }
     };
+    // Наследие твердынь 2.0 (бонусы старта, не 1:1): сила юнитов 2.0 для конвертации армии
+    var LEGACY_POWER = { t1: 2, t2: 6, t3: 16, t4: 45, t5: 140, t6: 450, t7: 1400 };
+    var LEGACY = { GOLD_MAX: 2000, GOLD_SEASON: 100, GOLD_THRONE: 300, GOLD_ASC: 300, CAPTURED_PER_HALL: 5, HALL_MAX: 3, BOSSES_PER_SKILL: 3, ARMY_SHARE: 0.1, ARMY_POWER_MAX: 600, LVL_MAX: 4, STAT_BASE: 3, STAT_PER_LVL: 8 };
     var C = {
         AP_CAP_DAY: 6,        // очков движения в сутки на героя
         AP_CARRY: 1,          // переносится на следующий день (на героя)
@@ -144,5 +147,5 @@
 
     return { SPHERES: SPHERES, SPHERE_NAME: SPHERE_NAME, HERO_NAME: HERO_NAME, RES_KEY: RES_KEY, RES_NAME: RES_NAME, RES_ICON: RES_ICON,
         SPHERE_OF_STAT: SPHERE_OF_STAT, HALL: HALL, NODES: NODES, EDGES: EDGES, LAIR: LAIR, TOWNS: TOWNS, MINES: MINES, LOOT: LOOT,
-        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, FACTIONS: FACTIONS, RANKS: RANKS, TACTICS: TACTICS, TACTIC_KEYS: TACTIC_KEYS, SKILL: SKILL, C: C };
+        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, FACTIONS: FACTIONS, LEGACY_POWER: LEGACY_POWER, LEGACY: LEGACY, RANKS: RANKS, TACTICS: TACTICS, TACTIC_KEYS: TACTIC_KEYS, SKILL: SKILL, C: C };
 });

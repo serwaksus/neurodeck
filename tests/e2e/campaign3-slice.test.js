@@ -1,5 +1,5 @@
 // ============================================================
-// Кампания 3.0, Ф4 — e2e за флагом nd_c3: 4 героя-сферы, карта из 33 узлов, города, фракции пороков.
+// Кампания 3.0, Ф5 — e2e за флагом nd_c3: 4 героя-сферы, карта из 33 узлов, города, фракции пороков.
 //   флаг выкл → 2.0 как была (панели нет, ключа c3 в сейве нет, выбор сферы задачи скрыт);
 //   флаг вкл → дело сферы двигает героя СВОЕЙ сферы, шаг по карте тратит ОД, бой, найм, залы, сбор армий, перезагрузка.
 // ============================================================
@@ -24,12 +24,13 @@ test.beforeEach(async ({ page }) => { await page.route('**/telegram-web-app.js',
 const card = (id, stat, rank) => ({ id, name: 'Дело ' + id, rank: rank || 'C', stat, streak: 3, mastery: 0, masteryThreshold: 7, totalCompletions: 5, progress: 0, prestige: 0, evolutionPath: 'depth', daysActive: 10, meta: '⚔ 15 мин · день', firstCompletedAt: Date.now() - 20 * 86400000, lastCompletedAt: Date.now() - 3 * 86400000, lastFailDay: null });
 const DEFAULT_CARDS = () => [card(1, 'str', 'A'), card(2, 'int', 'C'), card(3, 'wil', 'C'), card(4, 'cha', 'SSS'), card(5, 'end', 'C')];
 
-async function boot(page, flag, cards) {
-    const s = seedSave({});
+async function boot(page, flag, cards, over) {
+    const s = seedSave(Object.assign({ army: { units: { t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0 }, week: 3 } }, over || {})); // без армии 2.0 — чистая карта без наследия
     s.forged = cards || DEFAULT_CARDS();
     await page.addInitScript(SEED_IN_PAGE, { flag, save: JSON.stringify(s) });
     await page.goto('/');
     await page.waitForSelector('.app-wrap');
+    if (flag) await page.waitForFunction(() => window.renderCampaign3 && window.NDC3, null, { timeout: 8000 }); // модули c3 грузятся лениво
     await page.waitForTimeout(1500);
     await page.evaluate(() => { document.querySelectorAll('.modal-overlay.show').forEach((m) => m.classList.remove('show')); });
 }
@@ -43,7 +44,7 @@ test('флаг выключен: панели нет, состояние не с
     await openStrongholds(page);
     await expect(page.locator('#c3Root')).toBeHidden();
     await complete(page, 1);
-    expect(await page.evaluate(() => NDC3.getState())).toBeNull();
+    expect(await page.evaluate(() => typeof NDC3)).toBe('undefined'); // модули не загружены вовсе
     const saved = await page.evaluate(() => { saveGameState(); return JSON.parse(localStorage.getItem('neurodeck_full_save')); });
     expect('c3' in saved).toBe(false);
     await page.evaluate(() => openTaskModal());
@@ -199,9 +200,9 @@ test('сутки закрываются: срывы идут фракциям С
 test('панель фракций: 4 фракции, перемирие и лазарет переключаются, лазарет требует подтверждения', async ({ page }) => {
     await boot(page, true);
     await openStrongholds(page);
-    await page.click('.c3-facs > summary');
-    await expect(page.locator('.c3-frow')).toHaveCount(4);
-    await expect(page.locator('.c3-facs')).toHaveAttribute('open', '');
+    await page.click('.c3-facs:not(.c3-legacy) > summary');
+    await expect(page.locator('.c3-facs:not(.c3-legacy) .c3-frow')).toHaveCount(4);
+    await expect(page.locator('.c3-facs:not(.c3-legacy)')).toHaveAttribute('open', '');
     await page.click('[data-c3="truce"][data-f="2"]');
     expect((await c3(page)).fac[2].truce).toBe(1);
     await expect(page.locator('[data-c3="truce"][data-f="0"]')).toBeDisabled(); // одновременно один обет
@@ -216,7 +217,7 @@ test('панель фракций: 4 фракции, перемирие и ла�
     await page.waitForTimeout(300);
     expect((await c3(page)).lz.on).toBe(1);
     await expect(page.locator('[data-c3="truce"][data-f="1"]')).toBeDisabled(); // в лазарете обет недоступен
-    await expect(page.locator('.c3-facs')).toHaveAttribute('open', ''); // панель не схлопывается от действий
+    await expect(page.locator('.c3-facs:not(.c3-legacy)')).toHaveAttribute('open', ''); // панель не схлопывается от действий
 });
 
 test('ход фракций: после недели со срывами Лень занимает узел, панель и карта показывают её власть; сейв хранит владельца', async ({ page }) => {
@@ -291,4 +292,58 @@ test('дни без открытия приложения: молчание сч
         return { body: s.fac[0].sh.reduce((a, b) => a + b, 0), mind: s.fac[1].sh.reduce((a, b) => a + b, 0), spirit: s.fac[2].sh.reduce((a, b) => a + b, 0) };
     });
     expect(r.body).toBeGreaterThanOrEqual(2); expect(r.mind).toBeGreaterThanOrEqual(2); expect(r.spirit).toBe(0);
+});
+
+test('ленивая загрузка: без флага модули c3 не запрашиваются, с флагом — подгружаются по порядку', async ({ page }) => {
+    const urls = [];
+    page.on('request', (r) => { const u = r.url(); if (/campaign3|c3-/.test(u)) urls.push(u.split('/').pop().split('?')[0]); });
+    await boot(page, false);
+    expect(urls.filter((u) => u !== 'c3-loader.js'), 'без флага грузится только лоадер').toEqual([]);
+    expect(await page.evaluate(() => typeof window.NDC3)).toBe('undefined');
+    const p2 = await page.context().newPage();
+    await p2.route('**/telegram-web-app.js', (r) => r.abort());
+    const urls2 = [];
+    p2.on('request', (r) => { const u = r.url(); if (/campaign3|c3-/.test(u)) urls2.push(u.split('/').pop().split('?')[0]); });
+    await p2.addInitScript(SEED_IN_PAGE, { flag: true, save: JSON.stringify(seedSave({})) });
+    await p2.goto('/');
+    await p2.waitForFunction(() => window.renderCampaign3 && window.NDC3, null, { timeout: 8000 });
+    expect(urls2).toEqual(['c3-loader.js', 'campaign3.css', 'c3-data.js', 'c3-model.js', 'c3-runtime.js', 'campaign3.js']);
+});
+
+test('тумблер беты в «Синхронизации»: включает флаг и перезапускает; панель появляется', async ({ page }) => {
+    await boot(page, false);
+    await page.evaluate(() => openSyncModal());
+    await expect(page.locator('#c3ToggleBtn')).toContainText('Включить');
+    await Promise.all([page.waitForNavigation(), page.click('#c3ToggleBtn')]);
+    expect(await page.evaluate(() => localStorage.getItem('nd_c3'))).toBe('1');
+    await page.waitForFunction(() => window.renderCampaign3 && window.NDC3, null, { timeout: 8000 });
+    await page.evaluate(() => { document.querySelectorAll('.modal-overlay.show').forEach((m) => m.classList.remove('show')); });
+    await openStrongholds(page);
+    await expect(page.locator('#c3Root .c3')).toBeVisible();
+});
+
+test('выключение беты не стирает прогресс c3: сейв хранит его, пока модули не загружены', async ({ page }) => {
+    await boot(page, true);
+    await complete(page, 1);
+    await page.evaluate(() => saveGameState());
+    await page.evaluate(() => localStorage.removeItem('nd_c3'));
+    await page.evaluate(() => sessionStorage.setItem('__ndSeeded', '1'));
+    await page.reload();
+    await page.waitForSelector('.app-wrap');
+    await page.waitForTimeout(1500);
+    expect(await page.evaluate(() => typeof window.NDC3)).toBe('undefined');
+    const kept = await page.evaluate(() => { saveGameState(); const c = JSON.parse(localStorage.getItem('neurodeck_full_save')).c3; return c ? c.ap : null; });
+    expect(kept).toEqual([2, 0, 0, 0]);
+});
+
+test('наследие твердынь 2.0: при создании карты бонусы применяются, панель «Наследие» показывает их', async ({ page }) => {
+    const over = { strongholds: Array.from({ length: 20 }, (_, i) => ({ id: 'sh' + String(i + 1).padStart(2, '0'), captured: i < 10, garrison: [], buildings: {}, corruption: { stage: 'ok', debtDays: 0 } })), season: { num: 3, start: '2026-09-20', crownBonus: 1, snapshot: { totalXp: 0, gold: 0, captured: 0, completions: 0, level: 1 } }, throne: 1 };
+    await boot(page, true, null, over);
+    await openStrongholds(page);
+    const s = await c3(page);
+    expect(s.lg).toBeTruthy(); expect(s.lg.hall).toEqual([1, 1, 0, 0]); expect(s.lg.g).toBe(200 + 300);
+    expect(s.res.g).toBe(40 + 500); expect(s.towns[0].hall).toBe(1);
+    await expect(page.locator('.c3-legacy')).toContainText('Наследие твердынь 2.0');
+    await page.click('.c3-legacy > summary');
+    await expect(page.locator('.c3-legacy')).toContainText('+500');
 });

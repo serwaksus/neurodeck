@@ -150,6 +150,7 @@ case 'copy-share-link': copyShareLink(); break;
 case 'share-link': shareLinkNative(); break;
 case 'download-sync-file': downloadSyncFile(); break;
 case 'undo-import': ndUndoImport(); break;
+case 'toggle-c3': ndToggleC3(); break; // кампания 3.0: бета-тумблер
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
 case 'export-metrics': exportMetrics(); break; // A2
@@ -6145,6 +6146,14 @@ setTimeout(() => { el.classList.remove('show'); setTimeout(playNextToast, 200); 
 }
 var _spiritT = null;
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(_spiritT); _spiritT = setTimeout(function() { el.classList.remove('show'); }, 4000); } // явное снятие: при reduced-motion анимации нет, иначе шёпот висел бы вечно
+function ndC3On() { try { return localStorage.getItem('nd_c3') === '1'; } catch (e) { return false; } }
+function ndRefreshC3Toggle() { var b = document.getElementById('c3ToggleBtn'); if (b) b.textContent = ndC3On() ? 'Выключить (перезапуск)' : 'Включить (перезапуск)'; }
+function ndToggleC3() { // флаг живёт вне сейва (localStorage); прогресс c3 в сейве остаётся при выключении
+    var on = ndC3On();
+    try { if (on) localStorage.removeItem('nd_c3'); else localStorage.setItem('nd_c3', '1'); } catch (e) {}
+    saveGameState();
+    setTimeout(function() { location.reload(); }, 150);
+}
 function dungeonConfirm(title, body, yesLabel, noLabel) {
 return new Promise(function(resolve) {
 var overlay = document.getElementById('confirmOverlay');

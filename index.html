@@ -15,9 +15,8 @@
     <link rel="preload" href="fonts/Philosopher-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/Alegreya-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=146" />
-    <link rel="stylesheet" href="css/style.css?v=146" />
-    <link rel="stylesheet" href="css/campaign3.css?v=146" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=149" />
+    <link rel="stylesheet" href="css/style.css?v=149" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
@@ -427,6 +426,11 @@
               <div class="sync-section-title">↩ Откат импорта</div>
               <div class="sync-section-desc" id="undoImportDesc">Перед последним импортом прежнее состояние сохранено.</div>
               <button class="demo-btn" data-action="undo-import">↩ Вернуть состояние до импорта</button>
+            </div>
+            <div class="sync-section" id="c3Section">
+              <div class="sync-section-title">🗺 Кампания 3.0 (бета)</div>
+              <div class="sync-section-desc">Четыре героя-сферы на общей карте, фракции пороков, тактики. Очки движения дают только твои дела. Включение перезапускает игру; прогресс беты хранится отдельно от твердынь 2.0.</div>
+              <button class="demo-btn" id="c3ToggleBtn" data-action="toggle-c3">Включить</button>
             </div>
             <div class="sync-section" id="cloudSection">
               <div class="sync-section-title">☁ Облако Telegram</div>
@@ -1599,22 +1603,19 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=146" defer></script>
-    <script src="js/perf-compat.js?v=146" defer></script>
-    <script src="js/event-bus.js?v=146" defer></script>
-    <script src="js/audio.js?v=146" defer></script>
-    <script src="js/telemetry.js?v=146" defer></script>
-    <script src="js/stronghold-data.js?v=146" defer></script>
-<script src="js/state-guards.js?v=146" defer></script>
-    <script src="js/storage.js?v=146" defer></script>
-    <script src="js/stronghold-model.js?v=146" defer></script>
-    <script src="js/state/store.js?v=146" defer></script>
-    <script src="js/remote-config.js?v=146" defer></script>
-    <script src="js/campaign3/c3-data.js?v=146" defer></script>
-    <script src="js/campaign3/c3-model.js?v=146" defer></script>
-    <script src="js/campaign3/c3-runtime.js?v=146" defer></script>
-    <script src="js/ui/strongholds.js?v=146" defer></script>
-    <script src="js/ui/campaign3.js?v=146" defer></script>
-    <script src="js/app.js?v=146" defer></script>
+    <script src="js/perf.js?v=149" defer></script>
+    <script src="js/perf-compat.js?v=149" defer></script>
+    <script src="js/event-bus.js?v=149" defer></script>
+    <script src="js/audio.js?v=149" defer></script>
+    <script src="js/telemetry.js?v=149" defer></script>
+    <script src="js/stronghold-data.js?v=149" defer></script>
+<script src="js/state-guards.js?v=149" defer></script>
+    <script src="js/storage.js?v=149" defer></script>
+    <script src="js/stronghold-model.js?v=149" defer></script>
+    <script src="js/state/store.js?v=149" defer></script>
+    <script src="js/remote-config.js?v=149" defer></script>
+    <script src="js/campaign3/c3-loader.js?v=149" defer></script>
+    <script src="js/ui/strongholds.js?v=149" defer></script>
+    <script src="js/app.js?v=149" defer></script>
   </body>
 </html>

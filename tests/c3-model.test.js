@@ -507,3 +507,35 @@ test('C11: выбор тактики решает 15–30% пограничны�
     const share = flips / total;
     assert.ok(share >= 0.15 && share <= 0.30, 'доля боёв, где тактика приносит победу: ' + share.toFixed(2));
 });
+
+// ---------- Ф5: наследие 2.0 ----------
+test('наследие: данные совпадают с UNIT_TIERS; пустой источник даёт нули', () => {
+    Object.keys(D.LEGACY_POWER).forEach((k) => assert.equal(D.LEGACY_POWER[k], SD.UNIT_TIERS[k].power));
+    assert.deepEqual(M.legacyFromV14(), { g: 0, hall: [0, 0, 0, 0], sk: [0, 0, 0, 0], a: 0, l: [1, 1, 1, 1] });
+    assert.deepEqual(M.legacyFromV14({ stats: 'x', units: null, captured: -5, seasonNum: 'a' }), M.legacyFromV14());
+});
+
+test('наследие: правила (золото ≤ 2000, залы за каждые 5 твердынь ≤ 3, навык за каждые 3 босса ≤ 4, 10% армии, уровни от статов)', () => {
+    const lg = M.legacyFromV14({ captured: 12, seasonNum: 3, throne: 2, ascension: 1, bosses: 7, units: { t1: 100, t4: 10, t7: 1 }, stats: { str: { value: 19 }, end: { value: 19 }, agi: { value: 19 }, int: { value: 11 }, wil: { value: 3 }, cha: { value: 100 } } });
+    assert.equal(lg.g, 200 + 600 + 300); assert.deepEqual(lg.hall, [1, 1, 0, 0], '12 твердынь = 2 здания');
+    assert.deepEqual(lg.sk, [1, 1, 1, 0], '7 боссов = 3 навыка');
+    assert.equal(lg.a, Math.floor(Math.min(600, Math.floor((200 + 450 + 1400) * 0.1)) / 2 / 4));
+    assert.deepEqual(lg.l, [3, 2, 1, 4]);
+    const max = M.legacyFromV14({ captured: 20, seasonNum: 99, throne: 5, ascension: 9, bosses: 11, units: { t7: 999 } });
+    assert.equal(max.g, 2000); assert.deepEqual(max.hall, [1, 1, 1, 0], 'не больше 3 зданий'); assert.deepEqual(max.sk, [1, 1, 1, 1]); assert.equal(max.a, 75, 'армия ограничена 600 силы');
+});
+
+test('наследие: newState применяет бонусы один раз; без наследия карта чистая и без ключа lg', () => {
+    const clean = fresh(); assert.equal('lg' in clean, false);
+    const lg = M.legacyFromV14({ captured: 5, seasonNum: 2, bosses: 3, units: { t3: 100 }, stats: { cha: { value: 11 } } });
+    const s = M.newState('2026-10-05', lg);
+    assert.equal(s.res.g, D.C.START_GOLD + 100); assert.equal(s.towns[BODY].hall, 1); assert.equal(s.heroes[BODY].sk, 1); assert.equal(s.heroes[TIES].lvl, 2);
+    assert.ok(s.heroes[MIND].army.t1 > D.C.START_ARMY.t1);
+    assert.deepEqual(s.lg, lg);
+});
+
+test('наследие не ломает C4: ОД не появляются, герои стоят', () => {
+    const s = M.newState('2026-10-05', M.legacyFromV14({ captured: 20, seasonNum: 9, throne: 5, bosses: 11, units: { t7: 50 } }));
+    for (let i = 0; i < 20; i++) M.dayEnd(s, '2026-11-' + String(i + 1).padStart(2, '0'), {});
+    assert.deepEqual(s.ap, [0, 0, 0, 0]);
+});
