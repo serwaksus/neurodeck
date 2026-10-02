@@ -40,7 +40,7 @@ var html = '<div class="sh-treasury">' +
 html += corruptionForecastLineHtml(); // P7: прогноз «до руины N дн.» (только при реальной угрозе)
 var fi = frontIdx();
 var daysToSiege = daysToSiegeNow();
-html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/10</b></div>';
+html += '<div class="sh-context-anchor">📍 Фронт: <b>' + (STRONGHOLDS[fi] ? STRONGHOLDS[fi].name : '—') + '</b> · 🛡 Осада через <b>' + Math.max(1, daysToSiege) + ' дн.</b> · Гнев: <b>' + siegeWrathNow() + '/' + siegeWrathCap() + '</b></div>';
 html += '<div class="km-stance-row">' + '<button class="km-stance km-chron-btn" data-action="km-chronicle-open"><span class="km-stance-ico">📜</span><span class="km-stance-name">Хроника</span><span class="km-stance-desc">летопись кампании</span></button>' + '<button class="km-stance km-chron-btn" data-action="km-techs-open"><span class="km-stance-ico">🔬</span><span class="km-stance-name">Технологии</span><span class="km-stance-desc">🔬' + TECH_PTS + ' · 📦' + resPool() + '</span></button>' + Object.keys(STANCES).map(function(sid) {
   var st = STANCES[sid], act = weekStance() === sid;
   return '<button class="km-stance' + (act ? ' active' : '') + '" data-action="km-stance" data-stance="' + sid + '"' + (act ? ' disabled' : '') + '><span class="km-stance-ico">' + st.icon + '</span><span class="km-stance-name">' + st.name + '</span><span class="km-stance-desc">' + st.desc + '</span></button>';
@@ -71,13 +71,13 @@ html += weeklyModifierLineHtml(); // C6-lite: модификатор недел�
 html += weeklyScoreLineHtml(); // P14: счёт недели (только эндгейм 20/20) — в блоке панели сезона
 var _wt = warlordTempo(), _wm = seasonCapturedDelta(); // Г1-6: тень воеводы
 html += '<div class="sh-warlord">⚔ Глорх, Погибель Урядов: <b>' + _wt + '</b> · ты: <b>' + _wm + '</b><div class="sh-season-bar" title="Прогресс до обгона воеводы"><div class="sh-season-fill' + (_wm >= _wt ? ' warlord-ahead' : '') + '" style="width:' + Math.min(100, Math.round(_wm / (_wt + 1) * 100)) + '%;"></div></div></div>';
-html += '<div class="sh-wrath">😮 Гнев: <b>' + siegeWrathNow() + '/10</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
+html += '<div class="sh-wrath">😮 Гнев: <b>' + siegeWrathNow() + '/' + siegeWrathCap() + '</b> <span style="color:var(--text-dim)">· призраки задач и пропуски усилят удар</span></div>'; // #37: гнев виден заранее
 var _alarm = (daysToSiege <= 2) ? siegeAlarmPreview() : null; // Ф1: осадная тревога за 2 дня и в день осады
 html += seasonTrialsHtml(); // G2: испытания сезона
 if (_alarm) {
     var _agenda = []; // G2: повестка осадной недели — конкретные шаги
     if (_alarm.ratio !== null && _alarm.ratio < 1) _agenda.push('найм/постройки обороны до штурма');
-    if ((siegeWrathNow() || 0) >= 4) _agenda.push('закрыть призраки и задачи — гнев ' + siegeWrathNow() + '/10');
+    if ((siegeWrathNow() || 0) >= 4) _agenda.push('закрыть призраки и задачи — гнев ' + siegeWrathNow() + '/' + siegeWrathCap());
     var _stW = weatherSeasonWeek();
     var _frontI = frontIdx(); // при 20/20 фронта нет (−1)
     var _frontProv = (_frontI >= 0 && STRONGHOLDS[_frontI]) ? STRONGHOLDS[_frontI].prov : null;

@@ -55,6 +55,7 @@ function bossEnv({ day = 'D1', capturedN = 20, hero = null, quests = null, goldG
         dailyQuests: quests, currentShIdx: null,
         showToast: (t, b, k) => calls.toast.push({ t: t, b: b, k: k }),
         sfxError: () => {}, sfxGoalComplete: () => {}, haptic: () => {}, saveSoon: () => {},
+        techArtifactMult: () => 1, // аудит 2.4: Реликварий (s2) подключён в bossArtifactMult
         renderStrongholdPanel: (i) => calls.panel.push(i)
     };
     const keys = Object.keys(stubs);
@@ -235,7 +236,7 @@ test('Г2-1: sanitizeHero whitelist bosses — мусор → безопасна
 // ----------------------------------------------------------------
 test('Г2-1: интеграции пассивов и хуков в app.js', () => {
     assert.ok(app.indexOf("bossArtifactMult('xp')") !== -1, 'XP completeCard');
-    assert.equal((app.match(/bossArtifactMult\('tax'/g) || []).length, 2, 'налог: тик + панель-превью');
+    assert.equal((app.match(/bossArtifactMult\('tax'/g) || []).length, 1, 'налог: единая формула shIncomePerDay (тик и панель читают её — аудит 2.2)');
     assert.ok(app.indexOf("bossArtifactMult('attrition'") !== -1, 'штурм: attrition');
     assert.ok(app.indexOf("bossArtifactMult('def'") !== -1, 'defBonusOf');
     assert.ok(app.indexOf("bossArtifactMult('cost'") !== -1, 'buildCostOf');
@@ -359,10 +360,10 @@ test('Г2-3: гейт 50💰 + одна тень за раз + срок годн
 });
 
 test('Г2-2/Г2-3: интеграционные пины — экономика/тревога/карта/кейс/сброс тени/whitelist', () => {
-    assert.equal((app.match(/weatherTaxMult\(/g) || []).length, 3, 'налог: shIncomePerDay + тик + 1 внутри самой функции');
-    assert.equal((app.match(/weatherUpkeepMult\(/g) || []).length, 3, 'upkeep: определение + shUpkeepPerDay + тик');
-    assert.equal((app.match(/weatherTaxMult\(STRONGHOLDS\[i\]\.prov/g) || []).length, 2, 'налог-интеграции: панель + тик');
-    assert.equal((app.match(/weatherUpkeepMult\(STRONGHOLDS\[i\]\.prov/g) || []).length, 2, 'upkeep-интеграции: панель + тик');
+    assert.equal((app.match(/weatherTaxMult\(/g) || []).length, 2, 'налог: определение + единая формула shIncomePerDay (аудит 2.2)');
+    assert.equal((app.match(/weatherUpkeepMult\(/g) || []).length, 2, 'upkeep: определение + единые опты corruptionTickOpts (тик/превью/аварийный ремонт)');
+    assert.equal((app.match(/weatherTaxMult\(STRONGHOLDS\[i\]\.prov/g) || []).length, 1, 'налог-интеграция: единая формула');
+    assert.equal((app.match(/weatherUpkeepMult\(STRONGHOLDS\[i\]\.prov/g) || []).length, 1, 'upkeep-интеграция: единые опты');
     assert.ok(extractFn('siegeAlarmPreview').indexOf('weatherFog') !== -1 && extractFn('siegeAlarmPreview').indexOf('🌫 ?') !== -1, 'туман прячет силу в осадной тревоге');
     assert.ok(extractFn('kingdomMapHtml').indexOf('km-weather') !== -1 && extractFn('kingdomMapHtml').indexOf('km-wi') !== -1, 'полоса погоды на карте');
     assert.ok(extractFn('frontPowerText').indexOf('туман: сила скрыта') !== -1, 'фронт-карточка прячет силу в тумане');

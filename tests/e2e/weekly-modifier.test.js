@@ -202,7 +202,8 @@ test('P13: 20/20 — строка видна по имени, налоги/со�
   // округление tax-цепочки до множителя — допуск 1 (паттерн P1/C6)
   assert.ok(Math.abs(active.taxes - neutral.taxes * P13.mA.mods.incomeMult) <= 1,
     'налоги ×' + P13.mA.mods.incomeMult + ': ' + neutral.taxes + ' → ' + active.taxes);
-  assert.ok(Math.abs(active.upkeep - neutral.upkeep * P13.mA.mods.upkeepMult) <= 1,
+  // содержание округляется по-твердыньно (как в тике): допуск — не больше 0.5 на каждую из 20 твердынь
+  assert.ok(Math.abs(active.upkeep - neutral.upkeep * P13.mA.mods.upkeepMult) <= 20 * 0.5,
     'содержание ×' + P13.mA.mods.upkeepMult + ': ' + neutral.upkeep + ' → ' + active.upkeep);
 });
 
@@ -216,22 +217,13 @@ test('P13: 20/20 — налоги/содержание в DOM совпадают
   assert.ok(tick && typeof tick.income === 'number' && typeof tick.upkeep === 'number', 'тик вернул казну');
   assert.strictEqual(tick.paid, true, 'казна покрывает содержание — тик без долгов, стационарный');
 
-  // #8 Новый год ×1.5 бьёт по тику (середина цепочки), но не по превью — в этот день
-  // допускаем масштаб вместо равенства; весь остальной год — байт-в-байт
-  const holMult = await page.evaluate(() => {
-    const h = (typeof holidayBonus === 'function') ? holidayBonus() : null;
-    return (h && h.tickMult) || 1;
-  });
-  if (holMult === 1) {
-    assert.strictEqual(tick.income, dom.taxes, 'налоги тика = налогам в DOM');
-  } else {
-    assert.ok(Math.abs(tick.income - dom.taxes * holMult) <= 3, 'налоги тика = DOM × ' + holMult);
-  }
+  // аудит 2.2: превью «Налоги» и тик читают ОДНУ формулу (shIncomePerDay) — равенство байт-в-байт круглый год,
+  // в т.ч. в «Новый год» (тик ×1.5): раньше в этот день тик расходился с превью и тест допускал масштаб
+  assert.strictEqual(tick.income, dom.taxes, 'налоги тика = налогам в DOM');
 
-  // тик округляет содержание по-твердыньно (corruptionTick), превью — один раз в конце:
-  // расхождение ≤ пол-монеты на твердыню — 20 × 0.5
-  assert.ok(Math.abs(tick.upkeep - dom.upkeep) <= 10,
-    'содержание тика (' + tick.upkeep + ') = содержанию в DOM (' + dom.upkeep + ') в пределах округления');
+  // содержание: и тик, и превью округляют по-твердыньно (corruptionTick) — равенство без допуска
+  assert.strictEqual(tick.upkeep, dom.upkeep,
+    'содержание тика (' + tick.upkeep + ') = содержанию в DOM (' + dom.upkeep + ')');
 });
 
 // ===================== 20/20: превью осады = формула тика с модификатором =====================

@@ -75,5 +75,6 @@ test('event-bus подключён в index.html до storage.js и в SW-пре
     const busPos = html.indexOf('js/event-bus.js');
     const storagePos = html.indexOf('js/storage.js');
     assert.ok(busPos > -1 && storagePos > busPos, 'event-bus грузится раньше storage');
-    assert.ok(sw.includes("'js/event-bus.js?v=103'"), 'event-bus в прекэше SW'); // ре-пин при бампе кэш-версии (v102, P22 game feel; v101 — P21 аудио-микшер)
+    const pin = (html.match(/js\/event-bus\.js\?v=(\d+)/) || [])[1];
+    assert.ok(pin && sw.includes("'js/event-bus.js?v=" + pin + "'"), 'event-bus в прекэше SW с тем же пином, что в index.html');
 });

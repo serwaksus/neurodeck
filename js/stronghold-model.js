@@ -117,7 +117,8 @@
     }
 
     // SPEC §6: дневное содержание набора построек — построенные не-руина постройки (руина «не ест»),
-    // сумма upkeep каталога × доктрина (0<m≤1) × правило провинции ((0;3]). Вынесено из corruptionTick
+    // сумма upkeep каталога × множитель содержания ((0;4]: доктрина/метель/стойка/технологии — и скидки, и штрафы >1; аудит 2.1)
+    // × правило провинции ((0;3]). Вынесено из corruptionTick
     // без изменения математики: P7 (аварийный ремонт/прогноз) считают цену ТОЙ ЖЕ формулой SPEC §6.
     function dailyUpkeep(buildings, opts) {
         opts = opts || {};
@@ -133,8 +134,8 @@
             var d = defs[id];
             if (d && typeof d.upkeep === 'number' && isFinite(d.upkeep)) upkeep += d.upkeep;
         });
-        var upkMult = Number(opts.upkeepMult); // Г1-2: доктрина upkeep −20% (только вниз, 0<m≤1)
-        if (!isFinite(upkMult) || upkMult <= 0 || upkMult > 1) upkMult = 1;
+        var upkMult = Number(opts.upkeepMult); // произведение доктрины (−20%) / метели (×2) / стойки (×1.25) / технологий (×0.72); аудит 2.1: штрафы >1 раньше срезались до ×1
+        if (!isFinite(upkMult) || upkMult <= 0 || upkMult > 4) upkMult = 1;
         var provMult = Number(opts.provinceUpkeepMult); // C3: правило провинции (Хутора −10% / Пепел +10%) — в отличие от доктрины может быть >1
         if (!isFinite(provMult) || provMult <= 0 || provMult > 3) provMult = 1;
         return Math.round(upkeep * upkMult * provMult);

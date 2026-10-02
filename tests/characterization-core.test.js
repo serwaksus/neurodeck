@@ -172,7 +172,7 @@ test('P17 модель: weekly-модификаторы — детерминиз
 
 function economyDecls() {
     return [extractFn('builtList'), extractFn('stageMult'), extractFn('corruptionStepNow'),
-        extractFn('corruptionTickOpts'), extractFn('strongholdsDailyTick')];
+        extractFn('corruptionTickOpts'), extractFn('shIncomePerDay'), extractFn('shUpkeepPerDay'), extractFn('strongholdsDailyTick')];
 }
 function economyStubs(extra) {
     return Object.assign(neutralMults(), {
@@ -247,8 +247,10 @@ test('P17 экономика: strongholdsDailyTick — Пепел ×1.1 нало
     assert.equal(sixStubs.HERO.gold, 68 - 55, 'казна после тика');
 });
 
-test('P17 экономика: превью казны == тик (нейтральные множители); асимметрии округления и тотема — как есть', () => {
-    const decls = economyDecls().concat([extractFn('shIncomePerDay'), extractFn('shUpkeepPerDay')]);
+// РЕ-ПИН (аудит 2026-10-02, п. 2.1/2.2): тик берёт доход из shIncomePerDay, а shUpkeepPerDay суммирует тот же SM.dailyUpkeep по-твердынно —
+// два прежних пина «РАСХОЖДЕНИЕ» ([6,3,5] округление и [946,993] тотем) зафиксировали баг превью и заменены паритетом.
+test('P17 экономика: превью казны == тик (единая формула): округление по-твердынно, тотем/праздник/жатва учтены', () => {
+    const decls = economyDecls();
     // (1) Паритет: shIncomePerDay/shUpkeepPerDay на том же состоянии = income/upkeep тика
     const one = mkStrongholds({ 0: { captured: true, buildings: { zh1: bld(), ec2: bld(), ec1: bld() } } });
     const t1 = buildIn({
@@ -259,8 +261,7 @@ test('P17 экономика: превью казны == тик (нейтрал�
     assert.deepEqual(t1[0], [23, 25], 'превью ДО тика = будущие income/upkeep');
     assert.deepEqual(t1[1], [23, 25], 'сам тик даёт те же числа');
     assert.deepEqual(t1[2], [23, 25], 'и превью ПОСЛЕ тика не дрейфует (оплаченные стадии целые)');
-    // (2) РАСХОЖДЕНИЕ округления (текущее поведение): тик округляет содержание ПО-ТВЕРДЫННО,
-    // превью — один раз по сумме: два zh1 в Хуторах → тик 3+3=6, превью round(5.4)=5.
+    // (2) Округление содержания ПО-ТВЕРДЫННО и в тике, и в превью: два zh1 в Хуторах → 3+3=6 (раньше превью округляло сумму: round(5.4)=5).
     const two = mkStrongholds({
         0: { captured: true, buildings: { zh1: bld() } },
         1: { captured: true, buildings: { zh1: bld() } }
@@ -270,16 +271,16 @@ test('P17 экономика: превью казны == тик (нейтрал�
         stubs: economyStubs({ strongholds: two, HERO: { gold: 1000 } }),
         body: '(function(){ var pv = shUpkeepPerDay(); var r = strongholdsDailyTick(); return [r.upkeep, r.income, pv]; })()'
     });
-    assert.deepEqual(t2, [6, 3, 5], 'тик 6 ≠ превью 5 (по-тверд. vs суммарное округление); доход 1+2 без маршрутов');
-    // (3) РАСХОЖДЕНИЕ тотема (текущее поведение): тик множит НАЛОГИ на totemGoldMult (до рынка),
-    // превью — не знает тотем вовсе. На малом налоге ш01 округление съедает эффект — берём ш16 (Пепел).
+    assert.deepEqual(t2, [6, 3, 6], 'превью = тик = 6 (по-твердынное округление); доход 1+2 без маршрутов');
+    // (3) Тотем: НАЛОГИ множатся на totemGoldMult (до рынка) и в тике, и в превью (раньше превью не знало тотем вовсе).
+    // На малом налоге ш01 округление съедает эффект — берём ш16 (Пепел).
     const wolf = mkStrongholds({ 15: { captured: true, buildings: { zh1: bld() } } });
     const t3 = buildIn({
         decls,
         stubs: economyStubs({ strongholds: wolf, HERO: { gold: 1000 }, totemGoldMult: () => 1.05 }),
         body: '(function(){ var pv = shIncomePerDay(); var r = strongholdsDailyTick(); return [pv, r.income]; })()'
     });
-    assert.deepEqual(t3, [946, 993], 'Волк ×1.05: тик round(946×1.05)=993, превью 946 — превью не знает тотем/праздники/жатву');
+    assert.deepEqual(t3, [993, 993], 'Волк ×1.05: round(946×1.05)=993 и в тике, и в превью');
 });
 
 // ================================================================
@@ -287,7 +288,7 @@ test('P17 экономика: превью казны == тик (нейтрал�
 // ================================================================
 
 function siegeDecls() {
-    return [extractFn('lastCapturedIdx'), extractFn('applyStackLoss'), extractFn('ruinAllBuildings'), extractFn('runWeeklySiege')];
+    return [extractFn('lastCapturedIdx'), extractFn('applyStackLoss'), extractFn('ruinAllBuildings'), extractFn('siegeWrathCap'), extractFn('siegeWrathNow'), extractFn('runWeeklySiege')];
 }
 function runSiege(stubExtra) {
     const rec = { reports: [], chron: [], xp: [] };
@@ -299,6 +300,7 @@ function runSiege(stubExtra) {
         // capturedCount — ЖИВОЙ счётчик по состоянию: каскад осады пересчитывает его после падения
         capturedCount: () => stubs.strongholds.filter(function(s) { return s.captured; }).length,
         countGhostTasks: () => 0, approachWrathDeltaNow: () => 0, approachEnemyMultNow: () => 1,
+        techWrathWeekReduction: () => 0, // аудит 2.4: гнев осады считает siegeWrathNow (кап w6, Обряды s3)
         recalcHirePool: () => {},
         chronicleSiegeRows: (rows) => rec.chron.push(rows),
         showSiegeReport: (rows, wrath) => rec.reports.push({ rows: rows, wrath: wrath }),

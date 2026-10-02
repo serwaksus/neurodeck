@@ -247,6 +247,7 @@ function env({ day = 'D1', capturedN = 20, hero = null, goldGoal = 50, stronghol
         strongholds: sh, ensureStrongholdState: () => {},
         getMSKDayKey: () => day, dailyGoldGoal: () => goldGoal, dailyQuests: null, currentShIdx: null,
         season: season, STATE_GUARDS: SG,
+        techArtifactMult: () => 1, // аудит 2.4: Реликварий (s2) подключён в bossArtifactMult
         document: { getElementById: function(id) { return null; } },
         showToast: (t, b, k) => calls.toast.push({ t: t, b: b, k: k }),
         sfxError: () => {}, sfxGoalComplete: () => {}, haptic: () => {}, saveSoon: () => {},

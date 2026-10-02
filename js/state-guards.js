@@ -492,6 +492,26 @@
     }
 
     // Аудит 2026-10-02 (P0): клятва на крови из импорта/облака — только известные поля и типы
+    // Аудит 2026-10-02 (2.3): дерево — 6 ветвей × 8 тиров = 48 нод. Прежний срез `.slice(0, 21)` оставлял 21 первый по порядку покупки
+    // ключ и молча терял остальные купленные ноды на каждой загрузке/синхронизации. Белый список id не даёт мусорному ключу
+    // (чужой сейв, импорт) попасть в TECHS: по неизвестному id падает отрисовка панели (TECH_TREE[id] === undefined).
+    var TECH_ID_RE = /^[wecsgd][1-8]$/;
+    function sanitizeTechs(input) {
+        var out = { owned: {}, lvl: {} };
+        if (!input || typeof input !== 'object' || Array.isArray(input)) return out;
+        var schema3 = !!(input.owned && typeof input.owned === 'object' && !Array.isArray(input.owned)); // Г5-Т3: {owned, lvl}
+        var ownedSrc = schema3 ? input.owned : input; // легаси Г5-Т/Т2: плоская карта {id: true}
+        Object.keys(ownedSrc).forEach(function(k) { if (TECH_ID_RE.test(k) && ownedSrc[k] === true) out.owned[k] = true; });
+        if (schema3 && input.lvl && typeof input.lvl === 'object' && !Array.isArray(input.lvl)) {
+            Object.keys(input.lvl).forEach(function(k) {
+                if (out.owned[k] !== true) return; // уровень есть только у купленной ноды
+                var v = Math.round(Number(input.lvl[k]));
+                if (v >= 1 && v <= 5) out.lvl[k] = v;
+            });
+        }
+        return out;
+    }
+
     function sanitizeBloodOath(input) {
         if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
         if (['active', 'completed', 'failed'].indexOf(input.status) < 0) return null;
@@ -528,6 +548,7 @@
         sanitizeSeason: sanitizeSeason,
         sanitizeDailyQuests: sanitizeDailyQuests,
         sanitizeBloodOath: sanitizeBloodOath,
-        sanitizeStorm: sanitizeStorm // Г1-5
+        sanitizeStorm: sanitizeStorm, // Г1-5
+        sanitizeTechs: sanitizeTechs // аудит 2026-10-02 (2.3)
     };
 });
