@@ -5,35 +5,36 @@
    При новом деплое: бампни ?v= в index.html И VERSION ниже — старый кэш удалится в activate. */
 'use strict';
 
-const VERSION = 'nd-shell-v104';
+const VERSION = 'nd-shell-v105';
 const SHELL = [
   './',
   'index.html',
-  'css/style.css?v=104',
-  'fonts/fonts.css?v=104',
+  'css/style.css?v=105',
+  'fonts/fonts.css?v=105',
   'fonts/cinzel-var.woff2',
   'fonts/CrimsonText-400.woff2',
   'fonts/CrimsonText-400i.woff2',
   'fonts/CrimsonText-600.woff2',
-  'js/perf.js?v=104',
-  'js/perf-compat.js?v=104',
-  'js/event-bus.js?v=104',
-  'js/audio.js?v=104',
-  'js/telemetry.js?v=104',
-  'js/stronghold-data.js?v=104',
-  'js/state-guards.js?v=104',
-  'js/storage.js?v=104',
-  'js/stronghold-model.js?v=104',
-  'js/state/store.js?v=104',
-  'js/remote-config.js?v=104',
-  'js/ui/strongholds.js?v=104',
+  'js/perf.js?v=105',
+  'js/perf-compat.js?v=105',
+  'js/event-bus.js?v=105',
+  'js/audio.js?v=105',
+  'js/telemetry.js?v=105',
+  'js/stronghold-data.js?v=105',
+  'js/state-guards.js?v=105',
+  'js/storage.js?v=105',
+  'js/stronghold-model.js?v=105',
+  'js/state/store.js?v=105',
+  'js/remote-config.js?v=105',
+  'js/ui/strongholds.js?v=105',
   'config/weekly-modifiers.v1.json',
-  'js/app.js?v=104',
+  'js/app.js?v=105',
   'manifest.json',
   'img/icon-192.png',
   'img/icon-512.png'
 ];
 const TG_SDK = 'https://telegram.org/js/telegram-web-app.js';
+const NAV_TIMEOUT_MS = 4000;
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
@@ -61,18 +62,37 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
 
   if (req.mode === 'navigate') {
-    // сеть первая — новый деплой подхватывается без ручного обновления
+    // сеть первая — новый деплой подхватывается без ручного обновления; но не дольше NAV_TIMEOUT_MS:
+    // на «флапающем» github.io запрос может висеть десятки секунд — тогда отдаём кэш, а ответ сети
+    // всё равно обновит кэш в фоне (аудит R2 M8)
+    const net = fetch(req).then((res) => {
+      const copy = res.clone();
+      caches.open(VERSION).then((c) => c.put('index.html', copy)).catch(() => {});
+      return res;
+    });
+    net.catch(() => {}); // отложенный отказ после таймаута не должен быть unhandled rejection
+    const timed = new Promise((_, reject) => setTimeout(() => reject(new Error('nav timeout')), NAV_TIMEOUT_MS));
     e.respondWith(
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(VERSION).then((c) => c.put('index.html', copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match('index.html').then((r) => r || caches.match('./')))
+      Promise.race([net, timed]).catch(() =>
+        caches.match('index.html').then((r) => r || caches.match('./')).then((r) => r || net)
+      )
     );
     return;
   }
 
   if (url.origin !== location.origin && url.href !== TG_SDK) return; // прочие кросс-домены не трогаем
+
+  // удалённый конфиг (config/*.json) без ?v= — сеть первая, кэш как офлайн-фоллбэк (аудит R2 M6):
+  // cache-first закрепил бы первую скачанную версию навсегда
+  if (url.origin === location.origin && /\/config\/[^/]+\.json$/.test(url.pathname)) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)).catch(() => {}); }
+        return res;
+      }).catch(() => caches.match(req).then((hit) => hit || Response.error()))
+    );
+    return;
+  }
 
   // статика (в т.ч. версионированная ?v=) — cache-first
   e.respondWith(
@@ -84,7 +104,7 @@ self.addEventListener('fetch', (e) => {
           caches.open(VERSION).then((c) => c.put(req, copy)).catch(() => {});
         }
         return res;
-      }).catch(() => caches.match('./'));
+      }).catch(() => Response.error()); // не index.html: подмена MIME ломала бы разбор CSS/JS (аудит R2 L12)
     })
   );
 });

@@ -134,3 +134,12 @@ test('M5: импорт файлом сохраняет точку отката; 
     await expect.poll(() => page.evaluate(() => FORGED.map((c) => c.name).join('|'))).toBe('Карточка');
     expect(await page.evaluate(() => localStorage.getItem('neurodeck_pre_import')), 'точка отката использована').toBeNull();
 });
+
+test('M6: на загрузке реально запрашивается config/weekly-modifiers.v1.json и каталог применяется', async ({ page }) => {
+    const asked = [];
+    page.on('request', (r) => { if (r.url().includes('weekly-modifiers')) asked.push(r.url()); });
+    await page.addInitScript(SEED_IN_PAGE, { save: JSON.stringify(seedSave()) });
+    await page.goto('/');
+    await expect.poll(() => asked.length, { timeout: 5000 }).toBeGreaterThan(0);
+    await expect.poll(() => page.evaluate(() => !!(window.StrongholdData && window.StrongholdData.WEEKLY_MODS_REMOTE)), { timeout: 5000 }).toBe(true);
+});
