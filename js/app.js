@@ -2506,20 +2506,23 @@ function spendRes(total) { // слив с захваченных провинц�
   });
   return left === 0;
 }
-function techPrevOwned(id) { var t = TECH_TREE[id]; if (t.tier === 1) return true; var prevId = t.br.toLowerCase().replace('💰', 'e').replace('⚔', 'w').replace('⚖', 'c') + (t.tier - 1); return hasTech(prevId); }
-function techBranchLetter(br) { return br === '⚔' ? 'w' : (br === '💰' ? 'e' : 'c'); }
+// Аудит 2026-10-02 (2.3): раньше буква ветви знала только ⚔→w, 💰→e, иначе c — ветви 🕯 (s), 🏗 (g), 🕊 (d) проверяли тиры ветви ⚖ (c)
+var TECH_BRANCH_LETTER = { '⚔': 'w', '💰': 'e', '⚖': 'c', '🕯': 's', '🏗': 'g', '🕊': 'd' };
+var TECH_BRANCHES = ['w', 'e', 'c', 's', 'g', 'd'];
+function techBranchLetter(br) { return TECH_BRANCH_LETTER[br] || ''; }
 function techPrevOwnedStrict(id) {
   var t = TECH_TREE[id];
   if (t.tier === 1) return true;
-  var own = hasTech(techBranchLetter(t.br) + (t.tier - 1));
+  var mine = techBranchLetter(t.br);
+  var own = hasTech(mine + (t.tier - 1));
   if (t.tier <= 4) return own; // тиры 1–4: линейная цепь
-  // Г5-Т2: кросс-требование — тир 5 требует тир 3+ в ДВУХ других ветвях, тир 6 — тир 4+ в двух других
+  // Г5-Т2: кросс-требование — тир 5 требует развития (сумма освоенных тиров ≥ 3) в ДВУХ других ветвях из пяти, тиры 6–8 — ≥ 4
   var need = (t.tier === 5) ? 3 : 4;
-  var others = ['w', 'e', 'c'].filter(function(L) { return L !== techBranchLetter(t.br); });
   var okCount = 0;
-  for (var oi = 0; oi < others.length; oi++) {
+  for (var oi = 0; oi < TECH_BRANCHES.length; oi++) {
+    if (TECH_BRANCHES[oi] === mine) continue;
     var s = 0;
-    for (var i = 1; i <= 6; i++) if (hasTech(others[oi] + i)) s += i;
+    for (var i = 1; i <= 6; i++) if (hasTech(TECH_BRANCHES[oi] + i)) s += i;
     if (s >= need) okCount++;
   }
   return own && okCount >= 2;
@@ -2528,7 +2531,7 @@ function buyTech(id) {
   var t = TECH_TREE[id];
   if (!t || hasTech(id)) return 'Уже изучено.';
   if (!techEraOk(t.tier)) return 'Эпоха закрыта: нужно ' + techEraNeed(t.tier) + ' твердынь (захвачено ' + capturedCount() + ').'; // Г5-Т3
-  if (!techPrevOwnedStrict(id)) return 'Сначала предыдущий тир ветви (тиры 5–6 требуют развития в двух ветвях).';
+  if (!techPrevOwnedStrict(id)) return 'Сначала предыдущий тир ветви (тиры 5–8 требуют развития ещё в двух других ветвях).';
   if (TECH_PTS < t.pts) return 'Не хватает очков технологий (' + TECH_PTS + '/' + t.pts + ').';
   if (resPool() < t.res) return 'Не хватает ресурсов (' + resPool() + '/' + t.res + ').';
   TECH_PTS -= t.pts;

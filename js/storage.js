@@ -163,18 +163,7 @@ MIGRATIONS[10] = function(data) {
 MIGRATIONS[11] = function(data) {
     try {
         if (!data || typeof data !== 'object') return;
-        if (data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) {
-          var _ct;
-          if (data.TECHS.owned && typeof data.TECHS.owned === 'object') { // Г5-Т3 схема {owned, lvl}
-            _ct = { owned: {}, lvl: {} };
-            Object.keys(data.TECHS.owned).slice(0, 21).forEach(function(k) { if (data.TECHS.owned[k] === true) _ct.owned[k] = true; });
-            if (data.TECHS.lvl && typeof data.TECHS.lvl === 'object') Object.keys(data.TECHS.lvl).slice(0, 21).forEach(function(k) { var v = Math.round(Number(data.TECHS.lvl[k])); if (v >= 1 && v <= 5) _ct.lvl[k] = v; });
-          } else { // Г5-Т/Г5-Т2 легаси: плоская карта → owned
-            _ct = { owned: {}, lvl: {} };
-            Object.keys(data.TECHS).slice(0, 21).forEach(function(k) { if (data.TECHS[k] === true) _ct.owned[k] = true; });
-          }
-          data.TECHS = _ct;
-        }
+        if (data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) data.TECHS = STATE_GUARDS.sanitizeTechs(data.TECHS); // аудит 2026-10-02 (2.3): прежний срез по 21 ключу резал дерево из 48 нод
         if (typeof data.TECH_PTS !== 'number' || !Number.isFinite(data.TECH_PTS)) data.TECH_PTS = 0;
         data.TECH_PTS = Math.max(0, Math.min(999, Math.round(data.TECH_PTS))); // Г5-Т
         if (typeof data.TECH_IDEA !== 'undefined' && data.TECH_IDEA !== null && (typeof data.TECH_IDEA !== 'string' || ['idea_might', 'idea_wealth', 'idea_order'].indexOf(data.TECH_IDEA) < 0)) data.TECH_IDEA = null; // Г5-Т2
@@ -1125,18 +1114,7 @@ if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEve
 }
 if (typeof season !== 'undefined' && data.season && typeof data.season === 'object') { season = STATE_GUARDS.sanitizeSeason(data.season, (typeof getMSKDayKey === 'function') ? getMSKDayKey() : null); }
 if (typeof throne !== 'undefined' && typeof data.throne === 'number' && Number.isFinite(data.throne)) throne = Math.max(0, Math.min(5, Math.round(data.throne)));
-if (typeof TECHS !== 'undefined' && data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) {
-  var _ct;
-  if (data.TECHS.owned && typeof data.TECHS.owned === 'object') { // Г5-Т3 схема
-    _ct = { owned: {}, lvl: {} };
-    Object.keys(data.TECHS.owned).slice(0, 21).forEach(function(k) { if (data.TECHS.owned[k] === true) _ct.owned[k] = true; });
-    if (data.TECHS.lvl && typeof data.TECHS.lvl === 'object') Object.keys(data.TECHS.lvl).slice(0, 21).forEach(function(k) { var v = Math.round(Number(data.TECHS.lvl[k])); if (v >= 1 && v <= 5) _ct.lvl[k] = v; });
-  } else { // легаси
-    _ct = { owned: {}, lvl: {} };
-    Object.keys(data.TECHS).slice(0, 21).forEach(function(k) { if (data.TECHS[k] === true) _ct.owned[k] = true; });
-  }
-  TECHS = _ct;
-}
+if (typeof TECHS !== 'undefined' && data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) TECHS = STATE_GUARDS.sanitizeTechs(data.TECHS); // аудит 2026-10-02 (2.3): прежний срез по 21 ключу терял 22-ю и следующие купленные ноды на каждой загрузке
 if (typeof TECH_PTS !== 'undefined' && typeof data.TECH_PTS === 'number' && Number.isFinite(data.TECH_PTS)) TECH_PTS = Math.max(0, Math.min(999, Math.round(data.TECH_PTS))); // Г5-Т
 if (typeof TECH_IDEA !== 'undefined' && data.TECH_IDEA !== undefined) { if (data.TECH_IDEA === null || ['idea_might', 'idea_wealth', 'idea_order'].indexOf(data.TECH_IDEA) >= 0) TECH_IDEA = data.TECH_IDEA; } // Г5-Т2
 if (typeof TECH_ACTIVES !== 'undefined' && data.TECH_ACTIVES && typeof data.TECH_ACTIVES === 'object' && !Array.isArray(data.TECH_ACTIVES)) { var _caa = {}; Object.keys(data.TECH_ACTIVES).slice(0, 4).forEach(function(k) { if (typeof data.TECH_ACTIVES[k] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.TECH_ACTIVES[k])) _caa[k] = data.TECH_ACTIVES[k]; }); TECH_ACTIVES = _caa; } // Г5-Т3 Ф2
