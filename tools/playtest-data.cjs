@@ -724,11 +724,13 @@ async function nodePhase() {
       FORGED.length = 0;
       FORGED.push({ id: 1, name: 'Живая-1', rank: 'C', stat: 'str', mastery: 0, masteryThreshold: 5, meta: '⚔ 10 мин · утро', streak: 0, totalCompletions: 0, prestige: 0, evolutionPath: null, daysActive: 0, firstCompletedAt: null, lastCompletedAt: null }, { id: 2, name: 'Живая-2', rank: 'C', stat: 'int', mastery: 0, masteryThreshold: 5, meta: '🧠 10 мин · день', streak: 0, totalCompletions: 0, prestige: 0, evolutionPath: null, daysActive: 0, firstCompletedAt: null, lastCompletedAt: null });
       saveGameState(); // эпоха E1
+      const cloudT = Date.now() + 60000; // «облако новее»; база синхронизации = эта же версия → конфликт «устарело», а не «облако менял другой девайс» (P0 1.2)
+      localStorage.setItem('nd_cloud_base', JSON.stringify({ id: '', pid: '', t: cloudT }));
       const oldSnap = buildSyncData(); // «облако»: устаревший снапшот с 1 карточкой
       oldSnap.forged = [FORGED[0]];
       window.Telegram = { WebApp: { platform: 'android', CloudStorage: { // platform: волна 1 — честный getCloudStorage требует не-'unknown'
         getItem: function(k, cb) { setTimeout(function() {
-          if (String(k).indexOf('meta') !== -1) cb(null, JSON.stringify({ n: 1, t: Date.now() + 60000 }));
+          if (String(k).indexOf('meta') !== -1) cb(null, JSON.stringify({ n: 1, t: cloudT }));
           else cb(null, JSON.stringify(oldSnap));
         }, 250); },
         setItem: function(k, v, cb) { setTimeout(function() { if (cb) cb(null); }, 50); },

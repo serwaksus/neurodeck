@@ -147,6 +147,7 @@ case 'load-cloud': loadFromCloud(); break;
 case 'copy-share-link': copyShareLink(); break;
 case 'share-link': shareLinkNative(); break;
 case 'download-sync-file': downloadSyncFile(); break;
+case 'undo-import': ndUndoImport(); break;
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
 case 'export-metrics': exportMetrics(); break; // A2
@@ -900,7 +901,7 @@ bloodOath = null;
 showToast('🩸 Клятва', 'Клятва нарушена — карта уничтожена', 'blood');
 }
 FORGED = FORGED.filter(c => c.id !== id);
-if (FORGED.length === 0) { try { localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {} } // hard-delete последней карточки мимо бэкапа (T1-M1)
+if (FORGED.length === 0) { try { localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {} if (typeof clearIDBSave === 'function') clearIDBSave(); } // hard-delete последней карточки мимо бэкапа (T1-M1)
 renderCards();
 showToast('🗑 Удалено', card.name, 'blood');
 saveGameState();
@@ -6169,6 +6170,7 @@ try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('n
 // location.reload() → свежая загрузка: saveGameState здесь НЕ вызывать,
 // иначе ever_saved=1 воскресает и старт-колода не вернётся (QA-lead O-10)
 try { var csR = getCloudStorage(); if (csR) csR.removeItem(CLOUD_META_KEY, function(){}); } catch(e) {}
+if (typeof clearIDBSave === 'function') { clearIDBSave(function() { location.reload(); }); return; } // R2 M3: IDB-копия не должна воскресить стёртое
 location.reload();
 });
 }
@@ -6269,7 +6271,8 @@ if (FORGED.length === 0) {
     setTimeout(function holdStarterDeck(attempt) {
         attempt = attempt || 0;
         // P0 1.3: восстановление важнее онбординга — ждём проверку облака (meta ≤5 c + чанки ≤15 c) и, без лимита, пока игрок отвечает на диалог восстановления
-        if ((window.__ndCloudCheckPending && attempt < 100) || window.__ndRecoveryOpen) { setTimeout(function() { holdStarterDeck(attempt + 1); }, 250); return; }
+        var _cfmOpen = false; try { var _co = document.getElementById('confirmOverlay'); _cfmOpen = !!(_co && _co.classList.contains('show')); } catch(e) {} // R2 M4: открытый диалог (импорт по ссылке) важнее старт-колоды
+        if ((window.__ndCloudCheckPending && attempt < 100) || (window.__ndIdbCheckPending && attempt < 40) || window.__ndRecoveryOpen || _cfmOpen) { setTimeout(function() { holdStarterDeck(attempt + 1); }, 250); return; }
         if (FORGED.length > 0) return; // восстановились из облака — старт-колода не нужна
         showStarterDeck();
     }, 900);

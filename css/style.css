@@ -2012,3 +2012,6 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 @media (prefers-reduced-motion: reduce) {
 .km-snow circle, .km-mist ellipse, .km-cloud, .km-fire, .km-ship, .km-ship-bob, .km-flag { animation: none; }
 }
+
+/* Аудит R2 (M4): диалог подтверждения — выше любых модалок, иначе старт-колода/другие окна перекрывают его кнопки */
+#confirmOverlay { z-index: 450; }

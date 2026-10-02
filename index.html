@@ -13,8 +13,8 @@
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
     <!-- Волна 3: шрифты self-host (fonts/fonts.css) — без fonts.googleapis/gstatic -->
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=103" />
-    <link rel="stylesheet" href="css/style.css?v=103" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=104" />
+    <link rel="stylesheet" href="css/style.css?v=104" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
@@ -454,6 +454,11 @@
             </button>
           </div>
           <div class="modal-body">
+            <div class="sync-section" id="undoImportSection" style="display: none">
+              <div class="sync-section-title">↩ Откат импорта</div>
+              <div class="sync-section-desc" id="undoImportDesc">Перед последним импортом прежнее состояние сохранено.</div>
+              <button class="demo-btn" data-action="undo-import">↩ Вернуть состояние до импорта</button>
+            </div>
             <div class="sync-section" id="cloudSection">
               <div class="sync-section-title">☁ Облако Telegram</div>
               <div class="sync-section-desc">
@@ -1649,18 +1654,18 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=103" defer></script>
-    <script src="js/perf-compat.js?v=103" defer></script>
-    <script src="js/event-bus.js?v=103" defer></script>
-    <script src="js/audio.js?v=103" defer></script>
-    <script src="js/telemetry.js?v=103" defer></script>
-    <script src="js/stronghold-data.js?v=103" defer></script>
-<script src="js/state-guards.js?v=103" defer></script>
-    <script src="js/storage.js?v=103" defer></script>
-    <script src="js/stronghold-model.js?v=103" defer></script>
-    <script src="js/state/store.js?v=103" defer></script>
-    <script src="js/remote-config.js?v=103" defer></script>
-    <script src="js/ui/strongholds.js?v=103" defer></script>
-    <script src="js/app.js?v=103" defer></script>
+    <script src="js/perf.js?v=104" defer></script>
+    <script src="js/perf-compat.js?v=104" defer></script>
+    <script src="js/event-bus.js?v=104" defer></script>
+    <script src="js/audio.js?v=104" defer></script>
+    <script src="js/telemetry.js?v=104" defer></script>
+    <script src="js/stronghold-data.js?v=104" defer></script>
+<script src="js/state-guards.js?v=104" defer></script>
+    <script src="js/storage.js?v=104" defer></script>
+    <script src="js/stronghold-model.js?v=104" defer></script>
+    <script src="js/state/store.js?v=104" defer></script>
+    <script src="js/remote-config.js?v=104" defer></script>
+    <script src="js/ui/strongholds.js?v=104" defer></script>
+    <script src="js/app.js?v=104" defer></script>
   </body>
 </html>
