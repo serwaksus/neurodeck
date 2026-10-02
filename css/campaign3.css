@@ -1,4 +1,4 @@
-/* Кампания 3.0, Ф2 — панель карты (js/ui/campaign3.js). Только токены дизайн-системы; без анимаций — eco и reduced-motion идентичны. */
+/* Кампания 3.0, Ф3 — панель карты (js/ui/campaign3.js). Только токены дизайн-системы; без анимаций — eco и reduced-motion идентичны. */
 .c3 { margin: 0 0 var(--sp-4); padding: var(--sp-3); background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border-hi); border-radius: var(--r-lg); box-shadow: var(--elev-1); }
 .c3-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .c3-title { font-family: var(--font-display); font-size: var(--t-lg); color: var(--gold-bright); letter-spacing: 1px; }
@@ -53,3 +53,22 @@
 .c3-log li { padding: var(--sp-1) 0; border-top: 1px dashed var(--hairline); }
 .c3-log i { font-style: normal; color: var(--tx-3); margin-right: var(--sp-1); }
 .c3-note { font-size: var(--t-xs); color: var(--tx-3); line-height: 1.4; }
+
+.c3-node.is-fac .nd-medal { --tone: var(--ac-threat); filter: saturate(0.9); }
+.c3-fbadge { position: absolute; left: -2px; bottom: -2px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--t-xs); font-weight: bold; line-height: 18px; text-align: center; color: var(--s0); background: var(--ac-threat); border-radius: var(--r-pill); }
+.c3-fbadge.c3-sg { left: auto; right: -4px; bottom: -2px; background: var(--ac-reward); }
+.c3-node.is-siege .nd-medal { box-shadow: 0 0 0 3px var(--s1), 0 0 0 5px var(--ac-reward); }
+
+.c3-facs { margin-bottom: var(--sp-3); background: var(--s1); border: 1px solid var(--hairline); border-radius: var(--r-md); }
+.c3-facs > summary { min-height: 44px; padding: var(--sp-3); font-size: var(--t-sm); color: var(--tx-1); cursor: pointer; list-style-position: inside; }
+.c3-flist { margin: 0; padding: 0 var(--sp-3) var(--sp-2); list-style: none; }
+.c3-frow { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-1) var(--sp-2); align-items: center; padding: var(--sp-2) 0; border-top: 1px dashed var(--hairline); font-size: var(--t-sm); }
+.c3-frow.is-dead { opacity: 0.6; }
+.c3-fname { color: var(--tx-1); }
+.c3-fname i { font-style: normal; font-size: var(--t-xs); color: var(--tx-3); margin-left: var(--sp-1); }
+.c3-fstat { grid-column: 1; font-size: var(--t-xs); color: var(--tx-2); }
+.c3-frow .c3-mini { grid-column: 2; grid-row: 1 / span 2; }
+.c3-mini { min-height: 44px; min-width: 44px; padding: var(--sp-1) var(--sp-3); font-family: inherit; font-size: var(--t-xs); color: var(--tx-1); background: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-md); cursor: pointer; }
+.c3-mini:disabled { opacity: 0.45; cursor: not-allowed; }
+.c3-mini:focus-visible { outline: 2px solid var(--ac-info); outline-offset: 2px; }
+.c3-lz { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); border-top: 1px dashed var(--hairline); font-size: var(--t-sm); color: var(--tx-2); }

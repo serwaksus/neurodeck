@@ -1,5 +1,5 @@
 // ============================================================
-// Кампания 3.0, Ф2 — e2e за флагом nd_c3: 4 героя-сферы, карта из 33 узлов, города.
+// Кампания 3.0, Ф3 — e2e за флагом nd_c3: 4 героя-сферы, карта из 33 узлов, города, фракции пороков.
 //   флаг выкл → 2.0 как была (панели нет, ключа c3 в сейве нет, выбор сферы задачи скрыт);
 //   флаг вкл → дело сферы двигает героя СВОЕЙ сферы, шаг по карте тратит ОД, бой, найм, залы, сбор армий, перезагрузка.
 // ============================================================
@@ -176,8 +176,8 @@ test('состояние переживает перезагрузку; сейв
     expect((await c3(page)).ap).toEqual([2, 0, 0, 3]);
 });
 
-test('сутки закрываются: тени от молчания, доход 4 городов, перенос ≤ 1 ОД на героя', async ({ page }) => {
-    await boot(page, true, [card(1, 'str', 'C'), card(2, 'int', 'C')]); // оба дела вчера не отмечены
+test('сутки закрываются: срывы идут фракциям СВОИХ сфер, доход 4 городов, перенос ≤ 1 ОД на героя', async ({ page }) => {
+    await boot(page, true, [card(1, 'str', 'C'), card(2, 'int', 'C'), card(3, 'wil', 'C')]); // три дела вчера не отмечены
     await page.evaluate(() => {
         NDC3.ensure();
         const s = NDC3.getState();
@@ -188,7 +188,62 @@ test('сутки закрываются: тени от молчания, дох�
     });
     const s = await c3(page);
     expect(s.day).toBe(await page.evaluate(() => getMSKDayKey()));
-    expect(s.fac.sh[s.fac.sh.length - 1]).toBe(2);
+    expect(s.fac.map((f) => f.sh[f.sh.length - 1])).toEqual([1, 1, 1, 0]); // Тело, Разум, Дух; Связи без карточек
     expect(s.ap).toEqual([1, 1, 1, 1]);
     expect(s.res.g).toBeGreaterThanOrEqual(40 + 40);
+});
+
+test('панель фракций: 4 фракции, перемирие и лазарет переключаются, лазарет требует подтверждения', async ({ page }) => {
+    await boot(page, true);
+    await openStrongholds(page);
+    await page.click('.c3-facs > summary');
+    await expect(page.locator('.c3-frow')).toHaveCount(4);
+    await expect(page.locator('.c3-facs')).toHaveAttribute('open', '');
+    await page.click('[data-c3="truce"][data-f="2"]');
+    expect((await c3(page)).fac[2].truce).toBe(1);
+    await expect(page.locator('[data-c3="truce"][data-f="0"]')).toBeDisabled(); // одновременно один обет
+    await page.click('[data-c3="truce"][data-f="2"]');
+    expect((await c3(page)).fac[2].truce).toBe(0);
+    await page.click('[data-c3="lazaret"]');
+    await expect(page.locator('#confirmOverlay')).toHaveClass(/show/);
+    await page.click('#confirmNo');
+    expect((await c3(page)).lz.on).toBe(0);
+    await page.click('[data-c3="lazaret"]');
+    await page.click('#confirmYes');
+    await page.waitForTimeout(300);
+    expect((await c3(page)).lz.on).toBe(1);
+    await expect(page.locator('[data-c3="truce"][data-f="1"]')).toBeDisabled(); // в лазарете обет недоступен
+    await expect(page.locator('.c3-facs')).toHaveAttribute('open', ''); // панель не схлопывается от действий
+});
+
+test('ход фракций: после недели со срывами Лень занимает узел, панель и карта показывают её власть; сейв хранит владельца', async ({ page }) => {
+    await boot(page, true);
+    await openStrongholds(page);
+    const ev = await page.evaluate(() => {
+        const s = NDC3.ensure() && NDC3.getState();
+        s.fac[0].sh = [2, 2, 2, 2, 2, 2, 2]; s.seen = '1'.repeat(33); // карту видно целиком, чтобы проверить пометку
+        s.day = '2026-10-11'; // воскресенье → закрытие суток откроет понедельник 12-го
+        return NDC3.dayEnd('2026-10-12').events.map((e) => e.kind);
+    });
+    expect(ev).toContain('take');
+    const s = await c3(page);
+    expect(s.own.charAt(5)).toBe('2'); // Лень взяла топь у своего оплота
+    await expect(page.locator('[data-c3="select"][data-n="5"] .c3-fbadge')).toHaveText('Л');
+    const saved = await page.evaluate(() => { saveGameState(); return JSON.parse(localStorage.getItem('neurodeck_full_save')).c3.own.charAt(5); });
+    expect(saved).toBe('2');
+});
+
+test('потерянный город: помечен фракцией, найм недоступен, герой освобождает его штурмом', async ({ page }) => {
+    await boot(page, true, [card(1, 'str', 'SSS'), card(5, 'end', 'SSS')]);
+    await openStrongholds(page);
+    await complete(page, 1); await complete(page, 5);
+    await patch(page, "s.own = s.own.slice(0, 8) + '2' + s.own.slice(9); s.gar[8] = 100; s.heroes[0].node = 9; s.heroes[0].army = { t1: 400, t3: 0, t5: 0 }; s.heroes[1].node = 12; M2 = 0;".replace(' M2 = 0;', ''));
+    await page.click('[data-c3="select"][data-n="8"]');
+    await expect(page.locator('#c3Root .c3-detail')).toContainText('Под властью «Лень»');
+    await patch(page, 's.heroes[0].node = 9;');
+    await page.click('[data-c3="atk"]');
+    await page.click('#confirmYes');
+    await page.waitForTimeout(400);
+    const s = await c3(page);
+    expect(s.own.charAt(8)).toBe('1');
 });

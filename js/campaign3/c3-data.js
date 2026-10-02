@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф2 — данные карты: 4 региона-сферы × 8 узлов + Логово Лени в центре, 4 героя, 5 ресурсов, 4 города.
+// Кампания 3.0, Ф3 — данные карты: 4 региона-сферы × 8 узлов + Цитадель Пороков в центре, 4 героя, 5 ресурсов, 4 города, 4 фракции пороков.
 // Чистые данные без DOM; UMD как js/stronghold-model.js. Дизайн: docs/plan/CAMPAIGN-3.0.md.
 (function(root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -25,7 +25,7 @@
 
     // ---------- карта ----------
     // Шаблон региона (Юго-запад = Тело): 8 локальных узлов; остальные регионы — зеркала. Узел = {t:type, x, y, c:вход, g:оборона}.
-    //   0 город — 1 тропа — 2 шахта сферы; 1 — 3 перекрёсток — 4 застава (граница) ; 3 — 5 дорога — 6 тайник (граница), 5 — 7 форт у центра
+    //   0 город — 1 тропа — 2 шахта сферы; 1 — 3 перекрёсток — 4 застава (граница); 3 — 5 топь — 6 тайник (граница), 5 — 7 оплот фракции порока этой сферы
     var TEMPLATE = [
         { t: 'town',   x: 8,  y: 92, c: 1, g: 0 },
         { t: 'path',   x: 22, y: 86, c: 1, g: 0 },
@@ -34,13 +34,14 @@
         { t: 'camp',   x: 22, y: 58, c: 1, g: 40 },
         { t: 'swamp',  x: 42, y: 78, c: 2, g: 0 },
         { t: 'cache',  x: 46, y: 92, c: 1, g: 25 },
-        { t: 'fort',   x: 40, y: 62, c: 1, g: 120 }
+        { t: 'bastion', x: 40, y: 62, c: 1, g: 120 }
     ];
     var LOCAL_EDGES = [[0, 1], [1, 2], [1, 3], [3, 4], [3, 5], [5, 6], [5, 7]];
     var NAMES = {
         town:  { body: 'Кузня', mind: 'Академия', spirit: 'Монастырь', ties: 'Ярмарка' },
         mine:  { body: 'Сталелитейная шахта', mind: 'Библиотека-копи', spirit: 'Родник воли', ties: 'Торговая жила' },
-        path: 'Дорога', camp: 'Застава', swamp: 'Топь', cache: 'Тайник', fort: 'Форт'
+        path: 'Дорога', camp: 'Застава', swamp: 'Топь', cache: 'Тайник',
+        bastion: { body: 'Оплот Лени', mind: 'Оплот Рассеянности', spirit: 'Оплот Уныния', ties: 'Оплот Отчуждения' }
     };
     function mirror(k, p) { // k: 0 Тело(ЮЗ), 1 Разум(СЗ), 2 Дух(СВ), 3 Связи(ЮВ)
         return k === 0 ? { x: p.x, y: p.y } : k === 1 ? { x: p.x, y: 100 - p.y } : k === 2 ? { x: 100 - p.x, y: 100 - p.y } : { x: 100 - p.x, y: p.y };
@@ -49,21 +50,28 @@
     SPHERES.forEach(function(sp, k) {
         TEMPLATE.forEach(function(n, j) {
             var pos = mirror(k, n);
-            var nm = (n.t === 'town' || n.t === 'mine') ? NAMES[n.t][sp] : NAMES[n.t] || n.t;
+            var nm = (n.t === 'town' || n.t === 'mine' || n.t === 'bastion') ? NAMES[n.t][sp] : NAMES[n.t] || n.t;
             NODES.push({ id: k * 8 + j, type: n.t, sphere: sp, name: nm, cost: n.c, gar: n.g, x: pos.x, y: pos.y });
         });
         LOCAL_EDGES.forEach(function(e) { EDGES.push([k * 8 + e[0], k * 8 + e[1]]); });
     });
     var LAIR = NODES.length; // 32
-    NODES.push({ id: LAIR, type: 'lair', sphere: null, name: 'Логово Лени', cost: 1, gar: 1400, x: 50, y: 50 });
+    NODES.push({ id: LAIR, type: 'lair', sphere: null, name: 'Цитадель Пороков', cost: 1, gar: 1400, x: 50, y: 50 });
     // граничные дороги по кольцу Тело–Разум–Дух–Связи и подступы к логову
     EDGES.push([4, 12], [14, 22], [20, 28], [30, 6]);
     [7, 15, 23, 31].forEach(function(f) { EDGES.push([f, LAIR]); });
     var TOWNS = [0, 8, 16, 24]; // индекс = сфера
+    // Фракции пороков: по одной на сферу; оплот — форт региона у центра. Растут от срывов ИМЕННО своей сферы.
+    var FACTIONS = [
+        { id: 'sloth',    name: 'Лень',         sphere: 'body',   bastion: 7 },
+        { id: 'distract', name: 'Рассеянность', sphere: 'mind',   bastion: 15 },
+        { id: 'gloom',    name: 'Уныние',       sphere: 'spirit', bastion: 23 },
+        { id: 'estrange', name: 'Отчуждение',   sphere: 'ties',   bastion: 31 }
+    ];
     var MINES = [2, 10, 18, 26];
 
     // награда за первое взятие узла: золото 3.0 (свой кошелёк, не HERO.gold) и ресурс сферы региона
-    var LOOT = { camp: { g: 25 }, fort: { g: 60 }, cache: { g: 50, r: 4 }, lair: { g: 200 }, mine: {} };
+    var LOOT = { camp: { g: 25 }, bastion: { g: 80 }, cache: { g: 50, r: 4 }, lair: { g: 200 }, mine: {} };
 
     // Единицы; сила совпадает с UNIT_TIERS (js/stronghold-data.js) — проверяет тест; цена в золоте 3.0 вдвое выше.
     // res — ресурсы за штуку: own — сферы города, nb — соседней сферы по кольцу (Тело→Разум→Дух→Связи→Тело).
@@ -83,11 +91,21 @@
         COMEBACK_IDLE: 3,     // дней без дел, после которых первое дело дня даёт ×2 ОД
         GOLD_TOWN_DAY: 10,    // доход одного города
         MINE_DAY: 1,          // ресурса сферы в день с шахты
-        SHADOW_K: 0.15,       // рост силы Лени за «тень» недели (окно 7 дней)
+        SHADOW_K: 0.15,       // рост силы фракции за «тень» её сферы (окно 7 дней)
         SHADOW_CAP: 2.5,      // потолок множителя
-        RAID_K: 0.03,         // доля силы логова в недельном набеге на удалённый узел
-        RAID_RATIO: 1.2,
-        RAID_MIN_SHADOW: 3,
+        FAC_BASE: 60,         // сила натиска фракции без теней
+        FAC_MIN_SHADOW: 1,    // меньше теней за неделю — фракция не ходит
+        FAC_RATIO: 1.2,       // успешный натиск при сила/оборона > 1.2
+        FAC_NODE_GAR: 40,     // гарнизон узла, взятого фракцией
+        FAC_TOWN_GAR: 100,    // гарнизон захваченного города (его можно отбить)
+        SIEGE_WEEKS: 2,       // недель успешной осады до падения города (последний город не падает)
+        TOWN_DEF: 80,         // оборона города игрока (узлы — NODE_DEF)
+        RUBBER_SHARE: 0.30,   // доля карты у игрока, ниже которой сила фракций ×RUBBER_MULT («резиновая лента»)
+        RUBBER_MULT: 0.75,
+        TRUCE_BREAK_MULT: 1.5, // срыв обета перемирия: фракция бьёт на 50% сильнее
+        LAIR_DIV: 2,          // множитель цитадели: 1 + SHADOW_K × (тени всех фракций / LAIR_DIV)
+        LAZARET_DAYS: 7,      // дней лазарета за сезон (болезнь/отпуск): тени не копятся, фракции не ходят
+        SEASON_WEEKS: 12,
         NODE_DEF: 40,         // оборона занятого игроком узла
         HALL_MAX: 3,
         HALL_COST: 5,         // ресурса сферы за уровень зала: HALL_COST × (уровень+1)
@@ -106,5 +124,5 @@
 
     return { SPHERES: SPHERES, SPHERE_NAME: SPHERE_NAME, HERO_NAME: HERO_NAME, RES_KEY: RES_KEY, RES_NAME: RES_NAME, RES_ICON: RES_ICON,
         SPHERE_OF_STAT: SPHERE_OF_STAT, HALL: HALL, NODES: NODES, EDGES: EDGES, LAIR: LAIR, TOWNS: TOWNS, MINES: MINES, LOOT: LOOT,
-        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, C: C };
+        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, FACTIONS: FACTIONS, C: C };
 });

@@ -144,16 +144,17 @@ test('бой: нельзя бить далёкий или мирный узел,
     assert.equal(s.ap[BODY], 2); assert.equal(s.ap[MIND], 0);
 });
 
-test('логово: победа завершает карту; оборона растёт с тенями до потолка; Монастырь смягчает рост', () => {
+test('цитадель: победа завершает карту; оборона растёт с тенями ВСЕХ фракций до потолка; Монастырь смягчает рост', () => {
     const s = fresh();
     assert.equal(M.nodeDefense(s, D.LAIR), 1400);
-    s.fac.sh = [10, 10, 10, 10, 10, 10, 10];
-    assert.equal(M.shadowMult(s), D.C.SHADOW_CAP);
+    s.fac.forEach((f) => { f.sh = [10, 10, 10, 10, 10, 10, 10]; });
+    assert.equal(M.lairMult(s), D.C.SHADOW_CAP);
     assert.equal(M.nodeDefense(s, D.LAIR), 3500);
-    const w = fresh(); w.fac.sh = [2, 2, 2, 2, 2, 2, 2];
-    const m0 = M.shadowMult(w); w.towns[SPIRIT].hall = 3;
-    assert.ok(M.shadowMult(w) < m0, 'зал Духа снижает множитель');
+    const w = fresh(); w.fac.forEach((f) => { f.sh = [1, 1, 1, 1, 1, 1, 1]; });
+    const m0 = M.lairMult(w); w.towns[SPIRIT].hall = 3;
+    assert.ok(M.lairMult(w) < m0, 'зал Духа снижает множитель');
     const win = fresh(); win.heroes[BODY].node = 7; win.ap[BODY] = 5; win.heroes[BODY].army = { t1: 2000, t3: 0, t5: 0 };
+    win.own = win.own.slice(0, 7) + '1' + win.own.slice(8);
     const r = M.engage(win, BODY, D.LAIR);
     assert.equal(r.win, true); assert.equal(win.done, true); assert.equal(win.own.charAt(D.LAIR), '1');
 });
@@ -254,22 +255,156 @@ test('неделя: прирост города зависит от дел ЕГ�
     assert.equal(cap.towns[BODY].pool.t1, D.C.POOL_CAP.t1);
 });
 
-test('набег Лени: без теней не ходит; с тенями отбирает ближайший к логову занятый узел, но не город и не узел с героем', () => {
-    const own = (s, ids) => { ids.forEach((i) => { s.own = s.own.slice(0, i) + '1' + s.own.slice(i + 1); }); };
-    const calm = fresh(); own(calm, [7, 6]);
-    assert.equal(M.weekEnd(calm).raid, null);
-    const s = fresh(); own(s, [7, 6, 2]); s.fac.sh = [3, 3, 3, 3, 3, 3, 3];
-    const w = M.weekEnd(s);
-    assert.ok(w.raid); assert.equal(w.raid.node, 7, 'форт ближе всех к логову'); assert.equal(w.raid.win, true);
-    assert.equal(s.own.charAt(7), '0'); D.TOWNS.forEach((t) => assert.equal(s.own.charAt(t), '1', 'город цел'));
-    const g = fresh(); own(g, [7, 6]); g.fac.sh = [3, 3, 3, 3, 3, 3, 3]; g.heroes[BODY].node = 7;
-    assert.equal(M.weekEnd(g).raid.node, 6, 'узел, где стоит герой, не трогают');
+// ---------- Ф3: фракции пороков ----------
+const own = (s, ids, ch) => { ids.forEach((i) => { s.own = s.own.slice(0, i) + (ch || '1') + s.own.slice(i + 1); }); };
+const shadowsOf = (s, f, v) => { s.fac[f].sh = [v, v, v, v, v, v, v]; };
+const FAC_SLOTH = 0, FAC_DISTRACT = 1, FAC_GLOOM = 2, FAC_ESTRANGE = 3;
+
+test('данные: по фракции на сферу; оплот — форт региона у центра; в начале фракции владеют только оплотами', () => {
+    assert.equal(D.FACTIONS.length, 4);
+    D.FACTIONS.forEach((f, i) => { assert.equal(f.sphere, D.SPHERES[i]); assert.equal(D.NODES[f.bastion].type, 'bastion'); assert.ok(M.ADJ[f.bastion].includes(D.LAIR)); });
+    const s = fresh();
+    D.FACTIONS.forEach((f, i) => { assert.equal(s.own.charAt(f.bastion), M.facCode(i)); assert.equal(M.facOf(s.own.charAt(f.bastion)), i); });
+    assert.equal(M.facOf('0'), -1); assert.equal(M.facOf('1'), -1); assert.equal(M.facOf('6'), -1);
 });
 
-test('набег отбивается залом Духа при умеренных тенях', () => {
-    const s = fresh(); s.own = s.own.slice(0, 7) + '1' + s.own.slice(8); s.towns[SPIRIT].hall = 3; s.fac.sh = [1, 1, 0, 1, 0, 0, 0];
-    const w = M.weekEnd(s);
-    assert.equal(w.raid.win, false); assert.equal(s.own.charAt(7), '1');
+test('тени по сферам: срыв сферы S питает ТОЛЬКО фракцию сферы S; лазарет обнуляет тени', () => {
+    const s = fresh();
+    M.dayEnd(s, '2026-10-06', { silent: [2, 0, 1, 0], honest: [0, 0, 2, 0], overdue: [0, 1, 0, 0] });
+    assert.deepEqual(s.fac.map((f) => f.sh[f.sh.length - 1]), [2, 1, 2, 0]);
+    assert.equal(M.shadowSum(s), 5);
+    const lz = fresh(); assert.equal(M.lazaretStart(lz).ok, true);
+    M.dayEnd(lz, '2026-10-06', { silent: [3, 3, 3, 3] });
+    assert.equal(M.shadowSum(lz), 0, 'в лазарете срывы не копятся'); assert.equal(lz.lz.left, D.C.LAZARET_DAYS - 1);
+});
+
+test('фракция без теней не ходит и отступает; с тенями занимает соседний узел; оплот защищён силой фракции', () => {
+    const calm = fresh();
+    assert.deepEqual(M.weekEnd(calm).events, []);
+    const s = fresh(); shadowsOf(s, FAC_SLOTH, 1);
+    const ev = M.weekEnd(s).events;
+    assert.equal(ev.length, 1); assert.equal(ev[0].kind, 'take'); assert.equal(s.own.charAt(5), M.facCode(FAC_SLOTH), 'Лень идёт по топи от своего оплота');
+    assert.equal(s.gar[5], D.C.FAC_NODE_GAR);
+    // другие фракции без теней стоят
+    assert.equal(s.own.charAt(13), '0'); assert.equal(s.own.charAt(21), '0');
+    // тени кончились — отступает
+    s.fac[FAC_SLOTH].sh = [0, 0, 0, 0, 0, 0, 0];
+    const back = M.weekEnd(s).events;
+    assert.equal(back[0].kind, 'retreat'); assert.equal(s.own.charAt(5), '0');
+    s.fac[FAC_SLOTH].sh[0] = 3; assert.ok(M.facMult(s, FAC_SLOTH) > 1);
+    assert.equal(M.nodeDefense(s, 7), Math.round(120 * M.facMult(s, FAC_SLOTH)));
+});
+
+test('приоритеты фракции: город игрока → узел игрока (в её регионе раньше) → нейтрал', () => {
+    const s = fresh(); shadowsOf(s, FAC_SLOTH, 2); own(s, [5], M.facCode(FAC_SLOTH)); // Лень стоит на топи
+    own(s, [3, 6]); s.gar[3] = 0; // узлы игрока 3 (соседний с топью) и 6 (тайник, сосед топи)
+    const ev = M.weekEnd(s).events;
+    assert.equal(ev[0].kind, 'take');
+    assert.ok([3, 6].includes(ev[0].node), 'берёт узел игрока, а не нейтральный оплот/цитадель');
+    assert.equal(s.own.charAt(ev[0].node), M.facCode(FAC_SLOTH));
+});
+
+test('натиск отбивается обороной (зал Духа) и узел с героем не трогают', () => {
+    const s = fresh(); own(s, [5], M.facCode(FAC_SLOTH)); own(s, [3]); shadowsOf(s, FAC_SLOTH, 0.5); // 3.5 тени: сила ≈ 91
+    s.towns[SPIRIT].hall = 3;
+    const w = M.weekEnd(s).events;
+    assert.equal(w[0].kind, 'repelled'); assert.equal(s.own.charAt(3), '1');
+    const g = fresh(); own(g, [5], M.facCode(FAC_SLOTH)); own(g, [3]); shadowsOf(g, FAC_SLOTH, 1); g.heroes[BODY].node = 3;
+    const e2 = M.weekEnd(g).events;
+    assert.notEqual(e2[0].node, 3, 'герой защищает свой узел');
+});
+
+test('город: осада два недельных хода, затем падение; последний город не падает; освобождение возвращает его', () => {
+    const s = fresh(); shadowsOf(s, FAC_SLOTH, 3);
+    own(s, [1], M.facCode(FAC_SLOTH)); own(s, [2, 3, 4, 5, 6], M.facCode(FAC_SLOTH)); // Лень стоит у города Тела (узлы вокруг заняты)
+    s.heroes[BODY].node = 6; // герой ушёл из города (стоящий в городе герой не даёт его осадить)
+    s.gar[1] = 40;
+    const e1 = M.weekEnd(s).events;
+    assert.equal(e1[0].kind, 'siege'); assert.equal(s.sg[BODY], 1); assert.equal(s.own.charAt(0), '1');
+    const e2 = M.weekEnd(s).events;
+    assert.equal(e2[0].kind, 'fall'); assert.equal(s.own.charAt(0), M.facCode(FAC_SLOTH)); assert.equal(s.gar[0], D.C.FAC_TOWN_GAR);
+    assert.equal(M.townsOwned(s), 3);
+    // потерянный город: нет найма, нет эффекта зала, нет дохода
+    s.towns[BODY].hall = 3; assert.equal(M.hall(s, 'body'), 0);
+    s.heroes[BODY].node = 0; s.res.g = 100; assert.equal(M.hire(s, BODY, 't1', 1).reason, 'away');
+    const g0 = s.res.g; M.dayEnd(s, '2026-10-12', {}); assert.equal(s.res.g, g0 + D.C.GOLD_TOWN_DAY * 3);
+    // освобождение
+    s.heroes[BODY].node = 1; s.ap[BODY] = 5; s.heroes[BODY].army = { t1: 400, t3: 0, t5: 0 };
+    const lib = M.engage(s, BODY, 0);
+    assert.equal(lib.win, true); assert.equal(s.own.charAt(0), '1'); assert.equal(M.townsOwned(s), 4);
+    assert.ok(s.log[s.log.length - 1].t.includes('освободил город'));
+});
+
+test('последний город не падает даже при осаде любой силы', () => {
+    const s = fresh(); shadowsOf(s, FAC_SLOTH, 50); own(s, [8, 16, 24], '0'); // остался один город (Тело)
+    own(s, [1, 2, 3, 4, 5, 6], M.facCode(FAC_SLOTH)); s.gar[1] = 40;
+    for (let i = 0; i < 5; i++) M.weekEnd(s);
+    assert.equal(s.own.charAt(0), '1'); assert.equal(M.townsOwned(s), 1);
+});
+
+test('резиновая лента: у игрока < 30% карты — сила фракций ×0.75', () => {
+    const s = fresh(); shadowsOf(s, FAC_SLOTH, 1);
+    assert.equal(M.playerShare(s) < D.C.RUBBER_SHARE, true, 'в начале у игрока 4 города из 33');
+    const weak = M.facPower(s, FAC_SLOTH);
+    own(s, [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13]); // >30%
+    assert.ok(M.playerShare(s) >= D.C.RUBBER_SHARE);
+    assert.ok(M.facPower(s, FAC_SLOTH) > weak);
+    assert.equal(M.facPower(s, FAC_SLOTH), Math.round(D.C.FAC_BASE * M.facMult(s, FAC_SLOTH)));
+});
+
+test('Рассеянность наводит туман вокруг взятого узла', () => {
+    const s = fresh(); shadowsOf(s, FAC_DISTRACT, 1); own(s, [13], M.facCode(FAC_DISTRACT));
+    s.seen = '1'.repeat(33);
+    M.weekEnd(s);
+    assert.ok(s.seen.includes('0'), 'часть карты скрылась из виду');
+    assert.equal(s.seen.charAt(0), '1', 'город игрока остаётся видимым');
+});
+
+test('оплот взят — фракция разбита: её узлы нейтральны, она больше не ходит', () => {
+    const s = fresh(); own(s, [5, 3], M.facCode(FAC_SLOTH));
+    s.heroes[BODY].node = 5; s.ap[BODY] = 6; s.heroes[BODY].army = { t1: 400, t3: 0, t5: 0 };
+    const r = M.engage(s, BODY, 7);
+    assert.equal(r.win, true); assert.equal(s.fac[FAC_SLOTH].dead, 1);
+    assert.equal(s.own.charAt(7), '1'); assert.equal(s.own.charAt(3), '0', 'узлы фракции стали нейтральными');
+    shadowsOf(s, FAC_SLOTH, 5);
+    assert.deepEqual(M.weekEnd(s).events, [], 'мёртвая фракция не ходит');
+    assert.equal(M.declareTruce(s, FAC_SLOTH).reason, 'dead');
+});
+
+test('перемирие: соблюдён обет — фракция пропускает ход и отступает; нарушен — бьёт на 50% сильнее', () => {
+    const kept = fresh(); own(kept, [5], M.facCode(FAC_SLOTH));
+    assert.equal(M.declareTruce(kept, FAC_SLOTH).ok, true);
+    assert.equal(M.declareTruce(kept, FAC_SLOTH).reason, 'already'); assert.equal(M.declareTruce(kept, FAC_GLOOM).reason, 'one');
+    const ev = M.weekEnd(kept).events;
+    assert.equal(ev[0].kind, 'retreat'); assert.equal(kept.own.charAt(5), '0'); assert.equal(kept.fac[FAC_SLOTH].truce, 0, 'обет снят в конце недели');
+    const broken = fresh(); own(broken, [5], M.facCode(FAC_SLOTH)); shadowsOf(broken, FAC_SLOTH, 0.5);
+    M.declareTruce(broken, FAC_SLOTH);
+    assert.ok(M.facPower(broken, FAC_SLOTH, true) >= M.facPower(broken, FAC_SLOTH, false) * (D.C.TRUCE_BREAK_MULT - 0.02));
+    assert.equal(M.weekEnd(broken).events[0].kind, 'take', 'при нарушенном обете фракция ходит');
+    assert.equal(M.revokeTruce(kept, FAC_SLOTH).reason, 'none');
+});
+
+test('лазарет: запас 7 дней за сезон; в лазарете фракции не ходят и перемирие недоступно; новый сезон возвращает запас', () => {
+    const s = fresh(); shadowsOf(s, FAC_SLOTH, 3);
+    assert.equal(M.lazaretStart(s).ok, true); assert.equal(M.lazaretStart(s).reason, 'on');
+    assert.equal(M.declareTruce(s, FAC_GLOOM).reason, 'lazaret');
+    assert.deepEqual(M.weekEnd(s).events, []);
+    for (let i = 0; i < 7; i++) M.dayEnd(s, '2026-10-' + (6 + i), {});
+    assert.equal(s.lz.on, 0); assert.equal(s.lz.left, 0);
+    assert.equal(M.lazaretStart(s).reason, 'none');
+    for (let w = 0; w < D.C.SEASON_WEEKS; w++) M.weekEnd(s);
+    assert.equal(s.lz.left, D.C.LAZARET_DAYS, 'новый сезон — новый запас');
+    const e = fresh(); M.lazaretStart(e); assert.equal(M.lazaretEnd(e).ok, true); assert.equal(M.lazaretEnd(e).reason, 'off');
+});
+
+test('C4 с фракциями: ни ход фракций, ни осада, ни лазарет не прибавляют ОД', () => {
+    const s = fresh();
+    for (let i = 0; i < 40; i++) {
+        D.FACTIONS.forEach((f, k) => { s.fac[k].sh = [3, 3, 3, 3, 3, 3, 3]; });
+        M.dayEnd(s, '2026-12-' + String(i % 28 + 1).padStart(2, '0'), { silent: [1, 1, 1, 1] });
+        if (i % 7 === 6) M.weekEnd(s);
+        assert.deepEqual(s.ap, [0, 0, 0, 0]);
+    }
 });
 
 test('состояние: JSON-раундтрип и хеш стабильны; размер ≤ 4 КБ после месяца игры', () => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 // ============================================================
-// NeuroDeck — симулятор Кампании 3.0, Фаза 2 (4 героя-сферы, 33 узла, 5 ресурсов).
+// NeuroDeck — симулятор Кампании 3.0, Фаза 3 (4 героя-сферы, 33 узла, 4 ИИ-фракции пороков, потеря и освобождение городов).
 // Чистая Node-симуляция на РЕАЛЬНОЙ модели js/campaign3/c3-model.js: профили дисциплины × 3 сида × 26 недель,
 // бот-игрок с простой политикой (зачистка своего региона → сбор армий → штурм логова).
 // Гейты — рельсы против катастрофического дисбаланса, не тонкая настройка:
@@ -13,7 +13,8 @@
 //  C1 дисциплина 70 %: логово Лени падает за 8–18 недель на каждом сиде;
 //  C2 дисциплина 40 %: карта проходима ≤ 26 недель, города целы;
 //  C8 дисциплина окупается (медианы недель победы монотонны);
-//  C3 дисциплина 10 %: игра не «умирает» — города целы, армии живы, герои выходят за границу города.
+//  C3 дисциплина 10 %: игра не «умирает» — хотя бы один город цел (последний не падает), армии живы, герои выходят за город; при 40 % остаётся ≥ 3 городов;
+//  C10 фракции отвечают на срывы СВОЕЙ сферы: без дел Духа Уныние занимает заметно больше узлов остальных.
 // Выход 1 при провале любого гейта.
 // ============================================================
 const path = require('path');
@@ -58,32 +59,50 @@ function goTo(s, h, target) {
   }
   return a;
 }
-function regionTargets(h) { const k = h * 8; return [k + 2, k + 4, k + 6, k + 7]; }
+// цели героя в своём регионе: потерянный город, шахта, заставы, захваченные фракцией узлы, оплот
+function regionTargets(s, h) {
+  const k = h * 8, out = [];
+  [0, 2, 4, 6, 1, 3, 5, 7].forEach((j) => {
+    const id = k + j, o = s.own.charAt(id);
+    if (o === '1') return;
+    if ([0, 2, 4, 6, 7].includes(j) || M.isHostile(s, id)) out.push(id);
+  });
+  return out;
+}
 function bot(s) {
   let actions = 0;
   for (let h = 0; h < 4; h++) actions += econ(s, h);
   const forts = [7, 15, 23, 31];
-  const regionDone = forts.every((f, h) => s.own.charAt(f) === '1');
-  const sumPower = [0, 1, 2, 3].reduce((x, h) => x + M.armyPower(s, h), 0);
+  const doneH = [0, 1, 2, 3].filter((h) => s.own.charAt(forts[h]) === '1' || s.fac[h].dead); // регион зачищен: оплот взят
+  const rallyPower = doneH.reduce((x, h) => x + M.armyPower(s, h), 0);
   const lairDef = M.nodeDefense(s, D.LAIR);
-  const rally = regionDone && sumPower >= lairDef * 1.35;
-  if (!rally) {
-    for (let h = 0; h < 4; h++) {
-      if (s.done) break;
-      const t = regionTargets(h).find((id) => s.own.charAt(id) !== '1');
-      if (t === undefined) { if (M.townAt(s, h) < 0 && s.ap[h] > 0) actions += goTo(s, h, D.TOWNS[h]); continue; } // регион зачищен — домой нанимать
-      const rt = M.route(s, h, t);
-      const hostile = rt && rt.battleNode !== null ? rt.battleNode : (rt && rt.steps.length === 0 ? t : null);
-      const def = M.nodeDefense(s, hostile !== null ? hostile : t);
-      if (M.armyPower(s, h) >= def * 1.3) actions += goTo(s, h, t);
-      else if (M.townAt(s, h) < 0 && s.ap[h] > 0) actions += goTo(s, h, D.TOWNS[h]); // слабы — домой докупать армию
+  const rally = doneH.includes(0) && rallyPower >= lairDef * 1.35;
+  const rallyNode = 7;
+  for (let h = 0; h < 4; h++) {
+    if (s.done) break;
+    if (rally && doneH.includes(h) && h > 0) { actions += goTo(s, h, rallyNode); if (s.heroes[h].node === rallyNode) { M.transferAll(s, h, 0); actions++; } continue; }
+    if (rally && h === 0) continue;
+    const t = regionTargets(s, h)[0];
+    if (t === undefined) { if (M.townAt(s, h) < 0 && s.ap[h] > 0) actions += goTo(s, h, D.TOWNS[h]); continue; } // регион зачищен — домой нанимать
+    const rt = M.route(s, h, t);
+    const hostile = rt && rt.battleNode !== null ? rt.battleNode : (rt && rt.steps.length === 0 ? t : null);
+    const def = M.nodeDefense(s, hostile !== null ? hostile : t);
+    if (M.armyPower(s, h) >= def * 1.3) actions += goTo(s, h, t);
+    else if (M.townAt(s, h) < 0) {
+      if (s.ap[h] > 0) actions += goTo(s, h, D.TOWNS[h]); // слабы — домой докупать армию
+      const home = M.route(s, h, D.TOWNS[h]);
+      if (home && home.battleNode !== null && M.townAt(s, h) < 0) { // дорога домой перерезана фракцией — на помощь идёт самый сильный другой герой
+        const need = M.nodeDefense(s, home.battleNode) * 1.3;
+        const cost = (a) => { const r = M.route(s, a, home.battleNode); return r ? r.total : Infinity; };
+        const ally = [0, 1, 2, 3].filter((a) => a !== h && M.armyPower(s, a) >= need).sort((x, y) => cost(x) - cost(y) || x - y)[0]; // ближайший достаточно сильный
+        if (ally !== undefined) actions += goTo(s, ally, home.battleNode);
+      }
     }
-  } else {
-    const rallyNode = 7;
-    for (let h = 1; h < 4; h++) { actions += goTo(s, h, rallyNode); if (s.heroes[h].node === rallyNode) { M.transferAll(s, h, 0); actions++; } }
+  }
+  if (rally) {
     actions += goTo(s, 0, rallyNode);
     if (s.heroes[0].node === rallyNode) {
-      for (let h = 1; h < 4; h++) if (s.heroes[h].node === rallyNode) { M.transferAll(s, h, 0); }
+      for (let h = 1; h < 4; h++) if (s.heroes[h].node === rallyNode) M.transferAll(s, h, 0);
       const f = M.forecast(s, 0, D.LAIR);
       if (f.adjacent && f.ratio >= 1.15 && s.ap[0] >= f.ap) { M.engage(s, 0, D.LAIR); actions++; }
     }
@@ -95,32 +114,33 @@ function run(p, seed, opts) {
   opts = opts || {};
   const rng = M.mulberry32(seed * 7919 + Math.round(p * 100));
   const s = M.newState(dayKey(0));
-  const out = { doneWeek: null, maxActions: 0, apGained: [0, 0, 0, 0], maxFar: [0, 0, 0, 0], raidsLost: 0 };
+  const out = { doneWeek: null, maxActions: 0, apGained: [0, 0, 0, 0], maxFar: [0, 0, 0, 0], falls: 0, takes: 0 };
   for (let i = 0; i < DAYS; i++) {
-    let missed = 0, overdue = 0;
+    const missedBy = [0, 0, 0, 0], overdue = [0, 0, 0, 0];
     if (opts.noDeeds !== true) {
       SPH.forEach((sp, k) => {
-        if (opts.skipSphere === sp) { missed += CARDS[sp]; return; }
+        if (opts.skipSphere === sp) { missedBy[k] += CARDS[sp]; return; }
         for (let c = 0; c < CARDS[sp]; c++) {
           if (rng() < p) { const r = M.applyDeed(s, { kind: 'habit', sphere: sp, rank: 'B' }); out.apGained[k] += r.gained; }
-          else missed++;
+          else missedBy[k]++;
         }
       });
       for (let t = 0; t < TASKS_PER_DAY; t++) {
-        const sp = SPH[Math.floor(rng() * 4)];
-        if (rng() < p && opts.skipSphere !== sp) { const r = M.applyDeed(s, { kind: 'task', sphere: sp }); out.apGained[SPH.indexOf(sp)] += r.gained; }
-        else if (rng() < 0.3) overdue++;
+        const k = Math.floor(rng() * 4), sp = SPH[k];
+        if (rng() < p && opts.skipSphere !== sp) { const r = M.applyDeed(s, { kind: 'task', sphere: sp }); out.apGained[k] += r.gained; }
+        else if (rng() < 0.3) overdue[k]++;
       }
     }
     const a = opts.noDeeds === true ? 0 : bot(s);
     out.maxActions = Math.max(out.maxActions, a);
     for (let h = 0; h < 4; h++) { const far = M.shortestPath(D.TOWNS[h], s.heroes[h].node); out.maxFar[h] = Math.max(out.maxFar[h], far ? far.cost : 0); }
-    const honest = Math.round(missed * 0.2), silent = Math.min(3, missed - honest);
+    const honest = missedBy.map((m) => Math.round(m * 0.2)), silent = missedBy.map((m, k) => Math.min(3, m - honest[k]));
     M.dayEnd(s, dayKey(i + 1), { silent, honest, overdue });
-    if (i % 7 === 6) { const w = M.weekEnd(s); if (w.raid && w.raid.win) out.raidsLost++; }
+    if (i % 7 === 6) { const w = M.weekEnd(s); w.events.forEach((e) => { if (e.kind === 'fall') out.falls++; if (e.kind === 'take') out.takes++; }); }
     if (s.done && out.doneWeek === null) out.doneWeek = Math.floor(i / 7) + 1;
   }
   out.state = s; out.hash = M.stateHash(s); out.bytes = JSON.stringify(s).length;
+  out.towns = M.townsOwned(s); out.facNodes = [0, 1, 2, 3].map((f) => (s.own.split(M.facCode(f)).length - 1));
   out.armyPower = [0, 1, 2, 3].reduce((x, h) => x + M.armyPower(s, h), 0);
   return out;
 }
@@ -128,11 +148,11 @@ function run(p, seed, opts) {
 let failed = 0;
 function gate(id, ok, msg) { console.log((ok ? 'OK   ' : 'FAIL ') + id + ' ' + msg); if (!ok) failed++; }
 
-console.log('профиль/сид: победа (нед.) | макс. действий/день | дальность героев от домов | потеряно набегами | ОД по сферам | байт | сила армий');
+console.log('профиль/сид: победа (нед.) | макс. действий/день | дальность героев от домов | потеряно городов/узлов | города | узлы фракций | ОД по сферам | байт | сила армий');
 const res = {};
 PROFILES.forEach((p) => {
   res[p] = SEEDS.map((seed) => run(p, seed));
-  res[p].forEach((r, i) => console.log(' ' + Math.round(p * 100) + '%/' + SEEDS[i] + ': ' + (r.doneWeek === null ? ' —' : String(r.doneWeek).padStart(2)) + ' | ' + String(r.maxActions).padStart(2) + ' | ' + r.maxFar.join('/') + ' | ' + r.raidsLost + ' | ' + r.apGained.join('/') + ' | ' + r.bytes + ' | ' + r.armyPower));
+  res[p].forEach((r, i) => console.log(' ' + Math.round(p * 100) + '%/' + SEEDS[i] + ': ' + (r.doneWeek === null ? ' —' : String(r.doneWeek).padStart(2)) + ' | ' + String(r.maxActions).padStart(2) + ' | ' + r.maxFar.join('/') + ' | ' + r.falls + '/' + r.takes + ' | ' + r.towns + ' | ' + r.facNodes.join('/') + ' | ' + r.apGained.join('/') + ' | ' + r.bytes + ' | ' + r.armyPower));
 });
 
 // C4: без дел — ничего
@@ -157,8 +177,12 @@ gate('C1', wk(0.7).every((w) => w !== null && w >= 8 && w <= 18), 'дисцип�
 gate('C2', wk(0.4).every((w) => w !== null && w <= 26), 'дисциплина 40 %: карта проходима ≤ 26 недель (' + wk(0.4).join(', ') + ')');
 const med = (p) => { const v = res[p].map((r) => r.doneWeek === null ? Infinity : r.doneWeek).sort((a, b) => a - b); return v[1]; };
 gate('C8', med(0.9) < med(0.7) && med(0.7) < med(0.4) && med(0.4) <= med(0.1), 'дисциплина окупается: медианы недель победы 90/70/40/10 % = ' + [0.9, 0.7, 0.4, 0.1].map(med).join(' < '));
-const low = res[0.1];
-gate('C3', low.every((r) => r.maxFar.some((v) => v >= 2) && r.armyPower > 0 && D.TOWNS.every((t) => r.state.own.charAt(t) === '1')), 'дисциплина 10 %: города целы, армии живы, герои выходят за город (дальность ' + low.map((r) => Math.max(...r.maxFar)).join(', ') + ')');
+const low = res[0.1], mid = res[0.4];
+gate('C3', low.every((r) => r.towns >= 1 && r.armyPower > 0 && r.maxFar.some((v) => v >= 2)) && mid.every((r) => r.towns >= 3), 'дисциплина 10 %: ≥ 1 города, армии живы, герои выходят за город (города ' + low.map((r) => r.towns).join(', ') + '); 40 %: ≥ 3 городов (' + mid.map((r) => r.towns).join(', ') + ')');
+// C10: фракция сферы, которую запустили, занимает больше всех
+const gloom = run(0.9, 11, { skipSphere: 'spirit' });
+const others = Math.max(gloom.facNodes[0], gloom.facNodes[1], gloom.facNodes[3]);
+gate('C10', gloom.facNodes[2] >= others + 2 && gloom.facNodes[2] >= 4, 'без дел Духа Уныние сильнее остальных: узлы фракций ' + gloom.facNodes.join('/'));
 
 console.log(failed ? '\nГЕЙТЫ КАМПАНИИ 3.0: ПРОВАЛ (' + failed + ')' : '\nИТОГО: гейты кампании 3.0 пройдены');
 process.exit(failed ? 1 : 0);

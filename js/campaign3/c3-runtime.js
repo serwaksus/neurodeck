@@ -23,7 +23,11 @@
                 } catch (e) { return false; }
             },
             dayKey: function() { return w.getMSKDayKey(); },
-            cardsStarted: function() { try { return (w.FORGED || []).filter(function(c) { return c && c.firstCompletedAt; }).length; } catch (e) { return 0; } },
+            cardsBySphere: function() { // начатые карточки по сферам [Тело, Разум, Дух, Связи]
+                var out = [0, 0, 0, 0], idx = { body: 0, mind: 1, spirit: 2, ties: 3 };
+                try { (w.FORGED || []).forEach(function(c) { var sp = c && c.firstCompletedAt ? w.NeuroDeckC3Data.SPHERE_OF_STAT[c.stat] : null; if (sp) out[idx[sp]]++; }); } catch (e) {}
+                return out;
+            },
             sanitize: function(raw) { return w.STATE_GUARDS ? w.STATE_GUARDS.sanitizeC3(raw) : null; },
             save: function() { if (typeof w.saveGameState === 'function') w.saveGameState(); },
             render: function() { if (typeof w.renderCampaign3 === 'function') w.renderCampaign3(); },
@@ -43,6 +47,10 @@
             if (!state) state = M.newState(env.dayKey());
             return state;
         }
+        function addPend(target, by) {
+            if (Array.isArray(by)) { for (var i = 0; i < 4; i++) target[i] += Math.max(0, Math.floor(by[i]) || 0); }
+            else target[1] += Math.max(0, Math.floor(by) || 0); // число без сферы — Разум
+        }
         var api = {
             enabled: enabled,
             getState: function() { return state; },
@@ -60,9 +68,10 @@
                 env.render();
                 return r;
             },
-            onHonestSkip: function() { if (ensure()) state.pend.h++; },
-            onSilentMisses: function(n) { if (ensure()) state.pend.s += Math.max(0, Math.floor(n) || 0); },
-            onTaskOverdue: function(n) { if (ensure()) state.pend.o += Math.max(0, Math.floor(n) || 0); },
+            // срывы суток копятся по сферам (массив [Тело, Разум, Дух, Связи] или сфера/стат + число)
+            onHonestSkip: function(stat) { if (!ensure()) return; var i = D.SPHERES.indexOf(D.SPHERE_OF_STAT[stat]); if (i >= 0) state.pend.h[i]++; },
+            onSilentMisses: function(by) { if (ensure()) addPend(state.pend.s, by); },
+            onTaskOverdue: function(by) { if (ensure()) addPend(state.pend.o, by); },
 
             // Закрывает сутки (и пропущенные дни без открытия приложения) до todayKey. Вызывается из checkDailyReset.
             dayEnd: function(todayKey) {
@@ -70,19 +79,21 @@
                 var gap = daysBetween(state.day, todayKey), closed = 0;
                 if (gap <= 0) return { days: 0 };
                 if (gap > MAX_CATCHUP_DAYS) state.day = dayDiffAdd(todayKey, -MAX_CATCHUP_DAYS);
-                var weekly = null;
+                var weekly = null, events = [];
                 while (state.day < todayKey) {
                     var next = dayDiffAdd(state.day, 1), input;
                     if (closed === 0) input = { silent: state.pend.s, honest: state.pend.h, overdue: state.pend.o };
-                    else input = { silent: Math.min(3, env.cardsStarted()), honest: 0, overdue: 0 }; // день без открытия приложения — молчание
-                    state.pend = { s: 0, h: 0, o: 0 };
+                    else input = { silent: env.cardsBySphere().map(function(n) { return Math.min(3, n); }), honest: [0, 0, 0, 0], overdue: [0, 0, 0, 0] }; // день без открытия приложения — молчание
+                    state.pend = { s: [0, 0, 0, 0], h: [0, 0, 0, 0], o: [0, 0, 0, 0] };
                     M.dayEnd(state, next, input);
-                    if (isMonday(next)) weekly = M.weekEnd(state);
+                    if (isMonday(next)) { weekly = M.weekEnd(state); events = events.concat(weekly.events); }
                     closed++;
                 }
-                if (weekly && weekly.raid) env.toast(weekly.raid.win ? '🦥 Лень отбила узел' : '🛡 Набег Лени отбит', weekly.raid.win ? 'Верни его — тени растут от пропусков' : 'Закалка и дисциплина держат границу', weekly.raid.win ? 'blood' : 'save');
+                // большой ход фракций: тост на самое важное (падение города, затем занятие узла), остальное — в журнале панели
+                var pick = events.filter(function(e) { return e.kind === 'fall'; })[0] || events.filter(function(e) { return e.kind === 'siege'; })[0] || events.filter(function(e) { return e.kind === 'take'; })[0] || events.filter(function(e) { return e.kind === 'retreat'; })[0];
+                if (pick) env.toast(pick.kind === 'fall' ? '🏚 Город пал' : (pick.kind === 'retreat' ? '🛡 Пороки отступают' : '🌑 Ход фракций'), pick.text, pick.kind === 'retreat' ? 'save' : 'blood');
                 env.render();
-                return { days: closed, weekly: weekly };
+                return { days: closed, weekly: weekly, events: events };
             },
 
             // ----- действия игрока (UI) -----
@@ -97,6 +108,8 @@
                 hire: function(h, tier, n) { if (!ensure()) return null; var r = M.hire(state, h, tier, n); env.save(); env.render(); return r; },
                 hall: function(h) { if (!ensure()) return null; var r = M.buyHall(state, h); env.save(); env.render(); return r; },
                 dwelling: function(h, tier) { if (!ensure()) return null; var r = M.buildDwelling(state, h, tier); env.save(); env.render(); return r; },
+                lazaret: function(on) { if (!ensure()) return null; var r = on ? M.lazaretStart(state) : M.lazaretEnd(state); env.save(); env.render(); return r; },
+                truce: function(f, on) { if (!ensure()) return null; var r = on ? M.declareTruce(state, f) : M.revokeTruce(state, f); env.save(); env.render(); return r; },
                 gather: function(from, to) { if (!ensure()) return null; var r = M.transferAll(state, from, to); env.save(); env.render(); return r; }
             }
         };

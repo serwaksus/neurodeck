@@ -1,17 +1,18 @@
-// Кампания 3.0, Ф2 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, журнал.
+// Кампания 3.0, Ф3 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, фракции пороков, лазарет, журнал.
 // Рисует только когда включён флаг nd_c3 (иначе панель пуста и скрыта). Логика — js/campaign3/*, здесь только вид и клики.
 (function() {
     'use strict';
     var D = window.NeuroDeckC3Data, M = window.NeuroDeckC3Model;
     if (!D || !M) return;
-    var selH = 0, selN = null;
+    var selH = 0, selN = null, facOpen = null; // facOpen: null — по умолчанию (раскрыто, если есть тени), иначе выбор игрока
     var SPH = D.SPHERES;
     var TONE = { body: 'steel', mind: 'arcane', spirit: 'gilded', ties: 'ec' };
     var HERO_ART = { body: 'broadsword', mind: 'book-pile', spirit: 'lotus', ties: 'trade' };
     var TOWN_ART = { body: 'anvil', mind: 'bookshelf', spirit: 'church', ties: 'coins-pile' };
-    var TYPE_ART = { mine: 'gold-mine', camp: 'watchtower', fort: 'guarded-tower', cache: 'cut-diamond', swamp: 'swamp', lair: 'crowned-skull' };
-    var TYPE_NAME = { town: 'Город', mine: 'Шахта', camp: 'Застава нейтралов', fort: 'Форт нейтралов', cache: 'Тайник', swamp: 'Топь', lair: 'Логово порока', path: 'Дорога' };
-    var REASON = { away: 'Герой не в городе', pool: 'Пул недели исчерпан', gold: 'Не хватает золота', res: 'Не хватает ресурса', nodwelling: 'Нужно жилище', built: 'Уже построено', prereq: 'Сначала жилище Лучников', max: 'Максимальный уровень' };
+    var TYPE_ART = { mine: 'gold-mine', camp: 'watchtower', bastion: 'guarded-tower', cache: 'cut-diamond', swamp: 'swamp', lair: 'crowned-skull' };
+    var TYPE_NAME = { town: 'Город', mine: 'Шахта', camp: 'Застава нейтралов', bastion: 'Оплот порока', cache: 'Тайник', swamp: 'Топь', lair: 'Цитадель пороков', path: 'Дорога' };
+    var FAC_LETTER = ['Л', 'Р', 'У', 'О'];
+    var REASON = { away: 'Герой не в своём городе', pool: 'Пул недели исчерпан', gold: 'Не хватает золота', res: 'Не хватает ресурса', nodwelling: 'Нужно жилище', built: 'Уже построено', prereq: 'Сначала жилище Лучников', max: 'Максимальный уровень' };
 
     function e(t) { return (typeof esc === 'function') ? esc(String(t)) : String(t).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
     function adjSeen(s, i) { return s.heroes.some(function(h) { return h.node === i || M.ADJ[h.node].indexOf(i) >= 0; }); }
@@ -23,12 +24,14 @@
             var k = D.RES_KEY[sp]; return '<span class="c3-chip" title="' + e(D.RES_NAME[k]) + '">' + D.RES_ICON[k] + ' <b>' + s.res[k] + '</b></span>';
         }).join('');
     }
+    function ratioTxt(r) { return isFinite(r) ? '×' + r.toFixed(2) : '∞ (без охраны)'; }
     function check(s, fn) { var c = JSON.parse(JSON.stringify(s)); return fn(c); } // «сухая» проверка действия на копии состояния
 
     function nodeHtml(s, n) {
         var vis = visible(s, n.id), owner = s.own.charAt(n.id), hostile = vis && M.isHostile(s, n.id);
         var here = []; s.heroes.forEach(function(h, i) { if (h.node === n.id) here.push(i); });
-        var cls = 'c3-node' + (owner === '1' ? ' is-own' : '') + (hostile ? ' is-hostile' : '') + (!vis ? ' is-fog' : '') + (selN === n.id ? ' is-sel' : '') + (here.indexOf(selH) >= 0 ? ' is-active' : '');
+        var fo = M.facOf(owner), sieged = n.type === 'town' && s.sg[SPH.indexOf(n.sphere)] > 0;
+        var cls = 'c3-node' + (fo >= 0 ? ' is-fac' : '') + (sieged ? ' is-siege' : '') + (owner === '1' ? ' is-own' : '') + (hostile ? ' is-hostile' : '') + (!vis ? ' is-fog' : '') + (selN === n.id ? ' is-sel' : '') + (here.indexOf(selH) >= 0 ? ' is-active' : '');
         var inner, label = vis ? n.name : 'Неизвестно';
         if (here.length) {
             var top = here.indexOf(selH) >= 0 ? selH : here[0];
@@ -38,6 +41,8 @@
         else if (vis && n.type === 'mine') inner = medal(TYPE_ART.mine, TONE[n.sphere]);
         else if (vis && TYPE_ART[n.type]) inner = medal(TYPE_ART[n.type], hostile ? 'iron' : 'iron');
         else inner = '<span class="c3-dot" aria-hidden="true"></span>';
+        if (vis && fo >= 0) { inner += '<span class="c3-fbadge" aria-hidden="true">' + FAC_LETTER[fo] + '</span>'; label += ' — под властью «' + D.FACTIONS[fo].name + '»'; }
+        if (sieged) { inner += '<span class="c3-fbadge c3-sg" aria-hidden="true">' + s.sg[SPH.indexOf(n.sphere)] + '/' + D.C.SIEGE_WEEKS + '</span>'; label += ' — осада'; }
         return '<button type="button" class="' + cls + '" data-c3="select" data-n="' + n.id + '" style="left:' + n.x + '%;top:' + n.y + '%" aria-label="' + e(label) + '"' + (!vis ? ' aria-disabled="true"' : '') + '>' + inner + '</button>';
     }
     function edgesHtml(s) {
@@ -83,9 +88,10 @@
             var t = M.townAt(s, h);
             if (t >= 0) html += townHtml(s, h, t);
         } else if (M.isHostile(s, selN)) {
-            var f = M.forecast(s, h, selN);
-            html += '<div class="c3-dline">Оборона <b>' + f.def + '</b> · сила ' + e(D.HERO_NAME[SPH[h]]) + ' <b>' + f.atk + '</b> · ' + (f.win ? '<span class="c3-ok">перевес ×' + f.ratio.toFixed(2) + '</span>' : '<span class="c3-bad">слабее (×' + f.ratio.toFixed(2) + ')</span>') + '</div>';
-            if (selN === D.LAIR) html += '<div class="c3-dline">Сила логова растёт от срывов: ×' + M.shadowMult(s).toFixed(2) + '. Соберите армии героев в одном узле — штурм ведёт один герой.</div>';
+            var f = M.forecast(s, h, selN), fo2 = M.facOf(s.own.charAt(selN));
+            if (fo2 >= 0) html += '<div class="c3-dline c3-bad">Под властью «' + e(D.FACTIONS[fo2].name) + '»' + (n.type === 'town' ? ' — освободи город: он снова растит армию' : (selN === D.FACTIONS[fo2].bastion ? ' — разгром оплота обезвредит фракцию' : '')) + '.</div>';
+            html += '<div class="c3-dline">Оборона <b>' + f.def + '</b> · сила ' + e(D.HERO_NAME[SPH[h]]) + ' <b>' + f.atk + '</b> · ' + (f.win ? '<span class="c3-ok">перевес ' + ratioTxt(f.ratio) + '</span>' : '<span class="c3-bad">слабее (' + ratioTxt(f.ratio) + ')</span>') + '</div>';
+            if (selN === D.LAIR) html += '<div class="c3-dline">Сила цитадели растёт от срывов всех сфер: ×' + M.lairMult(s).toFixed(2) + '. Соберите армии героев в одном узле — штурм ведёт один герой.</div>';
             if (f.adjacent) acts += btn('⚔ Штурм (' + f.ap + ' ОД)', { primary: true, data: 'data-c3="atk" data-n="' + selN + '"' }, s.ap[h] >= f.ap, 'Не хватает очков движения');
             else { var rt = M.route(s, h, selN); html += '<div class="c3-dline">Подойди ближе' + (rt ? ' — путь ' + rt.cost + ' ОД' : '') + '.</div>'; if (rt && rt.steps.length) acts += btn('➜ Идти (' + rt.cost + ' ОД)', { data: 'data-c3="go" data-n="' + selN + '"' }, s.ap[h] >= 1, 'Нет очков движения'); }
         } else {
@@ -99,6 +105,20 @@
         return html + (acts ? '<div class="c3-acts">' + acts + '</div>' : '') + '</div>';
     }
 
+    function facPanel(s) {
+        var anyTruce = s.fac.some(function(f) { return f.truce; });
+        var rows = D.FACTIONS.map(function(F, f) {
+            var fs = s.fac[f], nodes = 0, code = M.facCode(f), i;
+            for (i = 0; i < s.own.length; i++) if (s.own.charAt(i) === code) nodes++;
+            var sum = M.facSum(s, f), state = fs.dead ? '<span class="c3-ok">разбита</span>' : (sum === 0 ? '<span class="c3-ok">затихла</span>' : '<span class="c3-bad">сила ' + M.facPower(s, f) + '</span>');
+            var can = !fs.dead && !s.lz.on && (!anyTruce || fs.truce);
+            var tbtn = fs.dead ? '' : '<button type="button" class="c3-mini" data-c3="truce" data-f="' + f + '" data-on="' + (fs.truce ? 0 : 1) + '"' + (can ? '' : ' disabled') + ' title="Обет: неделя без срывов в сфере «' + e(D.SPHERE_NAME[F.sphere]) + '». Соблюдёшь — фракция отступит, нарушишь — ударит сильнее.">' + (fs.truce ? '🕊 Обет дан ✕' : '🕊 Перемирие') + '</button>';
+            return '<li class="c3-frow' + (fs.dead ? ' is-dead' : '') + '"><span class="c3-fname">' + FAC_LETTER[f] + ' ' + e(F.name) + ' <i>' + e(D.SPHERE_NAME[F.sphere]) + '</i></span><span class="c3-fstat">' + state + ' · тени ' + (Math.round(sum * 10) / 10) + ' · узлов ' + nodes + '</span>' + tbtn + '</li>';
+        }).join('');
+        var lz = '<div class="c3-lz">🏥 Лазарет: ' + (s.lz.on ? '<b>идёт</b>, осталось ' + s.lz.left + ' дн.' : 'запас <b>' + s.lz.left + '</b> дн. за сезон') + ' <button type="button" class="c3-mini" data-c3="lazaret" data-on="' + (s.lz.on ? 0 : 1) + '"' + (!s.lz.on && s.lz.left <= 0 ? ' disabled' : '') + ' title="Болезнь или отпуск: тени не копятся, фракции не ходят">' + (s.lz.on ? 'Выйти' : 'Объявить') + '</button></div>';
+        var open = facOpen !== null ? facOpen : s.fac.some(function(f, i) { return !f.dead && M.facSum(s, i) > 0; });
+        return '<details class="c3-facs"' + (open ? ' open' : '') + '><summary>🌑 Фракции пороков</summary><ul class="c3-flist">' + rows + '</ul>' + lz + '</details>';
+    }
     window.renderCampaign3 = function() {
         var root = document.getElementById('c3Root');
         if (!root) return;
@@ -115,12 +135,13 @@
             '<div class="c3-tabs" role="group" aria-label="Герои">' + tabs + '</div>' +
             '<div class="c3-stats">' + resChips(s) + '</div>' +
             '<div class="c3-hline"><b>' + e(D.HERO_NAME[SPH[selH]]) + '</b> ур. ' + hero.lvl + ' · сила <b>' + M.armyPower(s, selH) + '</b> · ' + armyLine(hero.army) + ' · ОД сегодня +' + s.apDay[selH] + '/' + D.C.AP_CAP_DAY + '</div>' +
-            (s.done ? '<div class="c3-done">🏆 Логово Лени пало — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
+            (s.done ? '<div class="c3-done">🏆 Цитадель Пороков пала — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
             '<div class="c3-mapwrap"><div class="c3-map">' + edgesHtml(s) + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' +
             detailHtml(s) +
-            '<div class="c3-shadow">🌑 Тени Лени за 7 дней: <b>' + (Math.round(sum * 10) / 10) + '</b> → сила логова ×' + M.shadowMult(s).toFixed(2) + '</div>' +
+            facPanel(s) +
+            '<div class="c3-shadow">🌑 Тени пороков за 7 дней: <b>' + (Math.round(sum * 10) / 10) + '</b> → сила цитадели ×' + M.lairMult(s).toFixed(2) + '</div>' +
             (s.log.length ? '<ul class="c3-log">' + s.log.slice().reverse().map(function(l) { return '<li><i>' + e(l.d.slice(5)) + '</i> ' + e(l.t) + '</li>'; }).join('') + '</ul>' : '') +
-            '<div class="c3-note">Очки движения героя дают только дела его сферы (Тело: Сила/Стойкость/Ловкость · Разум: Интеллект · Дух: Воля · Связи: Харизма); задача идёт сфере, выбранной при создании. Срывы любых дел усиливают Лень.</div>' +
+            '<div class="c3-note">Очки движения героя дают только дела его сферы (Тело: Сила/Стойкость/Ловкость · Разум: Интеллект · Дух: Воля · Связи: Харизма); задача идёт сфере, выбранной при создании. Срыв дела сферы усиливает ЕЁ фракцию порока: она ходит раз в неделю (понедельник) и берёт соседние узлы, а затем и города.</div>' +
             '</section>';
         root.innerHTML = html;
         var wrap = root.querySelector('.c3-mapwrap');
@@ -128,7 +149,7 @@
             if (sl !== null) { wrap.scrollLeft = sl; wrap.scrollTop = st; }
             else { var m = wrap.firstElementChild, hn = D.NODES[hero.node]; wrap.scrollLeft = Math.max(0, m.offsetWidth * hn.x / 100 - wrap.clientWidth / 2); wrap.scrollTop = Math.max(0, m.offsetHeight * hn.y / 100 - wrap.clientHeight / 2); }
         }
-        if (!root.dataset.bound) { root.dataset.bound = '1'; root.addEventListener('click', onClick); }
+        if (!root.dataset.bound) { root.dataset.bound = '1'; root.addEventListener('click', onClick); root.addEventListener('toggle', function(ev) { if (ev.target.classList && ev.target.classList.contains('c3-facs')) facOpen = ev.target.open; }, true); }
     };
 
     function onClick(ev) {
@@ -140,10 +161,17 @@
         if (act === 'hire') { NDC3.act.hire(selH, el.dataset.t, parseInt(el.dataset.k, 10) || 1); return; }
         if (act === 'dw') { NDC3.act.dwelling(selH, el.dataset.t); return; }
         if (act === 'hall') { NDC3.act.hall(selH); return; }
+        if (act === 'truce') { NDC3.act.truce(parseInt(el.dataset.f, 10), el.dataset.on === '1'); return; }
+        if (act === 'lazaret') {
+            var on = el.dataset.on === '1';
+            if (!on || typeof dungeonConfirm !== 'function') { NDC3.act.lazaret(on); return; }
+            dungeonConfirm('🏥 Объявить лазарет?', 'Тени не копятся, фракции пороков затаятся. Запас — ' + s.lz.left + ' дн. за сезон; дни тратятся, пока лазарет идёт. Только для болезни или отпуска.').then(function(ok) { if (ok) NDC3.act.lazaret(true); });
+            return;
+        }
         if (act === 'gather') { NDC3.act.gather(parseInt(el.dataset.from, 10), selH); return; }
         if (act === 'atk') {
             var f = M.forecast(s, selH, n);
-            var body = 'Оборона <b>' + f.def + '</b>, сила героя <b>' + f.atk + '</b> (×' + f.ratio.toFixed(2) + ').<br>' + (f.win ? 'Победа ожидаема, потери ≈ ' + Math.round(f.attritionPct * 100) + '%.' : 'Ты слабее — штурм, скорее всего, провалится.');
+            var body = 'Оборона <b>' + f.def + '</b>, сила героя <b>' + f.atk + '</b> (' + ratioTxt(f.ratio) + ').<br>' + (f.win ? 'Победа ожидаема, потери ≈ ' + Math.round(f.attritionPct * 100) + '%.' : 'Ты слабее — штурм, скорее всего, провалится.');
             var go = function() { NDC3.act.engage(selH, n); };
             if (typeof dungeonConfirm === 'function') dungeonConfirm('⚔ Штурм «' + D.NODES[n].name + '»?', body).then(function(ok) { if (ok) go(); }); else go();
         }
