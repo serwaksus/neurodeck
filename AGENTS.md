@@ -17,7 +17,8 @@ swap-skills --budget # show token estimate
 ```
 
 ## Verification
-- `npm run check:js` — JS syntax check (covers 6 core files incl. js/state/store.js and js/ui/strongholds.js; stronghold-data/stronghold-model/perf-compat indirectly via tests)
+- `npm run check:js` — JS syntax check (covers 7 core files incl. js/state/store.js, js/ui/strongholds.js and js/audio.js; stronghold-data/stronghold-model/perf-compat indirectly via tests)
 - `npm test` — full test suite
 - E2E: `npx playwright test tests/e2e/`
-- **Full chain = `npm run ci`** — check:js + unit + e2e + visual + playtest:strongholds/acceptance + qa:data/chaos/parity (same 9 steps run in GitHub Actions; visual stays continue-on-error there)
+- **Full chain = `npm run ci`** — check:js + check:ui + unit + e2e + visual + playtest:strongholds/acceptance + qa:data/chaos/parity + sim:economy. GitHub Actions runs the same steps (`tests/ci-config.test.js` enforces parity); visual runs in a separate `visual` job inside the pinned Playwright container against CI-native baselines in `tests/e2e/snapshots-ci/` and is blocking once they are committed — see docs/qa/VISUAL-BASELINES.md
+- Cache pins: after any change to shipped JS/CSS run `node tools/bump-pin.cjs` (bumps `?v=` in index.html, VERSION/precache in sw.js and the test pins)

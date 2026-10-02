@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      update_visual:
+        description: 'Пересобрать визуальные базлайны в CI-окружении (артефакт visual-baselines-ci → закоммитить в tests/e2e/snapshots-ci)'
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -12,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22]
+        node: [22, 24]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -27,33 +33,74 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium
       - run: npm run check:js
+      - run: npm run check:ui
       - run: npm test
       # retries=1 только в CI (флаг поверх конфига; локально поведение не меняется)
       - run: npm run test:e2e -- --retries=1
-      - run: npm run test:e2e:visual
-        id: visual
-        # Baselines were captured off-CI; ubuntu-latest rendering differs.
-        # Non-blocking until CI-native baselines prove stable.
-        continue-on-error: true
       - run: npm run test:playtest:strongholds
       - run: npm run test:playtest:acceptance
       - run: npm run test:qa:data
       - run: npm run test:qa:chaos
       - run: npm run test:qa:parity
+      - run: npm run test:sim:economy
       - uses: actions/upload-artifact@v7
-        # failure() misses the visual step (continue-on-error keeps the job
-        # green), so also fire on its raw outcome.
-        if: failure() || steps.visual.outcome == 'failure'
+        if: failure()
         with:
           name: test-failure-artifacts-node${{ matrix.node }}
+          path: test-results/
+          retention-days: 7
+
+  # Визуальный гейт (аудит R2 M10). Закреплённое окружение: контейнер Playwright той же версии, что в package-lock
+  # (тег сверяет tests/ci-config.test.js). Базлайны — tests/e2e/snapshots-ci/ (снимаются ЭТИМ же job-ом).
+  #  • есть snapshots-ci/ → job БЛОКИРУЮЩИЙ (любой дрейф = красный CI);
+  #  • нет (первый запуск) или workflow_dispatch update_visual → режим пересъёмки: job собирает базлайны
+  #    в артефакт visual-baselines-ci, их надо закоммитить; после этого гейт блокирующий.
+  visual:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.0-noble
+    env:
+      ND_VISUAL_CI: '1'
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Режим
+        id: mode
+        run: |
+          if [ "${{ github.event.inputs.update_visual }}" = "true" ] || [ ! -d tests/e2e/snapshots-ci ]; then
+            echo "update=true" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Визуальные базлайны::snapshots-ci/ нет или запрошена пересъёмка — job собирает базлайны в артефакт visual-baselines-ci (закоммитить в tests/e2e/snapshots-ci). Гейт станет блокирующим после коммита."
+          else
+            echo "update=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Визуальные тесты (блокирующие)
+        if: steps.mode.outputs.update == 'false'
+        run: npm run test:e2e:visual
+      - name: Пересъёмка базлайнов
+        if: steps.mode.outputs.update == 'true'
+        run: npm run test:e2e:visual -- --update-snapshots
+      - uses: actions/upload-artifact@v7
+        if: steps.mode.outputs.update == 'true'
+        with:
+          name: visual-baselines-ci
+          path: tests/e2e/snapshots-ci/
+          retention-days: 14
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: visual-failure-artifacts
           path: |
             test-results/
-            tests/e2e/snapshots/*-diff.png
           retention-days: 7
 
   deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main'
+    needs: [test, visual]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -63,10 +110,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
-      - run: rm -f index_backup.html index768_backup.html
+      # В Pages уходит только то, что нужно приложению (аудит R2 M7): без docs/, .opencode/, bot/, service/, tools/, tests/
+      - name: Собрать публичный артефакт
+        run: |
+          mkdir _site
+          cp -r index.html sw.js manifest.json css js fonts img config _site/
+          find _site -type f | wc -l
+          du -sh _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

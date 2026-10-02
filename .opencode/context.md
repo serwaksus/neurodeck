@@ -1,7 +1,7 @@
 # NeuroDeck — Project Context
 
 ## Skill Profile
-30 skills in `.opencode/skills/`:
+12 skills in `.opencode/skills/` (the 18 gamedev skills below load via the `swap-skills gamedev-all` profile, not as directories here):
 
 ### Gamedev (18, symlinked from `gamedev-all`)
 | Skill | Load when |
@@ -25,7 +25,7 @@
 | `game-jam` | Scoping, deadlines, shipping workflow |
 | `prototype-fast` | Rapid prototyping, MVP, greyboxing |
 
-### NeuroDeck-native (12, moved from global)
+### NeuroDeck-native (12, in `.opencode/skills/`)
 | Skill | Load when |
 |---|---|
 | `neurodeck-architecture` | Any NeuroDeck system change |
