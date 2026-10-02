@@ -2,6 +2,9 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <!-- Аудит 2026-10-02 (P0): CSP — GitHub Pages не умеет заголовки, поэтому <meta>. Инлайн-скрипт один (регистрация SW), разрешён по хешу;
+         хеш сверяет tests/csp.test.js. Любой новый inline-скрипт/обработчик on*= без обновления политики будет заблокирован. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-zGtSwB7zZfaIyCjVYrKk/G0u6/CVpSAXVqwvGl10rLI=' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' data: blob:; frame-src 'self' tg: https://telegram.org https://t.me; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover"
@@ -10,8 +13,8 @@
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
     <!-- Волна 3: шрифты self-host (fonts/fonts.css) — без fonts.googleapis/gstatic -->
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=102" />
-    <link rel="stylesheet" href="css/style.css?v=102" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=103" />
+    <link rel="stylesheet" href="css/style.css?v=103" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
@@ -867,7 +870,6 @@
                 value="3"
                 min="1"
                 max="20"
-                onchange="renderStepInputs()"
               />
             </div>
             <div class="form-row" id="goalStepInputsWrap" style="display: none">
@@ -1639,7 +1641,7 @@
         </div>
       </div>
     </div>
-    <script src="https://telegram.org/js/telegram-web-app.js" async onload="window.__tgReady && window.__tgReady()"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
       if ('serviceWorker' in navigator && !navigator.webdriver && (location.protocol === 'https:' || location.hostname === 'localhost')) {
         window.addEventListener('load', function () {
@@ -1647,18 +1649,18 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=102" defer></script>
-    <script src="js/perf-compat.js?v=102" defer></script>
-    <script src="js/event-bus.js?v=102" defer></script>
-    <script src="js/audio.js?v=102" defer></script>
-    <script src="js/telemetry.js?v=102" defer></script>
-    <script src="js/stronghold-data.js?v=102" defer></script>
-<script src="js/state-guards.js?v=102" defer></script>
-    <script src="js/storage.js?v=102" defer></script>
-    <script src="js/stronghold-model.js?v=102" defer></script>
-    <script src="js/state/store.js?v=102" defer></script>
-    <script src="js/remote-config.js?v=102" defer></script>
-    <script src="js/ui/strongholds.js?v=102" defer></script>
-    <script src="js/app.js?v=102" defer></script>
+    <script src="js/perf.js?v=103" defer></script>
+    <script src="js/perf-compat.js?v=103" defer></script>
+    <script src="js/event-bus.js?v=103" defer></script>
+    <script src="js/audio.js?v=103" defer></script>
+    <script src="js/telemetry.js?v=103" defer></script>
+    <script src="js/stronghold-data.js?v=103" defer></script>
+<script src="js/state-guards.js?v=103" defer></script>
+    <script src="js/storage.js?v=103" defer></script>
+    <script src="js/stronghold-model.js?v=103" defer></script>
+    <script src="js/state/store.js?v=103" defer></script>
+    <script src="js/remote-config.js?v=103" defer></script>
+    <script src="js/ui/strongholds.js?v=103" defer></script>
+    <script src="js/app.js?v=103" defer></script>
   </body>
 </html>
