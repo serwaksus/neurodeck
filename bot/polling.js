@@ -32,10 +32,34 @@ if (!TOKEN) {
 // --- chats.json v2: { "<chatId>": { mode, hour, minute, lastFire } } ---
 // Легаси v1 читается на лету: true → daily 21:30, false → off.
 function loadChats() {
-  try { return JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8')); } catch (e) { return {}; }
+  let raw;
+  try { raw = fs.readFileSync(CHATS_FILE, 'utf8'); } catch (e) { return {}; } // файла нет — подписчиков нет
+  try {
+    const db = JSON.parse(raw);
+    if (db && typeof db === 'object' && !Array.isArray(db)) return db;
+    throw new Error('chats.json не объект');
+  } catch (e) {
+    // Битый файл не считаем пустым: иначе следующая запись молча сотрёт все подписки.
+    // Сохраняем улику рядом и пробуем последнюю хорошую копию.
+    console.error('[bot] chats.json повреждён:', e.message);
+    try { fs.writeFileSync(CHATS_FILE + '.corrupt-' + Date.now(), raw); } catch (e2) {}
+    try {
+      const bak = JSON.parse(fs.readFileSync(CHATS_FILE + '.bak', 'utf8'));
+      if (bak && typeof bak === 'object' && !Array.isArray(bak)) { console.error('[bot] восстановлено из chats.json.bak'); return bak; }
+    } catch (e3) {}
+    return {};
+  }
 }
+// Атомарная запись: tmp + rename — падение посреди записи не оставляет битый chats.json.
+// Перед заменой текущий (заведомо валидный) файл остаётся как .bak.
 function saveChats(db) {
-  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(CHATS_FILE, JSON.stringify(db)); } catch (e) { console.error('[bot] saveChats:', e.message); }
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tmp = CHATS_FILE + '.tmp-' + process.pid;
+    fs.writeFileSync(tmp, JSON.stringify(db));
+    try { fs.copyFileSync(CHATS_FILE, CHATS_FILE + '.bak'); } catch (e) {}
+    fs.renameSync(tmp, CHATS_FILE);
+  } catch (e) { console.error('[bot] saveChats:', e.message); }
 }
 function clampInt(v, lo, hi, dflt) {
   const n = Math.round(Number(v));
@@ -98,7 +122,8 @@ function socks5Connect(targetHost, targetPort, timeoutMs) {
 // API-запрос через SOCKS-туннель + TLS. let + сеттер: юнит-тесты подменяют транспорт (setApiForTests), прод не трогает.
 let api = async function (method, body) {
   const payload = JSON.stringify(body || {});
-  const sock = await socks5Connect(API_HOST, 443, method === 'getUpdates' ? 70000 : 15000);
+  const timeoutMs = method === 'getUpdates' ? 70000 : 15000;
+  const sock = await socks5Connect(API_HOST, 443, timeoutMs);
   return new Promise((resolve, reject) => {
     const req = https.request({
       host: API_HOST, path: '/bot' + TOKEN + '/' + method, method: 'POST',
@@ -114,6 +139,8 @@ let api = async function (method, body) {
       });
     });
     req.on('error', (e) => { sock.destroy(); reject(e); });
+    // Без таймаута «молчащий» прокси вешает pollLoop навсегда, а systemd видит живой процесс.
+    req.setTimeout(timeoutMs, () => req.destroy(new Error(method + ': http timeout')));
     req.end(payload);
   });
 };
@@ -154,29 +181,53 @@ async function sendReminder(chatId, mode) {
 
 function _resetForTests() { /* lastFire теперь персистится в chats.json — сброс через фикстуру */ }
 
+// Постоянный отказ доставки: пользователь заблокировал бота / чат удалён — повторять бессмысленно.
+function isPermanentSendError(err) {
+  return /\b403\b|forbidden|bot was blocked|chat not found|user is deactivated/i.test(String(err && err.message || err));
+}
+
+let tickRunning = false; // setInterval не должен запускать второй тик поверх идущего (дубли рассылки)
 async function schedulerTick(now = Date.now()) {
-  const p = mskParts(now);
-  const minutesNow = p.hour * 60 + p.minute;
-  const db = loadChats();
-  let dirty = false, sent = 0;
-  for (const id of Object.keys(db)) {
-    const e = normEntry(db[id]);
-    if (e.mode === 'off') continue;
-    if (e.mode === 'sunday' && p.dow !== 'Sun') continue;
-    const target = e.hour * 60 + e.minute;
-    const inWindow = minutesNow >= target && minutesNow < target + FIRE_WINDOW_MIN;
-    const catchup = minutesNow >= target + FIRE_WINDOW_MIN && minutesNow < target + CATCHUP_MIN; // бот был мёртв в окне
-    if ((!inWindow && !catchup) || e.lastFire === p.key) continue;
-    try {
-      await sendReminder(id, e.mode);
-      e.lastFire = p.key; // персист: рестарт в окне не дублирует, простой не теряет
-      db[id] = e;
-      dirty = true;
-      sent++;
-    } catch (err) { console.error('[bot] reminder ->', id, err.message); }
-  }
-  if (dirty) saveChats(db);
-  if (sent > 0) console.log('[bot] reminder', p.key, 'sent:', sent);
+  if (tickRunning) return;
+  tickRunning = true;
+  try {
+    const p = mskParts(now);
+    const minutesNow = p.hour * 60 + p.minute;
+    const ids = Object.keys(loadChats());
+    let sent = 0;
+    for (const id of ids) {
+      // Свежая запись на КАЖДЫЙ чат: /stop, пришедший во время предыдущих отправок, обязан сработать.
+      const db0 = loadChats();
+      if (!Object.prototype.hasOwnProperty.call(db0, id)) continue;
+      const e = normEntry(db0[id]);
+      if (e.mode === 'off') continue;
+      if (e.mode === 'sunday' && p.dow !== 'Sun') continue;
+      const target = e.hour * 60 + e.minute;
+      const inWindow = minutesNow >= target && minutesNow < target + FIRE_WINDOW_MIN;
+      const catchup = minutesNow >= target + FIRE_WINDOW_MIN && minutesNow < target + CATCHUP_MIN; // бот был мёртв в окне
+      if ((!inWindow && !catchup) || e.lastFire === p.key) continue;
+      try {
+        await sendReminder(id, e.mode);
+        // Пишем ТОЛЬКО эту запись поверх свежего файла и сразу — рестарт не дублирует, чужие правки не затираются.
+        const db1 = loadChats();
+        if (Object.prototype.hasOwnProperty.call(db1, id)) {
+          const cur = normEntry(db1[id]);
+          cur.lastFire = p.key;
+          db1[id] = cur;
+          saveChats(db1);
+        }
+        sent++;
+      } catch (err) {
+        console.error('[bot] reminder ->', id, err.message);
+        if (isPermanentSendError(err)) {
+          const db2 = loadChats();
+          if (Object.prototype.hasOwnProperty.call(db2, id)) { const cur = normEntry(db2[id]); cur.mode = 'off'; db2[id] = cur; saveChats(db2); }
+          console.error('[bot] чат', id, 'недоступен — напоминания выключены');
+        }
+      }
+    }
+    if (sent > 0) console.log('[bot] reminder', p.key, 'sent:', sent);
+  } finally { tickRunning = false; }
 }
 
 const HELP_TEXT = [
@@ -270,4 +321,4 @@ async function main() {
 if (require.main === module) {
   main().catch((e) => { console.error('[bot] fatal:', e.message); process.exit(1); });
 }
-module.exports = { mskParts, schedulerTick, handleMessage, pollOnce, setApiForTests, _resetForTests, normEntry, parseHHMM, REMIND_HOUR, REMIND_MIN };
+module.exports = { loadChats, saveChats, isPermanentSendError, mskParts, schedulerTick, handleMessage, pollOnce, setApiForTests, _resetForTests, normEntry, parseHHMM, REMIND_HOUR, REMIND_MIN };

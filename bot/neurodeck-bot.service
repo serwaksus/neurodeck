@@ -16,6 +16,11 @@ Restart=always
 RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
 ReadWritePaths=/opt/neurodeck-bot/data
 
 [Install]
