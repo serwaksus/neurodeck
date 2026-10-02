@@ -383,7 +383,7 @@ letter-spacing: 1px;
 .goal-card.completed { opacity: 0.5; filter: grayscale(0.5); }
 .goal-card.completed .goal-name { text-decoration: line-through; }
 .goals-empty { padding: 30px 16px; text-align: center; color: var(--text-dim); font-style: italic; font-size: 12px; letter-spacing: 1px; line-height: 1.6; }
-.float-number { position: fixed; z-index: 310; font-family: 'Georgia', serif; font-size: 20px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; animation: floatUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; white-space: nowrap; }
+.float-number { position: fixed; z-index: 310; font-family: var(--font-display); font-size: 20px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; animation: floatUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; white-space: nowrap; }
 .float-number.damage { color: var(--blood-bright) !important; text-shadow: 0 0 12px rgba(199, 62, 77, 0.9), 0 2px 4px rgba(0,0,0,0.8) !important; font-size: 24px; }
 @keyframes floatUp { 0%{opacity:0; transform: translate(-50%, 0) scale(0.5);} 20%{opacity:1; transform: translate(-50%, -10px) scale(1.2);} 100%{opacity:0; transform: translate(-50%, -80px) scale(0.8);} }
 .levelup-overlay { position: fixed; inset: 0; z-index: 320; pointer-events: none; background: radial-gradient(circle, rgba(251, 191, 36, 0.3), transparent 60%); opacity: 0; }
@@ -1034,8 +1034,8 @@ textarea:focus-visible {
 
 /* ---- У1.1: Типографика ---- */
 :root {
-  --font-display: 'Cinzel', 'Georgia', serif;
-  --font-body: 'Crimson Text', 'Georgia', serif;
+  --font-display: 'Philosopher', 'Cinzel', 'Georgia', serif; /* кириллица + латиница (fonts/fonts.css) */
+  --font-body: 'Alegreya', 'Georgia', serif;
   --radius-card: 8px;
   --radius-btn: 6px;
   --radius-modal: 12px;
@@ -1050,7 +1050,19 @@ textarea:focus-visible {
 html, body {
   font-family: var(--font-body) !important;
   font-size: 15px;
+  font-variant-numeric: lining-nums; /* Alegreya по умолчанию рисует «старые» цифры — для счётчиков и казны нужны ровные */
 }
+
+/* Органы управления по умолчанию НЕ наследуют шрифт (UA-стиль Arial/system-ui): главная CTA «Выполнить»,
+   тотемы, доктрины и стойки рисовались чужим шрифтом (аудит визуала D1). Элементный селектор слабее любых классовых правил. */
+button, input, select, textarea { font-family: inherit; }
+
+/* Числа, которые меняются на глазах, не должны «дышать» шириной */
+.gold-chip, .gold-chip b, #heroGoldVal, #heroXpCur, #heroXpMax, #heroMiniXpText, #progressVal,
+.float-number, .stat-value, .xp-val { font-variant-numeric: lining-nums tabular-nums; }
+
+/* Знак NEURODECK остаётся в Cinzel (латиница), всё остальное — Philosopher */
+.logo { font-family: 'Cinzel', var(--font-display) !important; }
 
 h1, h2, h3, .view-title, .modal-header h3,
 .sh-panel-title, .sh-prov-title, .sh-quest-title, .logo,
@@ -1460,10 +1472,10 @@ body::before {
 .km-lg-safe { background: rgba(52, 211, 153, 0.7); box-shadow: 0 0 6px rgba(52, 211, 153, 0.55); }
 .km-lg-trade { background: rgba(251, 191, 36, 0.75); box-shadow: 0 0 6px rgba(251, 191, 36, 0.6); }
 /* картуш и зоны */
-.km-cartouche text { fill: var(--gold-bright); font-family: Georgia, serif; font-size: 22px; letter-spacing: 8px; }
+.km-cartouche text { fill: var(--gold-bright); font-family: var(--font-display); font-size: 22px; letter-spacing: 8px; }
 .km-cartouche line { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1.5; }
 .km-corner path { fill: none; stroke: rgba(212, 165, 116, 0.55); stroke-width: 2; }
-.km-zone { fill: rgba(212, 165, 116, 0.6); font-size: 20px; letter-spacing: 5px; font-family: Georgia, serif; }
+.km-zone { fill: rgba(212, 165, 116, 0.6); font-size: 20px; letter-spacing: 5px; font-family: var(--font-display); }
 /* Г3: море/река/декор */
 .km-sea { fill: rgba(20, 42, 62, 0.4); stroke: rgba(96, 140, 170, 0.3); stroke-width: 1.5; }
 .km-wave { fill: none; stroke: rgba(150, 190, 220, 0.22); stroke-width: 2.5; stroke-linecap: round; }
@@ -1484,7 +1496,7 @@ body::before {
 .km-deco { stroke: rgba(180, 150, 100, 0.34); stroke-width: 2.5; fill: none; }
 .km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.26); stroke: none; }
 .km-cross rect { fill: rgba(212, 165, 116, 0.85); stroke: rgba(0, 0, 0, 0.5); stroke-width: 1.5; }
-.km-zone { fill: rgba(212, 165, 116, 0.85); font-size: 44px; letter-spacing: 10px; font-family: Georgia, serif; }
+.km-zone { fill: rgba(212, 165, 116, 0.85); font-size: 44px; letter-spacing: 10px; font-family: var(--font-display); }
 .km-zone-sub { fill: rgba(212, 165, 116, 0.5); font-size: 22px; letter-spacing: 8px; }
 /* дороги: тёмный корпус + золотое полотно (захвачено) / пунктир (заперто) */
 .km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 8; stroke-linecap: round; }
@@ -1507,7 +1519,7 @@ body::before {
 .km-compass-ring { fill: rgba(10, 8, 6, 0.5); stroke: rgba(212, 165, 116, 0.35); stroke-width: 1; }
 .km-compass-hub { fill: rgba(212, 165, 116, 0.65); }
 .km-star { fill: rgba(212, 165, 116, 0.42); }
-.km-compass-n { fill: rgba(212, 165, 116, 0.65); font-size: 9px; font-family: Georgia, serif; }
+.km-compass-n { fill: rgba(212, 165, 116, 0.65); font-size: 9px; font-family: var(--font-display); }
 :root.perf-eco .km-connector.owned { animation: none !important; }
 /* Г3: полит-заливки территорий (сталь captured / штриховка front / кровь+fog locked) */
 .km-terr.km-captured { fill: rgba(70, 130, 180, 0.30); stroke: none; }
@@ -1543,7 +1555,7 @@ body::before {
 /* таблички имён */
 .km-plaque rect { fill: rgba(8, 6, 4, 0.85); stroke: rgba(212, 165, 116, 0.3); stroke-width: 1; }
 .km-plaque.km-captured rect, .km-plaque:not(.dim) rect { stroke: rgba(212, 165, 116, 0.45); }
-.km-name { font-size: 19px; fill: var(--text); letter-spacing: 2px; font-family: Georgia, serif; pointer-events: none; }
+.km-name { font-size: 19px; fill: var(--text); letter-spacing: 2px; font-family: var(--font-display); pointer-events: none; }
 .km-name.dim { fill: var(--text-dim); opacity: 0.55; }
 .km-count { font-size: 19px; font-style: italic; fill: var(--gold); letter-spacing: 2px; pointer-events: none; }
 .km-count.now { fill: var(--blood-bright); font-style: normal; font-weight: bold; }
@@ -1570,14 +1582,14 @@ body::before {
 .km-edict-body b { font-size: 13px; color: var(--gold-bright); }
 .km-edict-body i { font-size: 11px; color: var(--text-dim); font-style: normal; }
 .km-edict-cost { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
-.km-prov-chip { fill: rgba(212, 165, 116, 0.7); font-size: 16px; font-family: Georgia, serif; letter-spacing: 1px; }
+.km-prov-chip { fill: rgba(212, 165, 116, 0.7); font-size: 16px; font-family: var(--font-display); letter-spacing: 1px; }
 .km-prov-chip.hot { fill: var(--blood-bright); }
 /* Г5-Ф: хроника кампании */
 .km-chron-btn { flex: 0 0 auto; border-style: dashed; }
 .km-chron-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); }
 .km-chron-ico { font-size: 17px; flex: 0 0 24px; text-align: center; }
 .km-chron-text { flex: 1; font-size: 13px; color: var(--text); }
-.km-chron-day { font-size: 11px; color: var(--text-dim); white-space: nowrap; font-family: Georgia, serif; }
+.km-chron-day { font-size: 11px; color: var(--text-dim); white-space: nowrap; font-family: var(--font-display); }
 /* Г5-Т: технологии провинций */
 .km-tech-note { font-size: 12px; color: var(--text-dim); margin: 0 0 10px; }
 .km-tech-row { display: flex; flex-direction: column; gap: 6px; }
@@ -1605,7 +1617,7 @@ body::before {
 .km-tree-edge { stroke: rgba(212, 165, 116, 0.2); stroke-width: 2.5; }
 .km-tree-edge.on { stroke: rgba(212, 165, 116, 0.7); }
 .km-tree-era { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1.5; stroke-dasharray: 6 6; }
-.km-tree-era-label { text-anchor: middle; font-size: 15px; fill: rgba(212, 165, 116, 0.75); letter-spacing: 3px; font-family: Georgia, serif; }
+.km-tree-era-label { text-anchor: middle; font-size: 15px; fill: rgba(212, 165, 116, 0.75); letter-spacing: 3px; font-family: var(--font-display); }
 @media (prefers-reduced-motion: reduce) {
   .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, .km-connector.owned { animation: none !important; }
 }

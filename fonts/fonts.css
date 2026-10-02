@@ -1,5 +1,10 @@
-/* Self-hosted fonts (волна 3, 2026-09-28): latin-сабсеты, кириллица и так рендерится системным шрифтом.
-   Убраны 2 внешних соединения к fonts.googleapis/gstatic (точка отказа из РФ, −~80 КБ). */
+/* Self-hosted шрифты (OFL-1.1, тексты лицензий — fonts/LICENSES.md). Аудит R2 / визуал-план фаза 0.2:
+   прежние Cinzel и Crimson Text были latin-only — кириллица падала в системные шрифты (Georgia/Noto/Liberation),
+   а значит у русского UI не было фирменной типографики. Теперь:
+   • Philosopher 400/700 (latin + cyrillic) — акцидентный/заголовки, --font-display;
+   • Alegreya (variable wght, normal + italic, latin + cyrillic) — текст, --font-body;
+   • Cinzel (latin) — только знак NEURODECK.
+   Сабсеты разнесены по unicode-range: браузер скачивает cyrillic/latin по надобности. */
 
 @font-face {
   font-family: 'Cinzel';
@@ -10,42 +15,70 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Cinzel';
+  font-family: 'Philosopher';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400;
   font-display: swap;
-  src: url('cinzel-var.woff2') format('woff2');
+  src: url('Philosopher-400-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Philosopher';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('Philosopher-400-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Cinzel';
+  font-family: 'Philosopher';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 700;
   font-display: swap;
-  src: url('cinzel-var.woff2') format('woff2');
+  src: url('Philosopher-700-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Philosopher';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('Philosopher-700-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Crimson Text';
+  font-family: 'Alegreya';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('Alegreya-cyrillic.woff2') format('woff2');
+  size-adjust: 108%; /* x-height Alegreya ниже Georgia: выравниваем кегль, не трогая px в CSS */
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Alegreya';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('Alegreya-latin.woff2') format('woff2');
+  size-adjust: 108%; /* x-height Alegreya ниже Georgia: выравниваем кегль, не трогая px в CSS */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Alegreya';
   font-style: italic;
-  font-weight: 400;
+  font-weight: 400 900;
   font-display: swap;
-  src: url('CrimsonText-400i.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url('Alegreya-italic-cyrillic.woff2') format('woff2');
+  size-adjust: 108%; /* x-height Alegreya ниже Georgia: выравниваем кегль, не трогая px в CSS */
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 @font-face {
-  font-family: 'Crimson Text';
-  font-style: normal;
-  font-weight: 400;
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 400 900;
   font-display: swap;
-  src: url('CrimsonText-400.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Crimson Text';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('CrimsonText-600.woff2') format('woff2');
+  src: url('Alegreya-italic-latin.woff2') format('woff2');
+  size-adjust: 108%; /* x-height Alegreya ниже Georgia: выравниваем кегль, не трогая px в CSS */
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
