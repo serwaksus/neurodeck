@@ -23,9 +23,14 @@
                 } catch (e) { return false; }
             },
             dayKey: function() { return w.getMSKDayKey(); },
+            sphereRanks: function(sphere) { // ранги лучших карточек сферы (до 3, от сильной) — сила тактик перед боем
+                var D2 = w.NeuroDeckC3Data, out = [];
+                try { (typeof FORGED !== 'undefined' ? FORGED : []).forEach(function(c) { if (c && D2.SPHERE_OF_STAT[c.stat] === sphere && D2.RANKS.indexOf(c.rank) >= 0) out.push(c.rank); }); } catch (e) {}
+                return out.sort(function(a, b) { return D2.RANKS.indexOf(b) - D2.RANKS.indexOf(a); }).slice(0, 3);
+            },
             cardsBySphere: function() { // начатые карточки по сферам [Тело, Разум, Дух, Связи]
                 var out = [0, 0, 0, 0], idx = { body: 0, mind: 1, spirit: 2, ties: 3 };
-                try { (w.FORGED || []).forEach(function(c) { var sp = c && c.firstCompletedAt ? w.NeuroDeckC3Data.SPHERE_OF_STAT[c.stat] : null; if (sp) out[idx[sp]]++; }); } catch (e) {}
+                try { (typeof FORGED !== 'undefined' ? FORGED : []).forEach(function(c) { var sp = c && c.firstCompletedAt ? w.NeuroDeckC3Data.SPHERE_OF_STAT[c.stat] : null; if (sp) out[idx[sp]]++; }); } catch (e) {}
                 return out;
             },
             sanitize: function(raw) { return w.STATE_GUARDS ? w.STATE_GUARDS.sanitizeC3(raw) : null; },
@@ -99,9 +104,10 @@
             // ----- действия игрока (UI) -----
             act: {
                 travel: function(h, node) { if (!ensure()) return null; var r = M.travel(state, h, node); env.save(); env.render(); return r; },
-                engage: function(h, node) {
+                offer: function(h) { if (!ensure()) return []; return M.offerTactics(state, h, env.sphereRanks(D.SPHERES[h])); },
+                engage: function(h, node, tactic) {
                     if (!ensure()) return null;
-                    var r = M.engage(state, h, node); env.save(); env.render();
+                    var r = M.engage(state, h, node, tactic); env.save(); env.render();
                     if (r.ok) env.toast(r.win ? '⚔ Победа' : '💢 Штурм отбит', state.log.length ? state.log[state.log.length - 1].t : '', r.win ? 'save' : 'blood');
                     return r;
                 },

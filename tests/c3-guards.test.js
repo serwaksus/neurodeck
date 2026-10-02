@@ -10,14 +10,14 @@ const R = require('../js/campaign3/c3-runtime.js');
 const fresh = () => M.newState('2026-10-05');
 
 test('sanitizeC3: мусор и чужие типы → null', () => {
-    [null, undefined, 0, 'x', [], {}, { v: 3, own: '000', day: '2026-10-05' }, { v: 3, own: '1'.repeat(33), day: 'вчера' }, { v: 3, own: '1'.repeat(34), day: '2026-10-05' }, { v: 3, own: '7'.repeat(33), day: '2026-10-05' }, { v: 2, own: '1'.repeat(33), day: '2026-10-05' }, { v: 1, own: '100000002', day: '2026-10-05' }]
+    [null, undefined, 0, 'x', [], {}, { v: 4, own: '000', day: '2026-10-05' }, { v: 4, own: '1'.repeat(33), day: 'вчера' }, { v: 4, own: '1'.repeat(34), day: '2026-10-05' }, { v: 4, own: '7'.repeat(33), day: '2026-10-05' }, { v: 3, own: '1'.repeat(33), day: '2026-10-05' }, { v: 2, own: '1'.repeat(33), day: '2026-10-05' }, { v: 1, own: '100000002', day: '2026-10-05' }]
         .forEach((v) => assert.equal(SG.sanitizeC3(v), null, JSON.stringify(v)));
 });
 
 test('sanitizeC3: валидное состояние проходит раундтрип без изменений (байт-стабильно)', () => {
     const s = fresh();
     for (let i = 0; i < 5; i++) { D.SPHERES.forEach((sp) => M.applyDeed(s, { kind: 'habit', sphere: sp, rank: 'A' })); M.dayEnd(s, '2026-10-' + String(6 + i).padStart(2, '0'), { silent: 1, honest: 1 }); }
-    s.towns[1].dw.t3 = 1; s.towns[1].hall = 2; s.fac[2].truce = 1; s.fac[0].dead = 1; s.sg[1] = 1; s.lz.on = 1; s.lz.left = 3;
+    s.heroes[0].sk = 2; s.stk = [3, 0, 1, 0]; s.towns[1].dw.t3 = 1; s.towns[1].hall = 2; s.fac[2].truce = 1; s.fac[0].dead = 1; s.sg[1] = 1; s.lz.on = 1; s.lz.left = 3;
     const out = SG.sanitizeC3(JSON.parse(JSON.stringify(s)));
     assert.equal(JSON.stringify(out), JSON.stringify(s));
 });
@@ -26,7 +26,7 @@ test('sanitizeC3: числа зажимаются, лишние поля и дл
     const s = fresh();
     s.res.g = -50; s.res.st = 1e12; s.heroes[0].node = 99; s.heroes[1].lvl = 500; s.ap = [999, -1, 'x']; s.towns[0].hall = 9; s.towns[1].dw = { t3: 0, t5: 1 };
     s.gar = [1e9, -1]; s.own = '2' + s.own.slice(1);
-    s.evil = 'x'; s.heroes[0].army.t9 = 5; s.log = Array.from({ length: 30 }, () => ({ d: 'bad', t: 'я'.repeat(500) }));
+    s.heroes[2].sk = 9; s.stk = [500, -1, 'x']; s.evil = 'x'; s.heroes[0].army.t9 = 5; s.log = Array.from({ length: 30 }, () => ({ d: 'bad', t: 'я'.repeat(500) }));
     s.fac = [{ sh: [500, -3, 'a'], dead: 'yes', truce: 1 }, { truce: 1, sh: [1] }, 'мусор']; s.sg = [99, -1]; s.lz = { on: 5, left: 999 };
     s.pend = { s: [5, -2, 'x'], h: 9, o: [1, 2, 3, 4, 5, 6] };
     const o = SG.sanitizeC3(s);
@@ -40,6 +40,7 @@ test('sanitizeC3: числа зажимаются, лишние поля и дл
     assert.equal(o.fac[0].dead, 1); assert.equal(o.fac[0].truce, 0, 'у мёртвой фракции перемирия нет'); assert.equal(o.fac.filter((f) => f.truce).length, 1, 'не больше одного обета');
     assert.deepEqual(o.sg, [10, 0, 0, 0]); assert.deepEqual(o.lz, { on: 1, left: 30 });
     assert.deepEqual(o.pend.s, [5, 0, 0, 0]); assert.deepEqual(o.pend.h, [0, 0, 0, 0]); assert.deepEqual(o.pend.o, [1, 2, 3, 4]);
+    assert.equal(o.heroes[2].sk, 3); assert.deepEqual(o.stk, [99, 0, 0, 0]);
     assert.equal(o.heroes.length, 4); assert.equal(o.towns.length, 4);
 });
 
@@ -47,7 +48,7 @@ test('sanitizeC3: числа зажимаются, лишние поля и дл
 function env(over) {
     const calls = { save: 0, render: 0, toasts: [] };
     const e = Object.assign({
-        getFlag: () => true, dayKey: () => '2026-10-05', cardsBySphere: () => [2, 1, 1, 1],
+        getFlag: () => true, dayKey: () => '2026-10-05', cardsBySphere: () => [2, 1, 1, 1], sphereRanks: (sp) => (sp === 'body' ? ['SSS', 'B'] : []),
         sanitize: (raw) => SG.sanitizeC3(raw), save: () => { calls.save++; }, render: () => { calls.render++; }, toast: (t, b) => calls.toasts.push(t),
     }, over || {});
     return { e, calls };
@@ -137,7 +138,7 @@ test('рантайм: load принимает валидный c3 и отвер�
     assert.equal(c3.serialize().res.g, 77);
     assert.equal(c3.load({ nope: 1 }), false);
     assert.equal(c3.load({ v: 1, own: '100000002', day: '2026-10-05' }), false, 'старый срез Ф1 отвергается');
-    assert.equal(c3.load(Object.assign(fresh(), { v: 2 })), false, 'состояние Ф2 отвергается');
+    assert.equal(c3.load(Object.assign(fresh(), { v: 3 })), false, 'состояние Ф3 отвергается');
     assert.equal(c3.serialize().res.g, 77, 'мусор не затирает прежнее состояние');
 });
 
@@ -148,4 +149,16 @@ test('рантайм: действия UI сохраняют и перерисо
     const r = c3.act.engage(0, 4);
     assert.equal(r.ok && r.win, true);
     assert.ok(calls.save >= 1 && calls.render >= 1 && calls.toasts.includes('⚔ Победа'));
+});
+
+test('рантайм: тактики предлагаются по рангам карточек сферы героя; бой с тактикой применяет её', () => {
+    const { e } = env(); const c3 = R.create(e);
+    const st = c3.ensure();
+    const o = c3.act.offer(0);
+    assert.equal(o.length, 3); assert.equal(o[0].rank, 'SSS'); assert.equal(o[0].p, 0.25); assert.equal(o[1].rank, 'B'); assert.equal(o[2].rank, null);
+    assert.equal(c3.act.offer(1)[0].rank, null, 'у Разума нет карточек — базовая сила');
+    st.ap[0] = 5; st.heroes[0].node = 3; st.heroes[0].army = { t1: 18, t3: 0, t5: 0 };
+    const rush = { kind: 'rush', p: 0.25 };
+    const r = c3.act.engage(0, 4, rush);
+    assert.equal(r.win, true); assert.equal(r.tactic.kind, 'rush');
 });

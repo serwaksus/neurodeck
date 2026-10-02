@@ -1,4 +1,4 @@
-/* Кампания 3.0, Ф3 — панель карты (js/ui/campaign3.js). Только токены дизайн-системы; без анимаций — eco и reduced-motion идентичны. */
+/* Кампания 3.0, Ф4 — панель карты (js/ui/campaign3.js). Только токены дизайн-системы; без анимаций — eco и reduced-motion идентичны. */
 .c3 { margin: 0 0 var(--sp-4); padding: var(--sp-3); background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border-hi); border-radius: var(--r-lg); box-shadow: var(--elev-1); }
 .c3-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .c3-title { font-family: var(--font-display); font-size: var(--t-lg); color: var(--gold-bright); letter-spacing: 1px; }
@@ -72,3 +72,11 @@
 .c3-mini:disabled { opacity: 0.45; cursor: not-allowed; }
 .c3-mini:focus-visible { outline: 2px solid var(--ac-info); outline-offset: 2px; }
 .c3-lz { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); border-top: 1px dashed var(--hairline); font-size: var(--t-sm); color: var(--tx-2); }
+
+.c3-tactics { margin-top: var(--sp-2); }
+.c3-tacrow { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-2); margin-top: var(--sp-2); }
+.c3-tac { display: grid; gap: 2px; justify-items: start; min-height: 44px; padding: var(--sp-2) var(--sp-3); text-align: left; font-family: inherit; color: var(--tx-1); background: var(--s3); border: 1px solid var(--border-hi); border-radius: var(--r-md); cursor: pointer; }
+.c3-tac:focus-visible { outline: 2px solid var(--ac-info); outline-offset: 2px; }
+.c3-tacname { font-size: var(--t-sm); color: var(--gold-bright); }
+.c3-tacsrc { font-size: var(--t-xs); color: var(--tx-3); }
+.c3-tacfx { font-size: var(--t-xs); color: var(--tx-2); }

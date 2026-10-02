@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф3 — чистая модель: 4 героя-сферы и 4 ИИ-фракции пороков на карте из 33 узлов (без DOM, Date.now и Math.random).
+// Кампания 3.0, Ф4 — чистая модель: 4 героя-сферы и 4 ИИ-фракции пороков на карте из 33 узлов (без DOM, Date.now и Math.random).
 // Время и случайность приходят снаружи: dayKey и сидированный mulberry32 — модель детерминирована (гейт C7).
 // ИНВАРИАНТ C4: очки движения (state.ap[]) растут ТОЛЬКО в applyDeed. Любая другая функция ap лишь тратит или обнуляет.
 (function(root, factory) {
@@ -44,11 +44,11 @@
             own += ch; gar.push(n.gar);
         });
         var s = {
-            v: 3, day: String(dayKey), wk: 0, idle: 0, bc: 0, tasksToday: 0, deedsToday: 0,
+            v: 4, day: String(dayKey), wk: 0, idle: 0, bc: 0, stk: zeros(4), tasksToday: 0, deedsToday: 0,
             ap: zeros(4), apDay: zeros(4), apWeek: zeros(4),
             pend: { s: zeros(4), h: zeros(4), o: zeros(4) }, // срывы закрываемых суток ПО СФЕРАМ из хуков Ф0 — ждут dayEnd
             res: { g: C.START_GOLD, st: 0, kn: 0, wl: 0, in: 0 },
-            heroes: SPHERES.map(function(sp, i) { return { node: D.TOWNS[i], lvl: 1, xp: 0, army: { t1: C.START_ARMY.t1, t3: C.START_ARMY.t3, t5: C.START_ARMY.t5 } }; }),
+            heroes: SPHERES.map(function(sp, i) { return { node: D.TOWNS[i], lvl: 1, xp: 0, sk: 0, army: { t1: C.START_ARMY.t1, t3: C.START_ARMY.t3, t5: C.START_ARMY.t5 } }; }),
             own: own, seen: '0'.repeat(N), gar: gar,
             towns: SPHERES.map(function() { return { pool: { t1: C.START_POOL.t1, t3: C.START_POOL.t3, t5: C.START_POOL.t5 }, dw: { t3: 0, t5: 0 }, hall: 0 }; }),
             fac: FAC.map(function() { return { sh: zeros(7), dead: 0, truce: 0 }; }),
@@ -185,11 +185,38 @@
     }
 
     // ---------- бой ----------
-    function forecast(s, h, id) {
-        var adjacent = ADJ[s.heroes[h].node].indexOf(id) >= 0;
-        var atk = armyPower(s, h), def = nodeDefense(s, id);
-        var out = SM.assaultOutcome(atk, def, { rand: function() { return 0.5; } }); // прогноз: средний исход
-        return { adjacent: adjacent, hostile: isHostile(s, id), atk: atk, def: def, ratio: out.ratio, win: out.win, attritionPct: out.attritionPct, ap: NODES[id].cost };
+    // ---------- тактики ----------
+    function tacticPower(rank) { var i = D.RANKS.indexOf(String(rank)); if (i < 0) i = 0; return C.TACTIC_MIN + (C.TACTIC_MAX - C.TACTIC_MIN) * i / (D.RANKS.length - 1); }
+    function skillBonus(s, h, kind) { var k = D.SKILL[SPHERES[h]].kind; return (k && k === kind) ? Math.round(C.SKILL_STEP * s.heroes[h].sk * 1000) / 1000 : 0; }
+    // 3 карты на выбор: вид — детерминированно по (день, номер боя, герой), сила — от рангов лучших карточек СФЕРЫ героя (ranks — до 3 строк, от лучшей)
+    function offerTactics(s, h, ranks) {
+        ranks = Array.isArray(ranks) ? ranks.slice(0, 3) : [];
+        var rnd = mulberry32(hashStr(s.day + '|' + s.bc + '|' + h)), first = Math.floor(rnd() * 3), out = [];
+        for (var i = 0; i < 3; i++) {
+            var kind = D.TACTIC_KEYS[(first + i) % 3];
+            var base = ranks[i] !== undefined ? tacticPower(ranks[i]) : C.TACTIC_MIN;
+            out.push({ kind: kind, p: Math.round((base + skillBonus(s, h, kind)) * 1000) / 1000, rank: ranks[i] !== undefined ? String(ranks[i]) : null });
+        }
+        return out;
+    }
+    function cleanTactic(t) { // клиентская тактика не доверяется: вид из каталога, сила в пределах
+        if (!t || D.TACTICS[t.kind] === undefined) return null;
+        var p = Number(t.p); if (!isFinite(p) || p <= 0) return null;
+        return { kind: t.kind, p: Math.min(C.TACTIC_MAX + C.SKILL_STEP * C.SKILL_MAX, p) };
+    }
+    function battleParams(s, h, id, tactic) {
+        var t = cleanTactic(tactic), atk = armyPower(s, h), def = nodeDefense(s, id), attrMult = 1;
+        if (t) {
+            if (t.kind === 'rush') atk = Math.round(atk * (1 + t.p));
+            else if (t.kind === 'cunning') def = Math.round(def * (1 - t.p));
+            else if (t.kind === 'formation') attrMult = Math.max(0.1, 1 - 1.5 * t.p);
+        }
+        return { atk: atk, def: def, attrMult: attrMult, tactic: t };
+    }
+    function forecast(s, h, id, tactic) {
+        var adjacent = ADJ[s.heroes[h].node].indexOf(id) >= 0, b = battleParams(s, h, id, tactic);
+        var out = SM.assaultOutcome(b.atk, b.def, { rand: function() { return 0.5; }, attritionMult: b.attrMult }); // прогноз: средний исход
+        return { adjacent: adjacent, hostile: isHostile(s, id), atk: b.atk, def: b.def, ratio: out.ratio, win: out.win, attritionPct: out.attritionPct, ap: NODES[id].cost };
     }
     function applyLoss(army, pct) {
         D.UNIT_KEYS.forEach(function(k) {
@@ -202,7 +229,7 @@
         var code = facCode(f);
         for (var i = 0; i < N; i++) if (s.own.charAt(i) === code) { s.own = strSet(s.own, i, '0'); s.gar[i] = 0; }
     }
-    function engage(s, h, id) { // бой героя h с соседним враждебным узлом; {ok, win?, reason?}
+    function engage(s, h, id, tactic) { // бой героя h с соседним враждебным узлом (tactic — по желанию); {ok, win?, reason?}
         if (s.done) return { ok: false, reason: 'done' };
         var hero = s.heroes[h];
         if (ADJ[hero.node].indexOf(id) < 0) return { ok: false, reason: 'far' };
@@ -210,27 +237,30 @@
         var cost = NODES[id].cost;
         if (s.ap[h] < cost) return { ok: false, reason: 'ap' };
         s.ap[h] -= cost;
-        var atk = armyPower(s, h), def = nodeDefense(s, id);
-        var out = SM.assaultOutcome(atk, def, { rand: mulberry32(hashStr(s.day + '|' + s.bc)) });
+        var b = battleParams(s, h, id, tactic);
+        var out = SM.assaultOutcome(b.atk, b.def, { rand: mulberry32(hashStr(s.day + '|' + s.bc)), attritionMult: b.attrMult });
         s.bc++;
         applyLoss(hero.army, out.attritionPct);
         var n = NODES[id];
         if (out.win) {
             var prevOwner = s.own.charAt(id), pf = facOf(prevOwner);
             s.own = strSet(s.own, id, '1'); s.gar[id] = 0; hero.node = id;
-            var loot = D.LOOT[n.type] || {};
-            s.res.g += loot.g || 0;
+            var loot = D.LOOT[n.type] || {}, gold = Math.round((loot.g || 0) * (D.SKILL[SPHERES[h]].kind === null ? 1 + C.DIPLO_LOOT * hero.sk : 1));
+            s.res.g += gold;
+            if (n.type === 'cache' && s.stk[h] >= C.SHRINE_STREAK && hero.sk < C.SKILL_MAX) { // святилище: серия дел сферы героя → навык
+                hero.sk++; pushLog(s, D.HERO_NAME[SPHERES[h]] + ' постиг «' + D.SKILL[SPHERES[h]].name + '» ' + hero.sk + '/' + C.SKILL_MAX);
+            }
             if (loot.r && n.sphere) s.res[D.RES_KEY[n.sphere]] += loot.r;
             addXp(s, h, 3);
             if (n.type === 'town') s.sg[SPHERES.indexOf(n.sphere)] = 0;
             if (id === LAIR) { s.done = true; pushLog(s, 'Победа! «' + n.name + '» пала — карта пройдена'); }
-            else if (pf >= 0 && id === FAC[pf].bastion) { defeatFaction(s, pf); pushLog(s, D.HERO_NAME[SPHERES[h]] + ' разбил «' + FAC[pf].name + '»: оплот взят' + (loot.g ? ' (+' + loot.g + ' 💰)' : '')); }
-            else pushLog(s, D.HERO_NAME[SPHERES[h]] + (n.type === 'town' ? ' освободил город: ' : ' взял: ') + n.name + (loot.g ? ' (+' + loot.g + ' 💰)' : ''));
+            else if (pf >= 0 && id === FAC[pf].bastion) { defeatFaction(s, pf); pushLog(s, D.HERO_NAME[SPHERES[h]] + ' разбил «' + FAC[pf].name + '»: оплот взят' + (gold ? ' (+' + gold + ' 💰)' : '')); }
+            else pushLog(s, D.HERO_NAME[SPHERES[h]] + (n.type === 'town' ? ' освободил город: ' : ' взял: ') + n.name + (gold ? ' (+' + gold + ' 💰)' : ''));
             markSeen(s);
         } else {
             pushLog(s, D.HERO_NAME[SPHERES[h]] + ': штурм «' + n.name + '» отбит (потери ' + Math.round(out.attritionPct * 100) + '%)');
         }
-        return { ok: true, win: out.win, ratio: out.ratio, attritionPct: out.attritionPct };
+        return { ok: true, win: out.win, ratio: out.ratio, attritionPct: out.attritionPct, tactic: b.tactic };
     }
 
     // ---------- города: найм, жилища, залы, передача армий ----------
@@ -325,6 +355,7 @@
         for (var i = 0; i < 4; i++) s.ap[i] = Math.min(C.AP_CARRY, s.ap[i]); // сгорает; перенос ≤ AP_CARRY на героя (ОД не прибавляются)
         s.res.g += C.GOLD_TOWN_DAY * townsOwned(s) + C.HALL_GOLD * hall(s, 'ties');
         for (var m = 0; m < 4; m++) if (s.own.charAt(D.MINES[m]) === '1') s.res[D.RES_KEY[SPHERES[m]]] += C.MINE_DAY;
+        for (var q = 0; q < 4; q++) s.stk[q] = s.apDay[q] > 0 ? Math.min(99, s.stk[q] + 1) : 0; // дней подряд с делами сферы (святилища)
         s.apDay = zeros(4); s.tasksToday = 0; s.deedsToday = 0;
         s.day = String(nextDay);
         return { shadows: shadows };
@@ -435,7 +466,7 @@
         shadowSum: shadowSum, shadowMult: shadowMult, armyPower: armyPower, nodeDefense: nodeDefense, isHostile: isHostile, nodeSphere: nodeSphere,
         rankBonus: rankBonus, deedAp: deedAp, applyDeed: applyDeed,
         shortestPath: shortestPath, route: route, travel: travel,
-        forecast: forecast, engage: engage,
+        tacticPower: tacticPower, skillBonus: skillBonus, offerTactics: offerTactics, forecast: forecast, engage: engage,
         townAt: townAt, hire: hire, hireGold: hireGold, resNeed: resNeed, dwellingCost: dwellingCost, buildDwelling: buildDwelling, hallCost: hallCost, buyHall: buyHall,
         transfer: transfer, transferAll: transferAll,
         dayEnd: dayEnd, weekEnd: weekEnd, lazaretStart: lazaretStart, lazaretEnd: lazaretEnd, declareTruce: declareTruce, revokeTruce: revokeTruce,

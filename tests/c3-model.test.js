@@ -430,3 +430,80 @@ test('туман: видны клетки вокруг героев и свои�
     s.heroes[BODY].node = 7; M.markSeen(s);
     assert.equal(s.seen.charAt(D.LAIR), '1');
 });
+
+// ---------- Ф4: тактики, навыки, святилища ----------
+test('тактики: сила от ранга карточки C 5% … SSS 25%, монотонна; предложение — 3 разных вида, детерминировано', () => {
+    assert.equal(M.tacticPower('C'), D.C.TACTIC_MIN); assert.equal(M.tacticPower('SSS'), D.C.TACTIC_MAX);
+    let prev = 0; D.RANKS.forEach((r) => { const p = M.tacticPower(r); assert.ok(p > prev || r === 'C'); prev = p; });
+    const s = fresh();
+    const a = M.offerTactics(s, BODY, ['SSS', 'A', 'C']), b = M.offerTactics(s, BODY, ['SSS', 'A', 'C']);
+    assert.deepEqual(a, b);
+    assert.equal(new Set(a.map((t) => t.kind)).size, 3);
+    assert.deepEqual(a.map((t) => t.rank), ['SSS', 'A', 'C']);
+    assert.equal(a[0].p, 0.25);
+    const few = M.offerTactics(s, BODY, ['B']);
+    assert.equal(few.length, 3); assert.equal(few[1].rank, null); assert.equal(few[1].p, D.C.TACTIC_MIN, 'без карточки — базовая сила');
+    assert.notDeepEqual(M.offerTactics(Object.assign(fresh(), { bc: 7 }), BODY, ['B', 'B', 'B']).map((t) => t.kind), M.offerTactics(fresh(), BODY, ['B', 'B', 'B']).map((t) => t.kind), 'после боя набор перетасован');
+});
+
+test('тактика меняет исход: Натиск поднимает атаку, Хитрость снижает оборону, Строй режет потери', () => {
+    const mk = () => { const s = fresh(); s.heroes[BODY].node = 3; s.ap[BODY] = 5; s.heroes[BODY].army = { t1: 18, t3: 0, t5: 0 }; return s; }; // 36 против 40 (застава 4)
+    assert.equal(M.forecast(mk(), BODY, 4).win, false);
+    assert.equal(M.forecast(mk(), BODY, 4, { kind: 'rush', p: 0.25 }).win, true);
+    assert.equal(M.forecast(mk(), BODY, 4, { kind: 'cunning', p: 0.25 }).win, true);
+    const strong = () => { const s = mk(); s.heroes[BODY].army = { t1: 60, t3: 0, t5: 0 }; return s; };
+    const plain = M.forecast(strong(), BODY, 4).attritionPct, form = M.forecast(strong(), BODY, 4, { kind: 'formation', p: 0.2 }).attritionPct;
+    assert.ok(form < plain, 'Строй снижает потери');
+    const r = M.engage(mk(), BODY, 4, { kind: 'rush', p: 0.25 });
+    assert.equal(r.win, true); assert.equal(r.tactic.kind, 'rush');
+});
+
+test('тактика не доверяется клиенту: неизвестный вид и нулевая сила игнорируются, сила режется потолком', () => {
+    const s = fresh(); s.heroes[BODY].node = 3; s.ap[BODY] = 5;
+    const base = M.forecast(s, BODY, 4);
+    assert.equal(M.forecast(s, BODY, 4, { kind: 'hack', p: 5 }).atk, base.atk);
+    assert.equal(M.forecast(s, BODY, 4, { kind: 'rush', p: 0 }).atk, base.atk);
+    assert.equal(M.forecast(s, BODY, 4, { kind: 'rush', p: -1 }).atk, base.atk);
+    const huge = M.forecast(s, BODY, 4, { kind: 'rush', p: 99 }).atk;
+    assert.ok(huge <= Math.round(base.atk * (1 + D.C.TACTIC_MAX + D.C.SKILL_STEP * D.C.SKILL_MAX)) + 1, 'сила ограничена');
+});
+
+test('серия дел сферы: растёт за дни с ОД сферы, обнуляется пропуском', () => {
+    const s = fresh();
+    for (let i = 0; i < 3; i++) { M.applyDeed(s, deed('body')); M.applyDeed(s, deed('mind')); M.dayEnd(s, '2026-10-0' + (6 + i), {}); }
+    assert.deepEqual(s.stk, [3, 3, 0, 0]);
+    M.applyDeed(s, deed('body')); M.dayEnd(s, '2026-10-09', {});
+    assert.deepEqual(s.stk, [4, 0, 0, 0], 'Разум пропустил день — серия обнулена');
+});
+
+test('святилище: при серии ≥ 3 дней взятие даёт навык героя (до 3 ур.), без серии — только добыча', () => {
+    const mk = (stk) => { const s = fresh(); s.stk[BODY] = stk; s.heroes[BODY].node = 5; s.ap[BODY] = 5; s.heroes[BODY].army = { t1: 400, t3: 0, t5: 0 }; return s; };
+    const no = mk(2); M.engage(no, BODY, 6); assert.equal(no.heroes[BODY].sk, 0); assert.equal(no.res.st, 4);
+    const yes = mk(3); M.engage(yes, BODY, 6); assert.equal(yes.heroes[BODY].sk, 1);
+    assert.ok(yes.log.some((l) => l.t.includes('постиг «Мастер натиска» 1/3')));
+    const cap = mk(9); cap.heroes[BODY].sk = 3; M.engage(cap, BODY, 6); assert.equal(cap.heroes[BODY].sk, 3, 'потолок 3');
+});
+
+test('навык: +5% к тактике своего вида за уровень; Дипломатия — +25% золота добычи за уровень', () => {
+    const s = fresh(); s.heroes[BODY].sk = 2; s.heroes[MIND].sk = 3;
+    assert.equal(M.skillBonus(s, BODY, 'rush'), 0.1); assert.equal(M.skillBonus(s, BODY, 'cunning'), 0);
+    assert.equal(M.skillBonus(s, MIND, 'cunning'), 0.15); assert.equal(M.skillBonus(s, SPIRIT, 'formation'), 0);
+    const o = M.offerTactics(s, BODY, ['C', 'C', 'C']).find((t) => t.kind === 'rush');
+    assert.equal(o.p, 0.15, 'база 5% + 10% навыка');
+    const mkTies = (sk) => { const t = fresh(); t.heroes[TIES].sk = sk; t.heroes[TIES].node = 29; t.ap[TIES] = 5; t.heroes[TIES].army = { t1: 400, t3: 0, t5: 0 }; return t; };
+    const base = mkTies(0); M.engage(base, TIES, 30); const rich = mkTies(2); M.engage(rich, TIES, 30);
+    assert.ok(rich.res.g > base.res.g, 'Дипломатия увеличивает добычу');
+});
+
+test('C11: выбор тактики решает 15–30% пограничных боёв (оборона ±20% от силы армии, карточки ранга B)', () => {
+    let flips = 0, total = 0;
+    for (let i = 0; i <= 80; i++) {
+        const ratio = 0.8 + 0.4 * i / 80, s = fresh();
+        s.heroes[BODY].node = 3; s.heroes[BODY].army = { t1: 1000, t3: 0, t5: 0 }; s.gar[4] = Math.round(2000 / ratio);
+        const none = M.forecast(s, BODY, 4).win;
+        const best = M.offerTactics(s, BODY, ['B', 'B', 'B']).some((t) => M.forecast(s, BODY, 4, t).win);
+        total++; if (best && !none) flips++;
+    }
+    const share = flips / total;
+    assert.ok(share >= 0.15 && share <= 0.30, 'доля боёв, где тактика приносит победу: ' + share.toFixed(2));
+});

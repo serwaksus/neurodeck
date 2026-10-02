@@ -1,10 +1,10 @@
-// Кампания 3.0, Ф3 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, фракции пороков, лазарет, журнал.
+// Кампания 3.0, Ф4 — панель карты в «Твердынях»: 4 героя-сферы, ресурсы, карта из 33 узлов, города, бои, фракции пороков, лазарет, журнал.
 // Рисует только когда включён флаг nd_c3 (иначе панель пуста и скрыта). Логика — js/campaign3/*, здесь только вид и клики.
 (function() {
     'use strict';
     var D = window.NeuroDeckC3Data, M = window.NeuroDeckC3Model;
     if (!D || !M) return;
-    var selH = 0, selN = null, facOpen = null; // facOpen: null — по умолчанию (раскрыто, если есть тени), иначе выбор игрока
+    var selH = 0, selN = null, tacOpen = null, facOpen = null; // facOpen: null — по умолчанию (раскрыто, если есть тени), иначе выбор игрока
     var SPH = D.SPHERES;
     var TONE = { body: 'steel', mind: 'arcane', spirit: 'gilded', ties: 'ec' };
     var HERO_ART = { body: 'broadsword', mind: 'book-pile', spirit: 'lotus', ties: 'trade' };
@@ -78,6 +78,14 @@
         acts += btn('🔨 ' + e(hallInfo.name) + (town.hall >= D.C.HALL_MAX ? '' : ' (' + M.hallCost(s, t) + D.RES_ICON[key] + ')'), { data: 'data-c3="hall"' }, hr.ok, REASON[hr.reason] || '');
         return html + '<div class="c3-acts">' + acts + '</div>';
     }
+    function tacticsHtml(s, h, id) {
+        var offer = NDC3.act.offer(h), base = M.forecast(s, h, id), cards = offer.map(function(t, i) {
+            var T = D.TACTICS[t.kind], f = M.forecast(s, h, id, t), eff = Math.round(t.p * 100);
+            var what = t.kind === 'formation' ? 'потери ≈ ' + Math.round(f.attritionPct * 100) + '%' : (f.win ? '<span class="c3-ok">победа ' + ratioTxt(f.ratio) + '</span>' : '<span class="c3-bad">' + ratioTxt(f.ratio) + '</span>');
+            return '<button type="button" class="c3-tac" data-c3="tac" data-n="' + id + '" data-i="' + i + '"><span class="c3-tacname">' + T.icon + ' ' + e(T.name) + ' +' + eff + '%</span><span class="c3-tacsrc">' + (t.rank ? 'карточка ранга ' + e(t.rank) : 'нет карточки') + '</span><span class="c3-tacfx">' + what + '</span></button>';
+        }).join('');
+        return '<div class="c3-tactics"><div class="c3-dline">Выбери тактику (сила — от рангов твоих карточек сферы): без неё ' + (base.win ? '<span class="c3-ok">' + ratioTxt(base.ratio) + '</span>' : '<span class="c3-bad">' + ratioTxt(base.ratio) + '</span>') + '</div><div class="c3-tacrow">' + cards + '<button type="button" class="c3-tac" data-c3="tac" data-n="' + id + '" data-i="none"><span class="c3-tacname">Без тактики</span><span class="c3-tacsrc">прямой штурм</span></button></div></div>';
+    }
     function detailHtml(s) {
         var h = selH, hero = s.heroes[h];
         if (selN === null || !visible(s, selN)) return '<div class="c3-detail c3-hint">Выбери узел на карте: путь, бой, найм в городе. Каждый герой ходит на свои очки движения.</div>';
@@ -92,7 +100,10 @@
             if (fo2 >= 0) html += '<div class="c3-dline c3-bad">Под властью «' + e(D.FACTIONS[fo2].name) + '»' + (n.type === 'town' ? ' — освободи город: он снова растит армию' : (selN === D.FACTIONS[fo2].bastion ? ' — разгром оплота обезвредит фракцию' : '')) + '.</div>';
             html += '<div class="c3-dline">Оборона <b>' + f.def + '</b> · сила ' + e(D.HERO_NAME[SPH[h]]) + ' <b>' + f.atk + '</b> · ' + (f.win ? '<span class="c3-ok">перевес ' + ratioTxt(f.ratio) + '</span>' : '<span class="c3-bad">слабее (' + ratioTxt(f.ratio) + ')</span>') + '</div>';
             if (selN === D.LAIR) html += '<div class="c3-dline">Сила цитадели растёт от срывов всех сфер: ×' + M.lairMult(s).toFixed(2) + '. Соберите армии героев в одном узле — штурм ведёт один герой.</div>';
-            if (f.adjacent) acts += btn('⚔ Штурм (' + f.ap + ' ОД)', { primary: true, data: 'data-c3="atk" data-n="' + selN + '"' }, s.ap[h] >= f.ap, 'Не хватает очков движения');
+            if (f.adjacent) {
+                acts += btn(tacOpen === selN ? '✕ Отмена' : '⚔ Штурм (' + f.ap + ' ОД)', { primary: tacOpen !== selN, data: 'data-c3="atk" data-n="' + selN + '"' }, s.ap[h] >= f.ap, 'Не хватает очков движения');
+                if (tacOpen === selN) html += tacticsHtml(s, h, selN);
+            }
             else { var rt = M.route(s, h, selN); html += '<div class="c3-dline">Подойди ближе' + (rt ? ' — путь ' + rt.cost + ' ОД' : '') + '.</div>'; if (rt && rt.steps.length) acts += btn('➜ Идти (' + rt.cost + ' ОД)', { data: 'data-c3="go" data-n="' + selN + '"' }, s.ap[h] >= 1, 'Нет очков движения'); }
         } else {
             var r2 = M.route(s, h, selN);
@@ -105,6 +116,10 @@
         return html + (acts ? '<div class="c3-acts">' + acts + '</div>' : '') + '</div>';
     }
 
+    function skillLine(s, h) {
+        var sp = SPH[h], K = D.SKILL[sp], hero = s.heroes[h], need = D.C.SHRINE_STREAK;
+        return '🎓 ' + e(K.name) + ' ' + hero.sk + '/' + D.C.SKILL_MAX + (K.kind ? ' (' + e(D.TACTICS[K.kind].name) + ' +' + Math.round(D.C.SKILL_STEP * 100 * hero.sk) + '%)' : ' (+' + Math.round(D.C.DIPLO_LOOT * 100 * hero.sk) + '% золота добычи)') + ' · серия дел сферы: <b>' + s.stk[h] + '</b>/' + need + (s.stk[h] >= need ? ' — святилище даст навык' : '');
+    }
     function facPanel(s) {
         var anyTruce = s.fac.some(function(f) { return f.truce; });
         var rows = D.FACTIONS.map(function(F, f) {
@@ -134,7 +149,7 @@
             '<div class="c3-head"><span class="c3-title">🗺 Кампания 3.0 <span class="c3-beta">бета</span></span><span class="c3-week">нед. ' + (s.wk + 1) + '</span></div>' +
             '<div class="c3-tabs" role="group" aria-label="Герои">' + tabs + '</div>' +
             '<div class="c3-stats">' + resChips(s) + '</div>' +
-            '<div class="c3-hline"><b>' + e(D.HERO_NAME[SPH[selH]]) + '</b> ур. ' + hero.lvl + ' · сила <b>' + M.armyPower(s, selH) + '</b> · ' + armyLine(hero.army) + ' · ОД сегодня +' + s.apDay[selH] + '/' + D.C.AP_CAP_DAY + '</div>' +
+            '<div class="c3-hline"><b>' + e(D.HERO_NAME[SPH[selH]]) + '</b> ур. ' + hero.lvl + ' · сила <b>' + M.armyPower(s, selH) + '</b> · ' + armyLine(hero.army) + ' · ОД сегодня +' + s.apDay[selH] + '/' + D.C.AP_CAP_DAY + '<br>' + skillLine(s, selH) + '</div>' +
             (s.done ? '<div class="c3-done">🏆 Цитадель Пороков пала — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
             '<div class="c3-mapwrap"><div class="c3-map">' + edgesHtml(s) + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' +
             detailHtml(s) +
@@ -155,8 +170,8 @@
     function onClick(ev) {
         var el = ev.target.closest('[data-c3]'); if (!el || el.disabled) return;
         var act = el.dataset.c3, n = parseInt(el.dataset.n, 10), s = NDC3.getState();
-        if (act === 'hero') { selH = parseInt(el.dataset.h, 10) || 0; selN = null; renderCampaign3(); return; }
-        if (act === 'select') { if (s && !visible(s, n)) return; selN = (selN === n) ? null : n; renderCampaign3(); return; }
+        if (act === 'hero') { selH = parseInt(el.dataset.h, 10) || 0; selN = null; tacOpen = null; renderCampaign3(); return; }
+        if (act === 'select') { if (s && !visible(s, n)) return; selN = (selN === n) ? null : n; tacOpen = null; renderCampaign3(); return; }
         if (act === 'go') { NDC3.act.travel(selH, n); return; }
         if (act === 'hire') { NDC3.act.hire(selH, el.dataset.t, parseInt(el.dataset.k, 10) || 1); return; }
         if (act === 'dw') { NDC3.act.dwelling(selH, el.dataset.t); return; }
@@ -169,11 +184,10 @@
             return;
         }
         if (act === 'gather') { NDC3.act.gather(parseInt(el.dataset.from, 10), selH); return; }
-        if (act === 'atk') {
-            var f = M.forecast(s, selH, n);
-            var body = 'Оборона <b>' + f.def + '</b>, сила героя <b>' + f.atk + '</b> (' + ratioTxt(f.ratio) + ').<br>' + (f.win ? 'Победа ожидаема, потери ≈ ' + Math.round(f.attritionPct * 100) + '%.' : 'Ты слабее — штурм, скорее всего, провалится.');
-            var go = function() { NDC3.act.engage(selH, n); };
-            if (typeof dungeonConfirm === 'function') dungeonConfirm('⚔ Штурм «' + D.NODES[n].name + '»?', body).then(function(ok) { if (ok) go(); }); else go();
+        if (act === 'atk') { tacOpen = (tacOpen === n) ? null : n; renderCampaign3(); return; }
+        if (act === 'tac') {
+            var offer = NDC3.act.offer(selH), pick = el.dataset.i === 'none' ? null : offer[parseInt(el.dataset.i, 10)];
+            tacOpen = null; NDC3.act.engage(selH, n, pick); return;
         }
     }
 })();

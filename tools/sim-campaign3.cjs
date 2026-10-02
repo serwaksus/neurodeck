@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 // ============================================================
-// NeuroDeck — симулятор Кампании 3.0, Фаза 3 (4 героя-сферы, 33 узла, 4 ИИ-фракции пороков, потеря и освобождение городов).
+// NeuroDeck — симулятор Кампании 3.0, Фаза 4 (4 героя-сферы, 33 узла, 4 ИИ-фракции, потеря городов, тактики перед боем, навыки, святилища).
 // Чистая Node-симуляция на РЕАЛЬНОЙ модели js/campaign3/c3-model.js: профили дисциплины × 3 сида × 26 недель,
 // бот-игрок с простой политикой (зачистка своего региона → сбор армий → штурм логова).
 // Гейты — рельсы против катастрофического дисбаланса, не тонкая настройка:
@@ -14,6 +14,7 @@
 //  C2 дисциплина 40 %: карта проходима ≤ 26 недель, города целы;
 //  C8 дисциплина окупается (медианы недель победы монотонны);
 //  C3 дисциплина 10 %: игра не «умирает» — хотя бы один город цел (последний не падает), армии живы, герои выходят за город; при 40 % остаётся ≥ 3 городов;
+//  C11 тактики ускоряют карту умеренно (не позже, чем без них, и не более чем на 4 недели);
 //  C10 фракции отвечают на срывы СВОЕЙ сферы: без дел Духа Уныние занимает заметно больше узлов остальных.
 // Выход 1 при провале любого гейта.
 // ============================================================
@@ -32,6 +33,15 @@ const dayKey = (i) => new Date(START + i * 86400000).toISOString().slice(0, 10);
 const SPH = D.SPHERES;
 
 // ---------- бот ----------
+// лучшая тактика из 3 предложенных (по прогнозу соотношения сил, при равенстве — по меньшим потерям); карточки профиля — ранг B
+function bestTactic(s, h, id) {
+  let best = null, bestScore = -Infinity;
+  M.offerTactics(s, h, ['B', 'B', 'B']).forEach((t) => {
+    const f = M.forecast(s, h, id, t), score = (isFinite(f.ratio) ? f.ratio : 99) - f.attritionPct * 0.01;
+    if (score > bestScore) { bestScore = score; best = t; }
+  });
+  return best;
+}
 function econ(s, h, count) {
   let a = 0;
   if (M.townAt(s, h) < 0) return 0;
@@ -44,6 +54,7 @@ function econ(s, h, count) {
   }
   return a;
 }
+const OPTS = { tactics: true };
 function goTo(s, h, target) {
   let a = 0;
   for (let g = 0; g < 12; g++) {
@@ -54,7 +65,7 @@ function goTo(s, h, target) {
     if (r.steps.length) { const t = M.travel(s, h, target); if (t.moved.length) a++; }
     const f = M.forecast(s, h, r.battleNode);
     if (!f.adjacent || f.ratio < 1.3 || s.ap[h] < f.ap) break;
-    const e = M.engage(s, h, r.battleNode); a++;
+    const e = M.engage(s, h, r.battleNode, OPTS.tactics ? bestTactic(s, h, r.battleNode) : null); a++;
     if (!e.ok || !e.win) break;
   }
   return a;
@@ -104,7 +115,7 @@ function bot(s) {
     if (s.heroes[0].node === rallyNode) {
       for (let h = 1; h < 4; h++) if (s.heroes[h].node === rallyNode) M.transferAll(s, h, 0);
       const f = M.forecast(s, 0, D.LAIR);
-      if (f.adjacent && f.ratio >= 1.15 && s.ap[0] >= f.ap) { M.engage(s, 0, D.LAIR); actions++; }
+      if (f.adjacent && f.ratio >= 1.15 && s.ap[0] >= f.ap) { M.engage(s, 0, D.LAIR, OPTS.tactics ? bestTactic(s, 0, D.LAIR) : null); actions++; }
     }
   }
   return actions;
@@ -183,6 +194,13 @@ gate('C3', low.every((r) => r.towns >= 1 && r.armyPower > 0 && r.maxFar.some((v)
 const gloom = run(0.9, 11, { skipSphere: 'spirit' });
 const others = Math.max(gloom.facNodes[0], gloom.facNodes[1], gloom.facNodes[3]);
 gate('C10', gloom.facNodes[2] >= others + 2 && gloom.facNodes[2] >= 4, 'без дел Духа Уныние сильнее остальных: узлы фракций ' + gloom.facNodes.join('/'));
+
+// C11: тактики помогают, а не ломают баланс: с тактиками победа не позже, чем без них, и не раньше чем на 4 недели (медиана 70 %)
+OPTS.tactics = false;
+const noTac = SEEDS.map((seed) => run(0.7, seed).doneWeek === null ? Infinity : run(0.7, seed).doneWeek).sort((a, b) => a - b)[1];
+OPTS.tactics = true;
+const withTac = med(0.7);
+gate('C11', withTac <= noTac && noTac - withTac <= 4, 'тактики: медиана победы при 70 % — с тактиками ' + withTac + ' нед., без ' + noTac + ' нед. (выигрыш 0…4)');
 
 console.log(failed ? '\nГЕЙТЫ КАМПАНИИ 3.0: ПРОВАЛ (' + failed + ')' : '\nИТОГО: гейты кампании 3.0 пройдены');
 process.exit(failed ? 1 : 0);

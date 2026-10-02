@@ -1,4 +1,4 @@
-// Кампания 3.0, Ф3 — данные карты: 4 региона-сферы × 8 узлов + Цитадель Пороков в центре, 4 героя, 5 ресурсов, 4 города, 4 фракции пороков.
+// Кампания 3.0, Ф4 — данные карты: 4 региона-сферы × 8 узлов + Цитадель Пороков в центре, 4 героя, 5 ресурсов, 4 города, 4 фракции пороков.
 // Чистые данные без DOM; UMD как js/stronghold-model.js. Дизайн: docs/plan/CAMPAIGN-3.0.md.
 (function(root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -40,7 +40,7 @@
     var NAMES = {
         town:  { body: 'Кузня', mind: 'Академия', spirit: 'Монастырь', ties: 'Ярмарка' },
         mine:  { body: 'Сталелитейная шахта', mind: 'Библиотека-копи', spirit: 'Родник воли', ties: 'Торговая жила' },
-        path: 'Дорога', camp: 'Застава', swamp: 'Топь', cache: 'Тайник',
+        path: 'Дорога', camp: 'Застава', swamp: 'Топь', cache: 'Святилище',
         bastion: { body: 'Оплот Лени', mind: 'Оплот Рассеянности', spirit: 'Оплот Уныния', ties: 'Оплот Отчуждения' }
     };
     function mirror(k, p) { // k: 0 Тело(ЮЗ), 1 Разум(СЗ), 2 Дух(СВ), 3 Связи(ЮВ)
@@ -84,6 +84,21 @@
     // жилища t3/t5 строятся в городе: золото + ресурсы (own — сферы города, nb — соседней)
     var DWELLING = { t3: { g: 60, own: 5, nb: 0 }, t5: { g: 200, own: 10, nb: 5 } };
 
+    // Тактики перед боем (авторасчёт остаётся, игрок выбирает 1 из 3 карт): сила от ранга реальной карточки сферы.
+    var RANKS = ['C', 'CC', 'CCC', 'B', 'BB', 'BBB', 'A', 'AA', 'AAA', 'S', 'SS', 'SSS'];
+    var TACTICS = {
+        rush:      { name: 'Натиск',    icon: '⚔', desc: 'атака +%' },
+        formation: { name: 'Строй',     icon: '🛡', desc: 'потери −%' },
+        cunning:   { name: 'Хитрость',  icon: '🦊', desc: 'оборона врага −%' }
+    };
+    var TACTIC_KEYS = ['rush', 'formation', 'cunning'];
+    // навык героя (до 3 уровней) даёт святилище; тактика своего вида получает +5% за уровень, у Связей — +25% золота добычи
+    var SKILL = {
+        body:   { name: 'Мастер натиска', kind: 'rush' },
+        mind:   { name: 'Стратег',        kind: 'cunning' },
+        spirit: { name: 'Стойкость',      kind: 'formation' },
+        ties:   { name: 'Дипломатия',     kind: null }
+    };
     var C = {
         AP_CAP_DAY: 6,        // очков движения в сутки на героя
         AP_CARRY: 1,          // переносится на следующий день (на героя)
@@ -104,6 +119,11 @@
         RUBBER_MULT: 0.75,
         TRUCE_BREAK_MULT: 1.5, // срыв обета перемирия: фракция бьёт на 50% сильнее
         LAIR_DIV: 2,          // множитель цитадели: 1 + SHADOW_K × (тени всех фракций / LAIR_DIV)
+        TACTIC_MIN: 0.05, TACTIC_MAX: 0.25, // сила тактики от ранга карточки: C 5% … SSS 25%
+        SKILL_STEP: 0.05,     // +к тактике своего вида за уровень навыка
+        SKILL_MAX: 3,
+        SHRINE_STREAK: 3,     // дней подряд с делами сферы героя, чтобы святилище дало навык
+        DIPLO_LOOT: 0.25,     // +к золоту добычи за уровень «Дипломатии»
         LAZARET_DAYS: 7,      // дней лазарета за сезон (болезнь/отпуск): тени не копятся, фракции не ходят
         SEASON_WEEKS: 12,
         NODE_DEF: 40,         // оборона занятого игроком узла
@@ -124,5 +144,5 @@
 
     return { SPHERES: SPHERES, SPHERE_NAME: SPHERE_NAME, HERO_NAME: HERO_NAME, RES_KEY: RES_KEY, RES_NAME: RES_NAME, RES_ICON: RES_ICON,
         SPHERE_OF_STAT: SPHERE_OF_STAT, HALL: HALL, NODES: NODES, EDGES: EDGES, LAIR: LAIR, TOWNS: TOWNS, MINES: MINES, LOOT: LOOT,
-        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, FACTIONS: FACTIONS, C: C };
+        UNITS: UNITS, UNIT_KEYS: UNIT_KEYS, DWELLING: DWELLING, FACTIONS: FACTIONS, RANKS: RANKS, TACTICS: TACTICS, TACTIC_KEYS: TACTIC_KEYS, SKILL: SKILL, C: C };
 });

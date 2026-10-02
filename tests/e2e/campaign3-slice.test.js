@@ -1,5 +1,5 @@
 // ============================================================
-// Кампания 3.0, Ф3 — e2e за флагом nd_c3: 4 героя-сферы, карта из 33 узлов, города, фракции пороков.
+// Кампания 3.0, Ф4 — e2e за флагом nd_c3: 4 героя-сферы, карта из 33 узлов, города, фракции пороков.
 //   флаг выкл → 2.0 как была (панели нет, ключа c3 в сейве нет, выбор сферы задачи скрыт);
 //   флаг вкл → дело сферы двигает героя СВОЕЙ сферы, шаг по карте тратит ОД, бой, найм, залы, сбор армий, перезагрузка.
 // ============================================================
@@ -101,8 +101,9 @@ test('карта: тап по узлу и «Идти» двигает выбра
     await page.click('[data-c3="select"][data-n="4"]');
     await expect(page.locator('#c3Root .c3-detail')).toContainText('Оборона');
     await page.click('[data-c3="atk"]');
-    await expect(page.locator('#confirmOverlay')).toHaveClass(/show/);
-    await page.click('#confirmYes');
+    await expect(page.locator('.c3-tac')).toHaveCount(4); // 3 тактики + «Без тактики»
+    await expect(page.locator('.c3-tactics')).toContainText('карточка ранга SSS'); // сила — от рангов карточек Тела
+    await page.click('[data-c3="tac"][data-i="none"]');
     await page.waitForTimeout(400);
     s = await c3(page);
     expect(s.own.charAt(4)).toBe('1'); expect(s.heroes[0].node).toBe(4); expect(s.ap[0]).toBe(3); expect(s.ap[1]).toBe(3);
@@ -119,14 +120,16 @@ test('вкладка героя переключает управление: Р�
     expect(s.heroes[1].node).toBe(9); expect(s.ap[1]).toBe(2); expect(s.heroes[0].node).toBe(0);
 });
 
-test('отказ в подтверждении штурма ничего не меняет', async ({ page }) => {
+test('отмена выбора тактики ничего не меняет', async ({ page }) => {
     await boot(page, true, [card(1, 'str', 'SSS'), card(5, 'end', 'SSS')]);
     await openStrongholds(page);
     await complete(page, 1); await complete(page, 5);
     await patch(page, 's.heroes[0].node = 3; s.heroes[0].army = { t1: 60, t3: 6, t5: 0 };');
     await page.click('[data-c3="select"][data-n="4"]');
     await page.click('[data-c3="atk"]');
-    await page.click('#confirmNo');
+    await expect(page.locator('.c3-tactics')).toBeVisible();
+    await page.click('[data-c3="atk"]'); // «Отмена»
+    await expect(page.locator('.c3-tactics')).toHaveCount(0);
     const s = await c3(page);
     expect(s.own.charAt(4)).toBe('0'); expect(s.ap[0]).toBe(6);
 });
@@ -242,8 +245,50 @@ test('потерянный город: помечен фракцией, найм
     await expect(page.locator('#c3Root .c3-detail')).toContainText('Под властью «Лень»');
     await patch(page, 's.heroes[0].node = 9;');
     await page.click('[data-c3="atk"]');
-    await page.click('#confirmYes');
+    await page.click('[data-c3="tac"][data-i="none"]');
     await page.waitForTimeout(400);
     const s = await c3(page);
     expect(s.own.charAt(8)).toBe('1');
+});
+
+test('тактика переворачивает слабый штурм: Натиск карточки SSS даёт победу там, где без неё поражение', async ({ page }) => {
+    await boot(page, true, [card(1, 'str', 'SSS'), card(5, 'end', 'SSS')]);
+    await openStrongholds(page);
+    await complete(page, 1); await complete(page, 5);
+    // 18 ополченцев = 36 против заставы 40: без тактики — поражение; три тактики предложены в детерминированном порядке, ищем Натиск/Хитрость
+    await patch(page, 's.heroes[0].node = 3; s.heroes[0].army = { t1: 18, t3: 0, t5: 0 };');
+    await page.click('[data-c3="select"][data-n="4"]');
+    await page.click('[data-c3="atk"]');
+    const idx = await page.evaluate(() => { const o = NDC3.act.offer(0); return o.findIndex((t) => t.kind === 'rush' || t.kind === 'cunning'); });
+    expect(idx).toBeGreaterThanOrEqual(0);
+    await page.click('[data-c3="tac"][data-i="' + idx + '"]');
+    await page.waitForTimeout(400);
+    const s = await c3(page);
+    expect(s.own.charAt(4)).toBe('1');
+    expect(s.log[s.log.length - 1].t).toContain('Воитель взял');
+});
+
+test('навык: на панели героя видна серия дел и навык; святилище при серии ≥ 3 даёт уровень', async ({ page }) => {
+    await boot(page, true);
+    await openStrongholds(page);
+    await expect(page.locator('.c3-hline')).toContainText('Мастер натиска 0/3');
+    await patch(page, "s.stk[0] = 3; s.heroes[0].node = 5; s.heroes[0].army = { t1: 400, t3: 0, t5: 0 }; s.ap[0] = 4;");
+    await page.click('[data-c3="select"][data-n="6"]');
+    await page.click('[data-c3="atk"]');
+    await page.click('[data-c3="tac"][data-i="none"]');
+    await page.waitForTimeout(300);
+    expect((await c3(page)).heroes[0].sk).toBe(1);
+    await expect(page.locator('.c3-hline')).toContainText('Мастер натиска 1/3');
+});
+
+test('дни без открытия приложения: молчание считается по реальным карточкам сфер (регрессия: рантайм не видел FORGED)', async ({ page }) => {
+    await boot(page, true, [card(1, 'str', 'C'), card(2, 'int', 'C')]);
+    const r = await page.evaluate(() => {
+        NDC3.ensure();
+        const s = NDC3.getState();
+        s.day = getMSKDayKey(Date.now() - 3 * 86400000);
+        NDC3.dayEnd(getMSKDayKey());
+        return { body: s.fac[0].sh.reduce((a, b) => a + b, 0), mind: s.fac[1].sh.reduce((a, b) => a + b, 0), spirit: s.fac[2].sh.reduce((a, b) => a + b, 0) };
+    });
+    expect(r.body).toBeGreaterThanOrEqual(2); expect(r.mind).toBeGreaterThanOrEqual(2); expect(r.spirit).toBe(0);
 });
