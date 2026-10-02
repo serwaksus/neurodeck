@@ -359,7 +359,9 @@ function autoCloudSave(json, force, bypassConflictCheck) {
         if ((!force || !bypassConflictCheck) && !err && metaStr) {
             try {
                 var meta = JSON.parse(metaStr);
-                if (meta && meta.t > savedAt + 10000) {
+                var _div = (typeof ndCloudDiverged === 'function') && ndCloudDiverged(meta); // P0 1.2: облако менял не этот девайс — не затираем, спрашиваем
+                if (meta && (meta.t > savedAt + 10000 || _div)) {
+                    if (_div && !window._cloudDialogOpen && typeof smartCloudSync === 'function' && Date.now() - (window._lastReconcileTry || 0) >= 20000) setTimeout(smartCloudSync, 0);
                     if (force) { updateSyncBadge('offline'); return; }
                     if (!window._cloudNewerToastShown) {
                         window._cloudNewerToastShown = true;
@@ -423,9 +425,11 @@ function pushCloudChunks(cs, json, onDone) {
                 doneCount++;
                 if (err) { failChunk(err); return; }
                 if (!aborted && doneCount === chunks.length) {
+                    if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet(null, saveId); // P0 1.2: meta мог записаться, а колбэк не дойти — id «в полёте» тоже наш
                     cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt, c: checksum, id: saveId, sz: json.length}), function(err2) {
                         if (err2 || aborted) { updateSyncBadge('offline'); settle(); return; }
                         pushOk = true;
+                        if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet({ id: saveId, t: savedAt });
                         clearSurplusChunks(chunks.length);
                         updateSyncBadge('synced');
                         if (typeof ndTel === 'function') ndTel('cloud_push_ok', { n: chunks.length, ms: Date.now() - t0 });
@@ -448,33 +452,49 @@ function smartCloudSync() {
     var cs = getCloudStorage();
     if (!cs) return;
     if (FORGED.length === 0) return; // пустое устройство обслуживает tryCloudRecovery — без второго диалога поверх
+    if (window._cloudDialogOpen) return; // игрока уже спрашивают
+    if (Date.now() - (window._lastReconcileTry || 0) < 20000) return; // boot-таймер и запрос из autoCloudSave не плодят дубли
+    window._lastReconcileTry = Date.now();
     var myEpoch = localEpoch; // страж гонки: локальные изменения во время полёта делают ответ устаревшим
     cs.getItem(CLOUD_META_KEY, function(err, metaStr) {
         if (err || !metaStr) return;
-        if (typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return;
         var meta;
         try { meta = JSON.parse(metaStr); } catch(e) { return; }
         var cloudTime = (meta && meta.t) || 0;
         if (!(cloudTime > 0)) return;
+        // P0 аудита (1.2): конфликт определяет «база» (кто писал облако последним), а не savedAt: загрузочный
+        // ресейв каждый раз штампует локальный сейв «сейчас» — устаревшее устройство выглядело новее облака и затирало его.
+        var diverged = (typeof ndCloudDiverged === 'function') && ndCloudDiverged(meta);
+        if (!diverged && typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return;
         var localTime = 0;
         var localRaw = localStorage.getItem('neurodeck_full_save') || localStorage.getItem('neurodeck_backup');
         if (localRaw) { try { localTime = JSON.parse(localRaw).savedAt || 0; } catch(e) {} }
-        if (localTime > cloudTime + 5000) { if (typeof ndTel === 'function') ndTel('sync_local_newer_push', { cloudT: cloudTime, localT: localTime }); forceCloudSave(true); return; }
-        if (!(cloudTime > localTime + 10000)) return;
+        if (!diverged) {
+            if (localTime > cloudTime + 5000) { if (typeof ndTel === 'function') ndTel('sync_local_newer_push', { cloudT: cloudTime, localT: localTime }); forceCloudSave(true); return; }
+            if (!(cloudTime > localTime + 10000)) return;
+        }
         loadCloudChunks(meta, function(chunkErr, data) {
             if (chunkErr || !data) { updateSyncBadge('offline'); return; }
-            if (typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return; // пока летали — локально изменилось
+            if (!diverged && typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return; // пока летали — локально изменилось
             var cloudDate = new Date(cloudTime).toLocaleString('ru');
             var localDate = localTime ? new Date(localTime).toLocaleString('ru') : 'нет данных';
             if (typeof dungeonConfirm === 'function') {
                 var dialogEpoch = localEpoch;
-                dungeonConfirm('☁ Найдано обновление',
-                    'Облако новее, чем это устройство:<br>' +
-                    '<b>Облако:</b> ' + cloudDate + '<br>' +
-                    '<b>Локально:</b> ' + localDate + '<br><br>' +
-                    '<span style="color:var(--gold-bright)">Загрузить актуальный прогресс?</span>'
+                var cloudInfo = '', localInfo = '';
+                if (diverged) { // только числа: тело диалога идёт в innerHTML
+                    cloudInfo = ' · ур. ' + (Math.round(Number(data.hero && data.hero.level)) || '?') + ' · карточек ' + ((data.forged && data.forged.length) || 0);
+                    localInfo = ' · ур. ' + (Math.round(Number(HERO.level)) || '?') + ' · карточек ' + FORGED.length;
+                }
+                window._cloudDialogOpen = true;
+                dungeonConfirm(diverged ? '☁ Облако изменилось' : '☁ Найдено обновление',
+                    (diverged ? 'В облаке другой прогресс (с другого устройства или после долгого перерыва):<br>' : 'Облако новее, чем это устройство:<br>') +
+                    '<b>Облако:</b> ' + cloudDate + cloudInfo + '<br>' +
+                    '<b>Локально:</b> ' + localDate + localInfo + '<br><br>' +
+                    (diverged ? '<span style="color:var(--gold-bright)">Что оставить? «Моё» — перезапишет облако.</span>' : '<span style="color:var(--gold-bright)">Загрузить актуальный прогресс?</span>'),
+                    diverged ? '☁ Взять облако' : undefined, diverged ? 'Оставить моё' : undefined
                 ).then(function(ok) {
-                    if (typeof localEpoch !== 'undefined' && localEpoch !== dialogEpoch) {
+                    window._cloudDialogOpen = false;
+                    if (!diverged && typeof localEpoch !== 'undefined' && localEpoch !== dialogEpoch) {
                         // пока думали — локально изменилось: чужие (облачные) данные не накладываем
                         forceCloudSave(true);
                         showToast('☁ Облако устарело', 'Локальные изменения сохранены и отправлены', 'save');
@@ -482,6 +502,7 @@ function smartCloudSync() {
                     }
                     if (ok) {
                         applySyncData(data);
+                        if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet(meta); // база = эта версия облака, иначе saveGameState снова решит, что облако чужое
                         saveGameState();
                         ndSyncHaptic();
                         showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
@@ -493,8 +514,9 @@ function smartCloudSync() {
                     }
                 });
             } else {
-                if (typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return;
+                if (!diverged && typeof localEpoch !== 'undefined' && localEpoch !== myEpoch) return;
                 applySyncData(data);
+                if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet(meta);
                 saveGameState();
                 ndSyncHaptic();
                 showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
@@ -525,6 +547,7 @@ var raw = localStorage.getItem('neurodeck_full_save');
 if (!raw) raw = localStorage.getItem('neurodeck_backup');
 if (raw) {
 var data = JSON.parse(raw);
+window.__ndBootSavedAt = Number(data && data.savedAt) || 0; // P0 1.2: savedAt последнего сохранения ДО загрузочного ресейва — опора легаси-правила конфликта
 if (!data.forged || data.forged.length === 0) {
 var emerg = localStorage.getItem('neurodeck_cards_backup');
 if (emerg) {
@@ -591,18 +614,21 @@ try { meta = JSON.parse(metaStr); } catch(e) { clearTimeout(failSafe); pendingDo
 var cloudT = (meta && meta.t) || 0;
 if (!(cloudT > 0)) { clearTimeout(failSafe); pendingDone(); return; }
 try { if (localStorage.getItem('neurodeck_cloud_declined_t') === String(cloudT)) { clearTimeout(failSafe); pendingDone(); return; } } catch(e) {} // от этого сейва уже отказывались
+clearTimeout(failSafe); // P0 1.3: облако ответило и в нём есть сейв — старт-колоду держим до конца загрузки (loadCloudChunks сам ограничен 15 c) и до ответа на диалог
 loadCloudChunks(meta, function(chunkErr, data) {
-clearTimeout(failSafe);
 pendingDone();
 if (chunkErr || !data) return;
 var cardCount = (data.forged && data.forged.length) || 0;
 if (cardCount === 0) return; // пустое облако не должно блокировать старт-колоду (O-10)
 if (typeof ndTel === 'function') ndTel('recovery_offered', { cards: cardCount, t: cloudT });
 var savedDate = new Date(cloudT).toLocaleString('ru');
-dungeonConfirm('☁ Найдено облачное сохранение!', 'Данные от <b>' + savedDate + '</b>.<br>Герой: <b>ур.' + (data.hero ? data.hero.level : '?') + '</b>, карточек: <b>' + cardCount + '</b>.<br><br><span style="color:var(--gold-bright)">Восстановить?</span>').then(function(ok) {
+window.__ndRecoveryOpen = true; // P0 1.3: старт-колода не показывается поверх диалога восстановления
+dungeonConfirm('☁ Найдено облачное сохранение!', 'Данные от <b>' + savedDate + '</b>.<br>Герой: <b>ур.' + (Math.round(Number(data.hero && data.hero.level)) || '?') + '</b>, карточек: <b>' + cardCount + '</b>.<br><br><span style="color:var(--gold-bright)">Восстановить?</span>').then(function(ok) {
+window.__ndRecoveryOpen = false;
 if (!ok) { if (typeof ndTel === 'function') ndTel('recovery_declined', { t: cloudT }); try { localStorage.setItem('neurodeck_cloud_declined_t', String(cloudT)); } catch(e) {} return; }
 if (typeof ndTel === 'function') ndTel('recovery_accepted', { cards: cardCount, t: cloudT });
 applySyncData(data, true);
+if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet(meta);
 saveGameState();
 if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
 ndSyncHaptic();
@@ -683,6 +709,41 @@ showToast('⚠ Ничего не найдено', 'Нет сохранений �
 const CLOUD_MAX_CHUNK = 4096;
 const CLOUD_META_KEY = 'nd_meta';
 const CLOUD_DATA_PREFIX = 'nd_';
+// Аудит 2026-10-02 (P0 1.2): «база» синхронизации — версия облака (nd_meta.id), которую ЭТО устройство
+// последней записало или прочитало. Пуш поверх чужой версии молча стирает чужой прогресс, а по времени
+// конфликт не определить: savedAt пере-штампуется при каждой загрузке (checkDailyReset → saveGameState).
+// pid — id пуша «в полёте»: meta мог записаться, а колбэк не дойти.
+var CLOUD_BASE_KEY = 'nd_cloud_base';
+function ndCloudBaseGet() {
+    try {
+        var b = JSON.parse(localStorage.getItem(CLOUD_BASE_KEY) || 'null');
+        if (!b || typeof b !== 'object') return null;
+        return { id: b.id ? String(b.id) : '', pid: b.pid ? String(b.pid) : '', t: Number(b.t) || 0 };
+    } catch (e) { return null; }
+}
+function ndCloudBaseSet(meta, pendingId) { // meta — разобранный nd_meta; pendingId — id пуша, чей meta ещё пишется
+    try {
+        var prev = ndCloudBaseGet();
+        if (pendingId) {
+            if (!prev) return; // базы не было — остаётся легаси-правило по честной метке
+            localStorage.setItem(CLOUD_BASE_KEY, JSON.stringify({ id: prev.id, pid: String(pendingId), t: prev.t }));
+            return;
+        }
+        if (!meta || typeof meta !== 'object') return;
+        localStorage.setItem(CLOUD_BASE_KEY, JSON.stringify({ id: meta.id ? String(meta.id) : '', pid: '', t: Number(meta.t) || 0 }));
+    } catch (e) {}
+}
+function ndCloudDiverged(meta) { // true — после последней синхронизации облако менял не этот девайс
+    if (!meta || typeof meta !== 'object') return false;
+    var base = ndCloudBaseGet();
+    if (base && (base.id || base.pid || base.t)) {
+        if (meta.id) return String(meta.id) !== base.id && String(meta.id) !== base.pid;
+        return Number(meta.t) !== base.t; // легаси-конверт без id
+    }
+    // базы ещё нет (обновление со старой версии / новое устройство): честная метка — savedAt последнего
+    // сохранения ДО этой сессии, а не свежий штамп загрузочного ресейва
+    return Number(meta.t) > (Number(window.__ndBootSavedAt) || 0) + 10000;
+}
 function getCloudStorage() {
     try {
         var tg = window.Telegram && window.Telegram.WebApp;
@@ -823,6 +884,7 @@ cs.setItem(CLOUD_META_KEY, JSON.stringify({n: chunks.length, t: savedAt, c: chec
 if (finished) return;
 finished = true; ndClosingGuard(false);
 if (!err) {
+if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet({ id: saveId, t: savedAt });
 clearSurplusChunks(chunks.length);
 updateCloudStatus();
 ndSyncHaptic();
@@ -882,6 +944,7 @@ return;
                 if (chunkErr || !data) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); return; }
                 try {
                     applySyncData(data);
+                    if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet(meta);
                     ndSyncHaptic();
                     showToast('☁ Загружено', new Date(data.t).toLocaleString('ru'));
                     spiritSay('«Облако поделилось воспоминаниями...»');
@@ -1005,14 +1068,16 @@ if (data.hero && typeof data.hero === 'object') {
 var sanitizedHero = STATE_GUARDS.sanitizeHero(data.hero);
 Object.keys(sanitizedHero).forEach(function(k) { HERO[k] = sanitizedHero[k]; });
 }
-if (data.stats) {
+if (data.stats && typeof data.stats === 'object') {
 Object.keys(data.stats).forEach(k => {
 if (!Object.prototype.hasOwnProperty.call(STATS, k)) return;
+var srcStat = data.stats[k];
+if (!srcStat || typeof srcStat !== 'object') return;
+// P0 аудита: только числовые поля — name/icon/color статов рисуются через innerHTML, из импорта их брать нельзя
 var maxCap = STATS[k].max;
-Object.assign(STATS[k], data.stats[k]);
-if (data.stats[k] && typeof data.stats[k].max === 'number') {
-STATS[k].max = Math.max(1, Math.min(maxCap, Math.round(data.stats[k].max)));
-}
+if (typeof srcStat.max === 'number' && Number.isFinite(srcStat.max)) STATS[k].max = Math.max(1, Math.min(maxCap, Math.round(srcStat.max)));
+if (Number.isFinite(Number(srcStat.value))) STATS[k].value = Number(srcStat.value);
+if (Number.isFinite(Number(srcStat.attributePoints))) STATS[k].attributePoints = Number(srcStat.attributePoints);
 STATS[k].value = Math.max(0, Math.min(STATS[k].max || 100, STATS[k].value || 0));
 STATS[k].attributePoints = Math.max(0, STATS[k].attributePoints || 0);
 });
@@ -1038,8 +1103,7 @@ if (data.goalIdCounter) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(da
 else if (data.counter != null) goalIdCounter = Math.max(STATE_GUARDS.sanitizeCounter(data.counter, 1), maxExistingId(GOALS) + 1);
 if (Array.isArray(data.xpHistory)) xpHistory = STATE_GUARDS.sanitizeXpHistory(data.xpHistory);
 if (data.bloodOath !== undefined) {
-bloodOath = (data.bloodOath && typeof data.bloodOath === 'object' && typeof data.bloodOath.status === 'string' && data.bloodOath.cardId !== undefined)
-? data.bloodOath : null;
+bloodOath = STATE_GUARDS.sanitizeBloodOath(data.bloodOath);
 }
 // QA3-M2: только строго датированные строки; мусор → null (= «сброс»: дневной/
 // недельный цикл сам выставит свежий ключ при следующем тике, app.js:2820)
@@ -1050,8 +1114,15 @@ if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongho
 if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
 if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
-    if (typeof dailyQuests !== 'undefined' && dailyQuests && data.dailyQuests && typeof data.dailyQuests === 'object' && data.dailyQuests.day) { dailyQuests.day = data.dailyQuests.day; dailyQuests.done = data.dailyQuests.done || {}; dailyQuests.progress = data.dailyQuests.progress || {}; dailyQuests.quests = Array.isArray(data.dailyQuests.quests) ? data.dailyQuests.quests : []; }
-if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEvent === 'object' && data.dailyEvent.id) dailyEvent = data.dailyEvent;
+    if (typeof dailyQuests !== 'undefined' && data.dailyQuests && typeof data.dailyQuests === 'object') {
+        var _dq = STATE_GUARDS.sanitizeDailyQuests(data.dailyQuests, (typeof DQ_POOL !== 'undefined') ? DQ_POOL : null); // P0: квесты по каталогу, не как есть
+        if (_dq.day) dailyQuests = { day: _dq.day, quests: _dq.quests, done: _dq.done, progress: _dq.progress };
+    }
+if (typeof dailyEvent !== 'undefined' && data.dailyEvent && typeof data.dailyEvent === 'object' && typeof data.dailyEvent.id === 'string') { // P0: событие дня — объект из каталога, не из импорта
+    var _evId = data.dailyEvent.id;
+    var _evCat = (typeof buildDailyEvents === 'function') ? buildDailyEvents().filter(function(x) { return x.id === _evId; }) : [];
+    if (_evCat.length) dailyEvent = _evCat[0];
+}
 if (typeof season !== 'undefined' && data.season && typeof data.season === 'object') { season = STATE_GUARDS.sanitizeSeason(data.season, (typeof getMSKDayKey === 'function') ? getMSKDayKey() : null); }
 if (typeof throne !== 'undefined' && typeof data.throne === 'number' && Number.isFinite(data.throne)) throne = Math.max(0, Math.min(5, Math.round(data.throne)));
 if (typeof TECHS !== 'undefined' && data.TECHS && typeof data.TECHS === 'object' && !Array.isArray(data.TECHS)) {

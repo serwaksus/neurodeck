@@ -4892,8 +4892,9 @@ function checkBloodOathDaily() {
     if (!card) { bloodOath = null; return; }
     var cardDoneToday = card.lastCompletedAt && getMSKDayKey(card.lastCompletedAt) === todayKey;
     if (!cardDoneToday) {
-        var lastResetKey = lastDayReset || getMSKDayKey();
-        var cardDoneLastDay = bloodOath.lastCompletedDay === lastResetKey;
+        // Аудит 2026-10-02: сверка идёт со ВЧЕРАШНИМ днём (lastDayReset уже = сегодня к моменту вызова из checkDailyReset)
+        var yesterdayKey = getMSKDayKey(Date.now() - 86400000);
+        var cardDoneLastDay = bloodOath.lastCompletedDay === yesterdayKey;
         if (!cardDoneLastDay) {
             failBloodOath('Карточка клятвы не была выполнена! Контракт нарушен.');
         }
@@ -5779,6 +5780,7 @@ document.getElementById('starterDeckModal').addEventListener('click', (e) => { i
 document.getElementById('siegeReportModal').addEventListener('click', (e) => { if (e.target.id === 'siegeReportModal') closeSiegeReport(); });
 (function(m) { if (m) m.addEventListener('click', (e) => { if (e.target.id === 'bossRewardModal') closeBossRewardModal(); }); })(document.getElementById('bossRewardModal')); // C5
 document.getElementById('syncFileInput').addEventListener('change', importSyncFile);
+(function(el) { if (el) el.addEventListener('change', renderStepInputs); })(document.getElementById('goalSteps')); // CSP: бывший inline onchange
 document.getElementById('taskName').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); createTask(); } }); // QA1-M4: Enter сабмитит форму задачи
 // ===================== Модалки: очередь, a11y-хром, фокус-ловушка, BackButton (QA1-M2/M7, QA5-H1) =====================
 var _pendingModal = null;
@@ -6051,20 +6053,26 @@ el.classList.remove('show'); void el.offsetWidth; el.dataset.ttype = type; el.cl
 setTimeout(() => { el.classList.remove('show'); setTimeout(playNextToast, 200); }, t.action ? 5000 : 2500);
 }
 function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
-function dungeonConfirm(title, body) {
+function dungeonConfirm(title, body, yesLabel, noLabel) {
 return new Promise(function(resolve) {
 var overlay = document.getElementById('confirmOverlay');
 document.getElementById('confirmTitle').textContent = title;
 document.getElementById('confirmBody').innerHTML = body;
+var yesBtn = document.getElementById('confirmYes'), noBtn = document.getElementById('confirmNo');
+var yesWas = yesBtn.textContent, noWas = noBtn.textContent; // подписи кнопок — только на время этого диалога
+if (yesLabel) yesBtn.textContent = yesLabel;
+if (noLabel) noBtn.textContent = noLabel;
 overlay.classList.add('show');
 function cleanup(result) {
 overlay.classList.remove('show');
-document.getElementById('confirmYes').onclick = null;
-document.getElementById('confirmNo').onclick = null;
+yesBtn.onclick = null;
+noBtn.onclick = null;
+yesBtn.textContent = yesWas;
+noBtn.textContent = noWas;
 resolve(result);
 }
-document.getElementById('confirmYes').onclick = function() { cleanup(true); };
-document.getElementById('confirmNo').onclick = function() { cleanup(false); };
+yesBtn.onclick = function() { cleanup(true); };
+noBtn.onclick = function() { cleanup(false); };
 });
 }
 function updateProgressFill(pct) {
@@ -6260,7 +6268,8 @@ if (FORGED.length === 0) {
     if (!getCloudStorage()) { setTimeout(function() { updateSyncBadge('offline'); }, 1500); }
     setTimeout(function holdStarterDeck(attempt) {
         attempt = attempt || 0;
-        if (window.__ndCloudCheckPending && attempt < 14) { setTimeout(function() { holdStarterDeck(attempt + 1); }, 250); return; } // ждём облако ≤3.5 c
+        // P0 1.3: восстановление важнее онбординга — ждём проверку облака (meta ≤5 c + чанки ≤15 c) и, без лимита, пока игрок отвечает на диалог восстановления
+        if ((window.__ndCloudCheckPending && attempt < 100) || window.__ndRecoveryOpen) { setTimeout(function() { holdStarterDeck(attempt + 1); }, 250); return; }
         if (FORGED.length > 0) return; // восстановились из облака — старт-колода не нужна
         showStarterDeck();
     }, 900);
