@@ -15,8 +15,8 @@
     <link rel="preload" href="fonts/Philosopher-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/Alegreya-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=125" />
-    <link rel="stylesheet" href="css/style.css?v=125" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=131" />
+    <link rel="stylesheet" href="css/style.css?v=131" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
@@ -62,17 +62,22 @@
       <canvas id="dustCanvas"></canvas>
       <div class="torch-flicker"></div>
       <canvas id="particles"></canvas>
+      
+    </div>
+      <!-- Слой эффектов (тосты, баннеры level-up/ранг-апа, реплики духа, подсказки) — на уровне body, НЕ внутри .app-wrap:
+           .app-wrap (position: fixed) образует контекст наложения с z-index auto, и всё внутри него рисовалось ПОД .app (z-index 10) —
+           тосты и баннеры были невидимы (аудит визуала, 2026-10-02). -->
       <div class="levelup-overlay" id="lvlOverlay"></div>
       <div class="levelup-banner" id="lvlBanner">
         <div class="lbl">⚔ БРЕМЯ СТАЛО ЛЕГЧЕ ⚔</div>
-        <div class="num" id="lvlNum">2</div>
+        <div class="cer-seal"><div class="num" id="lvlNum">2</div></div>
         <div class="sub" id="lvlSub">Новый уровень</div>
         <div class="sub2" id="lvlSub2">+100 HP · Новые возможности открыты</div>
       </div>
       <div class="rankup-overlay" id="rankupOverlay"></div>
       <div class="rankup-banner" id="rankupBanner">
         <div class="lbl">⚔ Ранг повышен ⚔</div>
-        <div class="rank-text" id="rankupRankText">CC</div>
+        <div class="cer-seal"><div class="rank-text" id="rankupRankText">CC</div></div>
         <div class="sub" id="rankupSubText">Сила пробуждается</div>
         <div class="card-name-small" id="rankupCardName"></div>
         <div class="attr-hint" id="rankupAttrHint">+1 к пулу Силы (3/5)</div>
@@ -84,7 +89,6 @@
         <button type="button" class="t-action" style="display:none"></button>
       </div>
       <div class="tooltip" id="tooltip"></div>
-    </div>
       <div
         class="modal-overlay"
         role="dialog"
@@ -1584,18 +1588,18 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=125" defer></script>
-    <script src="js/perf-compat.js?v=125" defer></script>
-    <script src="js/event-bus.js?v=125" defer></script>
-    <script src="js/audio.js?v=125" defer></script>
-    <script src="js/telemetry.js?v=125" defer></script>
-    <script src="js/stronghold-data.js?v=125" defer></script>
-<script src="js/state-guards.js?v=125" defer></script>
-    <script src="js/storage.js?v=125" defer></script>
-    <script src="js/stronghold-model.js?v=125" defer></script>
-    <script src="js/state/store.js?v=125" defer></script>
-    <script src="js/remote-config.js?v=125" defer></script>
-    <script src="js/ui/strongholds.js?v=125" defer></script>
-    <script src="js/app.js?v=125" defer></script>
+    <script src="js/perf.js?v=131" defer></script>
+    <script src="js/perf-compat.js?v=131" defer></script>
+    <script src="js/event-bus.js?v=131" defer></script>
+    <script src="js/audio.js?v=131" defer></script>
+    <script src="js/telemetry.js?v=131" defer></script>
+    <script src="js/stronghold-data.js?v=131" defer></script>
+<script src="js/state-guards.js?v=131" defer></script>
+    <script src="js/storage.js?v=131" defer></script>
+    <script src="js/stronghold-model.js?v=131" defer></script>
+    <script src="js/state/store.js?v=131" defer></script>
+    <script src="js/remote-config.js?v=131" defer></script>
+    <script src="js/ui/strongholds.js?v=131" defer></script>
+    <script src="js/app.js?v=131" defer></script>
   </body>
 </html>

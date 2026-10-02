@@ -131,6 +131,7 @@ if (rank === 'SS' || rank === 'SSS') return RANK_COLORS.S;
 return RANK_COLORS[rank] || RANK_COLORS.C;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function ndMedal(art, tone, cls) { return '<span class="nd-medal tone-' + (tone || 'iron') + (cls ? ' ' + cls : '') + '" aria-hidden="true" style="--art:url(../img/gameicons/' + art + '.svg)"></span>'; } // медальон-силуэт (game-icons, CC BY 3.0)
 function ndIcon(name) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; } // визуал-план 0.5: иконки UI-хрома — SVG-спрайт, не эмодзи
 const STATE_GUARDS = window.NeuroDeckStateGuards;
 function ecoOn() { return !!(window.NeuroDeckPerf && window.NeuroDeckPerf.isEco()); }
@@ -4692,10 +4693,12 @@ container.innerHTML =
 '<div class="st-panel">' +
 '<div class="st-panel-title">XP за последние 7 дней</div>' +
 stAreaChart(last7, maxXp) +
+(totalXp7 === 0 ? '<div class="st-empty">' + ndIcon('flame') + '<span>За последнюю неделю XP нет. Выполни карточку — столбики поднимутся.</span></div>' : '') +
 '</div>' +
 '<div class="st-panel">' +
 '<div class="st-panel-title">Тепловая карта стриков (последние 8 недель)</div>' +
 streakHeatmap +
+(xpHistory.length === 0 ? '<div class="st-empty">' + ndIcon('check') + '<span>Каждый день с выполнением закрасит клетку — собери непрерывную цепь.</span></div>' : '') +
 '</div>' +
 
 achievements +
@@ -4741,22 +4744,14 @@ for (var i = 55; i >= 0; i--) {
 var key = getMSKDayKey(Date.now() - i * 86400000);
 var xpDay = xpHistory.find(function(h) { return h.date === key; });
 var count = xpDay ? xpDay.xp : 0;
-var color;
-if (count === 0) color = 'rgba(255,255,255,0.05)';
-else if (count < 20) color = 'rgba(52,211,153,0.25)';
-else if (count < 50) color = 'rgba(52,211,153,0.5)';
-else if (count < 100) color = 'rgba(52,211,153,0.75)';
-else color = 'rgba(52,211,153,1)';
-days.push('<div style="width:14px;height:14px;border-radius:2px;background:' + color + ';" title="' + key + ': ' + count + ' XP"></div>');
+var lvl = count === 0 ? 0 : count < 20 ? 1 : count < 50 ? 2 : count < 100 ? 3 : 4;
+days.push('<div class="hm-cell l' + lvl + '" title="' + key + ': ' + count + ' XP"></div>');
 }
-var html = '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+var html = '<div class="hm-grid">';
 days.forEach(function(d) { html += d; });
 html += '</div>';
-html += '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:10px;color:var(--text-dim);">';
-html += '<span>Меньше</span>';
-['rgba(255,255,255,0.05)','rgba(52,211,153,0.25)','rgba(52,211,153,0.5)','rgba(52,211,153,0.75)','rgba(52,211,153,1)'].forEach(function(c) {
-html += '<div style="width:10px;height:10px;border-radius:2px;background:' + c + ';"></div>';
-});
+html += '<div class="hm-legend"><span>Меньше</span>';
+[0, 1, 2, 3, 4].forEach(function(l) { html += '<i class="hm-cell l' + l + '"></i>'; });
 html += '<span>Больше</span></div>';
 return html;
 }
@@ -4773,41 +4768,41 @@ var equippedN = Object.values(INVENTORY.equipped).filter(function(e) { return e;
 var captured = capturedCount();
 var fmt = function(n) { return n.toLocaleString('ru-RU'); };
 var all = [
-{ icon: '⚔', name: 'Первая ковка', desc: 'Выковать первую карточку', cur: Math.min(cardsN, 1), max: 1 },
-{ icon: '📖', name: 'Коллекционер', desc: 'Карточек в колоде', cur: cardsN, max: 10 },
-{ icon: '📚', name: 'Архивариус', desc: 'Карточек в колоде', cur: cardsN, max: 25 },
-{ icon: '🛡', name: 'Воин', desc: 'Карточка ранга B', cur: rankReached('B') ? 1 : 0, max: 1 },
-{ icon: '⚡', name: 'Мастер', desc: 'Карточка ранга A', cur: rankReached('A') ? 1 : 0, max: 1 },
-{ icon: '👑', name: 'Легенда', desc: 'Карточка ранга S', cur: rankReached('S') ? 1 : 0, max: 1 },
-{ icon: '🗡', name: 'Искатель', desc: 'Уровень героя', cur: HERO.level, max: 5 },
-{ icon: '🛡', name: 'Страж', desc: 'Уровень героя', cur: HERO.level, max: 10 },
-{ icon: '🏰', name: 'Архонт', desc: 'Уровень героя', cur: HERO.level, max: 15 },
-{ icon: '✨', name: 'Первая тысяча', desc: 'Набрать XP', cur: HERO.totalXp, max: 1000 },
-{ icon: '💎', name: 'Десять тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 10000 },
-{ icon: '🌟', name: 'Сто тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 100000 },
-{ icon: '🎒', name: 'Полный комплект', desc: 'Слотов экипировки', cur: equippedN, max: 9 },
-{ icon: '🏰', name: 'Полкоролевства', desc: 'Захватить твердынь', cur: captured, max: 10 },
-{ icon: '👑', name: 'Владыка Твердынь', desc: 'Захватить все твердыни', cur: captured, max: STRONGHOLDS.length },
-{ icon: '🔥', name: 'Неделя дисциплины', desc: 'Стрик на карточке', cur: bestStreakN, max: 7 },
-{ icon: '🔥', name: 'Месяц железа', desc: 'Стрик на карточке', cur: bestStreakN, max: 30 },
-{ icon: '💯', name: 'Сотня', desc: 'Выполнений карточек', cur: totalCompletions, max: 100 }
+{ art: 'anvil', tone: 'iron', name: 'Первая ковка', desc: 'Выковать первую карточку', cur: Math.min(cardsN, 1), max: 1 },
+{ art: 'bookshelf', tone: 'iron', name: 'Коллекционер', desc: 'Карточек в колоде', cur: cardsN, max: 10 },
+{ art: 'book-pile', tone: 'steel', name: 'Архивариус', desc: 'Карточек в колоде', cur: cardsN, max: 25 },
+{ art: 'bordered-shield', tone: 'steel', name: 'Воин', desc: 'Карточка ранга B', cur: rankReached('B') ? 1 : 0, max: 1 },
+{ art: 'crossed-swords', tone: 'arcane', name: 'Мастер', desc: 'Карточка ранга A', cur: rankReached('A') ? 1 : 0, max: 1 },
+{ art: 'crown', tone: 'gilded', name: 'Легенда', desc: 'Карточка ранга S', cur: rankReached('S') ? 1 : 0, max: 1 },
+{ art: 'boots', tone: 'iron', name: 'Искатель', desc: 'Уровень героя', cur: HERO.level, max: 5 },
+{ art: 'visored-helm', tone: 'steel', name: 'Страж', desc: 'Уровень героя', cur: HERO.level, max: 10 },
+{ art: 'imperial-crown', tone: 'arcane', name: 'Архонт', desc: 'Уровень героя', cur: HERO.level, max: 15 },
+{ art: 'sparkles', tone: 'iron', name: 'Первая тысяча', desc: 'Набрать XP', cur: HERO.totalXp, max: 1000 },
+{ art: 'cut-diamond', tone: 'steel', name: 'Десять тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 10000 },
+{ art: 'star-medal', tone: 'gilded', name: 'Сто тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 100000 },
+{ art: 'chest-armor', tone: 'steel', name: 'Полный комплект', desc: 'Слотов экипировки', cur: equippedN, max: 9 },
+{ art: 'castle', tone: 'arcane', name: 'Полкоролевства', desc: 'Захватить твердынь', cur: captured, max: 10 },
+{ art: 'laurels', tone: 'gilded', name: 'Владыка Твердынь', desc: 'Захватить все твердыни', cur: captured, max: STRONGHOLDS.length },
+{ art: 'flame', tone: 'iron', name: 'Неделя дисциплины', desc: 'Стрик на карточке', cur: bestStreakN, max: 7 },
+{ art: 'fire-ring', tone: 'arcane', name: 'Месяц железа', desc: 'Стрик на карточке', cur: bestStreakN, max: 30 },
+{ art: 'trophy-cup', tone: 'steel', name: 'Сотня', desc: 'Выполнений карточек', cur: totalCompletions, max: 100 }
 ];
 var unlocked = all.filter(function(a) { return a.cur >= a.max; }).length;
 var html = '<div class="ach-wrap">';
 var crowns = (season && season.crownBonus) || 0;
-html += '<div class="ach-head"><div class="ach-title">🏆 Галерея трофеев</div><div class="ach-count">' + unlocked + '/' + all.length + (crowns > 0 ? ' · 👑 ' + crowns + ' (+2% налогов)' : '') + '</div></div>';
+html += '<div class="ach-head"><div class="ach-title">' + ndIcon('medal') + ' Галерея трофеев</div><div class="ach-count">' + unlocked + '/' + all.length + (crowns > 0 ? ' · 👑 ' + crowns + ' (+2% налогов)' : '') + '</div></div>';
 html += '<div class="ach-overall"><div class="ach-overall-fill" style="width:' + Math.round(unlocked / all.length * 100) + '%;"></div></div>';
 html += '<div class="ach-grid">';
 all.forEach(function(a) {
 var done = a.cur >= a.max;
 var pct = Math.min(100, Math.round(a.cur / a.max * 100));
-html += '<div class="ach-card' + (done ? ' unlocked' : '') + '">' +
-'<div class="ach-icon"><svg class="icn" aria-hidden="true"><use href="#i-medal"/></svg></div>' +
+html += '<div class="ach-card' + (done ? ' unlocked' : '') + '" title="' + esc(a.name) + ' — ' + esc(a.desc) + (a.max > 1 ? ' (' + fmt(Math.min(a.cur, a.max)) + ' / ' + fmt(a.max) + ')' : '') + '">' +
+'<div class="ach-icon">' + ndMedal(a.art, done ? a.tone : 'iron') + '</div>' +
 '<div class="ach-name">' + a.name + '</div>' +
 '<div class="ach-desc">' + a.desc + '</div>' +
 (a.max > 1
 ? '<div class="ach-prog"><div class="ach-prog-fill" style="width:' + pct + '%;"></div></div><div class="ach-prog-text">' + fmt(Math.min(a.cur, a.max)) + ' / ' + fmt(a.max) + '</div>'
-: '') +
+: '<div class="ach-prog-text">' + (done ? 'получено' : 'не получено') + '</div>') +
 '</div>';
 });
 html += '</div></div>';

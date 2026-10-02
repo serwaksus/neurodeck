@@ -1107,26 +1107,6 @@ body::before {
 .digest-kp { height: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; margin: 8px 0 4px; }
 .digest-kp-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
 .digest-foot { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 10px; }
-
-/* ===== B2: галерея трофеев ===== */
-.ach-wrap { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); padding: 16px; margin-bottom: 20px; border-radius: 4px; }
-.ach-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-.ach-title { font-size: 12px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
-.ach-count { color: var(--gold-bright); font-size: 14px; font-weight: bold; }
-.ach-overall { height: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
-.ach-overall-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
-.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.ach-card { position: relative; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 14px 10px; border-radius: 6px; text-align: center; opacity: 0.55; }
-.ach-card.unlocked { opacity: 1; background: rgba(251, 191, 36, 0.08); border-color: rgba(251, 191, 36, 0.45); box-shadow: 0 0 14px rgba(251, 191, 36, 0.12); }
-.ach-icon { font-size: 26px; }
-.ach-card:not(.unlocked) .ach-icon { filter: grayscale(1); }
-.ach-name { font-size: 12px; color: var(--gold-bright); font-weight: bold; margin-top: 6px; letter-spacing: 0.5px; }
-.ach-card:not(.unlocked) .ach-name { color: var(--text-dim); }
-.ach-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-.ach-prog { height: 5px; background: rgba(0, 0, 0, 0.5); border-radius: 3px; overflow: hidden; margin-top: 8px; }
-.ach-prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
-.ach-prog-text { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
-.ach-card.unlocked::after { content: '✓'; position: absolute; top: 6px; right: 8px; color: var(--gold-bright); font-size: 12px; }
 .sh-trade { font-size: var(--fs-secondary); color: var(--text-dim); margin: 6px 0 10px; letter-spacing: 0.5px; }
 .sh-trade b { color: var(--gold-bright); }
 .sh-season { margin: 0 0 10px; }
@@ -1547,10 +1527,6 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .st-chart .st-bar-label { font-size: 9px; fill: var(--text-dim); }
 .st-chart .st-bar-val { font-size: 9px; fill: var(--gold-bright); }
 .st-chart .st-gridline { stroke: rgba(212,165,116,0.12); stroke-width: 1; }
-.ach-icon { display: flex; align-items: center; justify-content: center; }
-.ach-icon .icn { width: 30px; height: 30px; color: var(--text-dim); opacity: 0.55; }
-.ach-card.unlocked .ach-icon .icn { color: var(--gold-bright); opacity: 1; filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.5)); }
-.ach-card.unlocked { border-color: rgba(251, 191, 36, 0.4); }
 .st-rank-chip { background: var(--rc-bg); border: 1px solid var(--rc-border); padding: 6px 12px; border-radius: 6px; font-size: 12px; }
 .st-rank-chip b { color: var(--rc-color); }
 
@@ -2097,8 +2073,8 @@ button.dash-stat:hover { border-color: var(--ac-reward); }
    ================================================================ */
 .mist-layer { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; opacity: var(--mist-opacity); transition: opacity 1.5s; mix-blend-mode: screen; }
 .mist-layer::before, .mist-layer::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; background: url(../img/fog.webp) 0 0 / 768px 768px repeat; }
-.mist-layer::before { width: calc(100% + 768px); opacity: 0.8; }
-.mist-layer::after { width: calc(100% + 1152px); background-size: 1152px 1152px; opacity: 0.5; }
+.mist-layer::before { width: calc(100% + 768px); opacity: 0.7; }
+.mist-layer::after { width: calc(100% + 1152px); background-size: 1152px 1152px; opacity: 0.45; }
 @media (prefers-reduced-motion: no-preference) {
   :root:not(.perf-eco):not(.nd-webdriver) body:not(.effects-off) .mist-layer::before { animation: fogDriftA 140s linear infinite; }
   :root:not(.perf-eco):not(.nd-webdriver) body:not(.effects-off) .mist-layer::after { animation: fogDriftB 220s linear infinite reverse; }
@@ -2117,3 +2093,59 @@ body[data-view="quests"] { --amb-h: 32; --amb-s: 55%; }
   radial-gradient(ellipse at 50% 100%, hsla(calc(var(--amb-h) + var(--atmosphere-hue)), var(--amb-s), calc(8% + var(--atmosphere-light) * 0.15), 0.6), transparent 60%),
   radial-gradient(ellipse at 20% 20%, hsla(calc(280 + var(--atmosphere-hue)), 40%, calc(6% + var(--atmosphere-light) * 0.1), 0.4), transparent 50%),
   linear-gradient(180deg, var(--s1) 0%, var(--s0) 100%); }
+
+/* ================================================================
+   TROPHIES v3 (визуал-план, фазы 5–6): галерея — медальоны по 3 в ряд с уникальными силуэтами; пустые состояния; теплокарта
+   ================================================================ */
+.ach-wrap { padding: var(--sp-3); margin-bottom: var(--sp-4); background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--inner-light); }
+.ach-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.ach-title { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-display); font-size: var(--t-sm); letter-spacing: 2px; text-transform: uppercase; color: var(--tx-2); }
+.ach-title .icn { color: var(--ac-reward); }
+.ach-count { font-size: var(--t-sm); font-weight: 700; color: var(--ac-reward); }
+.ach-overall { height: 6px; margin-bottom: var(--sp-3); border-radius: var(--r-pill); background: var(--s4); overflow: hidden; }
+.ach-overall-fill { height: 100%; background: linear-gradient(90deg, var(--mat-gilded-edge), var(--mat-gilded-text)); }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: var(--sp-2); }
+.ach-card { position: relative; display: grid; justify-items: center; align-content: start; gap: 2px; padding: var(--sp-3) var(--sp-2); text-align: center; background: var(--s1); border: 1px solid var(--border); border-radius: var(--r-md); }
+.ach-card.unlocked { border-color: color-mix(in srgb, var(--mat-gilded-edge) 45%, transparent); background: linear-gradient(180deg, var(--mat-gilded-fill), var(--s1)); }
+.ach-card.unlocked::after { content: '✓'; position: absolute; top: var(--sp-1); right: var(--sp-2); font-size: var(--t-xs); color: var(--ac-reward); }
+.ach-icon { display: grid; place-items: center; margin-bottom: var(--sp-1); }
+.ach-icon .nd-medal { width: 52px; height: 52px; }
+.ach-card:not(.unlocked) .ach-icon { filter: grayscale(1); opacity: 0.55; }
+.ach-name { font-family: var(--font-display); font-weight: 700; font-size: var(--t-xs); line-height: 1.2; color: var(--ac-reward); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ach-card:not(.unlocked) .ach-name { color: var(--tx-2); }
+.ach-desc { font-size: var(--t-xs); line-height: 1.2; color: var(--tx-2); }
+.ach-prog { width: 100%; height: 4px; margin-top: var(--sp-1); border-radius: var(--r-pill); background: var(--s4); overflow: hidden; }
+.ach-prog-fill { height: 100%; background: linear-gradient(90deg, var(--mat-gilded-edge), var(--mat-gilded-text)); }
+.ach-prog-text { font-size: var(--t-xs); color: var(--tx-2); font-variant-numeric: tabular-nums; }
+
+.hm-grid { display: grid; grid-template-columns: repeat(auto-fill, 14px); gap: 3px; }
+.hm-cell { display: block; width: 14px; height: 14px; border-radius: 3px; background: var(--s3); }
+.hm-cell.l1 { background: color-mix(in srgb, var(--ac-success) 28%, var(--s3)); }
+.hm-cell.l2 { background: color-mix(in srgb, var(--ac-success) 52%, var(--s3)); }
+.hm-cell.l3 { background: color-mix(in srgb, var(--ac-success) 76%, var(--s3)); }
+.hm-cell.l4 { background: var(--ac-success); }
+.hm-legend { display: flex; align-items: center; gap: 6px; margin-top: var(--sp-2); font-size: var(--t-xs); color: var(--tx-2); }
+.hm-legend .hm-cell { width: 10px; height: 10px; }
+.st-empty { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3); font-size: var(--t-sm); color: var(--tx-2); border: 1px dashed var(--border-hi); border-radius: var(--r-md); }
+.st-empty .icn { flex-shrink: 0; width: 18px; height: 18px; color: var(--ac-reward); }
+
+/* ================================================================
+   CEREMONY v3 (визуал-план, фаза 5): единая печать для level-up и ранг-апа — тот же материал, что у карточек
+   ================================================================ */
+.cer-seal { --m-edge: var(--mat-gilded-edge); --m-glow: var(--mat-gilded-glow); --m-text: var(--mat-gilded-text); --lvl: 3;
+  position: relative; display: grid; place-items: center; width: 132px; height: 132px; margin: 0 auto var(--sp-3); border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--m-edge) 38%, var(--s3)), var(--s1) 72%);
+  border: 3px solid var(--m-edge);
+  box-shadow: inset 0 0 0 5px var(--s1), inset 0 0 0 7px color-mix(in srgb, var(--m-edge) 45%, transparent), 0 0 36px var(--m-glow), var(--elev-3); }
+.cer-seal::before { content: ''; position: absolute; inset: -9px; border-radius: 50%; opacity: 0.6; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, var(--m-edge) 0 2deg, transparent 2deg 20deg);
+  -webkit-mask: radial-gradient(circle, transparent 62%, black 63%); mask: radial-gradient(circle, transparent 62%, black 63%); }
+.levelup-banner .cer-seal .num { font-family: var(--font-display); font-size: var(--t-3xl); line-height: 1; color: var(--m-text); text-shadow: 0 0 18px var(--m-glow); }
+.rankup-banner .cer-seal .rank-text { margin: 0; font-family: var(--font-display); font-size: var(--t-3xl); letter-spacing: 1px; line-height: 1; }
+.rankup-banner .cer-seal { width: 112px; height: 112px; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .levelup-banner.show .cer-seal::before,
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .rankup-banner.show .cer-seal::before { animation: sealSweep 6s linear infinite; }
+}
+/* баннеры церемоний: тёмная подложка — текст не сливается с интерфейсом под ними */
+.levelup-banner, .rankup-banner { padding: var(--sp-8) var(--sp-10); background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--s0) 94%, transparent) 55%, transparent 100%); }

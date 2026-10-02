@@ -108,3 +108,5 @@
 - **Darkzaitzev** — hooded-figure (Т6)
 
 Соответствие id → иконка — в `shSpriteImg` (`js/ui/strongholds.js`). Файлы получены из пакета `@iconify-json/game-icons` (чёрный фон не содержат), правок глифов нет.
+
+Трофеи (визуал-план, фазы 5–6): галерея в «Дневнике» — медальоны-силуэты. Добавлено (CC BY 3.0, game-icons.net): **Delapouite** — bookshelf, book-pile, sparkles, star-medal, trophy-cup; **Lorc** — cut-diamond, fire-ring, laurels; **Carl Olsen** — flame. Остальные иконки галереи (anvil, boots, bordered-shield, chest-armor, crossed-swords, crown, visored-helm, castle, imperial-crown) уже перечислены выше.

@@ -258,3 +258,18 @@ test('Фаза 4: туман — текстура, а не SVG-фильтры; �
     expect(l2).toBeGreaterThan(Number(r.light || 0));
     expect(l2).toBe(15);
 });
+
+// ---------- Слой эффектов ----------
+test('Фаза 5: тосты и реплики духа видны поверх интерфейса (раньше их перекрывал .app из-за контекста наложения)', async ({ page }) => {
+    await bootSeed(page, seedWithRanks());
+    const r = await page.evaluate(async () => {
+        showToast('Проверка слоя', 'Тост должен быть сверху', 'save');
+        spiritSay('Реплика духа');
+        await new Promise((res) => setTimeout(res, 900));
+        const top = (id) => { const e = document.getElementById(id); e.style.pointerEvents = 'auto'; /* иначе elementFromPoint пропускает pointer-events:none */ const b = e.getBoundingClientRect(); const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !!(hit && (hit === e || e.contains(hit))); };
+        return { toast: top('toast'), spirit: top('spiritMsg'), parents: ['toast', 'spiritMsg', 'lvlBanner', 'rankupBanner', 'lvlOverlay', 'rankupOverlay', 'tooltip'].map((id) => document.getElementById(id).parentElement === document.body) };
+    });
+    expect(r.toast, 'тост — верхний элемент в своей точке').toBe(true);
+    expect(r.spirit, 'реплика духа — верхний элемент').toBe(true);
+    expect(r.parents.every(Boolean), 'слой эффектов — на уровне body, вне .app-wrap').toBe(true);
+});
