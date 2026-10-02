@@ -128,7 +128,7 @@ test('hero: statRankups/statEscape заменены на «Твердынь N/20
 });
 
 test('header: «Побег» → «Твердыни», счётчик 0/20, кэш-пин единообразно', () => {
-    assert.ok(html.includes('<span>Твердыни</span>'), 'заголовок progress-control');
+    assert.ok(html.includes('<span class="pc-text">Твердыни</span>'), 'заголовок progress-control');
     assert.ok(/id="progressVal">0\/20/.test(html), 'счётчик 0/20');
     const vs = [...html.matchAll(/v=(\d{2,})/g)].map(m => m[1]);
     assert.equal(new Set(vs).size, 1, 'все ?v= одинаковы (факт: ' + vs.join(',') + ')');

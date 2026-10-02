@@ -1,9 +1,9 @@
 {
-  "hexLiterals": 109,
-  "rgbaLiterals": 619,
-  "zIndexLiterals": 36,
-  "importants": 136,
-  "fontSizeOffScale": 134,
-  "fontSizeBelow11": 21,
-  "inlineStylesInJs": 143
+  "hexLiterals": 80,
+  "rgbaLiterals": 532,
+  "zIndexLiterals": 32,
+  "importants": 116,
+  "fontSizeOffScale": 123,
+  "fontSizeBelow11": 19,
+  "inlineStylesInJs": 106
 }

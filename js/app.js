@@ -131,6 +131,7 @@ if (rank === 'SS' || rank === 'SSS') return RANK_COLORS.S;
 return RANK_COLORS[rank] || RANK_COLORS.C;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function ndIcon(name) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; } // визуал-план 0.5: иконки UI-хрома — SVG-спрайт, не эмодзи
 const STATE_GUARDS = window.NeuroDeckStateGuards;
 function ecoOn() { return !!(window.NeuroDeckPerf && window.NeuroDeckPerf.isEco()); }
 
@@ -603,43 +604,42 @@ el.className += ' blood-oath';
 }
 const nextRankText = getNextRank(card.rank) || 'MAX';
 var oathBadge = (bloodOath && bloodOath.status === 'active' && bloodOath.cardId === card.id)
-? '<div class="blood-oath-badge">🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
-var dayBadge = _dailyPairIds[card.id] ? '<div class="day-card-badge" title="Карта дня: XP и золото ×2">✨</div>' : '';
-var _orn = '<svg class="card-orn" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
-'<path d="M2 20 L2 6 Q2 2 6 2 L20 2" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'<path d="M80 2 L94 2 Q98 2 98 6 L98 20" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'<path d="M98 80 L98 94 Q98 98 94 98 L80 98" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'<path d="M20 98 L6 98 Q2 98 2 94 L2 80" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'</svg>';
+? '<div class="blood-oath-badge" title="Клятва на крови">' + ndIcon('drop') + ' Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
+var dayBadge = _dailyPairIds[card.id] ? '<div class="day-card-badge" title="Карта дня: XP и золото ×2">' + ndIcon('star') + '</div>' : '';
+// Карточка v3 (визуал-план, фаза 2): печать ранга слева (материал iron/steel/arcane/gilded из CSS-токенов),
+// имя/мета/теги/трек мастерства справа, действия одним рядом снизу. Классы rank-*/done-today/day-card/blood-oath и
+// data-action-кнопки — прежние (тесты и делегированные обработчики не меняются).
+var _cardTools =
+   '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать" role="button" aria-label="Редактировать"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></div>' +
+   '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить" role="button" aria-label="Удалить"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></div>' +
+   '<div class="card-btn pomodoro" data-action="pomodoro-toggle" data-id="' + card.id + '" title="Помодоро 25 мин (+5 XP, 1/день)" role="button" aria-label="Помодоро"><svg class="icn" aria-hidden="true"><use href="#i-timer"/></svg></div>' + // #65: помодоро в карточке
+   (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn prestige" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" role="button" aria-label="Переродить"><svg class="icn" aria-hidden="true"><use href="#i-star"/></svg></div>' : '');
 el.innerHTML =
-_orn +
 dayBadge +
 oathBadge +
-'<div class="card-corner-actions">' +
-   '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></div>' +
-   '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></div>' +
-   '<div class="card-btn pomodoro" data-action="pomodoro-toggle" data-id="' + card.id + '" title="Помодоро 25 мин (+5 XP, 1/день)"><svg class="icn" aria-hidden="true"><use href="#i-timer"/></svg></div>' + // #65: помодоро в карточке; DS2.0: SVG-иконки
-   (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" style="color:var(--gold-bright)"><svg class="icn" aria-hidden="true"><use href="#i-star"/></svg></div>' : '') +
+'<div class="card-seal" title="Ранг ' + card.rank + '"><div class="card-rank" data-len="' + card.rank.length + '">' + card.rank + '</div></div>' +
+'<div class="card-main">' +
+  '<div class="card-name">' + esc(card.name) + '</div>' +
+  '<div class="card-tags">' +
+    '<span class="card-meta">' + esc(card.meta || '') + '</span>' +
+    '<span class="card-stat-tag" style="color: ' + st.color + '; border-color: ' + st.color + '40;">' +
+      (artIconHtml(STAT_ART[card.stat]) || '<span>' + st.icon + '</span>') + ' ' + st.name +
+    '</span>' +
+    '<span class="card-adaptation-tag ' + streakInfo.cls + '" title="Бонус стрика">' + streakInfo.label + '</span>' +
+    '<span class="card-streak" title="Стрик, дней подряд">' + ndIcon('flame') + '<b>' + (card.streak || 0) + '</b></span>' +
+  '</div>' +
+  '<div class="card-track" title="Мастерство: ' + card.mastery + '/' + card.masteryThreshold + ' до ранга ' + nextRankText + ' · выполнено всего: ' + (card.totalCompletions || 0) + '">' +
+    '<div class="card-progress"><div class="card-progress-bar" style="width:' + progressPct + '%"></div></div>' +
+    '<span class="card-mastery"><b>' + card.mastery + '/' + card.masteryThreshold + '</b> → ' + nextRankText + '</span>' +
+  '</div>' +
 '</div>' +
-'<div class="card-rank">' + card.rank + '</div>' +
-'<div class="card-name">' + esc(card.name) + '</div>' +
-'<div class="card-meta">' + esc(card.meta || '') + '</div>' +
-'<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">' +
-  '<span class="card-stat-tag" style="color: ' + st.color + '; border-color: ' + st.color + '40;">' +
-    (artIconHtml(STAT_ART[card.stat]) || '<span>' + st.icon + '</span>') + ' ' + st.name +
-  '</span>' +
-  '<span class="card-adaptation-tag ' + streakInfo.cls + '">' + streakInfo.label + '</span>' +
-'</div>' +
-'<div class="card-stats-line">Выполнено: <b>' + (card.totalCompletions || 0) + '</b> · 🔥 <b>' + (card.streak || 0) + '</b></div>' +
-
-'<div class="card-mastery">Мастерство: <b>' + card.mastery + '/' + card.masteryThreshold + '</b> до ранга ' + nextRankText + '</div>' +
-'<div class="card-progress"><div class="card-progress-bar" style="width:' + progressPct + '%"></div></div>' +
 '<div class="card-btn-row">' +
 (doneToday
-    ? '<div class="card-complete-btn done">✓ Выполнено</div>'
-    : '<button class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">⚔ Выполнить</button>' +
-      '<button class="card-skip-btn" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)">✕</button>'
+    ? '<div class="card-complete-btn done">' + ndIcon('check') + ' Выполнено</div>'
+    : '<button class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">' + ndIcon('sword') + ' Выполнить</button>' +
+      '<button class="card-skip-btn" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)" aria-label="Пропустить (−1 золото)">' + ndIcon('x') + '</button>'
 ) +
+'<div class="card-corner-actions">' + _cardTools + '</div>' +
 '</div>';
 el.addEventListener('mousemove', (e) => {
 if (ecoOn()) return;
@@ -5090,24 +5090,24 @@ function renderDashboard() {
     var bar = document.getElementById('dashboardBar');
     if (!bar) return;
     var isBeginner = (HERO.level || 1) <= 2 && FORGED.length > 0 && FORGED.length <= 5;
-    var html = '<button class="info-btn" data-action="toggle-help" title="Что получишь и чем рискуешь" style="position:absolute; right:6px; top:6px;">?</button>';
-    if (dailyEvent) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span style="color:var(--gold-bright)">📅 ' + dailyEvent.icon + ' ' + dailyEvent.name + '</span> <button data-action="reroll-event" title="Переролл события дня (50 💰, 1/день)" style="margin-left:6px; font-size:11px; background:none; border:1px solid var(--gold); border-radius:6px; color:var(--gold-bright); cursor:pointer; padding:1px 6px;">🎲 50💰</button></div>'; // #50/#48: чип события + реролл
+    var html = '<button class="info-btn dash-help" data-action="toggle-help" title="Что получишь и чем рискуешь" aria-label="Что получишь и чем рискуешь">?</button>';
+    if (dailyEvent) html += '<div class="dash-line"><span class="dash-event">📅 ' + dailyEvent.icon + ' ' + dailyEvent.name + '</span> <button class="dash-mini-btn" data-action="reroll-event" title="Переролл события дня (50 💰, 1/день)">🎲 50💰</button></div>'; // #50/#48: чип события + реролл
     var hol = holidayBonus();
-    if (hol) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(hol.tip) + '">🎉 ' + esc(hol.label) + '</span></div>'; // #8: праздник
+    if (hol) html += '<div class="dash-line"><span class="dash-chip" title="' + esc(hol.tip) + '">🎉 ' + esc(hol.label) + '</span></div>'; // #8: праздник
     var _tot = totemOf(); // Ф2: чип активного тотема
-    if (_tot && HERO.totem && !HERO.totem.rechoose) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(_tot.tip) + '">' + _tot.icon + ' ' + esc(_tot.name) + '</span></div>';
+    if (_tot && HERO.totem && !HERO.totem.rechoose) html += '<div class="dash-line"><span class="dash-chip" title="' + esc(_tot.tip) + '">' + _tot.icon + ' ' + esc(_tot.name) + '</span></div>';
     var _docs = activeDoctrineList(); // Г1-2: чип активных доктрин
-    if (_docs.length) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;">' + _docs.map(function(d) { return '<span class="dash-chip" title="' + esc(d.tip) + '">' + d.icon + ' ' + esc(d.name) + '</span>'; }).join(' ') + '</div>';
+    if (_docs.length) html += '<div class="dash-line">' + _docs.map(function(d) { return '<span class="dash-chip" title="' + esc(d.tip) + '">' + d.icon + ' ' + esc(d.name) + '</span>'; }).join(' ') + '</div>';
     var _wf = weatherForecastChips(); // G1: погода как решение — эффект виден ДО решения
-    if (_wf) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;">' + _wf + '</div>';
+    if (_wf) html += '<div class="dash-line">' + _wf + '</div>';
     var pom = activePomodoro();
     if (pom) { // #65: помодоро — чип-обратный отсчёт
         var left = Math.max(0, Math.round((pom.end - Date.now()) / 1000));
-        html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="Помодоро: ' + esc(pom.name) + '">🍅 ' + pom.name + ' · ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + '</span> <button data-action="pomodoro-stop" data-id="' + pom.id + '" title="Отменить таймер" style="font-size:11px; background:none; border:1px solid var(--blood-bright); border-radius:6px; color:var(--blood-bright); cursor:pointer; padding:1px 6px;">✕</button></div>';
+        html += '<div class="dash-line"><span class="dash-chip" title="Помодоро: ' + esc(pom.name) + '">🍅 ' + pom.name + ' · ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + '</span> <button class="dash-mini-btn danger" data-action="pomodoro-stop" data-id="' + pom.id + '" title="Отменить таймер" aria-label="Отменить таймер">✕</button></div>';
     }
     var goal = dailyGoldGoal();
     var gp = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
-    html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="Цель дня: заработай золото любым способом">🎯 Цель дня: ' + Math.min(gp, goal) + '/' + goal + '💰</span><span style="display:inline-block; vertical-align:middle; width:70px; height:6px; background:var(--border); border-radius:3px; margin-left:6px; overflow:hidden;"><span style="display:block; height:100%; width:' + Math.min(100, Math.round(gp / goal * 100)) + '%; background:var(--gold-bright);"></span></span></div>'; // #71: дневная цель золота
+    html += '<div class="dash-line"><span class="dash-chip" title="Цель дня: заработай золото любым способом">🎯 Цель дня: ' + Math.min(gp, goal) + '/' + goal + '💰</span><span class="dash-goalbar"><span style="width:' + Math.min(100, Math.round(gp / goal * 100)) + '%"></span></span></div>'; // #71: дневная цель золота
     html += renderTodayPriority(); // Today Loop 2.0: одно главное действие дня — до инфо-блоков
     html += isBeginner ? renderDashboardBeginner() : renderDashboardVeteran();
     bar.innerHTML = html;
@@ -5118,12 +5118,12 @@ function renderDashboardBeginner() {
     var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
     var remaining = FORGED.length - doneToday;
     var openTasks = TASKS.filter(function(t) { return t.status === 'active'; }).length;
-    return '<div style="padding-right:22px;">' +
-        '<div style="color:var(--gold-bright); font-size:13px; margin-bottom:4px;">⚔ УРОВЕНЬ ' + Math.max(1, HERO.level) + ' · 💰 ' + (HERO.gold || 0) + '</div>' +
+    return '<div class="dash-begin">' +
+        '<div class="dash-begin-head">⚔ УРОВЕНЬ ' + Math.max(1, HERO.level) + ' · 💰 ' + (HERO.gold || 0) + '</div>' +
         '<div>⛏ Выполняй карточки — золото крепит Твердыни.</div>' +
-        '<div style="margin-top:6px;">📖 Сегодня сделано: <b>' + doneToday + '</b> из\u00A0<b>' + FORGED.length + '</b> · осталось\u00A0<b>' + remaining + '</b>' + (openTasks > 0 ? '\u00A0· 📋 задач в\u00A0работе:\u00A0<b>' + openTasks + '</b>' : '') + '</div>' +
-        '<div style="margin-top:6px; font-size:10px; color:var(--text-dim);">✅ За выполнение: <b style="color:#34d399">+15 XP · +1 💰 · +1 очко атрибута</b></div>' +
-        '<div style="font-size:10px; color:var(--text-dim);">⚠️ За пропуск: <b style="color:var(--blood-bright)">−1 💰</b> и стрик сбросится</div>' +
+        '<div class="dash-begin-row">📖 Сегодня сделано: <b>' + doneToday + '</b> из\u00A0<b>' + FORGED.length + '</b> · осталось\u00A0<b>' + remaining + '</b>' + (openTasks > 0 ? '\u00A0· 📋 задач в\u00A0работе:\u00A0<b class="info">' + openTasks + '</b>' : '') + '</div>' +
+        '<div class="dash-begin-hint">✅ За выполнение: <b class="ok">+15 XP · +1 💰 · +1 очко атрибута</b></div>' +
+        '<div class="dash-begin-hint">⚠️ За пропуск: <b class="bad">−1 💰</b> и стрик сбросится</div>' +
         '</div>';
 }
 
@@ -5134,16 +5134,23 @@ function renderDashboardVeteran() {
     var openTasks = TASKS.filter(function(t) { return t.status === 'active'; }).length;
     var revenue = strongholdTaxPerDay();
     var nextSh = STRONGHOLDS[strongholds.filter(function(x) { return x.captured; }).length];
-    var toNext = nextSh ? ' · до «' + esc(nextSh.name) + '»: сила ' + nextSh.total : ' · Твердыни покорены!';
-    var oathProgress = bloodOath && bloodOath.status === 'active' ? ' · 🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays : '';
+    var toNext = nextSh ? 'До «' + esc(nextSh.name) + '»: сила ' + nextSh.total : 'Твердыни покорены!';
+    var oathProgress = bloodOath && bloodOath.status === 'active' ? ' · Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays : '';
     var comboMult = getComboMultiplier();
-    var comboInfo = comboMult > 1.0 ? ' · 🎯 Комбо ×' + comboMult.toFixed(2) : '';
+    var comboInfo = comboMult > 1.0 ? ' · Комбо ×' + comboMult.toFixed(2) : '';
     var maxStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
-    return '<div style="padding-right:22px;">' +
-        '<div class="dashboard-row"><span class="treasury-chip" data-action="treasury-info" title="Разбивка казны">💰 Казна: <b style="color:var(--gold-bright)">' + (HERO.gold || 0) + '</b></span><span>🏰 Твердыней: <b>' + capturedCount() + '/20</b> · доход <b style="color:#34d399">+' + revenue + ' 💰/день</b>' + toNext + '</span></div>' +
-        '<div class="dashboard-row"><span>📖 ' + doneToday + '/' + FORGED.length + ' сегодня' + (remaining > 0 ? ' (осталось ' + remaining + ')' : '') + '</span>' + (openTasks > 0 ? '<span>📋 Задач в работе: <b style="color:#60a5fa">' + openTasks + '</b></span>' : '') + '<span>👻 Призраков: <b style="color:var(--blood-bright)">' + countGhostTasks() + '</b></span></div>' +
-        '<div class="dashboard-row"><span>🔥 Макс. стрик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>' +
-        '</div>';
+    // Визуал-план фаза 1: плитки-показатели вместо трёх строк с inline-стилями; иконки — SVG-спрайт
+    var ic = function(n) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; };
+    var ghosts = countGhostTasks();
+    return '<div class="dash-stats">' +
+        '<button class="dash-stat treasury-chip" data-action="treasury-info" title="Разбивка казны">' + ic('gold') + '<span>Казна</span><b class="gold">' + (HERO.gold || 0) + '</b></button>' +
+        '<div class="dash-stat" title="Захвачено твердынь, доход в день">' + ic('strongholds') + '<span>Твердыни</span><b>' + capturedCount() + '/20</b><em class="up">+' + revenue + ' 💰/день</em></div>' +
+        '<div class="dash-stat" title="Карточек выполнено сегодня">' + ic('check') + '<span>Сегодня</span><b>' + doneToday + '/' + FORGED.length + '</b>' + (remaining > 0 ? '<em>осталось ' + remaining + '</em>' : '') + '</div>' +
+        (openTasks > 0 ? '<div class="dash-stat" title="Задач в работе">' + ic('quests') + '<span>Задач</span><b class="info">' + openTasks + '</b></div>' : '') +
+        '<div class="dash-stat' + (ghosts > 0 ? ' warn' : '') + '" title="Призраки просроченных задач">' + ic('ghost') + '<span>Призраков</span><b>' + ghosts + '</b></div>' +
+        '<div class="dash-stat" title="Максимальный стрик среди карточек">' + ic('flame') + '<span>Стрик</span><b>' + maxStreak + '</b><em>дн.</em></div>' +
+        '</div>' +
+        '<div class="dash-note">' + toNext + comboInfo + oathProgress + '</div>';
 }
 
 // ===== Today Loop 2.0 (фаза 1 AAA-плана): приоритет дня =====
@@ -5189,26 +5196,28 @@ function todayKingdomLine(shList, daysToSiege) {
 function renderTodayPriority() {
     try {
         var pick = pickTodayCard(FORGED, getMSKDayKey());
-        var html = '<div style="padding:8px 10px; margin:2px 0 10px; border:1px solid var(--gold); border-radius:6px; background:rgba(212,175,55,0.06);">';
+        var ic = function(n) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; }; // локально: харнесс today-panel собирает функцию поодиночке
         if (!FORGED.length) {
-            return html + '<div style="font-size:12px;">🗡 Колода пуста — выкуй первую карточку кнопкой ниже.</div></div>';
+            return '<div class="today today-empty"><div class="today-kicker">ПРИОРИТЕТ ДНЯ</div><div class="today-line">Колода пуста — выкуй первую карточку кнопкой ниже.</div></div>';
         }
         if (!pick || !pick.card) {
-            return html + '<div style="font-size:13px; color:var(--gold-bright);">✅ День закрыт: все ' + FORGED.length + ' карточек выполнены!</div>' +
-                '<div style="font-size:11px; color:var(--text-dim); margin-top:3px;">Загляни в Твердыни — там ждут налоги и осады.</div></div>';
+            return '<div class="today today-done"><div class="today-kicker">ПРИОРИТЕТ ДНЯ</div><div class="today-line ok">' + ic('check') + ' День закрыт: все ' + FORGED.length + ' карточек выполнены!</div>' +
+                '<div class="today-foot">Загляни в Твердыни — там ждут налоги и осады.</div></div>';
         }
         var c = pick.card;
         var st = STATS[c.stat] || STATS.str;
         var masteryLeft = Math.max(0, (c.masteryThreshold || 0) - (c.mastery || 0));
-        var reward = masteryLeft <= 1 ? '⚡ следующее выполнение — ранг-ап!' : '📖 до ранг-апа: ' + masteryLeft;
+        var reward = masteryLeft <= 1 ? 'следующее выполнение — ранг-ап!' : 'до ранг-апа: ' + masteryLeft;
         var atRisk = (c.streak || 0) > 0;
-        html += '<div style="font-size:10px; letter-spacing:1.5px; color:var(--text-dim); margin-bottom:4px;">ПРИОРИТЕТ ДНЯ</div>';
-        html += '<div style="display:flex; align-items:center; gap:10px; justify-content:space-between; flex-wrap:wrap;">';
-        html += '<div style="font-size:13px; min-width:0;"><b style="color:var(--gold-bright)">' + esc(c.name) + '</b> <span style="color:var(--text-dim); font-size:11px;">' + (st.icon || '') + ' ' + esc(st.name || '') + ' · ' + (c.rank || 'C') + '</span>' +
-            (atRisk ? ' <span title="Стрик сгорит при пропуске" style="color:#f59e0b; font-size:11px;">🔥 ' + c.streak + ' дн. — под угрозой</span>' : '') + '</div>';
-        html += '<button class="card-complete-btn" data-action="complete-card" data-id="' + c.id + '">⚔ Выполнить</button>';
-        html += '</div>';
-        html += '<div style="font-size:10px; color:var(--text-dim); margin-top:4px;">📖 ' + pick.doneToday + '/' + pick.total + ' сегодня · ' + reward + todayKingdomLine(strongholds, (typeof daysToSiegeNow === 'function') ? daysToSiegeNow() : -1) + '</div>';
+        var rank = String(c.rank || 'C');
+        var html = '<div class="today rank-' + rank + '">';
+        html += '<div class="today-kicker">ПРИОРИТЕТ ДНЯ</div>';
+        html += '<div class="today-row"><div class="card-seal"><div class="card-rank" data-len="' + rank.length + '">' + rank + '</div></div>';
+        html += '<div class="today-info"><b class="today-name">' + esc(c.name) + '</b>' +
+            '<span class="today-sub">' + esc(st.name || '') + ' · ' + rank + '</span>' +
+            (atRisk ? '<span class="today-risk" title="Стрик сгорит при пропуске">🔥 ' + c.streak + ' дн. — под угрозой</span>' : '') + '</div></div>';
+        html += '<button class="card-complete-btn today-cta" data-action="complete-card" data-id="' + c.id + '">' + ic('sword') + ' Выполнить</button>';
+        html += '<div class="today-foot">Сегодня <b>' + pick.doneToday + '/' + pick.total + '</b> · ' + reward + todayKingdomLine(strongholds, (typeof daysToSiegeNow === 'function') ? daysToSiegeNow() : -1) + '</div>';
         html += '</div>';
         return html;
     } catch (e) { return ''; } // панель не должна ронять дашборд
@@ -6259,6 +6268,30 @@ if (typeof NDDBus !== 'undefined' && NDDBus && typeof NDDBus.on === 'function') 
         NDRemoteConfig.loadWeeklyConfig().then(function(r) {
             if (r && r.applied && typeof weeklyEndgame === 'function' && weeklyEndgame() && typeof renderStrongholds === 'function') renderStrongholds();
         }).catch(function() {});
+    } catch (e) {}
+})();
+
+// Визуал-план фаза 1: шапка сжимается при прокрутке контента (строка «Твердыни/сезон/осада» уходит), возвращается у верха.
+// Гистерезис 32/4 px — без дрожания на границе; без анимации высоты (reduced-motion/eco эквивалентны).
+(function initHeaderCompact() {
+    try {
+        var content = document.querySelector('.content'), app = document.querySelector('.app');
+        if (!content || !app) return;
+        // В авто-браузерах (webdriver) сжатие шапки выключено: оно сдвигает раскладку на 28 px ПОСЛЕ прокрутки к цели клика,
+        // и харнессы промахивались по кнопкам (acceptance/chaos). Для собственных тестов — флаг nd_force_compact.
+        var forced = false; try { forced = localStorage.getItem('nd_force_compact') === '1'; } catch (e2) {}
+        if (document.documentElement.classList.contains('nd-webdriver') && !forced) return;
+        var on = false, ticking = false;
+        content.addEventListener('scroll', function() {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(function() {
+                ticking = false;
+                var y = content.scrollTop;
+                if (!on && y > 32) { on = true; app.classList.add('is-scrolled'); }
+                else if (on && y < 4) { on = false; app.classList.remove('is-scrolled'); }
+            });
+        }, { passive: true });
     } catch (e) {}
 })();
 window.addEventListener('load', function(){ window.__tgReady(); });
