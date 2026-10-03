@@ -107,7 +107,8 @@
     function playerShare(s) { var n = 0; for (var i = 0; i < N; i++) if (s.own.charAt(i) === '1') n++; return n / N; }
     function rubber(s) { return playerShare(s) < C.RUBBER_SHARE ? C.RUBBER_MULT : 1; }
     function cycMult(s) { return 1 + C.CYC_K * (s.cyc || 0); } // сложность следующих карт
-    function facPower(s, f, truceBroken) { return Math.round(C.FAC_BASE * facMult(s, f) * rubber(s) * cycMult(s) * (truceBroken ? C.TRUCE_BREAK_MULT : 1)); }
+    function streakWeak(s, f) { return s.stk[f] >= C.WEAKEN_STREAK ? 1 - C.WEAKEN_STREAK_PCT : 1; } // серия дел сферы ≥7 дней держит натиск фракции ниже, обрыв — возвращает силу
+    function facPower(s, f, truceBroken) { return Math.round(C.FAC_BASE * facMult(s, f) * streakWeak(s, f) * rubber(s) * cycMult(s) * (truceBroken ? C.TRUCE_BREAK_MULT : 1)); }
     function armyPower(s, h) {
         var hero = s.heroes[h], p = 0;
         D.UNIT_KEYS.forEach(function(k) { p += (hero.army[k] || 0) * D.UNITS[k].power; });
@@ -260,6 +261,18 @@
         return n;
     }
     function allLairsFallen(s) { return lairsLeft(s) === 0; }
+    // Ранг-ап карточки сферы (§3 «как ослабить»): −WEAKEN_GAR_PCT гарнизона оплота её фракции; оплот пал — бьём по Цитадели; не ниже WEAKEN_GAR_FLOOR от исходного
+    function weakenLairOnRankUp(s, sphere) {
+        var f = SPHERES.indexOf(sphere);
+        if (f < 0) return { ok: false, reason: 'sphere' };
+        var id = (!s.fac[f].dead && s.own.charAt(FAC[f].bastion) === facCode(f)) ? FAC[f].bastion : (s.own.charAt(LAIR) !== '1' ? LAIR : -1);
+        if (id < 0) return { ok: false, reason: 'fallen' };
+        var was = s.gar[id], floor = Math.round(NODES[id].gar * C.WEAKEN_GAR_FLOOR), now = Math.max(floor, Math.round(was * (1 - C.WEAKEN_GAR_PCT)));
+        if (now >= was) return { ok: false, reason: 'floor', node: id };
+        s.gar[id] = now;
+        pushLog(s, 'Ранг карточки «' + D.SPHERE_NAME[SPHERES[f]] + '» растёт: гарнизон «' + NODES[id].name + '» −' + (was - now) + ' (осталось ' + now + ')');
+        return { ok: true, node: id, was: was, now: now };
+    }
     function engage(s, h, id, tactic) { // бой героя h с соседним враждебным узлом (tactic — по желанию); {ok, win?, reason?}
         if (s.done) return { ok: false, reason: 'done' };
         var hero = s.heroes[h];
@@ -395,6 +408,7 @@
         s.res.g += C.GOLD_TOWN_DAY * townsOwned(s) + C.HALL_GOLD * hall(s, 'ties');
         for (var m = 0; m < 4; m++) if (s.own.charAt(D.MINES[m]) === '1') s.res[D.RES_KEY[SPHERES[m]]] += C.MINE_DAY;
         for (var q = 0; q < 4; q++) s.stk[q] = s.apDay[q] > 0 ? Math.min(99, s.stk[q] + 1) : 0; // дней подряд с делами сферы (святилища)
+        for (var w = 0; w < 4; w++) if (s.stk[w] === C.WEAKEN_STREAK && !s.fac[w].dead) pushLog(s, 'Серия ' + C.WEAKEN_STREAK + ' дней дел «' + D.SPHERE_NAME[SPHERES[w]] + '»: «' + FAC[w].name + '» ослаблена на ' + Math.round(C.WEAKEN_STREAK_PCT * 100) + '%'); // ровно 7 — событие пересечения; повторится только после обрыва и новой серии
         s.apDay = zeros(4); s.tasksToday = 0; s.deedsToday = 0; s.dc = zeros(4);
         for (var o = 0; o < 4; o++) if (s.ob[o] === 1) { s.ob[o] = 0; s.obb[o] = 0; } // непринятый за сутки челлендж обелиска сгорает; взятая награда (2) остаётся
         s.day = String(nextDay);
@@ -608,7 +622,7 @@
         mulberry32: mulberry32, hashStr: hashStr, stateHash: stateHash,
         newState: newState, legacyFromV14: legacyFromV14, carryLegacy: carryLegacy, newMap: newMap, seasonOver: seasonOver, lairsLeft: lairsLeft, allLairsFallen: allLairsFallen, cycMult: cycMult,
         obeliskAt: obeliskAt, obeliskLeft: obeliskLeft, obeliskActivate: obeliskActivate, obeliskClaim: obeliskClaim, pushLog: pushLog, markSeen: markSeen,
-        hall: hall, townOwned: townOwned, townsOwned: townsOwned, facSum: facSum, facMult: facMult, lairMult: lairMult, facPower: facPower, playerShare: playerShare, facOf: facOf, facCode: facCode,
+        hall: hall, townOwned: townOwned, townsOwned: townsOwned, facSum: facSum, facMult: facMult, lairMult: lairMult, facPower: facPower, playerShare: playerShare, facOf: facOf, facCode: facCode, streakWeak: streakWeak, weakenLairOnRankUp: weakenLairOnRankUp,
         shadowSum: shadowSum, shadowMult: shadowMult, armyPower: armyPower, nodeDefense: nodeDefense, isHostile: isHostile, nodeSphere: nodeSphere,
         rankBonus: rankBonus, deedAp: deedAp, applyDeed: applyDeed,
         shortestPath: shortestPath, route: route, travel: travel,

@@ -833,6 +833,7 @@ showToast('👑 МАКСИМУМ!', card.name + ' достигла SSS', 'crit')
 spiritSay('«Легенда... Твоя дисциплина несокрушима.»');
 }
 }
+if (rankUpHappened && window.NDC3 && NDC3.enabled()) NDC3.onCardRankUp(card.stat); // кампания 3.0: ранг-ап карточки ослабляет логово фракции её сферы (§3 «как ослабить»; действие пользователя — буфера не нужно)
 goldGain(dayMult, 'card');
 checkCombos(finalXp); // Г2-4: комбо статов дня — после счётчика и награды карты, до тостов
 dqProgress('cards');
