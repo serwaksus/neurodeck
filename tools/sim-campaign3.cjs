@@ -25,7 +25,7 @@ const ROOT = path.join(__dirname, '..');
 const D = require(ROOT + '/js/campaign3/c3-data.js');
 const M = require(ROOT + '/js/campaign3/c3-model.js');
 
-const DAYS = 182;
+const DAYS = 365; // плановый горизонт (аудит 2026-10-03: возвращён с 182)
 const SEEDS = [11, 23, 47];
 const PROFILES = [0.9, 0.7, 0.4, 0.1];
 const CARDS = { body: 2, mind: 1, spirit: 1, ties: 1 }; // привычек в день по сферам
@@ -186,15 +186,15 @@ const maxBytes = Math.max(...PROFILES.flatMap((p) => res[p].map((r) => r.bytes))
 gate('C6', maxBytes <= 4096, 'сейв ≤ 4096 байт (макс. ' + maxBytes + ')');
 // C5: действия
 const maxAct = Math.max(...PROFILES.flatMap((p) => res[p].map((r) => r.maxActions)));
-gate('C5', maxAct <= 20, 'действий в день ≤ 20 (макс. ' + maxAct + ')');
+gate('C5', maxAct <= 15, 'действий в день ≤ 15 (макс. ' + maxAct + ')');
 // C9: сфера не качается чужими делами
 const noSpirit = run(0.7, 11, { skipSphere: 'spirit' });
 console.log(' без дел Духа (70 %): победа на неделе ' + (noSpirit.doneWeek === null ? '—' : noSpirit.doneWeek) + ', сила армий ' + noSpirit.armyPower + ' (с Духом ' + a1.armyPower + ')');
 gate('C9', noSpirit.apGained[2] === 0 && noSpirit.maxFar[2] === 0 && noSpirit.state.heroes[2].node === D.TOWNS[2] && noSpirit.apGained[0] > 0, 'без дел Духа герой Духа стоит в городе, остальные играют (ОД ' + noSpirit.apGained.join('/') + ')');
 // C1/C2/C3/C8
 const wk = (p) => res[p].map((r) => r.doneWeek);
-gate('C1', wk(0.7).every((w) => w !== null && w >= 8 && w <= 18), 'дисциплина 70 %: все 5 логов падают за 8–18 недель (' + wk(0.7).join(', ') + ')');
-gate('C2', wk(0.4).every((w) => w !== null && w <= 26), 'дисциплина 40 %: карта проходима ≤ 26 недель (' + wk(0.4).join(', ') + ')');
+gate('C1', wk(0.7).every((w) => w !== null && w >= 10 && w <= 14), 'дисциплина 70 %: все 5 логов падают за 10–14 недель (' + wk(0.7).join(', ') + ')');
+gate('C2', wk(0.4).every((w) => w !== null && w <= 26) && res[0.4].every((r) => M.playerShare(r.state) >= 0.2), 'дисциплина 40 %: карта проходима ≤ 26 недель и игрок держит ≥ 20 % карты (' + wk(0.4).join(', ') + '; доля ' + res[0.4].map((r) => Math.round(M.playerShare(r.state) * 100) + '%').join(', ') + ')');
 const med = (p) => { const v = res[p].map((r) => r.doneWeek === null ? Infinity : r.doneWeek).sort((a, b) => a - b); return v[1]; };
 gate('C8', med(0.9) < med(0.7) && med(0.7) < med(0.4) && med(0.4) <= med(0.1), 'дисциплина окупается: медианы недель победы 90/70/40/10 % = ' + [0.9, 0.7, 0.4, 0.1].map(med).join(' < '));
 const low = res[0.1], mid = res[0.4];
