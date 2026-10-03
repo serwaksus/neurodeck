@@ -398,6 +398,7 @@
         s.apDay = zeros(4); s.tasksToday = 0; s.deedsToday = 0; s.dc = zeros(4);
         for (var o = 0; o < 4; o++) if (s.ob[o] === 1) { s.ob[o] = 0; s.obb[o] = 0; } // непринятый за сутки челлендж обелиска сгорает; взятая награда (2) остаётся
         s.day = String(nextDay);
+        delete s.eot; // «Закончить ход» живёт до смены суток; новый день — новый ход
         if (restArr(s).some(function(k) { return k < nextDay; })) s.rest = restArr(s).filter(function(k) { return k >= nextDay; }); // прошедшие дни вычищаются
         return { shadows: shadows };
     }
@@ -507,6 +508,23 @@
         return { ok: true };
     }
 
+    // ---------- «Закончить ход» (план §1) ----------
+    // Игрок явно завершает действия на сегодня — сводка-подтверждение, а НЕ досрочное закрытие суток:
+    // их по-прежнему закрывает dayEnd на смене дня (иначе сломается привязка ко дню и гейты C4/C7).
+    // Поле eot ленивое: ключ дня, сбрасывается в dayEnd; turnEnded — «Ход завершён ✓» до смены суток.
+    function turnEnded(s) { return s.eot === s.day; }
+    function endTurn(s) {
+        if (s.done) return { ok: false, reason: 'done' };
+        var f, apLeft = 0, pendSh = 0;
+        for (f = 0; f < 4; f++) apLeft += s.ap[f];
+        var rest = isRestDay(s, s.day); // прогноз теней зеркалит dayEnd: лазарет и объявленный отдых срывов не копят
+        if (!s.lz.on && !rest) for (f = 0; f < 4; f++) pendSh += s.pend.s[f] + 0.5 * s.pend.h[f] + s.pend.o[f];
+        var taken = 0; // захвачено сегодня — по журналу этого дня (взят узел/город, оплот, логово)
+        s.log.forEach(function(l) { if (l.d === s.day && /взял: |освободил город|оплот взят|пала/.test(l.t)) taken++; });
+        s.eot = s.day;
+        return { ok: true, apLeft: apLeft, deeds: s.deedsToday, taken: taken, shadows: Math.round(pendSh * 10) / 10 };
+    }
+
     // ---------- ход фракций (большой ход недели) ----------
     function factionNodes(s, f) { var out = [], code = facCode(f); for (var i = 0; i < N; i++) if (s.own.charAt(i) === code) out.push(i); return out; }
     function fogAround(s, id, keep) { // «Рассеянность» наводит туман вокруг взятого узла (кроме видимого героями/своими)
@@ -599,6 +617,7 @@
         transfer: transfer, transferAll: transferAll,
         dayEnd: dayEnd, weekEnd: weekEnd, lazaretStart: lazaretStart, lazaretEnd: lazaretEnd, declareTruce: declareTruce, revokeTruce: revokeTruce,
         declareRest: declareRest, cancelRest: cancelRest, isRestDay: isRestDay, restLeft: restLeft, weekKey: weekKey,
+        endTurn: endTurn, turnEnded: turnEnded,
         ADJ: ADJ
     };
 });

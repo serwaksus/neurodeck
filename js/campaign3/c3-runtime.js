@@ -140,6 +140,12 @@
                 lazaret: function(on) { if (!ensure()) return null; var r = on ? M.lazaretStart(state) : M.lazaretEnd(state); env.save(); env.render(); return r; },
                 declareRest: function(dayKey) { if (!ensure()) return null; var r = M.declareRest(state, dayKey); env.save(); env.render(); return r; }, // объявленный отдых на будущий день
                 cancelRest: function(dayKey) { if (!ensure()) return null; var r = M.cancelRest(state, dayKey); env.save(); env.render(); return r; },
+                endTurn: function() { // «Закончить ход» (план §1): сводка дня, сутки закрывает dayEnd на смене дня, не раньше
+                    if (!ensure()) return null;
+                    var r = M.endTurn(state); env.save(); env.render();
+                    if (r.ok) env.toast('⏭ Ход завершён', 'ОД осталось ' + r.apLeft + ' (сгорят на смене суток)' + (r.taken ? ', взято сегодня: ' + r.taken : '') + (r.shadows > 0 ? ', срывов сегодня: ' + r.shadows : ', срывов нет'), 'save');
+                    return r;
+                },
                 truce: function(f, on) { if (!ensure()) return null; var r = on ? M.declareTruce(state, f) : M.revokeTruce(state, f); env.save(); env.render(); return r; },
                 obelisk: function(h, claim) {
                     if (!ensure()) return null;

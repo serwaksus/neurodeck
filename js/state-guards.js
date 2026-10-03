@@ -499,6 +499,7 @@
             rest.sort();
             out.rest = rest.slice(-14); // при переполнении остаются самые поздние (будущие)
         }
+        if (typeof src.eot === 'string' && DATE.test(src.eot) && src.eot === src.day) out.eot = src.eot; // Кампания 3.0: «Закончить ход» — ключ текущего дня, сбрасывается в dayEnd; ленивое поле — мусор и чужой день выбрасываются
         return out;
     }
 
