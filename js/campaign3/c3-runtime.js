@@ -100,6 +100,13 @@
             onUndoSkip: function(stat) { if (!ensure()) return; var i = D.SPHERES.indexOf(D.SPHERE_OF_STAT[stat]); if (i >= 0) state.pend.h[i] = Math.max(0, state.pend.h[i] - 1); },
             onSilentMisses: function(by) { if (ensure()) addPend(state.pend.s, by); },
             onTaskOverdue: function(by) { if (ensure()) addPend(state.pend.o, by); },
+            // ранг-ап карточки — действие пользователя, модули к этому моменту загружены: буфер __ndC3Early не нужен, сейв делает сам completeCard
+            onCardRankUp: function(stat) {
+                if (!ensure()) return null;
+                var r = M.weakenLairOnRankUp(state, D.SPHERE_OF_STAT[stat] || null);
+                if (r && r.ok) env.render();
+                return r;
+            },
 
             // Закрывает сутки (и пропущенные дни без открытия приложения) до todayKey. Вызывается из checkDailyReset.
             dayEnd: function(todayKey) {
