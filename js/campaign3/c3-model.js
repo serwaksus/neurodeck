@@ -253,6 +253,13 @@
         var code = facCode(f);
         for (var i = 0; i < N; i++) if (s.own.charAt(i) === code) { s.own = strSet(s.own, i, '0'); s.gar[i] = 0; }
     }
+    // Победа (решение владельца «пали все логова»): 4 оплота фракций + Цитадель; одна Цитадель карту не завершает
+    function lairsLeft(s) {
+        var n = s.own.charAt(LAIR) !== '1' ? 1 : 0;
+        for (var f = 0; f < 4; f++) if (s.own.charAt(FAC[f].bastion) !== '1') n++;
+        return n;
+    }
+    function allLairsFallen(s) { return lairsLeft(s) === 0; }
     function engage(s, h, id, tactic) { // бой героя h с соседним враждебным узлом (tactic — по желанию); {ok, win?, reason?}
         if (s.done) return { ok: false, reason: 'done' };
         var hero = s.heroes[h];
@@ -277,8 +284,15 @@
             if (loot.r && n.sphere) s.res[D.RES_KEY[n.sphere]] += loot.r;
             addXp(s, h, 3);
             if (n.type === 'town') s.sg[SPHERES.indexOf(n.sphere)] = 0;
-            if (id === LAIR) { s.done = true; pushLog(s, 'Победа! «' + n.name + '» пала — карта пройдена'); }
-            else if (pf >= 0 && id === FAC[pf].bastion) { defeatFaction(s, pf); pushLog(s, D.HERO_NAME[SPHERES[h]] + ' разбил «' + FAC[pf].name + '»: оплот взят' + (gold ? ' (+' + gold + ' 💰)' : '')); }
+            if (id === LAIR) {
+                if (allLairsFallen(s)) { s.done = true; pushLog(s, 'Победа! «' + n.name + '» пала — все логова взяты, карта пройдена'); }
+                else pushLog(s, '«' + n.name + '» пала; осталось логов: ' + lairsLeft(s) + '. Победа — когда падут все пять');
+            }
+            else if (pf >= 0 && id === FAC[pf].bastion) {
+                defeatFaction(s, pf);
+                pushLog(s, D.HERO_NAME[SPHERES[h]] + ' разбил «' + FAC[pf].name + '»: оплот взят' + (gold ? ' (+' + gold + ' 💰)' : '') + ' · осталось логов: ' + lairsLeft(s));
+                if (allLairsFallen(s)) { s.done = true; pushLog(s, 'Победа! Оплот «' + FAC[pf].name + '» — последнее логово, карта пройдена'); }
+            }
             else pushLog(s, D.HERO_NAME[SPHERES[h]] + (n.type === 'town' ? ' освободил город: ' : ' взял: ') + n.name + (gold ? ' (+' + gold + ' 💰)' : ''));
             markSeen(s);
         } else {
@@ -539,7 +553,7 @@
 
     return {
         mulberry32: mulberry32, hashStr: hashStr, stateHash: stateHash,
-        newState: newState, legacyFromV14: legacyFromV14, carryLegacy: carryLegacy, newMap: newMap, seasonOver: seasonOver, cycMult: cycMult,
+        newState: newState, legacyFromV14: legacyFromV14, carryLegacy: carryLegacy, newMap: newMap, seasonOver: seasonOver, lairsLeft: lairsLeft, allLairsFallen: allLairsFallen, cycMult: cycMult,
         obeliskAt: obeliskAt, obeliskLeft: obeliskLeft, obeliskActivate: obeliskActivate, obeliskClaim: obeliskClaim, pushLog: pushLog, markSeen: markSeen,
         hall: hall, townOwned: townOwned, townsOwned: townsOwned, facSum: facSum, facMult: facMult, lairMult: lairMult, facPower: facPower, playerShare: playerShare, facOf: facOf, facCode: facCode,
         shadowSum: shadowSum, shadowMult: shadowMult, armyPower: armyPower, nodeDefense: nodeDefense, isHostile: isHostile, nodeSphere: nodeSphere,

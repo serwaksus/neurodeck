@@ -153,10 +153,38 @@ test('цитадель: победа завершает карту; оборон
     const w = fresh(); w.fac.forEach((f) => { f.sh = [1, 1, 1, 1, 1, 1, 1]; });
     const m0 = M.lairMult(w); w.towns[SPIRIT].hall = 3;
     assert.ok(M.lairMult(w) < m0, 'зал Духа снижает множитель');
-    const win = fresh(); win.heroes[BODY].node = 7; win.ap[BODY] = 5; win.heroes[BODY].army = { t1: 2000, t3: 0, t5: 0 };
-    win.own = win.own.slice(0, 7) + '1' + win.own.slice(8);
-    const r = M.engage(win, BODY, D.LAIR);
-    assert.equal(r.win, true); assert.equal(win.done, true); assert.equal(win.own.charAt(D.LAIR), '1');
+});
+
+function citadelFresh() { const w = fresh(); w.heroes[BODY].army = { t1: 2000, t3: 0, t5: 0 }; return w; }
+function takeBastion(w, f) { // герой BODY берёт оплот f: ставим его рядом (на соседний с оплотом узел) и штурмуем
+    const b = D.FACTIONS[f].bastion; const from = D.EDGES.filter((e) => e[1] === b || e[0] === b).map((e) => (e[0] === b ? e[1] : e[0])).find((x) => x !== D.LAIR);
+    w.heroes[BODY].node = from; w.ap[BODY] = 9; const r = M.engage(w, BODY, b); return r;
+}
+
+test('победа = пали ВСЕ логова: цитадель при непавших оплотах карту не завершает', () => {
+    const w = citadelFresh(); assert.equal(M.lairsLeft(w), 5);
+    w.heroes[BODY].node = 7; w.ap[BODY] = 5; w.own = w.own.slice(0, 7) + '1' + w.own.slice(8); // оплот Тела взят
+    assert.equal(M.lairsLeft(w), 4);
+    const r = M.engage(w, BODY, D.LAIR);
+    assert.equal(r.win, true); assert.equal(w.own.charAt(D.LAIR), '1');
+    assert.equal(w.done, false, 'победы нет'); assert.equal(M.seasonOver(w), false); assert.equal(M.lairsLeft(w), 3);
+    assert.ok(w.log.some((l) => /осталось логов: 3/.test(l.t)), 'в логе сказано, сколько логов осталось');
+});
+
+test('победа = пали ВСЕ логова: цитадель первой, победа фиксируется на последнем оплоте', () => {
+    const w = citadelFresh();
+    w.heroes[BODY].node = 7; w.ap[BODY] = 5; w.own = w.own.slice(0, 7) + '1' + w.own.slice(8);
+    M.engage(w, BODY, D.LAIR); assert.equal(w.done, false);
+    for (const f of [1, 2, 3]) {
+        w.ap[BODY] = 9; const r = takeBastion(w, f);
+        assert.equal(r.win, true, 'оплот ' + f + ' взят'); assert.equal(w.fac[f].dead, 1);
+        assert.equal(w.done, f === 3, 'done только после пятого логова'); assert.equal(M.lairsLeft(w), 3 - f);
+    }
+    assert.equal(M.allLairsFallen(w), true); assert.equal(M.seasonOver(w), true);
+});
+
+test('победа = пали ВСЕ логова: сезон без победы заканчивается по неделям', () => {
+    const w = citadelFresh(); w.wk = D.C.SEASON_WEEKS; assert.equal(w.done, false); assert.equal(M.seasonOver(w), true);
 });
 
 test('тени: окно 7 дней; честный пропуск весит вдвое меньше молчаливого', () => {

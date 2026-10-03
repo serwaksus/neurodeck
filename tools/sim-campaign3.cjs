@@ -3,14 +3,14 @@
 // ============================================================
 // NeuroDeck — симулятор Кампании 3.0, Фаза 6 (4 героя-сферы, 33 узла, 4 ИИ-фракции, потеря городов, тактики, навыки, святилища, наследие, обелиски, новые карты).
 // Чистая Node-симуляция на РЕАЛЬНОЙ модели js/campaign3/c3-model.js: профили дисциплины × 3 сида × 26 недель,
-// бот-игрок с простой политикой (зачистка своего региона → сбор армий → штурм логова).
+// бот-игрок с простой политикой (зачистка своего региона → помощь отставшему региону → сбор армий → штурм Цитадели: победа = пали все 5 логов).
 // Гейты — рельсы против катастрофического дисбаланса, не тонкая настройка:
 //  C4 без дел очки движения не появляются, герои стоят в городах;
 //  C7 детерминизм: тот же сид и профиль → тот же хеш состояния;
 //  C6 размер сейва ≤ 4 КБ (общий кап c3 ≤ 8 КБ);
 //  C5 действий игрока ≤ 20 в день (10–15 минут в стратегии);
 //  C9 сфера не качается чужими делами: без дел Духа герой Духа не выходит из города и армия мира слабее;
-//  C1 дисциплина 70 %: логово Лени падает за 8–18 недель на каждом сиде;
+//  C1 дисциплина 70 %: карта пройдена (пали все 5 логов) за 8–18 недель на каждом сиде;
 //  C2 дисциплина 40 %: карта проходима ≤ 26 недель, города целы;
 //  C8 дисциплина окупается (медианы недель победы монотонны);
 //  C3 дисциплина 10 %: игра не «умирает» — хотя бы один город цел (последний не падает), армии живы, герои выходят за город; при 40 % остаётся ≥ 3 городов;
@@ -56,7 +56,7 @@ function econ(s, h, count) {
   }
   return a;
 }
-const OPTS = { tactics: true };
+const OPTS = { tactics: true, helpLast: true }; // helpLast: зачищенный герой помогает взять оплот отставшего региона
 function goTo(s, h, target) {
   let a = 0;
   for (let g = 0; g < 12; g++) {
@@ -89,14 +89,20 @@ function bot(s) {
   const doneH = [0, 1, 2, 3].filter((h) => s.own.charAt(forts[h]) === '1' || s.fac[h].dead); // регион зачищен: оплот взят
   const rallyPower = doneH.reduce((x, h) => x + M.armyPower(s, h), 0);
   const lairDef = M.nodeDefense(s, D.LAIR);
-  const rally = doneH.includes(0) && rallyPower >= lairDef * 1.35;
+  const rally = doneH.length === 4 && rallyPower >= lairDef * 1.35;
   const rallyNode = 7;
   for (let h = 0; h < 4; h++) {
     if (s.done) break;
     if (rally && doneH.includes(h) && h > 0) { actions += goTo(s, h, rallyNode); if (s.heroes[h].node === rallyNode) { M.transferAll(s, h, 0); actions++; } continue; }
     if (rally && h === 0) continue;
     const t = regionTargets(s, h)[0];
-    if (t === undefined) { if (M.townAt(s, h) < 0 && s.ap[h] > 0) actions += goTo(s, h, D.TOWNS[h]); continue; } // регион зачищен — домой нанимать
+    if (t === undefined) { // регион зачищен: сильнейший такой герой помогает взять оплот отставшего региона (победа — все 5 логов), остальные — домой нанимать
+        const stuck = [0, 1, 2, 3].filter((u) => !doneH.includes(u));
+        const lead = doneH.slice().sort((x, y) => M.armyPower(s, y) - M.armyPower(s, x) || x - y)[0];
+        const fort = stuck.map((u) => forts[u]).sort((x, y) => M.nodeDefense(s, x) - M.nodeDefense(s, y))[0];
+        if (OPTS.helpLast && h === lead && fort !== undefined && M.armyPower(s, h) >= M.nodeDefense(s, fort) * 1.3) { actions += goTo(s, h, fort); continue; }
+        if (M.townAt(s, h) < 0 && s.ap[h] > 0) actions += goTo(s, h, D.TOWNS[h]); continue;
+    }
     const rt = M.route(s, h, t);
     const hostile = rt && rt.battleNode !== null ? rt.battleNode : (rt && rt.steps.length === 0 ? t : null);
     const def = M.nodeDefense(s, hostile !== null ? hostile : t);
@@ -187,14 +193,16 @@ console.log(' без дел Духа (70 %): победа на неделе ' + 
 gate('C9', noSpirit.apGained[2] === 0 && noSpirit.maxFar[2] === 0 && noSpirit.state.heroes[2].node === D.TOWNS[2] && noSpirit.apGained[0] > 0, 'без дел Духа герой Духа стоит в городе, остальные играют (ОД ' + noSpirit.apGained.join('/') + ')');
 // C1/C2/C3/C8
 const wk = (p) => res[p].map((r) => r.doneWeek);
-gate('C1', wk(0.7).every((w) => w !== null && w >= 8 && w <= 18), 'дисциплина 70 %: логово падает за 8–18 недель (' + wk(0.7).join(', ') + ')');
+gate('C1', wk(0.7).every((w) => w !== null && w >= 8 && w <= 18), 'дисциплина 70 %: все 5 логов падают за 8–18 недель (' + wk(0.7).join(', ') + ')');
 gate('C2', wk(0.4).every((w) => w !== null && w <= 26), 'дисциплина 40 %: карта проходима ≤ 26 недель (' + wk(0.4).join(', ') + ')');
 const med = (p) => { const v = res[p].map((r) => r.doneWeek === null ? Infinity : r.doneWeek).sort((a, b) => a - b); return v[1]; };
 gate('C8', med(0.9) < med(0.7) && med(0.7) < med(0.4) && med(0.4) <= med(0.1), 'дисциплина окупается: медианы недель победы 90/70/40/10 % = ' + [0.9, 0.7, 0.4, 0.1].map(med).join(' < '));
 const low = res[0.1], mid = res[0.4];
 gate('C3', low.every((r) => r.towns >= 1 && r.armyPower > 0 && r.maxFar.some((v) => v >= 2)) && mid.every((r) => r.towns >= 3), 'дисциплина 10 %: ≥ 1 города, армии живы, герои выходят за город (города ' + low.map((r) => r.towns).join(', ') + '); 40 %: ≥ 3 городов (' + mid.map((r) => r.towns).join(', ') + ')');
 // C10: фракция сферы, которую запустили, занимает больше всех
+OPTS.helpLast = false; // C10 меряет отклик самой фракции, а не умение бота её сломать помощью соседа
 const gloom = run(0.9, 11, { skipSphere: 'spirit' });
+OPTS.helpLast = true;
 const others = Math.max(gloom.facNodes[0], gloom.facNodes[1], gloom.facNodes[3]);
 gate('C10', gloom.facNodes[2] >= others + 2 && gloom.facNodes[2] >= 4, 'без дел Духа Уныние сильнее остальных: узлы фракций ' + gloom.facNodes.join('/'));
 

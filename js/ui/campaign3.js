@@ -108,7 +108,7 @@
             var f = M.forecast(s, h, selN), fo2 = M.facOf(s.own.charAt(selN));
             if (fo2 >= 0) html += '<div class="c3-dline c3-bad">Под властью «' + e(D.FACTIONS[fo2].name) + '»' + (n.type === 'town' ? ' — освободи город: он снова растит армию' : (selN === D.FACTIONS[fo2].bastion ? ' — разгром оплота обезвредит фракцию' : '')) + '.</div>';
             html += '<div class="c3-dline">Оборона <b>' + f.def + '</b> · сила ' + e(D.HERO_NAME[SPH[h]]) + ' <b>' + f.atk + '</b> · ' + (f.win ? '<span class="c3-ok">перевес ' + ratioTxt(f.ratio) + '</span>' : '<span class="c3-bad">слабее (' + ratioTxt(f.ratio) + ')</span>') + '</div>';
-            if (selN === D.LAIR) html += '<div class="c3-dline">Сила цитадели растёт от срывов всех сфер: ×' + M.lairMult(s).toFixed(2) + '. Соберите армии героев в одном узле — штурм ведёт один герой.</div>';
+            if (selN === D.LAIR) html += '<div class="c3-dline">Сила цитадели растёт от срывов всех сфер: ×' + M.lairMult(s).toFixed(2) + '. Соберите армии героев в одном узле — штурм ведёт один герой. Победа — когда падут все 5 логов: 4 оплота фракций и цитадель.</div>';
             if (f.adjacent) {
                 acts += btn(tacOpen === selN ? '✕ Отмена' : '⚔ Штурм (' + f.ap + ' ОД)', { primary: tacOpen !== selN, data: 'data-c3="atk" data-n="' + selN + '"' }, s.ap[h] >= f.ap, 'Не хватает очков движения');
                 if (tacOpen === selN) html += tacticsHtml(s, h, selN);
@@ -166,11 +166,11 @@
             return '<button type="button" class="c3-tab' + (i === selH ? ' is-active' : '') + '" data-c3="hero" data-h="' + i + '" aria-pressed="' + (i === selH) + '">' + medal(HERO_ART[sp], TONE[sp], 'c3-tabicon') + '<span class="c3-tabname">' + e(D.SPHERE_NAME[sp]) + '</span><span class="c3-tabap" title="Очки движения">' + s.ap[i] + ' ОД</span></button>';
         }).join('');
         var html = '<section class="c3" aria-label="Кампания 3.0 (бета)">' +
-            '<div class="c3-head"><span class="c3-title">🗺 Кампания 3.0 <span class="c3-beta">бета</span></span><span class="c3-week">карта ' + s.mp + (s.cyc ? ' (+' + Math.round(D.C.CYC_K * 100 * s.cyc) + '%)' : '') + ' · нед. ' + (s.wk + 1) + '/' + D.C.SEASON_WEEKS + '</span></div>' +
+            '<div class="c3-head"><span class="c3-title">🗺 Кампания 3.0 <span class="c3-beta">бета</span></span><span class="c3-week">карта ' + s.mp + (s.cyc ? ' (+' + Math.round(D.C.CYC_K * 100 * s.cyc) + '%)' : '') + ' · логова ' + (5 - M.lairsLeft(s)) + '/5 · нед. ' + (s.wk + 1) + '/' + D.C.SEASON_WEEKS + '</span></div>' +
             '<div class="c3-tabs" role="group" aria-label="Герои">' + tabs + '</div>' +
             '<div class="c3-stats">' + resChips(s) + '</div>' +
             '<div class="c3-hline"><b>' + e(D.HERO_NAME[SPH[selH]]) + '</b> ур. ' + hero.lvl + ' · сила <b>' + M.armyPower(s, selH) + '</b> · ' + armyLine(hero.army) + ' · ОД сегодня +' + s.apDay[selH] + '/' + D.C.AP_CAP_DAY + '<br>' + skillLine(s, selH) + '</div>' +
-            (s.done ? '<div class="c3-done">🏆 Цитадель Пороков пала — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
+            (s.done ? '<div class="c3-done">🏆 Все логова пали — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
             (M.seasonOver(s) ? '<div class="c3-done">' + (s.done ? 'Следующая карта сложнее на ' + Math.round(D.C.CYC_K * 100 * ((s.cyc || 0) + 1)) + '%, часть силы перенесётся.' : 'Сезон (' + D.C.SEASON_WEEKS + ' недель) закончился.') + ' <button type="button" class="c3-mini" data-c3="newmap">🗺 Новая карта</button></div>' : '') +
             '<div class="c3-mapwrap"><div class="c3-map">' + edgesHtml(s) + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' +
             detailHtml(s) +
