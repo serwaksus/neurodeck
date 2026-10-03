@@ -384,8 +384,9 @@
     function dayEnd(s, nextDay, input) {
         input = input || {};
         var sl = perSphere(input.silent), hn = perSphere(input.honest), ov = perSphere(input.overdue), shadows = zeros(4);
+        var rest = isRestDay(s, s.day); // закрываем объявленный отдых: теней нет (молчание, честный пропуск и просрочка)
         for (var f = 0; f < 4; f++) {
-            shadows[f] = s.lz.on ? 0 : sl[f] + 0.5 * hn[f] + ov[f]; // лазарет: срывы не копятся
+            shadows[f] = (s.lz.on || rest) ? 0 : sl[f] + 0.5 * hn[f] + ov[f]; // лазарет и отдых: срывы не копятся
             s.fac[f].sh.push(shadows[f]); while (s.fac[f].sh.length > 7) s.fac[f].sh.shift();
         }
         if (s.lz.on) { s.lz.left = Math.max(0, s.lz.left - 1); if (s.lz.left === 0) s.lz.on = 0; }
@@ -397,6 +398,7 @@
         s.apDay = zeros(4); s.tasksToday = 0; s.deedsToday = 0; s.dc = zeros(4);
         for (var o = 0; o < 4; o++) if (s.ob[o] === 1) { s.ob[o] = 0; s.obb[o] = 0; } // непринятый за сутки челлендж обелиска сгорает; взятая награда (2) остаётся
         s.day = String(nextDay);
+        if (restArr(s).some(function(k) { return k < nextDay; })) s.rest = restArr(s).filter(function(k) { return k >= nextDay; }); // прошедшие дни вычищаются
         return { shadows: shadows };
     }
 
@@ -471,6 +473,39 @@
         return { ok: true };
     }
     function revokeTruce(s, f) { if (!s.fac[f].truce) return { ok: false, reason: 'none' }; s.fac[f].truce = 0; return { ok: true }; }
+
+    // ---------- объявленный отдых (решение владельца: отдых 1–2 дня в неделю объявляется ЗАРАНЕЕ) ----------
+    var DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+    function msOfDay(day) { return Date.parse(day + 'T00:00:00Z'); }
+    function dayAdd(day, n) { return new Date(msOfDay(day) + n * 86400000).toISOString().slice(0, 10); }
+    function dayDiff(a, b) { return Math.round((msOfDay(b) - msOfDay(a)) / 86400000); }
+    function weekKey(day) { return dayAdd(day, -((new Date(msOfDay(day)).getUTCDay() + 6) % 7)); } // понедельник недели дня
+    function restArr(s) { return Array.isArray(s.rest) ? s.rest : []; } // поле необязательное: старые сейвы без него — пустой список
+    function isRestDay(s, dayKey) { return restArr(s).indexOf(String(dayKey)) >= 0; }
+    function restInWeek(s, dayKey) { var wk = weekKey(String(dayKey)); return restArr(s).filter(function(k) { return weekKey(k) === wk; }).length; }
+    function restLeft(s, dayKey) { return Math.max(0, C.REST_PER_WEEK - restInWeek(s, dayKey)); }
+    function declareRest(s, dayKey) {
+        var day = String(dayKey || '');
+        if (!DAY_RE.test(day) || !DAY_RE.test(s.day)) return { ok: false, reason: 'arg' };
+        var diff = dayDiff(s.day, day);
+        if (diff <= 0) return { ok: false, reason: 'past' };
+        if (diff > C.REST_AHEAD) return { ok: false, reason: 'far' };
+        if (isRestDay(s, day)) return { ok: false, reason: 'dup' };
+        if (restLeft(s, day) <= 0) return { ok: false, reason: 'cap' };
+        if (!Array.isArray(s.rest)) s.rest = [];
+        s.rest.push(day); s.rest.sort();
+        while (s.rest.length > C.REST_MAX) s.rest.shift(); // при мусорном переполнении выпадают старые (уже прошедшие) дни
+        pushLog(s, '🌙 Отдых ' + day + ' объявлен: день пройдёт без теней');
+        return { ok: true };
+    }
+    function cancelRest(s, dayKey) { // отмена — только пока день ещё будущий
+        var day = String(dayKey || ''), i = restArr(s).indexOf(day);
+        if (i < 0) return { ok: false, reason: 'none' };
+        if (dayDiff(s.day, day) <= 0) return { ok: false, reason: 'past' };
+        s.rest.splice(i, 1);
+        pushLog(s, '🌙 Отдых ' + day + ' отменён');
+        return { ok: true };
+    }
 
     // ---------- ход фракций (большой ход недели) ----------
     function factionNodes(s, f) { var out = [], code = facCode(f); for (var i = 0; i < N; i++) if (s.own.charAt(i) === code) out.push(i); return out; }
@@ -563,6 +598,7 @@
         townAt: townAt, hire: hire, hireGold: hireGold, resNeed: resNeed, dwellingCost: dwellingCost, buildDwelling: buildDwelling, hallCost: hallCost, buyHall: buyHall,
         transfer: transfer, transferAll: transferAll,
         dayEnd: dayEnd, weekEnd: weekEnd, lazaretStart: lazaretStart, lazaretEnd: lazaretEnd, declareTruce: declareTruce, revokeTruce: revokeTruce,
+        declareRest: declareRest, cancelRest: cancelRest, isRestDay: isRestDay, restLeft: restLeft, weekKey: weekKey,
         ADJ: ADJ
     };
 });

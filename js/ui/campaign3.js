@@ -140,6 +140,14 @@
             '<li class="c3-frow"><span class="c3-fname">Армия</span><span class="c3-fstat">+' + lg.a + ' 🗡 каждому герою</span></li>' +
             '<li class="c3-frow"><span class="c3-fname">Уровни героев</span><span class="c3-fstat">' + lg.l.join(' / ') + ' — от твоих характеристик</span></li></ul></details>';
     }
+    function nextDayKey(day) { return new Date(Date.parse(day + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10); }
+    function restPanel(s) { // «объявленный отдых»: заранее обещанный день без теней (UI предлагает только завтра)
+        var tm = nextDayKey(s.day), on = M.isRestDay(s, tm), left = M.restLeft(s, tm);
+        var b = on
+            ? '<button type="button" class="c3-mini" data-c3="rest-off" title="День снова обычный">✕ Отменить отдых на завтра</button>'
+            : '<button type="button" class="c3-mini" data-c3="rest-on"' + (left > 0 ? '' : ' disabled title="Лимит недели: ' + D.C.REST_PER_WEEK + ' дня"') + '>🌙 Объявить отдых на завтра</button>';
+        return '<div class="c3-lz">🌙 Отдых: объявлено: <b>' + (D.C.REST_PER_WEEK - left) + '</b> из ' + D.C.REST_PER_WEEK + ' на этой неделе · ' + b + '</div>';
+    }
     function facPanel(s) {
         var anyTruce = s.fac.some(function(f) { return f.truce; });
         var rows = D.FACTIONS.map(function(F, f) {
@@ -174,6 +182,7 @@
             (M.seasonOver(s) ? '<div class="c3-done">' + (s.done ? 'Следующая карта сложнее на ' + Math.round(D.C.CYC_K * 100 * ((s.cyc || 0) + 1)) + '%, часть силы перенесётся.' : 'Сезон (' + D.C.SEASON_WEEKS + ' недель) закончился.') + ' <button type="button" class="c3-mini" data-c3="newmap">🗺 Новая карта</button></div>' : '') +
             '<div class="c3-mapwrap"><div class="c3-map">' + edgesHtml(s) + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' +
             detailHtml(s) +
+            restPanel(s) +
             facPanel(s) + legacyPanel(s) +
             '<div class="c3-shadow">🌑 Тени пороков за 7 дней: <b>' + (Math.round(sum * 10) / 10) + '</b> → сила цитадели ×' + M.lairMult(s).toFixed(2) + '</div>' +
             (s.log.length ? '<ul class="c3-log">' + s.log.slice().reverse().map(function(l) { return '<li><i>' + e(l.d.slice(5)) + '</i> ' + e(l.t) + '</li>'; }).join('') + '</ul>' : '') +
@@ -198,6 +207,8 @@
         if (act === 'dw') { NDC3.act.dwelling(selH, el.dataset.t); return; }
         if (act === 'hall') { NDC3.act.hall(selH); return; }
         if (act === 'truce') { NDC3.act.truce(parseInt(el.dataset.f, 10), el.dataset.on === '1'); return; }
+        if (act === 'rest-on') { NDC3.act.declareRest(nextDayKey(s.day)); return; }
+        if (act === 'rest-off') { NDC3.act.cancelRest(nextDayKey(s.day)); return; }
         if (act === 'lazaret') {
             var on = el.dataset.on === '1';
             if (!on || typeof dungeonConfirm !== 'function') { NDC3.act.lazaret(on); return; }

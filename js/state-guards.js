@@ -493,6 +493,12 @@
             gar: arr(src.gar, N, 0, 100000, 0), towns: towns, fac: facs, sg: arr(src.sg, 4, 0, 10, 0), lz: { on: lz.on ? 1 : 0, left: int(lz.left, 0, 30, 7) }, log: log, done: src.done === true
         };
         if (src.lg && typeof src.lg === 'object') out.lg = { g: int(src.lg.g, 0, 2000, 0), hall: arr(src.lg.hall, 4, 0, 1, 0), sk: arr(src.lg.sk, 4, 0, 1, 0), a: int(src.lg.a, 0, 1000, 0), l: arr(src.lg.l, 4, 1, 4, 1) }; // наследие 2.0 — для экрана «Наследие»
+        if (src.rest !== undefined) { // Кампания 3.0: объявленный отдых — ключи дней (YYYY-MM-DD), уникальные и ≤ 14; ленивое поле — байт-стабильный раундтрип старых сейвов
+            var seenRest = {}, rest = [];
+            (Array.isArray(src.rest) ? src.rest : []).forEach(function(k) { if (typeof k === 'string' && DATE.test(k) && !seenRest[k]) { seenRest[k] = 1; rest.push(k); } });
+            rest.sort();
+            out.rest = rest.slice(-14); // при переполнении остаются самые поздние (будущие)
+        }
         return out;
     }
 

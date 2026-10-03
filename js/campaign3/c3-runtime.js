@@ -138,6 +138,8 @@
                 hall: function(h) { if (!ensure()) return null; var r = M.buyHall(state, h); env.save(); env.render(); return r; },
                 dwelling: function(h, tier) { if (!ensure()) return null; var r = M.buildDwelling(state, h, tier); env.save(); env.render(); return r; },
                 lazaret: function(on) { if (!ensure()) return null; var r = on ? M.lazaretStart(state) : M.lazaretEnd(state); env.save(); env.render(); return r; },
+                declareRest: function(dayKey) { if (!ensure()) return null; var r = M.declareRest(state, dayKey); env.save(); env.render(); return r; }, // объявленный отдых на будущий день
+                cancelRest: function(dayKey) { if (!ensure()) return null; var r = M.cancelRest(state, dayKey); env.save(); env.render(); return r; },
                 truce: function(f, on) { if (!ensure()) return null; var r = on ? M.declareTruce(state, f) : M.revokeTruce(state, f); env.save(); env.render(); return r; },
                 obelisk: function(h, claim) {
                     if (!ensure()) return null;
