@@ -13,3 +13,6 @@ test-results/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# локальные настройки Claude Code (содержат разрешения)
+.claude/settings.local.json

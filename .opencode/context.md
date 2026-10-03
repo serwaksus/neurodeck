@@ -44,11 +44,11 @@
 ## Global Skills (always available, 21)
 `android-native-dev`, `buddy-sings`, `conventional-commits`, `flutter-dev`, `frontend-dev`, `fullstack-dev`, `gif-sticker-maker`, `glm-quota`, `ios-application-dev`, `minimax-docx`, `mmx-cli`, `minimax-music-gen`, `minimax-music-playlist`, `minimax-pdf`, `minimax-xlsx`, `opencode-skill-creator`, `pptx-generator`, `prompt-injection-defense`, `react-native-dev`, `vision-analysis`
 
-## Кампания 3.0 (бета, флаг по умолчанию ВЫКЛЮЧЕН)
+## Кампания 3.0 (включена по умолчанию с 2026-10-03; выключить: `localStorage.nd_c3='0'` или `?c3=0`)
 Стратегический слой «реальные дела → очки движения героев → карта против фракций пороков»; работает параллельно с твердынями 2.0, сейв — необязательный ключ `c3` при схеме v14.
 
 - Дизайн и статус: [docs/plan/CAMPAIGN-3.0.md](../docs/plan/CAMPAIGN-3.0.md) · незакрытые пункты: [docs/audit/AUDIT-2026-10-03-CAMPAIGN3.md](../docs/audit/AUDIT-2026-10-03-CAMPAIGN3.md)
-- Флаг беты: `localStorage.nd_c3 = '1'` или `?c3=1` / `?c3=0`; тумблер — «Синхронизация» → «Кампания 3.0 (бета)».
+- Флаг: по умолчанию включён; `localStorage.nd_c3 = '0'` или `?c3=0` выключает, `'1'` или `?c3=1` включает; тумблер — «Синхронизация» → «Кампания 3.0 (бета)».
 - Модули: `js/campaign3/c3-{data,model,runtime}.js` (чистая модель тестируется в Node) + ленивый `js/campaign3/c3-loader.js` (≈1 КБ в index.html, остальные ≈75 КБ грузятся только при бете и не в прекэше); UI — `js/ui/campaign3.js` + `css/campaign3.css`; санитайзер `sanitizeC3` в `js/state-guards.js`.
 - Проверки: юниты `tests/c3-*.test.js` (`npm test`), симулятор `npm run test:sim:c3` (гейты C1–C13), e2e `tests/e2e/campaign3-*.test.js` (`ND_E2E_PORT=<порт> npx playwright test tests/e2e/campaign3-<файл>`).
 - Не трогать без решения владельца: условие победы (`lairsLeft`/`allLairsFallen`), объявленный отдых (`declareRest`/`cancelRest`/`isRestDay`), буфер `window.__ndC3Early`/`ND_SPHERE_OF_STAT` в app.js.
