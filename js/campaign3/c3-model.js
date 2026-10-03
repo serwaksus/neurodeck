@@ -561,6 +561,8 @@
         s.log.forEach(function(l) { if (l.d === s.day && /взял: |освободил город|оплот взят|пала/.test(l.t)) taken++; });
         s.eot = s.day;
         return { ok: true, apLeft: apLeft, deeds: s.deedsToday, taken: taken, shadows: Math.round(pendSh * 10) / 10 };
+    }
+
     // ---------- «освобождение» города (план: первые 7 дней после отбивания оборона −30%) ----------
     // lib[t] — день освобождения города t (ленивое необязательное поле, как rest; 0 — штраф прошёл или город не освобождали)
     function freedLeft(s, t) {
