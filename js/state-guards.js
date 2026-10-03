@@ -193,7 +193,29 @@
                 }
                 return out;
             })(hero.combosToday),
-            comboDayXp: (hero.comboDayXp === 1.1) ? 1.1 : null // Г2-4: Вихрь — единственное допустимое значение
+            comboDayXp: (hero.comboDayXp === 1.1) ? 1.1 : null, // Г2-4: Вихрь — единственное допустимое значение
+            dayFlags: (function(f) { // Ф0.5: флаги суток {day, chests, reroll, goal} — иначе null (создаётся лениво)
+                if (!f || typeof f !== 'object' || Array.isArray(f) || !/^\d{4}-\d{2}-\d{2}$/.test(String(f.day))) return null;
+                return { day: f.day, chests: Math.round(clampNumber(f.chests, 0, 1000, 0)), reroll: f.reroll === true, goal: f.goal === true };
+            })(hero.dayFlags),
+            pomodoro: (function(p) { // Ф0.5 (аудит 2026-10-03): помодоро в сейве {active: {id: конец-мс}, done: {"id_день": "день"}} — иначе null; капы чужих дней не храним
+                if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+                var active = {}, a = (p.active && typeof p.active === 'object' && !Array.isArray(p.active)) ? p.active : {};
+                Object.keys(a).slice(0, 20).forEach(function(id) { // живых таймеров ≤ числа карточек — 20 с запасом
+                    if (!/^\d{1,9}$/.test(id)) return;
+                    var end = Number(a[id]);
+                    if (!Number.isFinite(end) || end <= 0 || end >= 8.64e15) return; // битая дата — мусор; истёкший валиден, награду выдаст sweep
+                    active[id] = Math.round(end);
+                });
+                var today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); // МСК-день, как getMSKDayKey в app.js
+                var done = {}, dn = (p.done && typeof p.done === 'object' && !Array.isArray(p.done)) ? p.done : {};
+                Object.keys(dn).slice(0, 100).forEach(function(k) {
+                    var m = /^(\d{1,9})_(\d{4}-\d{2}-\d{2})$/.exec(k);
+                    if (!m || dn[k] !== m[2] || m[2] !== today) return; // ключ согласован со значением и это сегодня; вчерашние хвосты капов не нужны
+                    done[k] = m[2];
+                });
+                return (Object.keys(active).length || Object.keys(done).length) ? { active: active, done: done } : null;
+            })(hero.pomodoro)
         };
     }
 
@@ -417,12 +439,74 @@
         var assaultDay = (typeof src.assaultDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(src.assaultDay)) ? src.assaultDay : null;
         var wkSkips = Math.round(clampNumber(src.wkSkips, 0, 1000, 0));
         var wkTaskFails = Math.round(clampNumber(src.wkTaskFails, 0, 1000, 0));
+        var wkHonest = Math.round(clampNumber(src.wkHonest, 0, 1000, 0)); // Ф0.1: честные пропуски недели (весят вдвое меньше молчаливых)
         var rams = Math.round(clampNumber(src.rams, 0, 999, 0)); // C4: осадные ресурсы (схема v12) — счётчики, всегда в выходе
         var ladders = Math.round(clampNumber(src.ladders, 0, 999, 0));
         var stance = ['assault', 'defend', 'scout', 'economy'].indexOf(src.stance) >= 0 ? src.stance : null; // Г4: стойка недели
         var approach = ['assault', 'siege', 'trick'].indexOf(src.approach) >= 0 ? src.approach : 'assault'; // P11: подход недели персистентный (схема v14), дефолт — норма «Штурм»
         var out = { week: Math.round(clampNumber(src.week, 1, 520, 1)), lastResult: last, assaultDay: assaultDay, wkSkips: wkSkips, wkTaskFails: wkTaskFails, retriedThisWeek: src.retriedThisWeek === true, rams: rams, ladders: ladders, approach: approach };
+        if (src.wkHonest !== undefined) out.wkHonest = wkHonest; // лениво — байт-стабильный раундтрип старых сейвов
         if (src.stance !== undefined) out.stance = stance; // Г4: лениво — байт-стабильный раундтрип сейвов без стойки
+        return out;
+    }
+
+    // Кампания 3.0, Ф6: состояние c3 (33 узла, 4 героя-сферы, 4 фракции, навыки, наследие, обелиски, номер карты). Невосстановимое (v1–v5 прежних фаз беты) → null: рантайм начнёт карту заново.
+    function sanitizeC3(input) {
+        if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+        var N = 33, DATE = /^\d{4}-\d{2}-\d{2}$/;
+        if (input.v !== 6 || typeof input.own !== 'string' || input.own.length !== N || !/^[0-6]+$/.test(input.own) || typeof input.day !== 'string' || !DATE.test(input.day)) return null;
+        function int(v, lo, hi, d) { return Math.round(clampNumber(v, lo, hi, d)); }
+        function arr(a, len, lo, hi, d) { var out = []; for (var i = 0; i < len; i++) out.push(int(Array.isArray(a) ? a[i] : d, lo, hi, d)); return out; }
+        var src = input, res = (src.res && typeof src.res === 'object') ? src.res : {}, pend = (src.pend && typeof src.pend === 'object') ? src.pend : {};
+        var i;
+        var lz = (src.lz && typeof src.lz === 'object') ? src.lz : {};
+        var heroes = [], towns = [];
+        for (i = 0; i < 4; i++) {
+            var h = (Array.isArray(src.heroes) && src.heroes[i] && typeof src.heroes[i] === 'object') ? src.heroes[i] : {};
+            var army = (h.army && typeof h.army === 'object') ? h.army : {};
+            heroes.push({ node: int(h.node, 0, N - 1, 8 * i), lvl: int(h.lvl, 1, 99, 1), xp: int(h.xp, 0, 100000, 0), sk: int(h.sk, 0, 3, 0),
+                army: { t1: int(army.t1, 0, 1e6, 0), t3: int(army.t3, 0, 1e6, 0), t5: int(army.t5, 0, 1e6, 0) } });
+            var t = (Array.isArray(src.towns) && src.towns[i] && typeof src.towns[i] === 'object') ? src.towns[i] : {};
+            var pool = (t.pool && typeof t.pool === 'object') ? t.pool : {}, dw = (t.dw && typeof t.dw === 'object') ? t.dw : {};
+            var town = { pool: { t1: int(pool.t1, 0, 1000, 0), t3: int(pool.t3, 0, 1000, 0), t5: int(pool.t5, 0, 1000, 0) },
+                dw: { t3: dw.t3 ? 1 : 0, t5: (dw.t3 && dw.t5) ? 1 : 0 }, hall: int(t.hall, 0, 3, 0) };
+            if (t.gar !== undefined) town.gar = int(t.gar, 0, 100000, 40); // Кампания 3.0: собственный гарнизон города — ленивое поле (байт-стабильный раундтрип старых сейвов)
+            towns.push(town);
+        }
+        var facs = [];
+        for (i = 0; i < 4; i++) {
+            var fz = (Array.isArray(src.fac) && src.fac[i] && typeof src.fac[i] === 'object') ? src.fac[i] : {}, sh = [];
+            for (var d = 0; d < 7; d++) sh.push(clampNumber(Array.isArray(fz.sh) ? fz.sh[d] : 0, 0, 100, 0));
+            var lost = [];
+            (Array.isArray(fz.lost) ? fz.lost : []).forEach(function(x) { x = int(x, 0, N - 1, 0); if (lost.indexOf(x) < 0 && lost.length < 8) lost.push(x); }); // узлы, взятые игроком на текущей неделе (контратака ИИ)
+            facs.push({ sh: sh, dead: fz.dead ? 1 : 0, truce: (fz.truce && !fz.dead) ? 1 : 0, lost: lost });
+        }
+        var truces = 0; facs.forEach(function(f) { if (f.truce) { truces++; if (truces > 1) f.truce = 0; } }); // не больше одного обета
+        var log = (Array.isArray(src.log) ? src.log : []).slice(-6).filter(function(e) { return e && typeof e === 'object'; }).map(function(e) {
+            return { d: DATE.test(String(e.d)) ? e.d : src.day, t: safeString(e.t, '', 90) };
+        });
+        var own = src.own; // города (индексы 0, 8, 16, 24) всегда игрока
+        [0, 8, 16, 24].forEach(function(c) { own = own.slice(0, c) + '1' + own.slice(c + 1); });
+        var out = {
+            v: 6, day: src.day, wk: int(src.wk, 0, 520, 0), idle: int(src.idle, 0, 100000, 0), bc: int(src.bc, 0, 10000000, 0), stk: arr(src.stk, 4, 0, 99, 0), dc: arr(src.dc, 4, 0, 99, 0), ob: arr(src.ob, 4, 0, 2, 0), obb: arr(src.obb, 4, 0, 99, 0), cyc: int(src.cyc, 0, 99, 0), mp: int(src.mp, 1, 999, 1),
+            tasksToday: int(src.tasksToday, 0, 5, 0), deedsToday: int(src.deedsToday, 0, 1000, 0),
+            ap: arr(src.ap, 4, 0, 20, 0), apDay: arr(src.apDay, 4, 0, 6, 0), apWeek: arr(src.apWeek, 4, 0, 1000, 0),
+            pend: { s: arr(pend.s, 4, 0, 1000, 0), h: arr(pend.h, 4, 0, 1000, 0), o: arr(pend.o, 4, 0, 1000, 0) },
+            res: { g: int(res.g, 0, 1e9, 0), st: int(res.st, 0, 1e6, 0), kn: int(res.kn, 0, 1e6, 0), wl: int(res.wl, 0, 1e6, 0), in: int(res['in'], 0, 1e6, 0) },
+            heroes: heroes, own: own, seen: (typeof src.seen === 'string' && src.seen.length === N && /^[01]+$/.test(src.seen)) ? src.seen : '0'.repeat(N),
+            gar: arr(src.gar, N, 0, 100000, 0), towns: towns, fac: facs, sg: arr(src.sg, 4, 0, 10, 0), lz: { on: lz.on ? 1 : 0, left: int(lz.left, 0, 30, 7) }, log: log, done: src.done === true
+        };
+        if (src.lg && typeof src.lg === 'object') out.lg = { g: int(src.lg.g, 0, 2000, 0), hall: arr(src.lg.hall, 4, 0, 1, 0), sk: arr(src.lg.sk, 4, 0, 1, 0), a: int(src.lg.a, 0, 1000, 0), l: arr(src.lg.l, 4, 1, 4, 1) }; // наследие 2.0 — для экрана «Наследие»
+        if (src.rest !== undefined) { // Кампания 3.0: объявленный отдых — ключи дней (YYYY-MM-DD), уникальные и ≤ 14; ленивое поле — байт-стабильный раундтрип старых сейвов
+            var seenRest = {}, rest = [];
+            (Array.isArray(src.rest) ? src.rest : []).forEach(function(k) { if (typeof k === 'string' && DATE.test(k) && !seenRest[k]) { seenRest[k] = 1; rest.push(k); } });
+            rest.sort();
+            out.rest = rest.slice(-14); // при переполнении остаются самые поздние (будущие)
+        }
+        if (typeof src.eot === 'string' && DATE.test(src.eot) && src.eot === src.day) out.eot = src.eot; // Кампания 3.0: «Закончить ход» — ключ текущего дня, сбрасывается в dayEnd; ленивое поле — мусор и чужой день выбрасываются
+        if (src.lib !== undefined) { // Кампания 3.0: день освобождения города (0 или YYYY-MM-DD по 4 городам) — ленивое поле «освобождение»
+            out.lib = [0, 1, 2, 3].map(function(k) { var v = Array.isArray(src.lib) ? src.lib[k] : 0; return (typeof v === 'string' && DATE.test(v)) ? v : 0; });
+        }
         return out;
     }
 
@@ -526,6 +610,7 @@
         sanitizeSiege: sanitizeSiege,
         sanitizeHirePool: sanitizeHirePool,
         sanitizeSeason: sanitizeSeason,
+        sanitizeC3: sanitizeC3, // Кампания 3.0, Ф6
         sanitizeDailyQuests: sanitizeDailyQuests,
         sanitizeBloodOath: sanitizeBloodOath,
         sanitizeStorm: sanitizeStorm // Г1-5

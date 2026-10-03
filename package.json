@@ -4,11 +4,11 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "check:js": "node --check js/state-guards.js && node --check js/state/store.js && node --check js/ui/strongholds.js && node --check js/perf.js && node --check js/audio.js && node --check js/storage.js && node --check js/app.js",
-    "check:ui": "node tests/verify-ui-assets.cjs css/style.css index.html",
+    "check:js": "node --check js/state-guards.js && node --check js/state/store.js && node --check js/ui/strongholds.js && node --check js/perf.js && node --check js/audio.js && node --check js/storage.js && node --check js/campaign3/c3-data.js && node --check js/campaign3/c3-model.js && node --check js/campaign3/c3-runtime.js && node --check js/campaign3/c3-loader.js && node --check js/ui/campaign3.js && node --check js/app.js",
+    "check:ui": "node tests/verify-ui-assets.cjs css/style.css index.html && node tools/css-lint.cjs",
     "test": "node --test tests/*.test.js",
-    "ci": "npm run check:js && npm test && npm run test:e2e && npm run test:e2e:visual && npm run test:playtest:strongholds && npm run test:playtest:acceptance && npm run test:qa:data && npm run test:qa:chaos && npm run test:qa:parity && npm run test:sim:economy",
-    "test:e2e": "npx playwright test tests/e2e/neurodeck.test.js tests/e2e/logic.test.js tests/e2e/campaign-flows.test.js tests/e2e/boss-flow.test.js tests/e2e/weekly-modifier.test.js tests/e2e/responsive-gates.test.js tests/e2e/device-matrix.test.js tests/e2e/audit-p0.test.js",
+    "ci": "npm run check:js && npm run check:ui && npm test && npm run test:e2e && npm run test:e2e:visual && npm run test:playtest:strongholds && npm run test:playtest:acceptance && npm run test:qa:data && npm run test:qa:chaos && npm run test:qa:parity && npm run test:sim:economy && npm run test:sim:c3",
+    "test:e2e": "npx playwright test tests/e2e/neurodeck.test.js tests/e2e/logic.test.js tests/e2e/campaign-flows.test.js tests/e2e/boss-flow.test.js tests/e2e/weekly-modifier.test.js tests/e2e/responsive-gates.test.js tests/e2e/device-matrix.test.js tests/e2e/audit-p0.test.js tests/e2e/audit-r2-data.test.js tests/e2e/campaign3-phase0.test.js tests/e2e/campaign3-slice.test.js tests/e2e/campaign3-b1-lazy-dayend.test.js tests/e2e/campaign3-rest.test.js tests/e2e/campaign3-weaken.test.js tests/e2e/campaign3-endturn.test.js tests/e2e/pomodoro-save.test.js tests/e2e/event-bus-ui.test.js tests/e2e/regression-audit-fixes.test.js tests/e2e/visual-system.test.js",
     "test:e2e:visual": "npx playwright test tests/e2e/visual-regression.test.js tests/e2e/visual-regression-extended.test.js",
     "test:e2e:visual:update": "npm run test:e2e:visual -- --update-snapshots",
     "test:e2e:all": "npx playwright test tests/e2e/",
@@ -18,7 +18,8 @@
     "test:qa:data": "node tools/playtest-data.cjs",
     "test:qa:chaos": "node tools/playtest-chaos.cjs",
     "test:qa:parity": "node tools/qa-economy-parity.cjs",
-    "test:sim:economy": "node tools/sim-economy.cjs"
+    "test:sim:economy": "node tools/sim-economy.cjs",
+    "test:sim:c3": "node tools/sim-campaign3.cjs"
   },
   "lint-staged": {
     "*.js": "node --check",

@@ -98,3 +98,15 @@
 Использование: силуэты через CSS-mask (`--art`), перекрашиваются ранговым цветом.
 Из оригиналов удалён чёрный фоновый прямоугольник (alpha-mask). Атрибуция по
 лицензии CC BY 3.0 — этот раздел и является кредитом.
+
+## Визуал-план, фаза 3 (2026-10-02): здания и юниты → силуэты game-icons
+
+Изометрия Kenney (здания) и пиксельные юниты 64×64 заменены медальонами-силуэтами (`.nd-medal`, CSS-маска `--art`) — единый язык с реликвиями и боссами. Файлы `img/units/*.png` и `img/tract/buildings/*.png` удалены (карта регионов `img/tract/region*.png` остаётся). **CC BY 3.0**, game-icons.net:
+
+- **Delapouite** — pitchfork (Т1), archer (Т3), sword-brandish (Т4), cavalry (Т5), imperial-crown (Т7), huts-village (Ж1), barracks (Ж2), stable (Ж5), church (Ж6), barn (Э2), gold-mine (Э3), coins-pile (Э4), coins (Э5), watchtower (О2), stone-wall (О3), saint-basil-cathedral (Р3)
+- **Lorc** — spears (Т2), archery-target (Ж3), sword-smithing (Ж4), castle (Ж7), trade (Э1), wooden-fence (О1), guarded-tower (О4), spyglass (Р1), tattered-banner (Р2), magic-gate (Р4)
+- **Darkzaitzev** — hooded-figure (Т6)
+
+Соответствие id → иконка — в `shSpriteImg` (`js/ui/strongholds.js`). Файлы получены из пакета `@iconify-json/game-icons` (чёрный фон не содержат), правок глифов нет.
+
+Трофеи (визуал-план, фазы 5–6): галерея в «Дневнике» — медальоны-силуэты. Добавлено (CC BY 3.0, game-icons.net): **Delapouite** — bookshelf, book-pile, sparkles, star-medal, trophy-cup; **Lorc** — cut-diamond, fire-ring, laurels; **Carl Olsen** — flame. Остальные иконки галереи (anvil, boots, bordered-shield, chest-armor, crossed-swords, crown, visored-helm, castle, imperial-crown) уже перечислены выше.

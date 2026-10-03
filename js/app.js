@@ -131,6 +131,8 @@ if (rank === 'SS' || rank === 'SSS') return RANK_COLORS.S;
 return RANK_COLORS[rank] || RANK_COLORS.C;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function ndMedal(art, tone, cls) { return '<span class="nd-medal tone-' + (tone || 'iron') + (cls ? ' ' + cls : '') + '" aria-hidden="true" style="--art:url(../img/gameicons/' + art + '.svg)"></span>'; } // медальон-силуэт (game-icons, CC BY 3.0)
+function ndIcon(name) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; } // визуал-план 0.5: иконки UI-хрома — SVG-спрайт, не эмодзи
 const STATE_GUARDS = window.NeuroDeckStateGuards;
 function ecoOn() { return !!(window.NeuroDeckPerf && window.NeuroDeckPerf.isEco()); }
 
@@ -147,6 +149,8 @@ case 'load-cloud': loadFromCloud(); break;
 case 'copy-share-link': copyShareLink(); break;
 case 'share-link': shareLinkNative(); break;
 case 'download-sync-file': downloadSyncFile(); break;
+case 'undo-import': ndUndoImport(); break;
+case 'toggle-c3': ndToggleC3(); break; // кампания 3.0: бета-тумблер
 case 'choose-sync-file': document.getElementById('syncFileInput').click(); break;
 case 'export-json': exportJson(); break;
 case 'export-metrics': exportMetrics(); break; // A2
@@ -170,7 +174,7 @@ case 'close-season-report': document.getElementById('seasonModal').classList.rem
 case 'throne-invest': investThrone(); break;
 case 'ascend': requestAscension(); break; // Г2-5: Вознесение
 case 'asc-doctrine': pickAscensionDoctrine(el.dataset.id); break; // Г2-5: выбор сохраняемой доктрины
-case 'sh-daily-quest': completeDailyQuest(el.dataset.qid, parseInt(el.dataset.reward)); break;
+case 'sh-daily-quest': completeDailyQuest(el.dataset.qid); break;
 case 'sh-open': currentShIdx = parseInt(el.dataset.idx); shCatalogOpen = false; renderStrongholdPanel(currentShIdx); hintOnce('shpanel', 'Жильё даёт недельный пул найма. Стройка занимает дни — планируй заранее.'); if (typeof maybeBossIntro === 'function') maybeBossIntro(currentShIdx); break; // C5: лор-вступление босса (одноразово)
 case 'sh-catalog-toggle': shCatalogOpen = !shCatalogOpen; renderStrongholdPanel(currentShIdx); break;
 case 'boss-challenge': requestBossChallenge(parseInt(el.dataset.num)); break; // Г2-1: вызов босса провинции
@@ -184,7 +188,7 @@ case 'sh-emergency-maint': requestEmergencyMaintenance(parseInt(el.dataset.idx))
 case 'reroll-event': rerollDailyEvent(); break;
 case 'treasury-info': showTreasuryBreakdown(); break;
 case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
-case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
+case 'pomodoro-stop': (function(pid) { delete pomodoroState().active[pid]; saveGameState(); renderDashboard(); })(el.dataset.id); break;
 case 'counter-siege': requestCounterSiege(); break;
 	case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
 	case 'km-approach': requestApproach(String(el.dataset.approach || '')); break; // C4/P11: подход недели — пишется в сейв (siege.approach)
@@ -244,6 +248,7 @@ break;
 case 'open-task-modal': openTaskModal(); break;
 case 'close-task-modal': closeTaskModal(); break;
 case 'select-task-tier': selectedTaskTier = el.dataset.tier; updateTaskTierSelection(); break;
+case 'select-task-sphere': selectedTaskSphere = el.dataset.sphere; updateTaskSphereSelection(); break; // кампания 3.0
 case 'create-task': createTask(); break;
 case 'complete-task': completeTask(parseInt(el.dataset.id)); break;
 case 'claim-task-gold': claimTaskChest(parseInt(el.dataset.id), 'gold'); break;
@@ -602,43 +607,42 @@ el.className += ' blood-oath';
 }
 const nextRankText = getNextRank(card.rank) || 'MAX';
 var oathBadge = (bloodOath && bloodOath.status === 'active' && bloodOath.cardId === card.id)
-? '<div class="blood-oath-badge">🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
-var dayBadge = _dailyPairIds[card.id] ? '<div class="day-card-badge" title="Карта дня: XP и золото ×2">✨</div>' : '';
-var _orn = '<svg class="card-orn" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
-'<path d="M2 20 L2 6 Q2 2 6 2 L20 2" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'<path d="M80 2 L94 2 Q98 2 98 6 L98 20" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'<path d="M98 80 L98 94 Q98 98 94 98 L80 98" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'<path d="M20 98 L6 98 Q2 98 2 94 L2 80" fill="none" stroke="currentColor" stroke-width="2.2"/>' +
-'</svg>';
+? '<div class="blood-oath-badge" title="Клятва на крови">' + ndIcon('drop') + ' Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays + '</div>' : '';
+var dayBadge = _dailyPairIds[card.id] ? '<div class="day-card-badge" title="Карта дня: XP и золото ×2">' + ndIcon('star') + '</div>' : '';
+// Карточка v3 (визуал-план, фаза 2): печать ранга слева (материал iron/steel/arcane/gilded из CSS-токенов),
+// имя/мета/теги/трек мастерства справа, действия одним рядом снизу. Классы rank-*/done-today/day-card/blood-oath и
+// data-action-кнопки — прежние (тесты и делегированные обработчики не меняются).
+var _cardTools =
+   '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать" role="button" aria-label="Редактировать"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></div>' +
+   '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить" role="button" aria-label="Удалить"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></div>' +
+   '<div class="card-btn pomodoro" data-action="pomodoro-toggle" data-id="' + card.id + '" title="Помодоро 25 мин (+5 XP, 1/день)" role="button" aria-label="Помодоро"><svg class="icn" aria-hidden="true"><use href="#i-timer"/></svg></div>' + // #65: помодоро в карточке
+   (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn prestige" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" role="button" aria-label="Переродить"><svg class="icn" aria-hidden="true"><use href="#i-star"/></svg></div>' : '');
 el.innerHTML =
-_orn +
 dayBadge +
 oathBadge +
-'<div class="card-corner-actions">' +
-   '<div class="card-btn edit" data-action="edit-card" data-id="' + card.id + '" title="Редактировать"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></div>' +
-   '<div class="card-btn delete" data-action="delete-card" data-id="' + card.id + '" title="Удалить"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></div>' +
-   '<div class="card-btn pomodoro" data-action="pomodoro-toggle" data-id="' + card.id + '" title="Помодоро 25 мин (+5 XP, 1/день)"><svg class="icn" aria-hidden="true"><use href="#i-timer"/></svg></div>' + // #65: помодоро в карточке; DS2.0: SVG-иконки
-   (card.rank === 'SSS' && (card.prestige || 0) < 3 ? '<div class="card-btn" data-action="prestige-card" data-id="' + card.id + '" title="Переродить" style="color:var(--gold-bright)"><svg class="icn" aria-hidden="true"><use href="#i-star"/></svg></div>' : '') +
+'<div class="card-seal" title="Ранг ' + card.rank + '"><div class="card-rank" data-len="' + card.rank.length + '">' + card.rank + '</div></div>' +
+'<div class="card-main">' +
+  '<div class="card-name">' + esc(card.name) + '</div>' +
+  '<div class="card-tags">' +
+    '<span class="card-meta">' + esc(card.meta || '') + '</span>' +
+    '<span class="card-stat-tag" style="color: ' + st.color + '; border-color: ' + st.color + '40;">' +
+      (artIconHtml(STAT_ART[card.stat]) || '<span>' + st.icon + '</span>') + ' ' + st.name +
+    '</span>' +
+    '<span class="card-adaptation-tag ' + streakInfo.cls + '" title="Бонус стрика">' + streakInfo.label + '</span>' +
+    '<span class="card-streak" title="Стрик, дней подряд">' + ndIcon('flame') + '<b>' + (card.streak || 0) + '</b></span>' +
+  '</div>' +
+  '<div class="card-track" title="Мастерство: ' + card.mastery + '/' + card.masteryThreshold + ' до ранга ' + nextRankText + ' · выполнено всего: ' + (card.totalCompletions || 0) + '">' +
+    '<div class="card-progress"><div class="card-progress-bar" style="width:' + progressPct + '%"></div></div>' +
+    '<span class="card-mastery"><b>' + card.mastery + '/' + card.masteryThreshold + '</b> → ' + nextRankText + '</span>' +
+  '</div>' +
 '</div>' +
-'<div class="card-rank">' + card.rank + '</div>' +
-'<div class="card-name">' + esc(card.name) + '</div>' +
-'<div class="card-meta">' + esc(card.meta || '') + '</div>' +
-'<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">' +
-  '<span class="card-stat-tag" style="color: ' + st.color + '; border-color: ' + st.color + '40;">' +
-    (artIconHtml(STAT_ART[card.stat]) || '<span>' + st.icon + '</span>') + ' ' + st.name +
-  '</span>' +
-  '<span class="card-adaptation-tag ' + streakInfo.cls + '">' + streakInfo.label + '</span>' +
-'</div>' +
-'<div class="card-stats-line">Выполнено: <b>' + (card.totalCompletions || 0) + '</b> · 🔥 <b>' + (card.streak || 0) + '</b></div>' +
-
-'<div class="card-mastery">Мастерство: <b>' + card.mastery + '/' + card.masteryThreshold + '</b> до ранга ' + nextRankText + '</div>' +
-'<div class="card-progress"><div class="card-progress-bar" style="width:' + progressPct + '%"></div></div>' +
 '<div class="card-btn-row">' +
 (doneToday
-    ? '<div class="card-complete-btn done">✓ Выполнено</div>'
-    : '<button class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">⚔ Выполнить</button>' +
-      '<button class="card-skip-btn" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)">✕</button>'
+    ? '<div class="card-complete-btn done">' + ndIcon('check') + ' Выполнено</div>'
+    : '<button class="card-complete-btn" data-action="complete-card" data-id="' + card.id + '">' + ndIcon('sword') + ' Выполнить</button>' +
+      '<button class="card-skip-btn" data-action="fail-card" data-id="' + card.id + '" title="Пропустить (−1💰)" aria-label="Пропустить (−1 золото)">' + ndIcon('x') + '</button>'
 ) +
+'<div class="card-corner-actions">' + _cardTools + '</div>' +
 '</div>';
 el.addEventListener('mousemove', (e) => {
 if (ecoOn()) return;
@@ -790,6 +794,7 @@ card.streak = (card.streak || 0) + 1;
 card.lastCompletedAt = Date.now();
 HERO.dailyCompletions++;
 bossProgressTick(); // Г2-1: фазы боссов (cards/streak)
+if (window.NDC3 && NDC3.enabled()) NDC3.onDeed({ kind: 'habit', stat: card.stat, rank: card.rank }); // кампания 3.0: ОД только из дел (флаг nd_c3)
 HERO.dailyUniqueStats = HERO.dailyUniqueStats || {};
 HERO.dailyUniqueStats[card.stat] = true;
 HERO.dayStatCounts = HERO.dayStatCounts || {}; // Г2-4: счётчик статов дня для комбо
@@ -811,7 +816,7 @@ if (nextRank) {
 const oldRank = card.rank;
 card.rank = nextRank;
 card.mastery = card.mastery - card.masteryThreshold;
-card.masteryThreshold = Math.max(2, Math.round(card.masteryThreshold * 1.2));
+card.masteryThreshold = Math.max(MASTERY_MIN, Math.round(card.masteryThreshold * 1.2));
 if (card.stat && STATS[card.stat]) {
 STATS[card.stat].attributePoints = (STATS[card.stat].attributePoints || 0) + 1;
 checkAttributePoolGrowth(card.stat);
@@ -828,6 +833,7 @@ showToast('👑 МАКСИМУМ!', card.name + ' достигла SSS', 'crit')
 spiritSay('«Легенда... Твоя дисциплина несокрушима.»');
 }
 }
+if (rankUpHappened && window.NDC3 && NDC3.enabled()) NDC3.onCardRankUp(card.stat); // кампания 3.0: ранг-ап карточки ослабляет логово фракции её сферы (§3 «как ослабить»; действие пользователя — буфера не нужно)
 goldGain(dayMult, 'card');
 checkCombos(finalXp); // Г2-4: комбо статов дня — после счётчика и награды карты, до тостов
 dqProgress('cards');
@@ -845,6 +851,47 @@ sfxHit(); haptic('light');
 saveGameState();
 onBloodOathComplete(id);
 }
+// Ф0.1 (кампания 3.0): честность выгоднее молчания. Молчаливый пропуск = 1 гнев и −1 💰, честный = 0.5 гнева (−1 💰, как раньше).
+// Гнев недели от пропусков = целые молчаливые (wkSkips) + половина честных (wkHonest, округление вниз).
+function wkSkipWrath() { return (siege.wkSkips || 0) + Math.floor((siege.wkHonest || 0) / 2); }
+var SILENT_MISS_CAP = 3; // в сутки: молчание не должно в один день выжигать всю казну и весь гнев
+function ndSilentMisses(dayKey) { // карточки с историей, к которым в сутки dayKey не было ни выполнения, ни честной отметки
+    var n = 0;
+    FORGED.forEach(function(c) {
+        if (!c.firstCompletedAt) return; // не начатые не наказываем
+        if (c.lastFailDay === dayKey) return;
+        if (c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === dayKey) return;
+        n++;
+    });
+    return Math.min(SILENT_MISS_CAP, n);
+}
+function ndC3Pend(hook, by) { // кампания 3.0: срывы суток. Модули c3 грузятся лениво и checkDailyReset идёт раньше — до загрузки копим в window.__ndC3Early, NDC3.boot() отдаст рантайму до закрытия суток
+    if (window.NDC3 && NDC3.enabled()) { NDC3[hook](by); return; }
+    var on = false; try { on = localStorage.getItem('nd_c3') === '1'; } catch (e) {}
+    if (!on || window.NDC3) return;
+    (window.__ndC3Early = window.__ndC3Early || []).push([hook, by]);
+}
+var ND_SPHERE_OF_STAT = { str: 'body', end: 'body', agi: 'body', int: 'mind', wil: 'spirit', cha: 'ties' }; // копия c3-data.js SPHERE_OF_STAT (тест c3-guards сверяет)
+function ndSilentBySphere(dayKey) { // кампания 3.0: молчаливые пропуски по сферам (Сила/Стойкость/Ловкость→Тело, Интеллект→Разум, Воля→Дух, Харизма→Связи), не больше 3 на сферу
+    var idx = { body: 0, mind: 1, spirit: 2, ties: 3 }, out = [0, 0, 0, 0];
+    FORGED.forEach(function(c) {
+        if (!c.firstCompletedAt || c.lastFailDay === dayKey) return;
+        if (c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === dayKey) return;
+        var sp = ND_SPHERE_OF_STAT[c.stat]; // не из NeuroDeckC3Data: на момент checkDailyReset модули c3 ещё не загружены
+        if (sp) out[idx[sp]] = Math.min(3, out[idx[sp]] + 1);
+    });
+    return out;
+}
+function applySilentMisses(dayKey) {
+    ndC3Pend('onSilentMisses', ndSilentBySphere(dayKey)); // кампания 3.0: молчание сферы = тень её фракции
+    var n = ndSilentMisses(dayKey);
+    if (n <= 0) return 0;
+    siege.wkSkips = (siege.wkSkips || 0) + n;
+    HERO.gold = Math.max(0, (HERO.gold || 0) - n);
+    showToast('🌫 Молчание — тоже пропуск', n + ' ' + (n === 1 ? 'дело' : 'дел') + ' без отметки: −' + n + ' 💰 и гнев +' + n + '. Честная отметка ✕ стоит вдвое меньше гнева.', 'blood');
+    return n;
+}
+var MASTERY_MIN = 5; // Ф0.3
 function failCard(e, id) {
 const card = findCard(id);
 if (!card) return;
@@ -859,7 +906,8 @@ var oathBreak = bloodOath && bloodOath.status === 'active' && bloodOath.cardId =
  screenShake(6, 300);
  sfxFail(); haptic('error');
  HERO.dailySkips++;
- siege.wkSkips = (siege.wkSkips || 0) + 1;
+ siege.wkHonest = (siege.wkHonest || 0) + 1; // Ф0.1: честный пропуск весит половину молчаливого (см. wkSkipWrath)
+ if (window.NDC3 && NDC3.enabled()) NDC3.onHonestSkip(card.stat); // кампания 3.0: 0.5 тени фракции сферы дела
  if ((HERO.streakShields || 0) > 0) {
 showToast('🛡 Стрик сохранён щитом!', 'Осталось щитов: ' + HERO.streakShields, 'save');
 } else {
@@ -885,7 +933,8 @@ HERO.gold = Math.max(0, undo.gold - 1);
 card.streak = undo.streak;
 card.lastFailDay = null;
 HERO.dailySkips = Math.max(0, (HERO.dailySkips || 0) - 1);
-siege.wkSkips = Math.max(0, (siege.wkSkips || 0) - 1);
+siege.wkHonest = Math.max(0, (siege.wkHonest || 0) - 1);
+if (window.NDC3 && NDC3.enabled()) NDC3.onUndoSkip(card.stat); // кампания 3.0: отменённый честный пропуск не даёт тень фракции
 HERO.streakShields = undo.shields;
 showToast('↩ Отменено', '«' + card.name + '» — стрик восстановлен, пошлина −1 💰', 'save');
 renderCards(); updateHeroUI(); renderDashboard(); saveGameState();
@@ -900,7 +949,7 @@ bloodOath = null;
 showToast('🩸 Клятва', 'Клятва нарушена — карта уничтожена', 'blood');
 }
 FORGED = FORGED.filter(c => c.id !== id);
-if (FORGED.length === 0) { try { localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {} } // hard-delete последней карточки мимо бэкапа (T1-M1)
+if (FORGED.length === 0) { try { localStorage.removeItem('neurodeck_cards_backup'); } catch(e) {} if (typeof clearIDBSave === 'function') clearIDBSave(); } // hard-delete последней карточки мимо бэкапа (T1-M1)
 renderCards();
 showToast('🗑 Удалено', card.name, 'blood');
 saveGameState();
@@ -1077,8 +1126,10 @@ sfxLevelUp(); haptic('success');
 document.getElementById('lvlNum').textContent = HERO.level;
 const ov = document.getElementById('lvlOverlay'), bn = document.getElementById('lvlBanner');
 document.getElementById('lvlSub').textContent = (HERO.level - 1) + ' → ' + HERO.level;
+// одна церемония за раз: ранг-ап и уровень от одного выполнения не накладываются друг на друга (о втором сообщает тост)
+const _rkBusy = document.getElementById('rankupBanner').classList.contains('show');
 ov.classList.remove('show'); bn.classList.remove('show'); void ov.offsetWidth;
-ov.classList.add('show'); bn.classList.add('show');
+if (!_rkBusy) { ov.classList.add('show'); bn.classList.add('show'); }
 const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 burstParticles(cx, cy, 100, { color: '#fbbf24', speed: 14, decay: 0.008, size: 4, shape: 'star', gravity: 0.12, life: 1.3 });
 screenShake(8, 400);
@@ -1113,11 +1164,11 @@ poolHint.style.display = 'inline-block';
 } else {
 poolHint.style.display = 'none';
 }
+const _lvlBusy = document.getElementById('lvlBanner').classList.contains('show'); // одна церемония за раз (см. onLevelUp)
 rankupOverlay.classList.remove('show');
 rankupBanner.classList.remove('show');
 void rankupOverlay.offsetWidth;
-rankupOverlay.classList.add('show');
-rankupBanner.classList.add('show');
+if (!_lvlBusy) { rankupOverlay.classList.add('show'); rankupBanner.classList.add('show'); }
 burstParticles(x, y, 80, { color: visual.color, speed: 12, decay: 0.008, size: 4, shape: 'star', gravity: 0.1, life: 1.3 });
 burstParticles(x, y, 50, { color: visual.color, speed: 8, decay: 0.012, size: 2, gravity: 0.05 });
 if (newRank === 'SSS') {
@@ -1213,7 +1264,10 @@ const selectedStatChip = document.querySelector('#editStatChips .stat-chip.selec
 const newStat = selectedStatChip ? selectedStatChip.dataset.stat : card.stat;
 const newTime = document.getElementById('editCardTime').value;
 const newDuration = parseInt(document.getElementById('editCardDuration').value) || 15;
-const newMastery = Math.max(2, parseInt(document.getElementById('editCardMastery').value) || 7);
+var _wantMastery = parseInt(document.getElementById('editCardMastery').value) || 7;
+// Ф0.3: порог ранг-апа — не ниже MASTERY_MIN и правится только вверх: иначе «2 выполнения до ранга» превращают ранги (и допуск к артефактам) в бесплатные
+const newMastery = Math.max(MASTERY_MIN, card.masteryThreshold || 0, _wantMastery);
+if (_wantMastery < newMastery) showToast('🔒 Порог не снижается', 'Выполнений до ранг-апа можно только увеличить (сейчас ' + newMastery + ')', 'blood');
 const st = STATS[newStat];
 const oldMeta = card.meta, oldStat = card.stat;
 card.name = name;
@@ -1804,7 +1858,7 @@ if (!name) { showToast('⚠ Ошибка', 'Название: добавь бу�
 const time = document.getElementById('forgeTime').value;
 const duration = parseInt(document.getElementById('forgeDuration').value) || 15;
 const rank = 'C';
-const masteryThreshold = Math.max(2, parseInt(document.getElementById('forgeMastery').value) || 5);
+const masteryThreshold = Math.max(MASTERY_MIN, parseInt(document.getElementById('forgeMastery').value) || 5);
 const st = STATS[selectedStat];
 const card = {
 id: forgedIdCounter++, name, meta: st.icon + ' ' + duration + ' мин · ' + time,
@@ -1919,6 +1973,7 @@ if (tabEl) tabEl.classList.add('active');
 if (bnavEl) bnavEl.classList.add('active');
 var _dsTarget = document.getElementById('view-' + view);
 _dsTarget.classList.add('active');
+try { document.body.dataset.view = view; } catch (e) {} // свет по вкладкам (CSS body[data-view])
 try {
     var _dsTo = VIEW_ORDER.indexOf(view);
     if (_dsFrom > -1 && _dsTo !== _dsFrom) {
@@ -1930,6 +1985,7 @@ try {
 document.querySelector('.content').scrollTop = 0; // V-7: смена вкладки всегда сверху
 if (view === 'hero') { renderStats(); updateHeroUI(); renderGoals(); }
 if (view === 'strongholds') renderStrongholds();
+if (view === 'strongholds' && typeof renderCampaign3 === 'function') renderCampaign3(); // кампания 3.0 (флаг nd_c3)
 if (view === 'strongholds' && typeof maybePendingBossReward === 'function') maybePendingBossReward(); // C5: вернуть незакрытый выбор награды босса
 if (view === 'quests') renderTasks();
 if (view === 'deck') renderDashboard();
@@ -2859,12 +2915,22 @@ function goldGain(n, src) {
 }
 var DAILY_GOLD_BASE = 50; // #71: цель дня по золоту
 function dailyGoldGoal() { return Math.min(200 * Math.pow(1.2, HERO.ascension || 0), Math.round((DAILY_GOLD_BASE + 10 * capturedCount()) * Math.pow(1.2, HERO.ascension || 0))); } // #71: 50+10×captured, кап 200 · Г2-5: ×1.2^N (кап тоже ×1.2^N → 600 при N=3+)
-function checkDailyGoldGoal() { // #71: однократный бонус за цель дня — флаг дня в localStorage (в сейв не пишем)
+// Ф0.5: флаги суток живут в сейве (HERO.dayFlags), а не только в localStorage — очистка site data больше не «перезаряжает» дневные награды.
+function dayFlags() {
+    var k = getMSKDayKey();
+    if (!HERO.dayFlags || HERO.dayFlags.day !== k) HERO.dayFlags = { day: k, chests: 0, reroll: false, goal: false };
+    return HERO.dayFlags;
+}
+var TASK_CHEST_DAILY_CAP = 5; // Ф0.2: сундуков с наградой в сутки; сверх — только XP (иначе «создал-выполнил» = бесконечное золото)
+function checkDailyGoldGoal() { // #71: однократный бонус за цель дня — флаг дня в сейве (+ зеркало в localStorage для старых сейвов)
     var goal = dailyGoldGoal();
     var p = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
     if (p < goal) return;
     var tk = getMSKDayKey();
-    try { if (localStorage.getItem('nd_dailgoaldone_' + tk)) return; localStorage.setItem('nd_dailgoaldone_' + tk, '1'); } catch (e) { return; }
+    var _df = dayFlags();
+    if (_df.goal) return;
+    try { if (localStorage.getItem('nd_dailgoaldone_' + tk)) return; localStorage.setItem('nd_dailgoaldone_' + tk, '1'); } catch (e) {}
+    _df.goal = true;
     HERO.gold = (HERO.gold || 0) + 10; // напрямую: goldGain зациклил бы проверку
     showToast('🎯 Цель дня!', 'Заработано ' + p + ' 💰 (цель ' + goal + '): +10 💰 бонус', 'crit');
     sfxGoalComplete(); haptic('success');
@@ -2875,10 +2941,13 @@ function dqQuestById(qid) {
     ((dailyQuests && dailyQuests.quests) || []).forEach(function(x) { if (x.id === qid) q = x; });
     return q;
 }
-function completeDailyQuest(qid, reward) {
+function completeDailyQuest(qid) { // Ф0.4: награда — из каталога DQ_POOL по id; значение из DOM (data-reward) не принимается, его можно подделать в DevTools
 if (dailyQuests.done[qid]) return;
 var _q = dqQuestById(qid);
 if (!_q) return;
+var _cat = null; DQ_POOL.forEach(function(x) { if (x.id === qid) _cat = x; });
+if (!_cat) return;
+var reward = _cat.reward;
 var _p = (dailyQuests.progress || {})[_q.counter] || 0;
 if (_p < _q.goal) { showToast('📋 Ещё не выполнено', 'Прогресс: ' + Math.min(_p, _q.goal) + '/' + _q.goal, 'blood'); return; }
 dailyQuests.done[qid] = true;
@@ -3078,7 +3147,7 @@ if (capturedCount() === 0) { // P19: команда siege-домена (inline-�
 if (!(typeof NDStore !== 'undefined' && NDStore && typeof NDStore.command === 'function' && typeof NDStore.dispatch === 'function' && NDStore.dispatch(NDStore.command('siege/week-reset')) === true)) siege.week = 1;
 return;
 }
-var wrath = Math.min(10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + approachWrathDeltaNow()); // C4: «Осада» — гнев +1
+var wrath = Math.min(10, 2 * countGhostTasks() + wkSkipWrath() + (siege.wkTaskFails || 0) + approachWrathDeltaNow()); // C4: «Осада» — гнев +1
 var rows = [];
 var fell = false;
 var hitMult = 1;
@@ -3718,8 +3787,17 @@ function buildingBreakdownHtml(idx, bid) {
 	else if (b.dUpkeep !== 0 || b.dIncome !== 0) parts.push('⏳ ' + b.cost + '💰 золотом не окупается');
 	return parts.length ? '<div class="sh-tile-break">' + parts.join(' · ') + '</div>' : '';
 }
+function applyKingdomAtmosphere(n) { // визуал-план фаза 4: чем больше твердынь, тем светлее и теплее мир (мрак → свет); 0..20 → 4 ступени, плавно
+    try {
+        var f = Math.max(0, Math.min(1, (n || 0) / 20)), r = document.documentElement.style;
+        r.setProperty('--atmosphere-light', String(Math.round(f * 30)));
+        r.setProperty('--light-rays-opacity', (f * 0.35).toFixed(2));
+        r.setProperty('--torch-intensity', (0.3 + f * 0.4).toFixed(2));
+    } catch (e) {}
+}
 function updateStrongholdProgress() {
 var n = capturedCount();
+applyKingdomAtmosphere(n);
 var el = document.getElementById('progressVal');
 if (el) el.textContent = n + '/' + STRONGHOLDS.length;
 var chip = document.getElementById('seasonChip');
@@ -3749,7 +3827,7 @@ return '<div class="sh-hire-row"><div class="sh-build-icon">' + shSpriteImg('img
 // Ревизия 30.09 (economy-sim аудит): раньше суббота давала 7, а ветка d===0 («Осада сегодня»)
 // была недостижима — тост срабатывал только по четвергам. Теперь: Вс→0, Пн→6 … Пт→2, Сб→1.
 function daysToSiegeNow(ts) { var dow = new Date((ts || Date.now()) + 3 * 3600000).getUTCDay(); return dow === 0 ? 0 : 7 - dow; }
-function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + (siege.wkSkips || 0) + (siege.wkTaskFails || 0) + ((typeof approachWrathDeltaNow === 'function') ? approachWrathDeltaNow() : 0)); } // Г5-Т2: Железный Закон — кап гнева 7; C4: «Осада» честно показывает +1 гнев (typeof-гвард: extract-харнессы тянут функцию поодиночке)
+function siegeWrathNow() { return Math.min(hasTech('w6') ? 7 : 10, 2 * countGhostTasks() + wkSkipWrath() + (siege.wkTaskFails || 0) + ((typeof approachWrathDeltaNow === 'function') ? approachWrathDeltaNow() : 0)); } // Г5-Т2: Железный Закон — кап гнева 7; C4: «Осада» честно показывает +1 гнев (typeof-гвард: extract-харнессы тянут функцию поодиночке)
 /* ===================== Г4 «Total War: управление провинциями» — ядро (чистые функции) ===================== */
 function ensureSeasonFields(k) { var s = ensureSeason(); if (k) { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; } return s; } // Г4: материализуем ТОЛЬКО записываемый контейнер — байт-стабильный раундтрип сейвов
 function provKey(p) { return String(p); }
@@ -4473,6 +4551,12 @@ urgent: { icon: '🔥', name: 'Срочная', color: '#c73e4d', gold: 20, xp: 
 let TASKS = [];
 let taskIdCounter = 1;
 let selectedTaskTier = 'normal';
+let selectedTaskSphere = 'mind'; // кампания 3.0: сфера задачи (по умолчанию Разум)
+function updateTaskSphereSelection() {
+    var row = document.getElementById('taskSphereRow');
+    if (row) row.hidden = !(window.NDC3 && NDC3.enabled()); // выбор сферы виден только при включённой кампании 3.0
+    document.querySelectorAll('#taskSphereChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c.dataset.sphere === selectedTaskSphere); });
+}
 function findTask(id) { return TASKS.find(function(t) { return t.id === id; }); }
 function countGhostTasks() { return TASKS.filter(function(t) { return t.status === 'ghost'; }).length; }
 function updateTaskTierSelection() { document.querySelectorAll('#taskTierChips .stat-chip').forEach(function(c) { c.classList.toggle('selected', c.dataset.tier === selectedTaskTier); }); }
@@ -4481,14 +4565,14 @@ document.getElementById('taskModal').classList.add('show');
 var d = getMSKDate();
 document.getElementById('taskDeadline').value = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
 document.getElementById('taskDeadlineTime').value = '19:00';
-updateTaskTierSelection();
+updateTaskTierSelection(); updateTaskSphereSelection();
 setTimeout(function() { document.getElementById('taskName').focus(); }, 100);
 }
 function closeTaskModal() {
 document.getElementById('taskModal').classList.remove('show');
 document.getElementById('taskName').value = '';
-selectedTaskTier = 'normal';
-updateTaskTierSelection();
+selectedTaskTier = 'normal'; selectedTaskSphere = 'mind';
+updateTaskTierSelection(); updateTaskSphereSelection();
 }
 function createTask() {
 var name = validDisplayText(document.getElementById('taskName').value, 120);
@@ -4498,6 +4582,7 @@ var timeVal = document.getElementById('taskDeadlineTime').value || '19:00';
 var deadline = dateVal ? new Date(dateVal + 'T' + timeVal + ':00').getTime() : null;
 if (deadline && isNaN(deadline)) deadline = null;
 TASKS.unshift({ id: taskIdCounter++, name: name, tier: selectedTaskTier, deadline: deadline, status: 'active', createdAt: Date.now(), doneAt: null, ghostSince: null });
+if (window.NDC3 && NDC3.enabled()) TASKS[0].sphere = selectedTaskSphere; // кампания 3.0: задача идёт герою своей сферы
 closeTaskModal(); renderTasks(); renderDashboard(); saveGameState();
 sfxForge(); haptic('medium');
 showToast('📋 Задача поставлена', TASK_TIERS[selectedTaskTier].name + ': ' + name, 'save');
@@ -4510,6 +4595,7 @@ if (t.name.indexOf('🔥 Восстание:') === 0) {
   if (!_ok) { showToast('🔥 Мятеж ещё бушует', 'Восстанови ≥2 постройки в мятежной провинции — тогда штраф снимут.', 'blood'); sfxError(); return; }
 }
 t.status = 'done'; t.doneAt = Date.now();
+if (window.NDC3 && NDC3.enabled() && t.name.indexOf('🔥 Восстание:') !== 0) NDC3.onDeed({ kind: 'task', sphere: t.sphere }); // кампания 3.0: ОД герою сферы задачи
 HERO.lastActiveDay = getMSKDayKey(); // #19: активность дня
 sfxGoalComplete(); haptic('success');
 burstParticles(window.innerWidth / 2, window.innerHeight / 2, 60, { color: '#fbbf24', speed: 10, decay: 0.01, size: 3, shape: 'star', gravity: 0.08 });
@@ -4522,6 +4608,13 @@ var t = findTask(id);
 if (!t || t.status !== 'done') return;
 if (tryResolveRevoltTask(t)) { renderTasks(); renderDashboard(); saveGameState(); return; } // Г4: revolt-задача без сундука — снятие штрафа и есть награда
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
+var _fl = dayFlags();
+var _capped = _fl.chests >= TASK_CHEST_DAILY_CAP;
+_fl.chests++;
+if (_capped) { // Ф0.2: лимит наград дня исчерпан — сундук даёт только XP
+choice = 'xp';
+showToast('📦 Лимит наград дня', 'Больше ' + TASK_CHEST_DAILY_CAP + ' сундуков в сутки дают только XP', 'blood');
+}
 if (choice === 'gold') {
 goldGain(tier.gold, 'chest');
 showToast('🎁 Сундук открыт', '+' + tier.gold + ' 💰 в казну', 'save');
@@ -4548,13 +4641,14 @@ renderTasks(); renderDashboard(); saveGameState();
 }
 function expireGhostTasks(yesterdayKey) {
 var changed = false;
-var newGhosts = 0;
+var newGhosts = 0, ghostSph = { body: 0, mind: 0, spirit: 0, ties: 0 };
 var ghostFree = !!(holidayBonus() && holidayBonus().ghostsFree); // #8: Хэллоуин — призраки праздникуют (C3: событие ghostfree удалено)
 TASKS.forEach(function(t) {
 var tier = TASK_TIERS[t.tier] || TASK_TIERS.normal;
 var dlDay = t.deadline ? getMSKDayKey(t.deadline) : yesterdayKey;
 if (t.status === 'active' && dlDay <= yesterdayKey) {
 t.status = 'ghost'; t.ghostSince = Date.now(); newGhosts++; changed = true;
+ghostSph[(t.sphere && ghostSph[t.sphere] !== undefined) ? t.sphere : 'mind']++; // кампания 3.0: просрочка идёт фракции сферы задачи
 } else if (t.status === 'done' && t.doneAt) {
 if (daysBetween(getMSKDayKey(t.doneAt), yesterdayKey) >= tier.doneGraceDays) {
 var half = Math.floor(tier.gold / 2);
@@ -4571,6 +4665,7 @@ showToast('👻 Призрак ушёл', '«' + t.name + '» растворил
 });
 TASKS = TASKS.filter(function(t) { return t.status !== 'gone' && t.status !== 'chest_open'; });
 if (newGhosts > 0) siege.wkTaskFails = (siege.wkTaskFails || 0) + newGhosts;
+if (newGhosts > 0) ndC3Pend('onTaskOverdue', [ghostSph.body, ghostSph.mind, ghostSph.spirit, ghostSph.ties]); // кампания 3.0: просрочка = тень фракции сферы задачи
 if (ghostFree) return { ghostNights: 0, free: true }; // «Духи дремлют»: переходы и уходы работают, списаний нет
 var ghostNights = 0;
 TASKS.forEach(function(t) { if (t.status === 'ghost') ghostNights++; });
@@ -4681,10 +4776,12 @@ container.innerHTML =
 '<div class="st-panel">' +
 '<div class="st-panel-title">XP за последние 7 дней</div>' +
 stAreaChart(last7, maxXp) +
+(totalXp7 === 0 ? '<div class="st-empty">' + ndIcon('flame') + '<span>За последнюю неделю XP нет. Выполни карточку — столбики поднимутся.</span></div>' : '') +
 '</div>' +
 '<div class="st-panel">' +
 '<div class="st-panel-title">Тепловая карта стриков (последние 8 недель)</div>' +
 streakHeatmap +
+(xpHistory.length === 0 ? '<div class="st-empty">' + ndIcon('check') + '<span>Каждый день с выполнением закрасит клетку — собери непрерывную цепь.</span></div>' : '') +
 '</div>' +
 
 achievements +
@@ -4730,22 +4827,14 @@ for (var i = 55; i >= 0; i--) {
 var key = getMSKDayKey(Date.now() - i * 86400000);
 var xpDay = xpHistory.find(function(h) { return h.date === key; });
 var count = xpDay ? xpDay.xp : 0;
-var color;
-if (count === 0) color = 'rgba(255,255,255,0.05)';
-else if (count < 20) color = 'rgba(52,211,153,0.25)';
-else if (count < 50) color = 'rgba(52,211,153,0.5)';
-else if (count < 100) color = 'rgba(52,211,153,0.75)';
-else color = 'rgba(52,211,153,1)';
-days.push('<div style="width:14px;height:14px;border-radius:2px;background:' + color + ';" title="' + key + ': ' + count + ' XP"></div>');
+var lvl = count === 0 ? 0 : count < 20 ? 1 : count < 50 ? 2 : count < 100 ? 3 : 4;
+days.push('<div class="hm-cell l' + lvl + '" title="' + key + ': ' + count + ' XP"></div>');
 }
-var html = '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+var html = '<div class="hm-grid">';
 days.forEach(function(d) { html += d; });
 html += '</div>';
-html += '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:10px;color:var(--text-dim);">';
-html += '<span>Меньше</span>';
-['rgba(255,255,255,0.05)','rgba(52,211,153,0.25)','rgba(52,211,153,0.5)','rgba(52,211,153,0.75)','rgba(52,211,153,1)'].forEach(function(c) {
-html += '<div style="width:10px;height:10px;border-radius:2px;background:' + c + ';"></div>';
-});
+html += '<div class="hm-legend"><span>Меньше</span>';
+[0, 1, 2, 3, 4].forEach(function(l) { html += '<i class="hm-cell l' + l + '"></i>'; });
 html += '<span>Больше</span></div>';
 return html;
 }
@@ -4762,41 +4851,41 @@ var equippedN = Object.values(INVENTORY.equipped).filter(function(e) { return e;
 var captured = capturedCount();
 var fmt = function(n) { return n.toLocaleString('ru-RU'); };
 var all = [
-{ icon: '⚔', name: 'Первая ковка', desc: 'Выковать первую карточку', cur: Math.min(cardsN, 1), max: 1 },
-{ icon: '📖', name: 'Коллекционер', desc: 'Карточек в колоде', cur: cardsN, max: 10 },
-{ icon: '📚', name: 'Архивариус', desc: 'Карточек в колоде', cur: cardsN, max: 25 },
-{ icon: '🛡', name: 'Воин', desc: 'Карточка ранга B', cur: rankReached('B') ? 1 : 0, max: 1 },
-{ icon: '⚡', name: 'Мастер', desc: 'Карточка ранга A', cur: rankReached('A') ? 1 : 0, max: 1 },
-{ icon: '👑', name: 'Легенда', desc: 'Карточка ранга S', cur: rankReached('S') ? 1 : 0, max: 1 },
-{ icon: '🗡', name: 'Искатель', desc: 'Уровень героя', cur: HERO.level, max: 5 },
-{ icon: '🛡', name: 'Страж', desc: 'Уровень героя', cur: HERO.level, max: 10 },
-{ icon: '🏰', name: 'Архонт', desc: 'Уровень героя', cur: HERO.level, max: 15 },
-{ icon: '✨', name: 'Первая тысяча', desc: 'Набрать XP', cur: HERO.totalXp, max: 1000 },
-{ icon: '💎', name: 'Десять тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 10000 },
-{ icon: '🌟', name: 'Сто тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 100000 },
-{ icon: '🎒', name: 'Полный комплект', desc: 'Слотов экипировки', cur: equippedN, max: 9 },
-{ icon: '🏰', name: 'Полкоролевства', desc: 'Захватить твердынь', cur: captured, max: 10 },
-{ icon: '👑', name: 'Владыка Твердынь', desc: 'Захватить все твердыни', cur: captured, max: STRONGHOLDS.length },
-{ icon: '🔥', name: 'Неделя дисциплины', desc: 'Стрик на карточке', cur: bestStreakN, max: 7 },
-{ icon: '🔥', name: 'Месяц железа', desc: 'Стрик на карточке', cur: bestStreakN, max: 30 },
-{ icon: '💯', name: 'Сотня', desc: 'Выполнений карточек', cur: totalCompletions, max: 100 }
+{ art: 'anvil', tone: 'iron', name: 'Первая ковка', desc: 'Выковать первую карточку', cur: Math.min(cardsN, 1), max: 1 },
+{ art: 'bookshelf', tone: 'iron', name: 'Коллекционер', desc: 'Карточек в колоде', cur: cardsN, max: 10 },
+{ art: 'book-pile', tone: 'steel', name: 'Архивариус', desc: 'Карточек в колоде', cur: cardsN, max: 25 },
+{ art: 'bordered-shield', tone: 'steel', name: 'Воин', desc: 'Карточка ранга B', cur: rankReached('B') ? 1 : 0, max: 1 },
+{ art: 'crossed-swords', tone: 'arcane', name: 'Мастер', desc: 'Карточка ранга A', cur: rankReached('A') ? 1 : 0, max: 1 },
+{ art: 'crown', tone: 'gilded', name: 'Легенда', desc: 'Карточка ранга S', cur: rankReached('S') ? 1 : 0, max: 1 },
+{ art: 'boots', tone: 'iron', name: 'Искатель', desc: 'Уровень героя', cur: HERO.level, max: 5 },
+{ art: 'visored-helm', tone: 'steel', name: 'Страж', desc: 'Уровень героя', cur: HERO.level, max: 10 },
+{ art: 'imperial-crown', tone: 'arcane', name: 'Архонт', desc: 'Уровень героя', cur: HERO.level, max: 15 },
+{ art: 'sparkles', tone: 'iron', name: 'Первая тысяча', desc: 'Набрать XP', cur: HERO.totalXp, max: 1000 },
+{ art: 'cut-diamond', tone: 'steel', name: 'Десять тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 10000 },
+{ art: 'star-medal', tone: 'gilded', name: 'Сто тысяч', desc: 'Набрать XP', cur: HERO.totalXp, max: 100000 },
+{ art: 'chest-armor', tone: 'steel', name: 'Полный комплект', desc: 'Слотов экипировки', cur: equippedN, max: 9 },
+{ art: 'castle', tone: 'arcane', name: 'Полкоролевства', desc: 'Захватить твердынь', cur: captured, max: 10 },
+{ art: 'laurels', tone: 'gilded', name: 'Владыка Твердынь', desc: 'Захватить все твердыни', cur: captured, max: STRONGHOLDS.length },
+{ art: 'flame', tone: 'iron', name: 'Неделя дисциплины', desc: 'Стрик на карточке', cur: bestStreakN, max: 7 },
+{ art: 'fire-ring', tone: 'arcane', name: 'Месяц железа', desc: 'Стрик на карточке', cur: bestStreakN, max: 30 },
+{ art: 'trophy-cup', tone: 'steel', name: 'Сотня', desc: 'Выполнений карточек', cur: totalCompletions, max: 100 }
 ];
 var unlocked = all.filter(function(a) { return a.cur >= a.max; }).length;
 var html = '<div class="ach-wrap">';
 var crowns = (season && season.crownBonus) || 0;
-html += '<div class="ach-head"><div class="ach-title">🏆 Галерея трофеев</div><div class="ach-count">' + unlocked + '/' + all.length + (crowns > 0 ? ' · 👑 ' + crowns + ' (+2% налогов)' : '') + '</div></div>';
+html += '<div class="ach-head"><div class="ach-title">' + ndIcon('medal') + ' Галерея трофеев</div><div class="ach-count">' + unlocked + '/' + all.length + (crowns > 0 ? ' · 👑 ' + crowns + ' (+2% налогов)' : '') + '</div></div>';
 html += '<div class="ach-overall"><div class="ach-overall-fill" style="width:' + Math.round(unlocked / all.length * 100) + '%;"></div></div>';
 html += '<div class="ach-grid">';
 all.forEach(function(a) {
 var done = a.cur >= a.max;
 var pct = Math.min(100, Math.round(a.cur / a.max * 100));
-html += '<div class="ach-card' + (done ? ' unlocked' : '') + '">' +
-'<div class="ach-icon"><svg class="icn" aria-hidden="true"><use href="#i-medal"/></svg></div>' +
+html += '<div class="ach-card' + (done ? ' unlocked' : '') + '" title="' + esc(a.name) + ' — ' + esc(a.desc) + (a.max > 1 ? ' (' + fmt(Math.min(a.cur, a.max)) + ' / ' + fmt(a.max) + ')' : '') + '">' +
+'<div class="ach-icon">' + ndMedal(a.art, done ? a.tone : 'iron') + '</div>' +
 '<div class="ach-name">' + a.name + '</div>' +
 '<div class="ach-desc">' + a.desc + '</div>' +
 (a.max > 1
 ? '<div class="ach-prog"><div class="ach-prog-fill" style="width:' + pct + '%;"></div></div><div class="ach-prog-text">' + fmt(Math.min(a.cur, a.max)) + ' / ' + fmt(a.max) + '</div>'
-: '') +
+: '<div class="ach-prog-text">' + (done ? 'получено' : 'не получено') + '</div>') +
 '</div>';
 });
 html += '</div></div>';
@@ -5033,55 +5122,73 @@ function toggleHelp(e) {
     }
 }
 
-var POMODORO_SECS = 25 * 60; // #65: помодоро 25:00 — таймер в localStorage, переживает reload
-function pomodoroKey(id) { return 'nd_pomodoro_' + id; }
+var POMODORO_SECS = 25 * 60; // #65: помодоро 25:00 — таймер в сейве, переживает reload
+// Ф0.5 (аудит 2026-10-03): флаги помодоро живут в сейве (HERO.pomodoro), не в localStorage —
+// чистка site data / старых ключей таймера больше не сбрасывает кап «1 награда/карта/день».
+function pomodoroState() {
+    if (!HERO.pomodoro || typeof HERO.pomodoro !== 'object') HERO.pomodoro = { active: {}, done: {} };
+    if (!HERO.pomodoro.active || typeof HERO.pomodoro.active !== 'object') HERO.pomodoro.active = {};
+    if (!HERO.pomodoro.done || typeof HERO.pomodoro.done !== 'object') HERO.pomodoro.done = {};
+    return HERO.pomodoro;
+}
 function activePomodoro() {
-    try {
-        var keys = Object.keys(localStorage), latest = null;
-        keys.forEach(function(k) {
-            if (k.indexOf('nd_pomodoro_') !== 0 || k.indexOf('nd_pomodoro_done_') === 0) return;
-            var end = parseInt(localStorage.getItem(k), 10);
-            if (!Number.isFinite(end)) return;
-            if (end <= Date.now()) { localStorage.removeItem(k); return; } // истёкший таймер снимаем (награда — в тике ниже)
-            var card = findCard(parseInt(k.replace('nd_pomodoro_', ''), 10));
-            if (!card) { localStorage.removeItem(k); return; } // карточка удалена — таймер мусор
-            if (!latest || end > latest.end) latest = { id: card.id, name: card.name, end: end };
-        });
-        return latest;
-    } catch (e) { return null; }
+    var st = pomodoroState(), latest = null, dirty = false;
+    Object.keys(st.active).forEach(function(id) {
+        var end = st.active[id];
+        if (!Number.isFinite(end) || end <= Date.now()) { delete st.active[id]; dirty = true; return; } // истёкший таймер снимаем (награда — в тике ниже)
+        var card = findCard(parseInt(id, 10));
+        if (!card) { delete st.active[id]; dirty = true; return; } // карточка удалена — таймер мусор
+        if (!latest || end > latest.end) latest = { id: card.id, name: card.name, end: end };
+    });
+    if (dirty) saveSoon();
+    return latest;
 }
 function togglePomodoro(id) { // #65: клик = старт/перезапуск/отмена; награда +5 XP кап 1/карта/день
     var card = findCard(id);
     if (!card) return;
-    var k = pomodoroKey(id), dk = 'nd_pomodoro_done_' + id + '_' + getMSKDayKey();
-    try {
-        if (localStorage.getItem(k)) { localStorage.removeItem(k); showToast('⏱ Помодоро отменён', '«' + esc(card.name) + '»', 'blood'); renderCards(); renderDashboard(); return; }
-        if (localStorage.getItem(dk)) { showToast('🍅 Уже был', 'Фокус за «' + esc(card.name) + '» сегодня получен', 'blood'); return; }
-        localStorage.setItem(k, String(Date.now() + POMODORO_SECS * 1000));
-        showToast('⏱ Помодоро пошёл', '«' + esc(card.name) + '» — 25 минут фокуса', 'save');
-    } catch (e) { showToast('⚠ Нет localStorage', 'Таймер недоступен', 'blood'); return; }
+    var st = pomodoroState(), dk = id + '_' + getMSKDayKey();
+    if (st.active[id]) { delete st.active[id]; saveGameState(); showToast('⏱ Помодоро отменён', '«' + esc(card.name) + '»', 'blood'); renderCards(); renderDashboard(); return; }
+    if (st.done[dk]) { showToast('🍅 Уже был', 'Фокус за «' + esc(card.name) + '» сегодня получен', 'blood'); return; }
+    st.active[id] = Date.now() + POMODORO_SECS * 1000;
+    showToast('⏱ Помодоро пошёл', '«' + esc(card.name) + '» — 25 минут фокуса', 'save');
     haptic('light');
+    saveGameState();
     renderCards(); renderDashboard();
 }
 function sweepExpiredPomodoros() { // награда за досидевший таймер (в т.ч. после reload)
+    var st = pomodoroState(), tk = getMSKDayKey(), dirty = false;
+    Object.keys(st.done).forEach(function(k) { if (st.done[k] !== tk) { delete st.done[k]; dirty = true; } }); // хвосты вчерашних капов
+    Object.keys(st.active).forEach(function(id) {
+        var end = st.active[id];
+        if (!Number.isFinite(end) || end > Date.now()) return;
+        delete st.active[id]; dirty = true;
+        var card = findCard(parseInt(id, 10));
+        if (!card) return;
+        var dk = id + '_' + tk;
+        if (st.done[dk]) return;
+        st.done[dk] = tk;
+        addXpReward(5);
+        showToast('🍅 Фокус завершён: +5 XP', '«' + esc(card.name) + '» — 25 минут выдержаны', 'crit');
+        haptic('success');
+    });
+    if (dirty) saveGameState();
+    renderDashboard();
+}
+function migratePomodoroFlags() { // Ф0.5: одноразовый перенос nd_pomodoro_* из localStorage в сейв; старые ключи удаляем в любой ветке
     try {
-        var tk = getMSKDayKey();
+        var st = pomodoroState(), moved = false;
         Object.keys(localStorage).forEach(function(k) {
-            if (k.indexOf('nd_pomodoro_done_') === 0 && localStorage.getItem(k) !== tk) localStorage.removeItem(k); // хвосты вчерашних капов
-            if (k.indexOf('nd_pomodoro_') !== 0 || k.indexOf('nd_pomodoro_done_') === 0) return;
-            var end = parseInt(localStorage.getItem(k), 10);
-            if (!Number.isFinite(end) || end > Date.now()) return;
-            localStorage.removeItem(k);
-            var id = parseInt(k.replace('nd_pomodoro_', ''), 10);
-            var card = findCard(id);
-            if (!card) return;
-            if (localStorage.getItem('nd_pomodoro_done_' + id + '_' + tk)) return;
-            localStorage.setItem('nd_pomodoro_done_' + id + '_' + tk, tk);
-            addXpReward(5);
-            showToast('🍅 Фокус завершён: +5 XP', '«' + esc(card.name) + '» — 25 минут выдержаны', 'crit');
-            haptic('success');
+            if (k.indexOf('nd_pomodoro_done_') === 0) {
+                var dk = k.slice('nd_pomodoro_done_'.length), day = localStorage.getItem(k);
+                if (st.done[dk] === undefined && /^\d+_\d{4}-\d{2}-\d{2}$/.test(dk) && day === dk.slice(dk.lastIndexOf('_') + 1)) st.done[dk] = day;
+                localStorage.removeItem(k); moved = true;
+            } else if (k.indexOf('nd_pomodoro_') === 0) {
+                var id = k.slice('nd_pomodoro_'.length), end = parseInt(localStorage.getItem(k), 10);
+                if (st.active[id] === undefined && /^\d+$/.test(id) && Number.isFinite(end) && end > 0) st.active[id] = end; // истёкший переносим как есть — награду выдаст sweep
+                localStorage.removeItem(k); moved = true;
+            }
         });
-        renderDashboard();
+        if (moved) saveGameState();
     } catch (e) {}
 }
 
@@ -5089,24 +5196,24 @@ function renderDashboard() {
     var bar = document.getElementById('dashboardBar');
     if (!bar) return;
     var isBeginner = (HERO.level || 1) <= 2 && FORGED.length > 0 && FORGED.length <= 5;
-    var html = '<button class="info-btn" data-action="toggle-help" title="Что получишь и чем рискуешь" style="position:absolute; right:6px; top:6px;">?</button>';
-    if (dailyEvent) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span style="color:var(--gold-bright)">📅 ' + dailyEvent.icon + ' ' + dailyEvent.name + '</span> <button data-action="reroll-event" title="Переролл события дня (50 💰, 1/день)" style="margin-left:6px; font-size:11px; background:none; border:1px solid var(--gold); border-radius:6px; color:var(--gold-bright); cursor:pointer; padding:1px 6px;">🎲 50💰</button></div>'; // #50/#48: чип события + реролл
+    var html = '<button class="info-btn dash-help" data-action="toggle-help" title="Что получишь и чем рискуешь" aria-label="Что получишь и чем рискуешь">?</button>';
+    if (dailyEvent) html += '<div class="dash-line"><span class="dash-event">📅 ' + dailyEvent.icon + ' ' + dailyEvent.name + '</span> <button class="dash-mini-btn" data-action="reroll-event" title="Переролл события дня (50 💰, 1/день)">🎲 50💰</button></div>'; // #50/#48: чип события + реролл
     var hol = holidayBonus();
-    if (hol) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(hol.tip) + '">🎉 ' + esc(hol.label) + '</span></div>'; // #8: праздник
+    if (hol) html += '<div class="dash-line"><span class="dash-chip" title="' + esc(hol.tip) + '">🎉 ' + esc(hol.label) + '</span></div>'; // #8: праздник
     var _tot = totemOf(); // Ф2: чип активного тотема
-    if (_tot && HERO.totem && !HERO.totem.rechoose) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="' + esc(_tot.tip) + '">' + _tot.icon + ' ' + esc(_tot.name) + '</span></div>';
+    if (_tot && HERO.totem && !HERO.totem.rechoose) html += '<div class="dash-line"><span class="dash-chip" title="' + esc(_tot.tip) + '">' + _tot.icon + ' ' + esc(_tot.name) + '</span></div>';
     var _docs = activeDoctrineList(); // Г1-2: чип активных доктрин
-    if (_docs.length) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;">' + _docs.map(function(d) { return '<span class="dash-chip" title="' + esc(d.tip) + '">' + d.icon + ' ' + esc(d.name) + '</span>'; }).join(' ') + '</div>';
+    if (_docs.length) html += '<div class="dash-line">' + _docs.map(function(d) { return '<span class="dash-chip" title="' + esc(d.tip) + '">' + d.icon + ' ' + esc(d.name) + '</span>'; }).join(' ') + '</div>';
     var _wf = weatherForecastChips(); // G1: погода как решение — эффект виден ДО решения
-    if (_wf) html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;">' + _wf + '</div>';
+    if (_wf) html += '<div class="dash-line">' + _wf + '</div>';
     var pom = activePomodoro();
     if (pom) { // #65: помодоро — чип-обратный отсчёт
         var left = Math.max(0, Math.round((pom.end - Date.now()) / 1000));
-        html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="Помодоро: ' + esc(pom.name) + '">🍅 ' + pom.name + ' · ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + '</span> <button data-action="pomodoro-stop" data-id="' + pom.id + '" title="Отменить таймер" style="font-size:11px; background:none; border:1px solid var(--blood-bright); border-radius:6px; color:var(--blood-bright); cursor:pointer; padding:1px 6px;">✕</button></div>';
+        html += '<div class="dash-line"><span class="dash-chip" title="Помодоро: ' + esc(pom.name) + '">🍅 ' + pom.name + ' · ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + '</span> <button class="dash-mini-btn danger" data-action="pomodoro-stop" data-id="' + pom.id + '" title="Отменить таймер" aria-label="Отменить таймер">✕</button></div>';
     }
     var goal = dailyGoldGoal();
     var gp = ((dailyQuests && dailyQuests.progress) || {})['gold'] || 0;
-    html += '<div style="font-size:12px; padding-right:22px; margin-bottom:3px;"><span class="dash-chip" title="Цель дня: заработай золото любым способом">🎯 Цель дня: ' + Math.min(gp, goal) + '/' + goal + '💰</span><span style="display:inline-block; vertical-align:middle; width:70px; height:6px; background:var(--border); border-radius:3px; margin-left:6px; overflow:hidden;"><span style="display:block; height:100%; width:' + Math.min(100, Math.round(gp / goal * 100)) + '%; background:var(--gold-bright);"></span></span></div>'; // #71: дневная цель золота
+    html += '<div class="dash-line"><span class="dash-chip" title="Цель дня: заработай золото любым способом">🎯 Цель дня: ' + Math.min(gp, goal) + '/' + goal + '💰</span><span class="dash-goalbar"><span style="width:' + Math.min(100, Math.round(gp / goal * 100)) + '%"></span></span></div>'; // #71: дневная цель золота
     html += renderTodayPriority(); // Today Loop 2.0: одно главное действие дня — до инфо-блоков
     html += isBeginner ? renderDashboardBeginner() : renderDashboardVeteran();
     bar.innerHTML = html;
@@ -5117,12 +5224,12 @@ function renderDashboardBeginner() {
     var doneToday = FORGED.filter(function(c) { return c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === todayKey; }).length;
     var remaining = FORGED.length - doneToday;
     var openTasks = TASKS.filter(function(t) { return t.status === 'active'; }).length;
-    return '<div style="padding-right:22px;">' +
-        '<div style="color:var(--gold-bright); font-size:13px; margin-bottom:4px;">⚔ УРОВЕНЬ ' + Math.max(1, HERO.level) + ' · 💰 ' + (HERO.gold || 0) + '</div>' +
+    return '<div class="dash-begin">' +
+        '<div class="dash-begin-head">⚔ УРОВЕНЬ ' + Math.max(1, HERO.level) + ' · 💰 ' + (HERO.gold || 0) + '</div>' +
         '<div>⛏ Выполняй карточки — золото крепит Твердыни.</div>' +
-        '<div style="margin-top:6px;">📖 Сегодня сделано: <b>' + doneToday + '</b> из\u00A0<b>' + FORGED.length + '</b> · осталось\u00A0<b>' + remaining + '</b>' + (openTasks > 0 ? '\u00A0· 📋 задач в\u00A0работе:\u00A0<b>' + openTasks + '</b>' : '') + '</div>' +
-        '<div style="margin-top:6px; font-size:10px; color:var(--text-dim);">✅ За выполнение: <b style="color:#34d399">+15 XP · +1 💰 · +1 очко атрибута</b></div>' +
-        '<div style="font-size:10px; color:var(--text-dim);">⚠️ За пропуск: <b style="color:var(--blood-bright)">−1 💰</b> и стрик сбросится</div>' +
+        '<div class="dash-begin-row">📖 Сегодня сделано: <b>' + doneToday + '</b> из\u00A0<b>' + FORGED.length + '</b> · осталось\u00A0<b>' + remaining + '</b>' + (openTasks > 0 ? '\u00A0· 📋 задач в\u00A0работе:\u00A0<b class="info">' + openTasks + '</b>' : '') + '</div>' +
+        '<div class="dash-begin-hint">✅ За выполнение: <b class="ok">+15 XP · +1 💰 · +1 очко атрибута</b></div>' +
+        '<div class="dash-begin-hint">⚠️ За пропуск: <b class="bad">−1 💰</b> и стрик сбросится</div>' +
         '</div>';
 }
 
@@ -5133,16 +5240,23 @@ function renderDashboardVeteran() {
     var openTasks = TASKS.filter(function(t) { return t.status === 'active'; }).length;
     var revenue = strongholdTaxPerDay();
     var nextSh = STRONGHOLDS[strongholds.filter(function(x) { return x.captured; }).length];
-    var toNext = nextSh ? ' · до «' + esc(nextSh.name) + '»: сила ' + nextSh.total : ' · Твердыни покорены!';
-    var oathProgress = bloodOath && bloodOath.status === 'active' ? ' · 🩸 Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays : '';
+    var toNext = nextSh ? 'До «' + esc(nextSh.name) + '»: сила ' + nextSh.total : 'Твердыни покорены!';
+    var oathProgress = bloodOath && bloodOath.status === 'active' ? ' · Клятва ' + bloodOath.streak + '/' + bloodOath.requiredDays : '';
     var comboMult = getComboMultiplier();
-    var comboInfo = comboMult > 1.0 ? ' · 🎯 Комбо ×' + comboMult.toFixed(2) : '';
+    var comboInfo = comboMult > 1.0 ? ' · Комбо ×' + comboMult.toFixed(2) : '';
     var maxStreak = FORGED.reduce(function(m, c) { return Math.max(m, c.streak || 0); }, 0);
-    return '<div style="padding-right:22px;">' +
-        '<div class="dashboard-row"><span class="treasury-chip" data-action="treasury-info" title="Разбивка казны">💰 Казна: <b style="color:var(--gold-bright)">' + (HERO.gold || 0) + '</b></span><span>🏰 Твердыней: <b>' + capturedCount() + '/20</b> · доход <b style="color:#34d399">+' + revenue + ' 💰/день</b>' + toNext + '</span></div>' +
-        '<div class="dashboard-row"><span>📖 ' + doneToday + '/' + FORGED.length + ' сегодня' + (remaining > 0 ? ' (осталось ' + remaining + ')' : '') + '</span>' + (openTasks > 0 ? '<span>📋 Задач в работе: <b style="color:#60a5fa">' + openTasks + '</b></span>' : '') + '<span>👻 Призраков: <b style="color:var(--blood-bright)">' + countGhostTasks() + '</b></span></div>' +
-        '<div class="dashboard-row"><span>🔥 Макс. стрик: <b>' + maxStreak + '</b> дн.' + comboInfo + oathProgress + '</span></div>' +
-        '</div>';
+    // Визуал-план фаза 1: плитки-показатели вместо трёх строк с inline-стилями; иконки — SVG-спрайт
+    var ic = function(n) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; };
+    var ghosts = countGhostTasks();
+    return '<div class="dash-stats">' +
+        '<button class="dash-stat treasury-chip" data-action="treasury-info" title="Разбивка казны">' + ic('gold') + '<span>Казна</span><b class="gold">' + (HERO.gold || 0) + '</b></button>' +
+        '<div class="dash-stat" title="Захвачено твердынь, доход в день">' + ic('strongholds') + '<span>Твердыни</span><b>' + capturedCount() + '/20</b><em class="up">+' + revenue + ' 💰/день</em></div>' +
+        '<div class="dash-stat" title="Карточек выполнено сегодня">' + ic('check') + '<span>Сегодня</span><b>' + doneToday + '/' + FORGED.length + '</b>' + (remaining > 0 ? '<em>осталось ' + remaining + '</em>' : '') + '</div>' +
+        (openTasks > 0 ? '<div class="dash-stat" title="Задач в работе">' + ic('quests') + '<span>Задач</span><b class="info">' + openTasks + '</b></div>' : '') +
+        '<div class="dash-stat' + (ghosts > 0 ? ' warn' : '') + '" title="Призраки просроченных задач">' + ic('ghost') + '<span>Призраков</span><b>' + ghosts + '</b></div>' +
+        '<div class="dash-stat" title="Максимальный стрик среди карточек">' + ic('flame') + '<span>Стрик</span><b>' + maxStreak + '</b><em>дн.</em></div>' +
+        '</div>' +
+        '<div class="dash-note">' + toNext + comboInfo + oathProgress + '</div>';
 }
 
 // ===== Today Loop 2.0 (фаза 1 AAA-плана): приоритет дня =====
@@ -5188,26 +5302,28 @@ function todayKingdomLine(shList, daysToSiege) {
 function renderTodayPriority() {
     try {
         var pick = pickTodayCard(FORGED, getMSKDayKey());
-        var html = '<div style="padding:8px 10px; margin:2px 0 10px; border:1px solid var(--gold); border-radius:6px; background:rgba(212,175,55,0.06);">';
+        var ic = function(n) { return '<svg class="icn" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; }; // локально: харнесс today-panel собирает функцию поодиночке
         if (!FORGED.length) {
-            return html + '<div style="font-size:12px;">🗡 Колода пуста — выкуй первую карточку кнопкой ниже.</div></div>';
+            return '<div class="today today-empty"><div class="today-kicker">ПРИОРИТЕТ ДНЯ</div><div class="today-line">Колода пуста — выкуй первую карточку кнопкой ниже.</div></div>';
         }
         if (!pick || !pick.card) {
-            return html + '<div style="font-size:13px; color:var(--gold-bright);">✅ День закрыт: все ' + FORGED.length + ' карточек выполнены!</div>' +
-                '<div style="font-size:11px; color:var(--text-dim); margin-top:3px;">Загляни в Твердыни — там ждут налоги и осады.</div></div>';
+            return '<div class="today today-done"><div class="today-kicker">ПРИОРИТЕТ ДНЯ</div><div class="today-line ok">' + ic('check') + ' День закрыт: все ' + FORGED.length + ' карточек выполнены!</div>' +
+                '<div class="today-foot">Загляни в Твердыни — там ждут налоги и осады.</div></div>';
         }
         var c = pick.card;
         var st = STATS[c.stat] || STATS.str;
         var masteryLeft = Math.max(0, (c.masteryThreshold || 0) - (c.mastery || 0));
-        var reward = masteryLeft <= 1 ? '⚡ следующее выполнение — ранг-ап!' : '📖 до ранг-апа: ' + masteryLeft;
+        var reward = masteryLeft <= 1 ? 'следующее выполнение — ранг-ап!' : 'до ранг-апа: ' + masteryLeft;
         var atRisk = (c.streak || 0) > 0;
-        html += '<div style="font-size:10px; letter-spacing:1.5px; color:var(--text-dim); margin-bottom:4px;">ПРИОРИТЕТ ДНЯ</div>';
-        html += '<div style="display:flex; align-items:center; gap:10px; justify-content:space-between; flex-wrap:wrap;">';
-        html += '<div style="font-size:13px; min-width:0;"><b style="color:var(--gold-bright)">' + esc(c.name) + '</b> <span style="color:var(--text-dim); font-size:11px;">' + (st.icon || '') + ' ' + esc(st.name || '') + ' · ' + (c.rank || 'C') + '</span>' +
-            (atRisk ? ' <span title="Стрик сгорит при пропуске" style="color:#f59e0b; font-size:11px;">🔥 ' + c.streak + ' дн. — под угрозой</span>' : '') + '</div>';
-        html += '<button class="card-complete-btn" data-action="complete-card" data-id="' + c.id + '">⚔ Выполнить</button>';
-        html += '</div>';
-        html += '<div style="font-size:10px; color:var(--text-dim); margin-top:4px;">📖 ' + pick.doneToday + '/' + pick.total + ' сегодня · ' + reward + todayKingdomLine(strongholds, (typeof daysToSiegeNow === 'function') ? daysToSiegeNow() : -1) + '</div>';
+        var rank = String(c.rank || 'C');
+        var html = '<div class="today rank-' + rank + '">';
+        html += '<div class="today-kicker">ПРИОРИТЕТ ДНЯ</div>';
+        html += '<div class="today-row"><div class="card-seal"><div class="card-rank" data-len="' + rank.length + '">' + rank + '</div></div>';
+        html += '<div class="today-info"><b class="today-name">' + esc(c.name) + '</b>' +
+            '<span class="today-sub">' + esc(st.name || '') + ' · ' + rank + '</span>' +
+            (atRisk ? '<span class="today-risk" title="Стрик сгорит при пропуске">🔥 ' + c.streak + ' дн. — под угрозой</span>' : '') + '</div></div>';
+        html += '<button class="card-complete-btn today-cta" data-action="complete-card" data-id="' + c.id + '">' + ic('sword') + ' Выполнить</button>';
+        html += '<div class="today-foot">Сегодня <b>' + pick.doneToday + '/' + pick.total + '</b> · ' + reward + todayKingdomLine(strongholds, (typeof daysToSiegeNow === 'function') ? daysToSiegeNow() : -1) + '</div>';
         html += '</div>';
         return html;
     } catch (e) { return ''; } // панель не должна ронять дашборд
@@ -5442,12 +5558,13 @@ function rollDailyEvent() { // #41: базовые 3 — по индексам 0
 function rerollDailyEvent() { // #48: переролл события дня, 1/день, 50💰 — флаг дня в localStorage (в сейв не пишем)
     if (!dailyEvent) return;
     var tk = getMSKDayKey();
-    try { if (localStorage.getItem('neurodeck_reroll_day') === tk) { showToast('🎲 Реролл уже был', 'Один переролл события в день', 'blood'); return; } } catch (e) {}
+    var _rf = dayFlags(); var _rls = false; try { _rls = localStorage.getItem('neurodeck_reroll_day') === tk; } catch (e) {}
+    if (_rf.reroll || _rls) { showToast('🎲 Реролл уже был', 'Один переролл события в день', 'blood'); return; }
     if ((HERO.gold || 0) < 50) { showToast('💰 Мало золота', 'Переролл события: 50 💰', 'blood'); sfxError(); return; }
     HERO.gold -= 50;
     var pool = buildDailyEvents().filter(function(x) { return x.id !== dailyEvent.id; });
     dailyEvent = pool[Math.floor(Math.random() * pool.length)];
-    try { localStorage.setItem('neurodeck_reroll_day', tk); } catch (e) {}
+    _rf.reroll = true; try { localStorage.setItem('neurodeck_reroll_day', tk); } catch (e) {}
     showToast(dailyEvent.icon + ' ' + dailyEvent.name, dailyEvent.text, 'save');
     sfxHit(); haptic('light');
     renderDashboard(); renderStrongholds(); updateHeroUI(); saveGameState();
@@ -5529,6 +5646,8 @@ burstParticles(window.innerWidth / 2, window.innerHeight / 2, 80, { color: '#34d
 } else {
 HERO.consecutivePerfectDays = 0;
 }
+applySilentMisses(yesterdayKey); // Ф0.1: итоги вчерашнего дня — до сброса дневных счётчиков и стриков
+if (window.NDC3 && NDC3.enabled()) NDC3.dayEnd(todayKey); // кампания 3.0: закрыть сутки (и пропущенные дни) — тени, доход, недельный ход
 HERO.dailyCompletions = 0;
 HERO.dailySkips = 0;
 HERO.dailyUniqueStats = {};
@@ -5541,7 +5660,7 @@ showToast('🗓 Новая неделя', 'Путь продолжается', '
 recalcHirePool(); // понедельник: пул = Σ прироста жилищ, непокупленное сгорает (SPEC §3)
 runWeeklySiege();
 siege.approach = 'assault'; // P11: подход сгорает вместе с неделей — новая начинается со «Штурма» (поле в сейве, схема v14)
-siege.wkSkips = 0; siege.wkTaskFails = 0;
+siege.wkSkips = 0; siege.wkHonest = 0; siege.wkTaskFails = 0;
   siege.wkSkips = Math.max(0, siege.wkSkips - techWrathWeekReduction()); siege.wkTaskFails = Math.max(0, siege.wkTaskFails - techWrathWeekReduction()); // Г5-Т3: Обряды Усмирения −1/нед к источникам гнева
   siege.retriedThisWeek = false; // #95: контрштурм доступен снова
   Object.keys(TECH_ACTIVES).forEach(function(k) { delete TECH_ACTIVES[k]; }); // Г5-Т3 Ф2: приказы недели сгорают в понедельник
@@ -6052,7 +6171,16 @@ el.style.borderColor = type === 'blood' ? 'var(--blood)' : type === 'crit' || ty
 el.classList.remove('show'); void el.offsetWidth; el.dataset.ttype = type; el.classList.add('show');
 setTimeout(() => { el.classList.remove('show'); setTimeout(playNextToast, 200); }, t.action ? 5000 : 2500);
 }
-function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+var _spiritT = null;
+function spiritSay(t) { const el = document.getElementById('spiritMsg'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(_spiritT); _spiritT = setTimeout(function() { el.classList.remove('show'); }, 4000); } // явное снятие: при reduced-motion анимации нет, иначе шёпот висел бы вечно
+function ndC3On() { try { return localStorage.getItem('nd_c3') === '1'; } catch (e) { return false; } }
+function ndRefreshC3Toggle() { var b = document.getElementById('c3ToggleBtn'); if (b) b.textContent = ndC3On() ? 'Выключить (перезапуск)' : 'Включить (перезапуск)'; }
+function ndToggleC3() { // флаг живёт вне сейва (localStorage); прогресс c3 в сейве остаётся при выключении
+    var on = ndC3On();
+    try { if (on) localStorage.removeItem('nd_c3'); else localStorage.setItem('nd_c3', '1'); } catch (e) {}
+    saveGameState();
+    setTimeout(function() { location.reload(); }, 150);
+}
 function dungeonConfirm(title, body, yesLabel, noLabel) {
 return new Promise(function(resolve) {
 var overlay = document.getElementById('confirmOverlay');
@@ -6081,16 +6209,7 @@ if (fillEl) fillEl.style.width = pct + '%';
 const sliderEl = document.getElementById('progressSlider');
 if (sliderEl) sliderEl.setAttribute('aria-valuenow', String(Math.round(pct)));
 }
-document.addEventListener('mousemove', (e) => {
-if (ecoOn()) return;
-const r1 = document.getElementById('mistRect1');
-const r2 = document.getElementById('mistRect2');
-if (!r1 || !r2) return;
-const x = (e.clientX / window.innerWidth - 0.5) * 40;
-const y = (e.clientY / window.innerHeight - 0.5) * 25;
-r1.setAttribute('transform', 'translate(' + x + ', ' + y + ')');
-r2.setAttribute('transform', 'translate(' + (-x * 0.5) + ', ' + (-y * 0.5) + ')');
-});
+// туман — готовая бесшовная текстура img/fog.webp, дрейф чистым CSS-transform (прежний SVG feTurbulence+blur на весь экран и parallax по mousemove убраны)
 var pendingOnboarding = false;
 function hintOnce(key, text) {
 var flag = null;
@@ -6169,6 +6288,7 @@ try { localStorage.removeItem('neurodeck_full_save'); localStorage.removeItem('n
 // location.reload() → свежая загрузка: saveGameState здесь НЕ вызывать,
 // иначе ever_saved=1 воскресает и старт-колода не вернётся (QA-lead O-10)
 try { var csR = getCloudStorage(); if (csR) csR.removeItem(CLOUD_META_KEY, function(){}); } catch(e) {}
+if (typeof clearIDBSave === 'function') { clearIDBSave(function() { location.reload(); }); return; } // R2 M3: IDB-копия не должна воскресить стёртое
 location.reload();
 });
 }
@@ -6203,6 +6323,7 @@ try { if (navigator.webdriver) document.documentElement.classList.add('nd-webdri
 ensureStrongholdState();
 if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [], progress: {} };
 loadGameState();
+migratePomodoroFlags(); // Ф0.5: одноразовая миграция флагов помодоро из localStorage в сейв (до чеков суток, чтобы sweep ниже уже работал с сейвом)
 applyAscensionPalette(); // Г2-5: палитра круга вознесения (body asc-1/2/3)
 checkCapturedRecovery(); // #49: следы потерянных крепостей — сразу после загрузки
 checkDailyReset();
@@ -6259,6 +6380,30 @@ if (typeof NDDBus !== 'undefined' && NDDBus && typeof NDDBus.on === 'function') 
         }).catch(function() {});
     } catch (e) {}
 })();
+
+// Визуал-план фаза 1: шапка сжимается при прокрутке контента (строка «Твердыни/сезон/осада» уходит), возвращается у верха.
+// Гистерезис 32/4 px — без дрожания на границе; без анимации высоты (reduced-motion/eco эквивалентны).
+(function initHeaderCompact() {
+    try {
+        var content = document.querySelector('.content'), app = document.querySelector('.app');
+        if (!content || !app) return;
+        // В авто-браузерах (webdriver) сжатие шапки выключено: оно сдвигает раскладку на 28 px ПОСЛЕ прокрутки к цели клика,
+        // и харнессы промахивались по кнопкам (acceptance/chaos). Для собственных тестов — флаг nd_force_compact.
+        var forced = false; try { forced = localStorage.getItem('nd_force_compact') === '1'; } catch (e2) {}
+        if (document.documentElement.classList.contains('nd-webdriver') && !forced) return;
+        var on = false, ticking = false;
+        content.addEventListener('scroll', function() {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(function() {
+                ticking = false;
+                var y = content.scrollTop;
+                if (!on && y > 32) { on = true; app.classList.add('is-scrolled'); }
+                else if (on && y < 4) { on = false; app.classList.remove('is-scrolled'); }
+            });
+        }, { passive: true });
+    } catch (e) {}
+})();
 window.addEventListener('load', function(){ window.__tgReady(); });
 if (FORGED.length === 0) {
     // Пустая колода — новый игрок ИЛИ очищенное хранилище (ITP-чистка iOS после
@@ -6269,7 +6414,8 @@ if (FORGED.length === 0) {
     setTimeout(function holdStarterDeck(attempt) {
         attempt = attempt || 0;
         // P0 1.3: восстановление важнее онбординга — ждём проверку облака (meta ≤5 c + чанки ≤15 c) и, без лимита, пока игрок отвечает на диалог восстановления
-        if ((window.__ndCloudCheckPending && attempt < 100) || window.__ndRecoveryOpen) { setTimeout(function() { holdStarterDeck(attempt + 1); }, 250); return; }
+        var _cfmOpen = false; try { var _co = document.getElementById('confirmOverlay'); _cfmOpen = !!(_co && _co.classList.contains('show')); } catch(e) {} // R2 M4: открытый диалог (импорт по ссылке) важнее старт-колоды
+        if ((window.__ndCloudCheckPending && attempt < 100) || (window.__ndIdbCheckPending && attempt < 40) || window.__ndRecoveryOpen || _cfmOpen) { setTimeout(function() { holdStarterDeck(attempt + 1); }, 250); return; }
         if (FORGED.length > 0) return; // восстановились из облака — старт-колода не нужна
         showStarterDeck();
     }, 900);

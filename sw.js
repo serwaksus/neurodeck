@@ -5,35 +5,43 @@
    При новом деплое: бампни ?v= в index.html И VERSION ниже — старый кэш удалится в activate. */
 'use strict';
 
-const VERSION = 'nd-shell-v103';
+const VERSION = 'nd-shell-v156';
 const SHELL = [
   './',
   'index.html',
-  'css/style.css?v=103',
-  'fonts/fonts.css?v=103',
+  'css/style.css?v=156',
+  'fonts/fonts.css?v=156',
   'fonts/cinzel-var.woff2',
-  'fonts/CrimsonText-400.woff2',
-  'fonts/CrimsonText-400i.woff2',
-  'fonts/CrimsonText-600.woff2',
-  'js/perf.js?v=103',
-  'js/perf-compat.js?v=103',
-  'js/event-bus.js?v=103',
-  'js/audio.js?v=103',
-  'js/telemetry.js?v=103',
-  'js/stronghold-data.js?v=103',
-  'js/state-guards.js?v=103',
-  'js/storage.js?v=103',
-  'js/stronghold-model.js?v=103',
-  'js/state/store.js?v=103',
-  'js/remote-config.js?v=103',
-  'js/ui/strongholds.js?v=103',
+  'fonts/Philosopher-400-cyrillic.woff2',
+  'fonts/Philosopher-400-latin.woff2',
+  'fonts/Philosopher-700-cyrillic.woff2',
+  'fonts/Philosopher-700-latin.woff2',
+  'fonts/Alegreya-cyrillic.woff2',
+  'fonts/Alegreya-latin.woff2',
+  'fonts/Alegreya-italic-cyrillic.woff2',
+  'fonts/Alegreya-italic-latin.woff2',
+  'js/perf.js?v=156',
+  'js/perf-compat.js?v=156',
+  'js/event-bus.js?v=156',
+  'js/audio.js?v=156',
+  'js/telemetry.js?v=156',
+  'js/stronghold-data.js?v=156',
+  'js/state-guards.js?v=156',
+  'js/storage.js?v=156',
+  'js/stronghold-model.js?v=156',
+  'js/state/store.js?v=156',
+  'js/remote-config.js?v=156',
+  'js/campaign3/c3-loader.js?v=156',
+  'js/ui/strongholds.js?v=156',
   'config/weekly-modifiers.v1.json',
-  'js/app.js?v=103',
+  'js/app.js?v=156',
   'manifest.json',
+  'img/fog.webp',
   'img/icon-192.png',
   'img/icon-512.png'
 ];
 const TG_SDK = 'https://telegram.org/js/telegram-web-app.js';
+const NAV_TIMEOUT_MS = 4000;
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
@@ -61,18 +69,40 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
 
   if (req.mode === 'navigate') {
-    // сеть первая — новый деплой подхватывается без ручного обновления
-    e.respondWith(
-      fetch(req).then((res) => {
+    // сеть первая — новый деплой подхватывается без ручного обновления; но не дольше NAV_TIMEOUT_MS:
+    // на «флапающем» github.io запрос может висеть десятки секунд — тогда отдаём кэш, а ответ сети
+    // всё равно обновит кэш в фоне (аудит R2 M8)
+    const net = fetch(req).then((res) => {
+      if (res && res.ok) { // 404/5xx «флапающего» хостинга не должен стать закэшированной оболочкой
         const copy = res.clone();
         caches.open(VERSION).then((c) => c.put('index.html', copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match('index.html').then((r) => r || caches.match('./')))
+      }
+      return res;
+    });
+    net.catch(() => {}); // отложенный отказ после таймаута не должен быть unhandled rejection
+    const timed = new Promise((_, reject) => setTimeout(() => reject(new Error('nav timeout')), NAV_TIMEOUT_MS));
+    const fromCache = () => caches.match('index.html').then((r) => r || caches.match('./'));
+    e.respondWith(
+      Promise.race([net, timed])
+        .then((res) => (res && (res.ok || res.type === 'opaqueredirect')) ? res : fromCache().then((r) => r || res)) // ошибка сервера — кэш, если он есть; редирект — как есть
+        .catch(() => fromCache().then((r) => r || net))
     );
     return;
   }
 
   if (url.origin !== location.origin && url.href !== TG_SDK) return; // прочие кросс-домены не трогаем
+
+  // удалённый конфиг (config/*.json) без ?v= — сеть первая, кэш как офлайн-фоллбэк (аудит R2 M6):
+  // cache-first закрепил бы первую скачанную версию навсегда
+  if (url.origin === location.origin && /\/config\/[^/]+\.json$/.test(url.pathname)) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)).catch(() => {}); }
+        return res;
+      }).catch(() => caches.match(req).then((hit) => hit || Response.error()))
+    );
+    return;
+  }
 
   // статика (в т.ч. версионированная ?v=) — cache-first
   e.respondWith(
@@ -84,7 +114,7 @@ self.addEventListener('fetch', (e) => {
           caches.open(VERSION).then((c) => c.put(req, copy)).catch(() => {});
         }
         return res;
-      }).catch(() => caches.match('./'));
+      }).catch(() => Response.error()); // не index.html: подмена MIME ломала бы разбор CSS/JS (аудит R2 L12)
     })
   );
 });

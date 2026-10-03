@@ -1,31 +1,75 @@
 var idb = null;
+// Состояние открытия IDB: 'pending' → 'ready' | 'failed'. loadGameState выполняется синхронно в deferred-скрипте,
+// когда indexedDB.open ещё не вернулся: без ожидания резерв никогда не предлагался при загрузке (аудит R2 M3).
+var idbState = 'pending';
+var idbWaiters = [];
+function idbSettle(state) {
+    idbState = state;
+    var w = idbWaiters; idbWaiters = [];
+    w.forEach(function(cb) { try { cb(); } catch(e) {} });
+}
+function whenIDB(cb) { // колбэк вызывается, когда открытие завершилось (успех/провал/таймаут 2.5 c)
+    if (idbState !== 'pending') { cb(); return; }
+    var done = false;
+    function once() { if (done) return; done = true; cb(); }
+    idbWaiters.push(once);
+    setTimeout(function() { if (idbState === 'pending') idbSettle('failed'); once(); }, 2500);
+}
 function openIDB() {
     try {
         var req = indexedDB.open('neurodeck_db', 1);
         req.onupgradeneeded = function(e) {
             e.target.result.createObjectStore('saves', { keyPath: 'id' });
         };
-        req.onsuccess = function(e) { idb = e.target.result; };
-        req.onerror = function() { idb = null; };
-    } catch(e) { idb = null; }
+        req.onsuccess = function(e) { idb = e.target.result; idbSettle('ready'); };
+        req.onerror = function() { idb = null; idbSettle('failed'); };
+    } catch(e) { idb = null; idbSettle('failed'); }
 }
 openIDB();
 function saveToIDB(obj) {
     if (!idb) return;
     try {
         var tx = idb.transaction('saves', 'readwrite');
-        tx.objectStore('saves').put({ id: 'latest', data: obj, ts: Date.now() });
-        window._lastIDBSaveAt = Date.now();
+        var st = tx.objectStore('saves');
+        var cards = obj && obj.forged && obj.forged.length;
+        if (cards || typeof st.get !== 'function') {
+            st.put({ id: 'latest', data: obj, ts: Date.now() });
+            window._lastIDBSaveAt = Date.now();
+            return;
+        }
+        // Пустой снапшот (закрыли приложение до ответа на диалог восстановления) не вправе затирать
+        // резерв с карточками — иначе IndexedDB умирает ровно в сценарии, ради которого существует (R2 M3).
+        var g = st.get('latest');
+        g.onsuccess = function() {
+            var cur = g.result;
+            var had = cur && cur.data && cur.data.forged && cur.data.forged.length;
+            if (had) return;
+            st.put({ id: 'latest', data: obj, ts: Date.now() });
+            window._lastIDBSaveAt = Date.now();
+        };
     } catch(e) {}
 }
-function loadFromIDB(callback) {
-    if (!idb) { callback(null); return; }
+function clearIDBSave(done) { // явное удаление (последняя карточка, полный вайп) — единственный законный способ очистить резерв
+    var fin = false;
+    function finish() { if (fin) return; fin = true; if (typeof done === 'function') done(); }
+    if (!idb) { finish(); return; }
     try {
-        var tx = idb.transaction('saves', 'readonly');
-        var req = tx.objectStore('saves').get('latest');
-        req.onsuccess = function(e) { callback(e.target.result ? e.target.result : null); };
-        req.onerror = function() { callback(null); };
-    } catch(e) { callback(null); }
+        var tx = idb.transaction('saves', 'readwrite');
+        tx.objectStore('saves').delete('latest');
+        tx.oncomplete = finish; tx.onerror = finish; tx.onabort = finish;
+        setTimeout(finish, 1500);
+    } catch(e) { finish(); }
+}
+function loadFromIDB(callback) {
+    whenIDB(function() {
+        if (!idb) { callback(null); return; }
+        try {
+            var tx = idb.transaction('saves', 'readonly');
+            var req = tx.objectStore('saves').get('latest');
+            req.onsuccess = function(e) { callback(e.target.result ? e.target.result : null); };
+            req.onerror = function() { callback(null); };
+        } catch(e) { callback(null); }
+    });
 }
 const EVER_SAVED_KEY = 'neurodeck_ever_saved';
 const GEN_KEY = 'neurodeck_gen';
@@ -321,6 +365,7 @@ ensureStrongholdState();
 snapshot.strongholds = (_ndSnap && _ndSnap.strongholds) ? _ndSnap.strongholds : strongholds;
 snapshot.army = (_ndSnap && _ndSnap.army) ? _ndSnap.army : army;
 snapshot.siege = (_ndSnap && _ndSnap.siege) ? _ndSnap.siege : siege; snapshot.dailyQuests = dailyQuests; snapshot.dailyEvent = (typeof dailyEvent !== 'undefined') ? dailyEvent : null; snapshot.season = (typeof season !== 'undefined') ? season : null; snapshot.throne = (typeof throne !== 'undefined') ? throne : 0; snapshot.TECHS = (typeof TECHS !== 'undefined') ? TECHS : {}; snapshot.TECH_PTS = (typeof TECH_PTS !== 'undefined') ? TECH_PTS : 0; snapshot.TECH_IDEA = (typeof TECH_IDEA !== 'undefined') ? TECH_IDEA : null; snapshot.TECH_ACTIVES = (typeof TECH_ACTIVES !== 'undefined') ? TECH_ACTIVES : {}; } catch(e) {}
+try { var _c3s = (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.serialize === 'function') ? NDC3.serialize() : window.__ndC3Raw; if (_c3s) snapshot.c3 = _c3s; } catch(e) {} // кампания 3.0
 pruneAgedHistory(HERO, 120);
 var json = JSON.stringify(snapshot);
 if (FORGED.length > 0) { try { localStorage.setItem(EVER_SAVED_KEY, '1'); } catch(e) {} } // ever_saved = «игрок с карточками»: пустой сейв не должен блокировать старт-колоду (O-10)
@@ -501,6 +546,7 @@ function smartCloudSync() {
                         return;
                     }
                     if (ok) {
+                        ndSnapshotBeforeImport();
                         applySyncData(data);
                         if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet(meta); // база = эта версия облака, иначе saveGameState снова решит, что облако чужое
                         saveGameState();
@@ -508,6 +554,7 @@ function smartCloudSync() {
                         showToast('☁ Синхронизировано', 'Загружено из облака: ' + cloudDate);
                         spiritSay('«Облако поделилось воспоминаниями...»');
                         screenShake(6, 400);
+                        ndOfferUndoImport('Загрузка облака');
                     } else {
                         forceCloudSave(true);
                         showToast('☁ Отправлено в облако', 'Локальные данные актуальнее');
@@ -578,22 +625,25 @@ return;
 } catch(e) {}
 }
 tryCloudRecovery();
+window.__ndIdbCheckPending = true; // boot придерживает старт-колоду, пока идёт проверка IndexedDB (R2 M3)
 loadFromIDB(function(result) {
-    if (result && result.data && result.data.forged && result.data.forged.length > 0 && FORGED.length === 0) {
-        dungeonConfirm('♻ Найдено в IndexedDB',
-            'Обнаружено сохранение с <b>' + result.data.forged.length + '</b> карточками.<br>' +
-            'Дата: ' + new Date(result.ts).toLocaleString('ru') + '<br><br>' +
-            '<span style="color:var(--gold-bright)">Восстановить?</span>'
-        ).then(function(ok) {
-            if (ok) {
-                applySyncData(result.data);
-                saveGameState();
-                if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
-                showToast('♻ Восстановлено', result.data.forged.length + ' карточек из IndexedDB');
-                screenShake(6, 400);
-            }
-        });
-    }
+    if (!(result && result.data && result.data.forged && result.data.forged.length > 0 && FORGED.length === 0)) { window.__ndIdbCheckPending = false; return; }
+    window.__ndRecoveryOpen = true;
+    window.__ndIdbCheckPending = false;
+    dungeonConfirm('♻ Найдено в IndexedDB',
+        'Обнаружено сохранение с <b>' + result.data.forged.length + '</b> карточками.<br>' +
+        'Дата: ' + new Date(result.ts).toLocaleString('ru') + '<br><br>' +
+        '<span style="color:var(--gold-bright)">Восстановить?</span>'
+    ).then(function(ok) {
+        window.__ndRecoveryOpen = false;
+        if (ok) {
+            applySyncData(result.data);
+            saveGameState();
+            if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
+            showToast('♻ Восстановлено', result.data.forged.length + ' карточек из IndexedDB');
+            screenShake(6, 400);
+        }
+    });
 });
 }
 function tryCloudRecovery() {
@@ -694,6 +744,7 @@ dungeonConfirm('♻ Глубокое восстановление',
 '<br><span style="color:var(--gold-bright)">Восстановить ' + bestCount + ' карточек?</span>'
 ).then(function(ok) {
 if (ok) {
+ndSnapshotBeforeImport();
 applySyncData(bestData);
 saveGameState();
 if (typeof checkCapturedRecovery === 'function') checkCapturedRecovery(); // #49: recovery-экран твердынь
@@ -831,6 +882,7 @@ try {
     data.army = army;
     data.siege = siege;
 } catch(e) {}
+try { var _c3 = (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.serialize === 'function') ? NDC3.serialize() : window.__ndC3Raw; if (_c3) data.c3 = _c3; } catch(e) {} // кампания 3.0: ключа нет, пока флаг не включали
 return data;
 }
 function updateCloudStatus() {
@@ -943,6 +995,7 @@ return;
                 finished = true;
                 if (chunkErr || !data) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); return; }
                 try {
+                    ndSnapshotBeforeImport();
                     applySyncData(data);
                     if (typeof ndCloudBaseSet === 'function') ndCloudBaseSet(meta);
                     ndSyncHaptic();
@@ -951,12 +1004,60 @@ return;
                     screenShake(6, 400);
                     closeSyncModal();
                     saveGameState();
+                    ndOfferUndoImport('Загрузка из облака');
                 } catch(e) { showToast('⚠ Ошибка', 'Данные повреждены', 'blood'); updateCloudStatus(); }
             }, 10000);
 });
 });
 }
-function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); }
+// R2 M5: импорт/загрузка из облака перезаписывают все слои сохранения разом — перед применением кладём
+// прежнее состояние в отдельный ключ (1 шт.) и даём откатить: тост с действием + кнопка в окне синхронизации.
+// Откат живёт 7 дней и всегда спрашивает подтверждение с датой: иначе через месяц одно нажатие молча стирает месяц прогресса.
+var PRE_IMPORT_KEY = 'neurodeck_pre_import';
+var PRE_IMPORT_TTL = 7 * 86400000;
+function ndSnapshotBeforeImport() {
+    try {
+        if (!FORGED || FORGED.length === 0) return false; // терять нечего
+        localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify({ t: Date.now(), data: buildSyncData() }));
+        return true;
+    } catch(e) { return false; } // квота — импорт всё равно возможен, просто без отката
+}
+function ndReadUndoImport() { // { t, data } или null; устаревший/битый снимок удаляется
+    var snap = null;
+    try { snap = JSON.parse(localStorage.getItem(PRE_IMPORT_KEY) || 'null'); } catch(e) {}
+    var ok = snap && typeof snap === 'object' && snap.data && typeof snap.data === 'object' && Number(snap.t) > 0 && Date.now() - Number(snap.t) < PRE_IMPORT_TTL;
+    if (!ok) { try { localStorage.removeItem(PRE_IMPORT_KEY); } catch(e) {} return null; }
+    return snap;
+}
+function ndOfferUndoImport(what) {
+    if (!ndReadUndoImport()) return;
+    if (typeof showToast === 'function') showToast('📥 ' + (what || 'Импорт') + ' применён', 'Прежнее состояние сохранено — откат в окне «Синхронизация»', 'save', { label: '↩ Отменить', fn: ndUndoImport });
+}
+function ndUndoImport() {
+    var snap = ndReadUndoImport();
+    if (!snap) { showToast('⚠ Нет точки отката', 'Прежнее состояние не найдено', 'blood'); ndRefreshUndoSection(); return; }
+    var n = (snap.data.forged && snap.data.forged.length) || 0;
+    dungeonConfirm('↩ Откатить импорт?',
+        'Вернуть состояние от <b>' + new Date(snap.t).toLocaleString('ru') + '</b> (' + n + ' карт.).<br><br>' +
+        '<span style="color:var(--blood-bright)">Всё, что сделано после импорта, будет потеряно.</span>'
+    ).then(function(ok) {
+        if (!ok) return;
+        applySyncData(snap.data);
+        saveGameState();
+        try { localStorage.removeItem(PRE_IMPORT_KEY); } catch(e) {}
+        ndRefreshUndoSection();
+        showToast('↩ Импорт отменён', 'Состояние до импорта восстановлено', 'save');
+    });
+}
+function ndRefreshUndoSection() {
+    var sec = document.getElementById('undoImportSection');
+    if (!sec) return;
+    var snap = ndReadUndoImport();
+    sec.style.display = snap ? '' : 'none';
+    var desc = document.getElementById('undoImportDesc');
+    if (desc && snap) desc.textContent = 'Состояние до импорта от ' + new Date(snap.t).toLocaleString('ru') + ' (' + ((snap.data.forged && snap.data.forged.length) || 0) + ' карт.) — хранится 7 дней.';
+}
+function openSyncModal() { document.getElementById('syncModal').classList.add('show'); updateCloudStatus(); ndRefreshUndoSection(); if (typeof ndRefreshC3Toggle === 'function') ndRefreshC3Toggle(); }
 function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }
 function generateShareLink() {
 var data = buildSyncData();
@@ -1009,9 +1110,11 @@ var data = JSON.parse(json);
 if (!data.v || !data.hero) { window.location.hash = ''; return; }
 dungeonConfirm('📥 Данные из ссылки', 'Прогресс от <b>' + new Date(data.t).toLocaleString('ru') + '</b>. Импортировать?<br><br><span style="color:var(--blood-bright)">Текущие данные будут перезаписаны.</span>').then(function(ok) {
 if (!ok) { window.location.hash = ''; return; }
+ndSnapshotBeforeImport();
 applySyncData(data);
 window.location.hash = '';
 showToast('📥 Импортировано из ссылки', 'Прогресс восстановлен');
+ndOfferUndoImport('Импорт из ссылки');
 spiritSay('«Путь продолжается...»');
 screenShake(6, 400);
 saveGameState();
@@ -1043,12 +1146,14 @@ try {
 var data = JSON.parse(e.target.result);
 dungeonConfirm('📥 Импортировать из файла?', 'Текущие данные будут перезаписаны.').then(function(ok) {
 if (!ok) return;
+ndSnapshotBeforeImport();
 applySyncData(data);
 showToast('✅ Импортировано', 'Данные из файла');
 spiritSay('«Чужие воспоминания... но теперь они твои.»');
 screenShake(6, 400);
 closeSyncModal();
 saveGameState();
+ndOfferUndoImport('Импорт из файла');
 });
 } catch(err) { showToast('⚠ Ошибка', 'Неверный формат файла', 'blood'); }
 };
@@ -1113,6 +1218,7 @@ if (typeof data.lastDayReset === 'string') lastDayReset = RESET_DATE_RE.test(dat
 if (Array.isArray(data.strongholds)) strongholds = STATE_GUARDS.sanitizeStrongholds(data.strongholds, strongholdCatalog());
 if (data.army && typeof data.army === 'object') army = STATE_GUARDS.sanitizeArmy(data.army);
 if (data.siege) siege = STATE_GUARDS.sanitizeSiege(data.siege);
+if (data.c3 !== undefined) { if (typeof NDC3 !== 'undefined' && NDC3 && typeof NDC3.load === 'function') NDC3.load(data.c3); else window.__ndC3Raw = data.c3; } // кампания 3.0: необязательный ключ, схема v14 не меняется; модули грузятся лениво — до их загрузки сейв ждёт в window.__ndC3Raw
 if (data.hirePool) hirePool = STATE_GUARDS.sanitizeHirePool(data.hirePool);
     if (typeof dailyQuests !== 'undefined' && data.dailyQuests && typeof data.dailyQuests === 'object') {
         var _dq = STATE_GUARDS.sanitizeDailyQuests(data.dailyQuests, (typeof DQ_POOL !== 'undefined') ? DQ_POOL : null); // P0: квесты по каталогу, не как есть
@@ -1145,7 +1251,9 @@ TASKS = data.tasks.filter(function(t) {
 return t && typeof t === 'object' && typeof t.name === 'string' && t.name.length > 0 &&
 ['active', 'done', 'ghost', 'chest_open'].indexOf(t.status) >= 0;
 }).map(function(t, i) {
-return { id: (Number.isFinite(Number(t.id)) && Number(t.id) >= 1) ? Math.min(1000000000, Math.round(Number(t.id))) : (i + 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: safeTs(t.deadline), status: t.status, createdAt: safeTs(t.createdAt, Date.now()), doneAt: safeTs(t.doneAt), ghostSince: safeTs(t.ghostSince) };
+var _tk = { id: (Number.isFinite(Number(t.id)) && Number(t.id) >= 1) ? Math.min(1000000000, Math.round(Number(t.id))) : (i + 1), name: t.name.slice(0, 200), tier: ['light', 'normal', 'urgent'].indexOf(t.tier) >= 0 ? t.tier : 'normal', deadline: safeTs(t.deadline), status: t.status, createdAt: safeTs(t.createdAt, Date.now()), doneAt: safeTs(t.doneAt), ghostSince: safeTs(t.ghostSince) };
+if (['body', 'mind', 'spirit', 'ties'].indexOf(t.sphere) >= 0) _tk.sphere = t.sphere; // кампания 3.0: сфера задачи (лениво — старые сейвы байт-стабильны)
+return _tk;
 });
 }
 TASKS = TASKS.filter(function(t, i) { return TASKS.findIndex(function(x) { return x.id === t.id; }) === i; });

@@ -278,7 +278,8 @@ test('perf.js file size is reasonable (<300 lines)', () => {
 // его загрузки. Бюджет — регрессионный гейт: превысил — режь/выноси, а не поднимай порог
 // молча (репин бюджета = осознанный коммит с комментарием, как у parity-эталонов).
 
-const P22_BUDGET_KB = { appJs: 520, styleCss: 200, precacheJsCss: 940 };
+// Бюджет прекэша 945 КБ (осознанный репин аудита 2026-10-03: +<1 КБ санитайзера c3 в state-guards.js и хук ранг-апа в app.js; запас был <1 КБ). Модули кампании 3.0 (≈ 75 КБ) в прекэш НЕ входят: грузятся лениво лоадером js/campaign3/c3-loader.js только при бете (nd_c3).
+const P22_BUDGET_KB = { appJs: 520, styleCss: 200, precacheJsCss: 945 };
 
 function precacheLocalEntries() {
     const sw = read('sw.js');

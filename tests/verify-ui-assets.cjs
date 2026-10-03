@@ -22,8 +22,8 @@ for (const rel of process.argv.slice(2)) {
         }
     } else if (rel.endsWith('.html')) {
         const pins = (src.match(/v=\d+/g) || []);
-        fileOk = fileOk && pins.length === 15 && new Set(pins).size === 1 && !src.includes('?v=80'); // P21: +js/audio.js (14 было в P20)
-        checks.push('pins x' + pins.length + '/15 unique=' + new Set(pins).size);
+        fileOk = fileOk && pins.length === 16 && new Set(pins).size === 1 && !src.includes('?v=80'); // кампания 3.0: +1 пин (js/campaign3/c3-loader.js; модули грузятся лениво); 15 было в P21
+        checks.push('pins x' + pins.length + '/16 unique=' + new Set(pins).size);
         const totem = src.includes('id="totemCard"');
         fileOk = fileOk && totem;
         checks.push('totemCard ' + (totem ? 'ok' : 'MISSING'));

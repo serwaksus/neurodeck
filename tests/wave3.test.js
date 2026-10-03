@@ -59,7 +59,7 @@ test('wave3 Ф1: siegeAlarmVerdict — <0.9 казармы / ≥1.2 крепка
 // ----------------------------------------------------------------
 test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гарнизоны захваченных, ratio', () => {
     const p = buildIn({
-        decls: [extractFn('siegeWrathNow'), extractFn('siegeAlarmVerdict'), extractFn('weatherOf'), extractFn('weatherNorth'), extractFn('weatherSouth'), extractFn('weatherFog'), extractFn('weatherSeasonWeek'), extractFn('scoutFresh'), extractFn('daysBetween'), extractFn('siegeAlarmPreview')],
+        decls: [extractFn('siegeWrathNow'), extractFn('wkSkipWrath'), extractFn('siegeAlarmVerdict'), extractFn('weatherOf'), extractFn('weatherNorth'), extractFn('weatherSouth'), extractFn('weatherFog'), extractFn('weatherSeasonWeek'), extractFn('scoutFresh'), extractFn('daysBetween'), extractFn('siegeAlarmPreview')],
         stubs: {
             SM: {
                 siegePower: (front, week, cap, wrath) => Math.round(front * 0.6 * (1 + 0.12 * wrath)),
@@ -92,7 +92,7 @@ test('wave3 Ф1: siegeAlarmPreview — power из SM, def = армия + гар�
     assert.ok(Math.abs(p.ratio - 20 / 134) < 1e-9);
     assert.equal(p.advice, 'Гарнизон тонкий — вложись в казармы');
     const none = buildIn({
-        decls: [extractFn('siegeWrathNow'), extractFn('siegeAlarmPreview')],
+        decls: [extractFn('siegeWrathNow'), extractFn('wkSkipWrath'), extractFn('siegeAlarmPreview')],
         stubs: { SM: null, army: { units: {} }, strongholds: [], STRONGHOLDS: [], siege: {}, capturedCount: () => 0, countGhostTasks: () => 0, lastCapturedIdx: () => -1 },
         body: 'siegeAlarmPreview()'
     });
@@ -304,17 +304,17 @@ test('wave3 Ф3 контракты [css/style.css + index.html]: башня в r
     assert.ok(cssSource().includes('.tower-card'), 'style.css: класс .tower-card существует');
     const html = htmlSource();
     const pins = (html.match(/v=(\d+)/g) || []);
-    assert.equal(pins.length, 15, 'index.html: 15 вхождений ?v= (P21: +js/audio.js; 14 было в P20)');
+    assert.equal(pins.length, 16, 'index.html: 16 вхождений ?v= (кампания 3.0: +js/campaign3/c3-loader.js, остальные модули грузятся лениво; 15 было в P21)');
     assert.equal(new Set(pins).size, 1, 'все ?v= одинаковы (факт: ' + pins.join(',') + ')');
     assert.ok(!html.includes('?v=80'), 'v80 не остался');
     console.log('verified: css/style.css index.html PASS (wave3 contracts)');
 });
 test('package.json: check:ui-скрипт верификации UI-ассетов подключён, JSON валиден', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-    assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html', 'check:ui вызывает верификатор');
+    assert.equal(pkg.scripts['check:ui'], 'node tests/verify-ui-assets.cjs css/style.css index.html && node tools/css-lint.cjs', 'check:ui вызывает верификатор и храповик css-lint');
     assert.equal(pkg.type, 'commonjs', 'type commonjs');
     const _pins = htmlSource().match(/v=\d+/g) || [];
-    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 15 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×15, P21: +js/audio.js)');
+    assert.ok(htmlSource().includes('id="totemCard"') && _pins.length === 16 && new Set(_pins).size === 1, 'index.html: PASS (totemCard + единый v ×16, кампания 3.0: лоадер)');
     assert.ok(cssSource().includes('.tower-card') && cssSource().includes('.siege-alarm'), 'css/style.css: PASS (tower-card + siege-alarm)');
     console.log('index.html: PASS');
     console.log('css/style.css: PASS');

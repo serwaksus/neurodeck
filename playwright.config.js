@@ -1,14 +1,20 @@
 const { defineConfig } = require('@playwright/test');
 
+const E2E_PORT = Number(process.env.ND_E2E_PORT) || 8099; // параллельные worktree ставят свой порт
+
 module.exports = defineConfig({
   testDir: './tests/e2e',
   timeout: 30000,
   expect: { timeout: 10000, toHaveScreenshot: { maxDiffPixels: 500, threshold: 0.2 } },
   fullyParallel: false,
   workers: 1,
-  snapshotPathTemplate: '{testDir}/snapshots/{testFilePath}/{arg}{ext}',
+  // Базлайны снимались на VPS и на ubuntu-раннере не воспроизводятся (аудит R2 M10). Визуальный CI-job (контейнер
+  // Playwright, ND_VISUAL_CI=1) читает СВОИ базлайны из snapshots-ci/; локальные остаются в snapshots/.
+  snapshotPathTemplate: process.env.ND_VISUAL_CI === '1'
+    ? '{testDir}/snapshots-ci/{testFilePath}/{arg}{ext}'
+    : '{testDir}/snapshots/{testFilePath}/{arg}{ext}',
   use: {
-    baseURL: 'http://localhost:8099',
+    baseURL: 'http://localhost:' + E2E_PORT,
     headless: true,
     viewport: { width: 390, height: 844 },
     trace: 'retain-on-failure', // QA-6 п.60: трейсы падений уезжают в test-results/ (upload-artifact в CI)
@@ -27,7 +33,7 @@ module.exports = defineConfig({
   },
   webServer: {
     command: 'node tests/e2e/serve.cjs',
-    url: 'http://localhost:8099',
+    url: 'http://localhost:' + E2E_PORT,
     reuseExistingServer: false,
     timeout: 10000,
   },

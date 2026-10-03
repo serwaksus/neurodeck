@@ -490,11 +490,11 @@ function finding(sev, title, evidence) { findings.push({ sev, title, evidence })
       const badges = [...document.querySelectorAll('.blood-oath-badge')];
       return {
         btn: true, rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
-        hit: hit ? hit.tagName + '|' + hit.className : null, cardExists: !!findCard(1), badgeCount: badges.length,
+        hit: hit ? hit.tagName + '|' + hit.className : null, hitIsDelete: !!(hit && hit.closest && hit.closest('[data-action="delete-card"]')), cardExists: !!findCard(1), badgeCount: badges.length,
         badgeRect: badges[0] ? (function () { const b = badges[0].getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }; })() : null,
       };
     });
-    if (diag.btn && diag.hit && !diag.hit.includes('delete-card')) {
+    if (diag.btn && diag.hit && !diag.hitIsDelete) { // аудит R2 L9: раньше искали 'delete-card' в className (это значение data-action) — ложный [P2]
       finding('P2', 'Бейдж Клятвы перекрывает кнопки ✎/🗑 карточки: тап по 🗑 на карточке с активной Клятвой не проходит (делегированный обработчик получает бейдж без data-action — клик умирает)', 'geometry: кнопка ' + JSON.stringify(diag.rect) + ', бейдж ' + JSON.stringify(diag.badgeRect) + ', elementFromPoint(центр кнопки) = ' + diag.hit + '; .blood-oath-badge position:absolute (css) — z над .card-corner-actions');
     }
     // Логика удаления — прямой DOM-клик той же кнопки (мимо перекрытия, тот же делегированный обработчик)

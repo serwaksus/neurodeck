@@ -180,17 +180,19 @@ test('P12: gold-фаза честным доходом → босс поверж
   await page.click('.sh-buy[data-action="boss-challenge"][data-num="1"]');
   await expect(card).toContainText('Вызов принят — фаза 3/3 в работе');
 
-  // gold-фаза: 10 сундуков срочных задач по +20💰 = 200💰 дня (цель 2×100).
+  // gold-фаза: цель 200💰 за день. Ф0.2 кампании 3.0: сундуков с золотом — не больше 5 в сутки (5×20 = 100💰),
+  // остальное — честный доход твердынь (goldGain 'tax'), как у живого игрока.
   // claimTaskChest не перерисовывает список задач (только дашборд) — после клейма
   // DOM протухает, поэтому между клеймами перезаходим во вкладку (renderTasks).
   await page.click('.bnav-btn[data-view="quests"]');
-  for (let i = 0; i < 10; i++) await page.locator('.task-btn.primary[data-action="complete-task"]').first().click();
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 5; i++) await page.locator('.task-btn.primary[data-action="complete-task"]').first().click();
+  for (let i = 0; i < 5; i++) {
     await page.locator('.task-btn.gold[data-action="claim-task-gold"]').first().click();
-    if (i < 9) { await page.click('.bnav-btn[data-view="deck"]'); await page.click('.bnav-btn[data-view="quests"]'); }
+    if (i < 4) { await page.click('.bnav-btn[data-view="deck"]'); await page.click('.bnav-btn[data-view="quests"]'); }
   }
+  await page.evaluate(() => goldGain(100, 'tax'));
 
-  // 10-й клейм закрывает фазу 3/3 → босс повержен → модалка reward-choice
+  // доход 200💰 дня закрывает фазу 3/3 → босс повержен → модалка reward-choice
   const modal = page.locator('#bossRewardModal');
   await expect(modal).toHaveClass(/show/);
   await expect(modal).toContainText('Гнилоух, Пастух Чумных Стад повержен — выбери награду');

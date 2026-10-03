@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 8099;
+const PORT = Number(process.env.ND_E2E_PORT) || 8099; // ND_E2E_PORT — параллельные рабочие копии (worktree) не делят порт
 const ROOT = path.join(__dirname, '..', '..');
 
 const server = http.createServer((req, res) => {

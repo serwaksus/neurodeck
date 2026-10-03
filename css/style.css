@@ -4,7 +4,7 @@ html { scroll-behavior: smooth; }
 --bg-deep: #0a0a0f;
 /* ФАЗА A: дизайн-токены «Тёмная сталь» */
 --gold-1: #8b5a2b; --gold-2: #c49a4a; --gold-3: #d4a574; --gold-4: #f4c896; --gold-5: #fde8c8;
---blood-1: #5e1622; --blood-2: #8b2635; --blood-3: #c73e4d;
+--blood-1: #5e1622; --blood-2: #8b2635; --blood-3: #da5565; /* было #c73e4d: контраст текста 3.9 < AA; светлее — 5.1 */
 --surface-0: rgba(8, 8, 14, 0.92); --surface-1: rgba(20, 20, 32, 0.78); --surface-2: rgba(30, 30, 48, 0.88);
 --hairline: rgba(212, 165, 116, 0.30);
 --shadow-key: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px var(--hairline);
@@ -34,6 +34,38 @@ html { scroll-behavior: smooth; }
  --light-rays-opacity: 0;
 --fs-secondary: 13px;
  }
+
+/* ============ TOKENS v2 — система арт-дирекции (docs/design/ART-DIRECTION.md) ============
+   Новые правила пишутся ТОЛЬКО на токенах; tools/css-lint.cjs не даёт литералам расти (храповик). */
+:root {
+  /* типографическая шкала (px) — единственные допустимые font-size */
+  --t-xs: 11px; --t-sm: 13px; --t-md: 15px; --t-lg: 17px; --t-xl: 20px; --t-2xl: 26px; --t-3xl: 34px;
+  /* отступы: шаг 4 */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  /* радиусы */
+  --r-sm: 4px; --r-md: 8px; --r-lg: 14px; --r-pill: 999px;
+  /* слои (z-index): диалог подтверждения выше любых модалок */
+  --z-base: 0; --z-lift: 1; --z-lift2: 2; --z-raised: 10; --z-fx: 50; --z-sticky: 90; --z-nav: 100; --z-celebrate: 320; --z-modal: 400; --z-confirm: 450; --z-toast: 500; --z-onboarding: 9999;
+  /* движение: длительности и кривые */
+  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms; --dur-4: 600ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* глубина */
+  --elev-1: 0 2px 6px rgba(0,0,0,0.4);
+  --elev-2: 0 6px 18px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4);
+  --elev-3: 0 14px 40px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+  --inner-light: inset 0 1px 0 rgba(255,255,255,0.06);
+  /* поверхности: 5 ступеней от «пола» к «поднятому» */
+  --s0: #07070b; --s1: #0c0c14; --s2: #12121c; --s3: #1a1a28; --s4: #232336;
+  /* текст: 3 ступени  */
+  --tx-1: #e8e4dc; --tx-2: #a8a294; --tx-3: #6f6a5f;
+  /* акценты по смыслу */
+  --ac-reward: #fbbf24; --ac-threat: #da5565; --ac-success: #34d399; --ac-arcane: #c084fc; --ac-info: #60a5fa;
+  /* материалы рангов: iron (C…CCC) → steel (B…BBB) → arcane (A…AAA) → gilded (S…SSS) */
+  --mat-iron-edge: #9ca3af;   --mat-iron-glow: rgba(156,163,175,0.35);  --mat-iron-fill: rgba(156,163,175,0.10);  --mat-iron-text: #c9cdd4;
+  --mat-steel-edge: #60a5fa;  --mat-steel-glow: rgba(96,165,250,0.40);  --mat-steel-fill: rgba(96,165,250,0.10);  --mat-steel-text: #93c5fd;
+  --mat-arcane-edge: #c084fc; --mat-arcane-glow: rgba(192,132,252,0.45); --mat-arcane-fill: rgba(192,132,252,0.12); --mat-arcane-text: #d8b4fe;
+  --mat-gilded-edge: #fbbf24; --mat-gilded-glow: rgba(251,191,36,0.55);  --mat-gilded-fill: rgba(251,191,36,0.14);  --mat-gilded-text: #fde68a;
+}
 html, body { background: var(--bg-deep); color: var(--text); font-family: 'Georgia', serif; height: 100%; overflow: hidden; }
 .app-wrap {
 position: fixed; inset: 0;
@@ -73,8 +105,6 @@ radial-gradient(ellipse 300px 700px at 70% 0%, rgba(255, 240, 200, 0.12), transp
 radial-gradient(ellipse 200px 500px at 50% 0%, rgba(255, 245, 220, 0.08), transparent 70%);
 mix-blend-mode: screen;
 }
-.mist-layer { position: fixed; inset: -50px; z-index: 2; pointer-events: none; opacity: var(--mist-opacity); transition: opacity 1.5s; mix-blend-mode: screen; }
-.mist-layer svg { width: 100%; height: 100%; }
 .torch-flicker {
 position: fixed; inset: 0; z-index: 3;
 pointer-events: none;
@@ -120,22 +150,6 @@ animation: flicker 3s infinite ease-in-out;
 .totem-opt.active { border-color: var(--gold-bright); color: var(--gold-bright); }
 .totem-chosen { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: rgba(212, 165, 116, 0.08); }
 .totem-icon { font-size: 28px; }
-.day-card-badge {
-    position: absolute;
-    bottom: 8px;
-    left: 12px;
-    background: linear-gradient(135deg, #fbbf24, #d97706);
-    color: #1a120b;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    z-index: 2;
-}
-.card.day-card { border-color: rgba(251, 191, 36, 0.55); box-shadow: 0 0 10px rgba(251, 191, 36, 0.12); }
 .toast .t-action {
     margin-top: 6px;
     background: none;
@@ -178,95 +192,13 @@ animation: flicker 3s infinite ease-in-out;
 @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .view-title { font-size: 17px; letter-spacing: 4px; color: var(--gold-bright); margin-bottom: 4px; text-transform: uppercase; }
 .view-subtitle { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-.card { position: relative; background: linear-gradient(180deg, var(--surface-hi), var(--surface)); border: 1px solid var(--border); border-radius: 3px; padding: 12px; cursor: pointer; transform-style: preserve-3d; transition: transform 0.2s, box-shadow 0.3s, border-color 0.3s; overflow: hidden; min-height: 200px; }
-.card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), var(--rank-glow, rgba(212, 165, 116, 0.15)), transparent 50%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
-.card:hover::before { opacity: 1; }
-.card:hover { border-color: var(--rank-color, var(--border-hi)); box-shadow: 0 0 24px var(--rank-shadow, rgba(212, 165, 116, 0.2)); }
-.card.rank-C, .card.rank-CC, .card.rank-CCC { --rank-color: #9ca3af; --rank-glow: rgba(156, 163, 175, 0.25); --rank-shadow: rgba(156, 163, 175, 0.3); }
-.card.rank-CC { --rank-color: #b8c0cc; --rank-glow: rgba(184, 192, 204, 0.35); --rank-shadow: rgba(184, 192, 204, 0.4); }
-.card.rank-CCC { --rank-color: #d1d8e0; --rank-glow: rgba(209, 216, 224, 0.45); --rank-shadow: rgba(209, 216, 224, 0.5); box-shadow: 0 0 14px rgba(209, 216, 224, 0.2); }
-.card.rank-B { --rank-color: #60a5fa; --rank-glow: rgba(96, 165, 250, 0.3); --rank-shadow: rgba(96, 165, 250, 0.4); }
-.card.rank-BB { --rank-color: #7cb8fc; --rank-glow: rgba(124, 184, 252, 0.4); --rank-shadow: rgba(124, 184, 252, 0.5); box-shadow: 0 0 14px rgba(124, 184, 252, 0.25); }
-.card.rank-BBB { --rank-color: #9acaff; --rank-glow: rgba(154, 202, 255, 0.5); --rank-shadow: rgba(154, 202, 255, 0.6); box-shadow: 0 0 18px rgba(154, 202, 255, 0.3); }
-.card.rank-A { --rank-color: #c084fc; --rank-glow: rgba(192, 132, 252, 0.35); --rank-shadow: rgba(192, 132, 252, 0.45); box-shadow: 0 0 14px rgba(192, 132, 252, 0.25); }
-.card.rank-AA { --rank-color: #d4a0fd; --rank-glow: rgba(212, 160, 253, 0.45); --rank-shadow: rgba(212, 160, 253, 0.55); box-shadow: 0 0 18px rgba(212, 160, 253, 0.35); }
-.card.rank-AAA { --rank-color: #e5bdff; --rank-glow: rgba(229, 189, 255, 0.6); --rank-shadow: rgba(229, 189, 255, 0.7); box-shadow: 0 0 22px rgba(229, 189, 255, 0.45); animation: aaaGlow 3s infinite ease-in-out; }
 @keyframes aaaGlow { 0%, 100% { box-shadow: 0 0 22px rgba(229, 189, 255, 0.45); } 50% { box-shadow: 0 0 30px rgba(229, 189, 255, 0.7); } }
-.card.rank-S { --rank-color: #fbbf24; --rank-glow: rgba(251, 191, 36, 0.45); --rank-shadow: rgba(251, 191, 36, 0.6); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); }
-.card.rank-SS { --rank-color: #f59e0b; --rank-glow: rgba(245, 158, 11, 0.6); --rank-shadow: rgba(245, 158, 11, 0.7); box-shadow: 0 0 24px rgba(245, 158, 11, 0.5); animation: ssGlow 3s infinite ease-in-out; }
 @keyframes ssGlow { 0%, 100% { box-shadow: 0 0 24px rgba(245, 158, 11, 0.5); } 50% { box-shadow: 0 0 34px rgba(245, 158, 11, 0.8); } }
-.card.rank-SSS {
---rank-color: #fcd34d; --rank-glow: rgba(252, 211, 77, 0.9); --rank-shadow: rgba(252, 211, 77, 1);
-box-shadow: 0 0 28px rgba(252, 211, 77, 0.6), inset 0 0 14px rgba(252, 211, 77, 0.2);
-border-color: #fcd34d;
-animation: sssGlow 2.5s infinite ease-in-out;
-}
 @keyframes sssGlow {
 0%, 100% { box-shadow: 0 0 28px rgba(252, 211, 77, 0.6), inset 0 0 14px rgba(252, 211, 77, 0.2); }
 50% { box-shadow: 0 0 48px rgba(252, 211, 77, 1), inset 0 0 26px rgba(252, 211, 77, 0.4); }
 }
-.card.rank-SSS::after {
-content: ''; position: absolute; inset: -2px;
-background: linear-gradient(115deg, transparent 30%, rgba(252, 211, 77, 0.6) 45%, rgba(251, 191, 36, 0.4) 50%, rgba(255, 240, 180, 0.3) 55%, transparent 70%);
-background-size: 200% 100%;
-animation: sssShimmer 3s infinite linear;
-pointer-events: none;
-border-radius: 3px;
-}
 @keyframes sssShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.card.rank-SSS .card-rank {
-background: linear-gradient(135deg, #fcd34d, #f59e0b, #fbbf24);
--webkit-background-clip: text;
-background-clip: text;
-color: transparent;
-text-shadow: 0 0 16px rgba(252, 211, 77, 0.9);
-filter: drop-shadow(0 0 6px rgba(252, 211, 77, 0.8));
-font-size: 20px;
-}
-.card-rank { position: absolute; top: 6px; right: 64px; font-size: 18px; font-weight: bold; color: var(--rank-color); text-shadow: 0 0 8px var(--rank-glow); letter-spacing: 1px; }
-.card-name { font-size: 13px; color: var(--text); letter-spacing: 1px; margin-bottom: 4px; padding-right: 100px; }
-.card-actions { position: absolute; top: 28px; right: 8px; display: flex; gap: 3px; }
-.card-meta { font-size: var(--fs-secondary); color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
-.card-stat-tag { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-secondary); letter-spacing: 1px; padding: 2px 7px; border-radius: 2px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); margin-bottom: 6px; }
-.card-adaptation-tag {
-display: inline-block;
-font-size: var(--fs-secondary); letter-spacing: 1px;
-padding: 2px 6px; border-radius: 2px;
-background: rgba(0,0,0,0.4);
-border: 1px solid var(--border);
-margin-left: 4px;
-}
-.card-adaptation-tag.streak-max { color: var(--gold-bright); border-color: rgba(251, 191, 36, 0.5); }
-.card-adaptation-tag.streak-high { color: var(--green); border-color: rgba(52, 211, 153, 0.4); }
-.card-adaptation-tag.streak-mid { color: var(--yellow); border-color: rgba(251, 191, 36, 0.4); }
-.card-adaptation-tag.streak-low { color: var(--text-dim); border-color: var(--border); }
-.card-mastery {
-margin-top: 8px;
-margin-bottom: 4px;
-font-size: var(--fs-secondary); color: var(--text-dim);
-letter-spacing: 1px;
-}
-.card-mastery b { color: var(--gold-bright); font-weight: normal; }
-.card-progress { margin-top: 6px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
-.card-progress-bar { height: 100%; background: var(--rank-color); box-shadow: 0 0 8px var(--rank-glow); transition: width 0.5s; }
-.card-stats-line { margin-top: 10px; font-size: var(--fs-secondary); color: var(--text-dim); letter-spacing: 1px; }
-.card-stats-line b { color: var(--text); font-weight: normal; }
-.card-btn { position: relative; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
-/* ponytail: pseudo hit-area 44x44; adjacent buttons' zones overlap an ~8px edge strip */
-.card-btn::after { content: ''; position: absolute; top: -11px; left: -11px; width: 44px; height: 44px; }
-.card-btn:hover { background: var(--gold); color: var(--bg-deep); }
-.card-btn.fail:hover { background: var(--blood-bright); }
-.card-btn.edit { font-size: 10px; }
-.card-btn.delete { font-size: 10px; }
-.card-btn.delete:hover { background: var(--blood-bright); }
-@media (hover: none) and (pointer: coarse) {
-.card-btn { width: 44px; height: 44px; font-size: 18px; border-radius: 4px; }
-.card-btn.edit, .card-btn.delete { font-size: 16px; }
-.card-btn::after { display: none; }
-}
-.card.done-today { opacity: 0.6; }
-.card.done-today::after { content: '✓ Сегодня'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; color: var(--green); letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 10px rgba(52, 211, 153, 0.6); background: rgba(5, 8, 12, 0.78); padding: 6px 14px; border-radius: 4px; border: 1px solid rgba(52, 211, 153, 0.4); pointer-events: none; z-index: 5; }
 .done-today-btn { opacity: 0.4; cursor: not-allowed !important; background: rgba(52, 211, 153, 0.2) !important; color: var(--green) !important; }@keyframes bossBreath { 0%,100%{transform:scale(1);} 50%{transform:scale(1.03);} }@keyframes eyeGlow { 0%,100%{opacity:1;} 50%{opacity:0.7;} }@keyframes bossRage {
 0%,100%{transform:scale(1.05) translateX(0);}
 25%{transform:scale(1.05) translateX(-3px);}
@@ -383,7 +315,7 @@ letter-spacing: 1px;
 .goal-card.completed { opacity: 0.5; filter: grayscale(0.5); }
 .goal-card.completed .goal-name { text-decoration: line-through; }
 .goals-empty { padding: 30px 16px; text-align: center; color: var(--text-dim); font-style: italic; font-size: 12px; letter-spacing: 1px; line-height: 1.6; }
-.float-number { position: fixed; z-index: 310; font-family: 'Georgia', serif; font-size: 20px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; animation: floatUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; white-space: nowrap; }
+.float-number { position: fixed; z-index: 310; font-family: var(--font-display); font-size: 20px; font-weight: bold; color: var(--gold-bright); text-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; animation: floatUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; white-space: nowrap; }
 .float-number.damage { color: var(--blood-bright) !important; text-shadow: 0 0 12px rgba(199, 62, 77, 0.9), 0 2px 4px rgba(0,0,0,0.8) !important; font-size: 24px; }
 @keyframes floatUp { 0%{opacity:0; transform: translate(-50%, 0) scale(0.5);} 20%{opacity:1; transform: translate(-50%, -10px) scale(1.2);} 100%{opacity:0; transform: translate(-50%, -80px) scale(0.8);} }
 .levelup-overlay { position: fixed; inset: 0; z-index: 320; pointer-events: none; background: radial-gradient(circle, rgba(251, 191, 36, 0.3), transparent 60%); opacity: 0; }
@@ -583,7 +515,6 @@ letter-spacing: 1px;
 .sync-header-btn span { display: none; }
 .sync-header-btn span#syncBadge { display: inline-flex; }
 .hero-mini-info { min-width: 90px; }
-.cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .stats-grid { grid-template-columns: 1fr; }
 .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(16px); border-top: 1px solid var(--border); z-index: 150; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); padding-left: calc(4px + env(safe-area-inset-left)); padding-right: calc(4px + env(safe-area-inset-right)); justify-content: space-around; } /* P2: боковые safe-area-инсеты — кнопки не прячутся за чёлкой в landscape */
 .bottom-nav .bnav-btn { flex: 1; padding: 8px 4px; background: none; border: none; color: var(--text-dim); font-family: inherit; font-size: var(--fs-secondary); letter-spacing: 1px; text-transform: uppercase; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -608,7 +539,6 @@ letter-spacing: 1px;
 }
 @media (max-width: 420px) {
 .hero-mini-xp-wrap { display: none; }
-.cards { grid-template-columns: 1fr; }
 .backpack-grid { grid-template-columns: repeat(4, 1fr); }
 }
 .confirm-modal { max-width: 340px; text-align: center; }
@@ -642,7 +572,6 @@ letter-spacing: 1px;
 0%, 100% { box-shadow: 0 0 0 rgba(251, 191, 36, 0); }
 50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.3); }
 }
-.card.rankup-glow { animation: cardGlowPulse 0.6s ease-in-out 3; }
 @keyframes heroLevelUpGlow {
 0% { box-shadow: 0 0 0 rgba(244, 200, 150, 0); }
 50% { box-shadow: 0 0 30px rgba(244, 200, 150, 0.6), 0 0 60px rgba(251, 191, 36, 0.3); }
@@ -669,39 +598,9 @@ letter-spacing: 1px;
 .goal-step-check { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--text-dim); border-radius: 50%; font-size: 11px; color: var(--text-dim); flex-shrink: 0; transition: all 0.2s; }
 .goal-step.done .goal-step-check { border-color: #34d399; background: rgba(52,211,153,0.15); color: #34d399; }
 .goal-step-text { font-size: 12px; color: var(--text-bright); flex: 1; }
-.card.blood-oath {
-    border-color: #c73e4d !important;
-    box-shadow: 0 0 20px rgba(199,62,77,0.6), 0 0 40px rgba(199,62,77,0.3) !important;
-    animation: bloodOathPulse 1.5s ease-in-out infinite;
-    position: relative;
-}
 @keyframes bloodOathPulse {
     0%, 100% { box-shadow: 0 0 20px rgba(199,62,77,0.6), 0 0 40px rgba(199,62,77,0.3); }
     50% { box-shadow: 0 0 30px rgba(199,62,77,0.9), 0 0 60px rgba(199,62,77,0.5); }
-}
-.blood-oath-badge {
-    position: absolute;
-    top: 8px;
-    left: 12px;
-    background: linear-gradient(135deg, #c73e4d, #8b0000);
-    color: #fff;
-    font-size: var(--fs-secondary);
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 3px;
-    z-index: 5; /* ниже угловых кнопок: бейдж не должен перекрывать edit/delete (P2 из brief) */
-    box-shadow: 0 2px 8px rgba(199,62,77,0.6);
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    white-space: nowrap;
-    /* a11y-фикс: на узких карточках nowrap-бейдж дотягивался до .card-corner-actions
-       и глотал тапы по кнопкам редактирования. Теперь он не шире свободной зоны
-       и сам не ловит указатель — только информация. */
-    max-width: calc(100% - 160px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    pointer-events: none;
-    box-sizing: border-box;
 }
 .dashboard-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.03); }
 .dashboard-row:last-child { border-bottom: none; }
@@ -729,13 +628,11 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
 }
-body.reduced-motion .card { transform: none !important; }
 body.reduced-motion .shake-wrap { animation: none !important; transform: none !important; }
 body.reduced-motion .torch-flicker { animation: none !important; }
 body.reduced-motion .blood-drop { animation: none !important; opacity: 0 !important; }
 body.reduced-motion .levelup-banner, body.reduced-motion .rankup-banner { animation: none !important; transform: translate(-50%, -50%) !important; }
 body.reduced-motion .modal-overlay { animation: none !important; }
-body.reduced-motion .card.rank-AAA { animation: none !important; }
 body.low-effect #dustCanvas { opacity: 0.3 !important; }
 body.low-effect .mist-layer { opacity: calc(var(--mist-opacity) * 0.5) !important; }
 body.effects-off #dustCanvas { display: none !important; }
@@ -814,9 +711,7 @@ textarea:focus-visible {
 :root.perf-eco .torch-flicker,
 :root.perf-eco .light-rays {
   display: none !important;
-}
-:root.perf-eco .sh-card,
-:root.perf-eco .sh-prov {
+}:root.perf-eco .sh-prov {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }.combat-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -857,7 +752,7 @@ textarea:focus-visible {
 .task-body { flex: 1; min-width: 0; }
 .task-name { font-size: 12.5px; color: var(--text-bright); word-break: break-word; }
 .task-card.ghost .task-name { text-decoration: line-through; color: var(--text-dim); }
-.task-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
+.task-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 .task-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .task-btn { min-height: 36px; min-width: 36px; padding: 4px 8px; font-size: 13px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; color: var(--text-bright); cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
 .task-btn.primary { color: var(--green); border-color: rgba(52,211,153,0.5); }
@@ -870,27 +765,9 @@ textarea:focus-visible {
 .task-btn.del:hover { color: var(--blood-bright); border-color: var(--blood); }
 .task-ghost-info { font-size: var(--fs-secondary); color: var(--text-dim); }
 .ghosts-title { font-size: 11px; color: var(--blood-bright); margin: 12px 0 8px; }
-
-/* ===================== ТВЕРДЫНИ v2 (souls-стиль, SPEC §1/§6) ===================== */
-.sh-treasury { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid var(--gold); border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: var(--text-dim); }
-.sh-treasury b { color: var(--gold-bright); }
 .sh-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .sh-prov { background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 4px; padding: 10px; }
 .sh-prov-title { font-size: 11px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-.sh-card { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin-bottom: 6px; }
-.sh-card.owned { border-color: rgba(52,211,153,0.35); cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
-.sh-card.owned:hover { border-color: var(--green); box-shadow: 0 0 12px rgba(52,211,153,0.2); }
-.sh-card.front { border-color: var(--gold); background: rgba(251,191,36,0.05); }
-.sh-card.locked { opacity: 0.4; }
-.sh-icon { width: 44px; min-height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
-.sh-icon img { width: 40px; height: auto; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
-:root.perf-eco .sh-icon img { filter: none; }
-.sh-body { flex: 1; min-width: 0; }
-.sh-name { font-size: 12.5px; color: var(--text-bright); }
-.sh-card.owned .sh-name { color: var(--gold-bright); }
-.sh-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
-.sh-assault { min-height: 44px; padding: 6px 12px; background: linear-gradient(180deg, rgba(199,62,77,0.25), rgba(139,38,53,0.2)); border: 1px solid var(--blood-bright); border-radius: 4px; color: var(--blood-bright); font-family: inherit; font-size: 11px; letter-spacing: 1px; cursor: pointer; white-space: nowrap; transition: box-shadow 0.2s; }
-.sh-assault:hover { box-shadow: 0 0 14px rgba(199,62,77,0.4); }
 .sh-back { display: inline-block; margin-bottom: 10px; padding: 7px 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 3px; color: var(--text-dim); font-family: inherit; font-size: 11px; letter-spacing: 1px; cursor: pointer; }
 .sh-back:hover { color: var(--gold-bright); border-color: var(--gold); }
 .sh-panel-head { margin-bottom: 12px; }
@@ -902,11 +779,11 @@ textarea:focus-visible {
 .sh-build-icon { width: 30px; text-align: center; font-size: 18px; flex-shrink: 0; }
 .sh-build-body { flex: 1; min-width: 0; }
 .sh-build-name { font-size: 12px; color: var(--text-bright); }
-.sh-build-meta { font-size: 10.5px; color: var(--text-dim); margin-top: 1px; }
+.sh-build-meta { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
 .sh-req { color: var(--blood-bright); font-size: var(--fs-secondary); }
 .sh-buy { min-height: 44px; padding: 6px 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--gold); border-radius: 3px; color: var(--gold-bright); font-family: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; transition: box-shadow 0.2s; }
 .sh-buy:hover { box-shadow: 0 0 12px rgba(251,191,36,0.35); }
-.sh-mini { min-height: 40px; min-width: 44px; padding: 5px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: inherit; font-size: 10.5px; cursor: pointer; transition: border-color 0.2s; }
+.sh-mini { min-height: 40px; min-width: 44px; padding: 5px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: inherit; font-size: 11px; cursor: pointer; transition: border-color 0.2s; }
 .sh-mini:hover { border-color: var(--gold); color: var(--gold-bright); }
 .sh-hire-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .sh-stage { font-size: var(--fs-secondary); letter-spacing: 1px; padding: 2px 7px; border-radius: 2px; white-space: nowrap; flex-shrink: 0; }
@@ -920,10 +797,10 @@ textarea:focus-visible {
 .sh-tile-icon { height: 64px; display: flex; align-items: center; justify-content: center; font-size: 40px; background: rgba(0,0,0,0.25); border-radius: 2px; overflow: hidden; }
 .sh-tile-icon img { width: 64px; height: 64px; object-fit: contain; }
 .sh-tile-name { font-size: 12px; color: var(--text-bright, #e8e4dc); }
-.sh-tile-meta { font-size: 10.5px; color: var(--text-dim); }
+.sh-tile-meta { font-size: 11px; color: var(--text-dim); }
 .sh-tile-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.sh-tile-cost { font-size: 10.5px; color: var(--gold-bright); }
-.sh-tile-upkeep { font-size: 10.5px; color: var(--blood-bright); }
+.sh-tile-cost { font-size: 11px; color: var(--gold-bright); }
+.sh-tile-upkeep { font-size: 11px; color: var(--blood-bright); }
 .sh-tile .sh-buy { width: 100%; }
 .sh-tile.locked { opacity: 0.75; }
 /* P7 «Коррупция по-человечески»: прогноз до руины, аварийный ремонт, восстановление */
@@ -935,7 +812,7 @@ textarea:focus-visible {
 .sh-rebuild:hover { box-shadow: 0 0 12px rgba(52,211,153,0.35); }
 .sh-tile.built { border-left-color: var(--green); }
 /* P6: брейкдауны экономики — строка тайла покупки и блок подтверждения штурма (статичный текст, без анимаций) */
-.sh-tile-break { font-size: 10.5px; color: var(--text-dim); border-top: 1px dashed var(--border); padding-top: 4px; }
+.sh-tile-break { font-size: 11px; color: var(--text-dim); border-top: 1px dashed var(--border); padding-top: 4px; }
 .assault-breakdown { margin: 8px 0; padding: 6px 10px; background: rgba(0,0,0,0.25); border: 1px dashed var(--border); border-radius: var(--radius-1); font-size: 12px; color: var(--text-bright, #e8e4dc); text-align: left; }
 .assault-breakdown div { margin: 2px 0; }
 /* P10: консолидированная панель подготовки осады + «рискованно»-пометка (статичный текст, без анимаций) */
@@ -1009,33 +886,14 @@ textarea:focus-visible {
 :root.perf-eco .siege-spectacle { animation: none; background: rgba(0,0,0,0.6); }
 :root.perf-eco .siege-spectacle .ss-text, :root.perf-eco .siege-spectacle .ss-icon { animation: none; }
 
-/* ===================== КАРТОЧКА: разделённые кнопки ===================== */
-.card-corner-actions { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; opacity: 0.5; transition: opacity 0.2s; }
-.card-corner-actions .card-btn { width: 26px; height: 26px; font-size: 12px; }
-.card-corner-actions:hover { opacity: 1; }
-.card-complete-btn { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(212,165,116,0.15), rgba(212,165,116,0.05)); border: 1px solid var(--gold); border-radius: 4px; color: var(--gold-bright); font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 8px; transition: all 0.2s; letter-spacing: 1px; }
-.card-complete-btn:hover { background: rgba(212,165,116,0.2); box-shadow: 0 0 16px rgba(212,165,116,0.25); }
-.card-complete-btn:active { transform: scale(0.97); }
-.card-complete-btn.done { background: rgba(52,211,153,0.1); border-color: var(--green); color: var(--green); cursor: default; }
-.card-skip-row { display: flex; justify-content: flex-end; padding: 0 4px 4px; }
-.card-skip-row .card-btn.fail { min-width: 44px; min-height: 28px; font-size: 11px; color: var(--text-dim); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 2px 8px; }
-.card-skip-row .card-btn.fail:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
-/* Тач: 26px угловые кнопки карточки — мисстап «удалить» вместо «редактировать» (H1);
-   правило стоит ПОСЛЕ .card-corner-actions, чтобы победить его специфичность */
-@media (hover: none) and (pointer: coarse) {
-.card-corner-actions { gap: 6px; }
-.card-corner-actions .card-btn { width: 44px; height: 44px; font-size: 16px; }
-}
-:root.perf-eco .card-complete-btn { transition: none; }
-
 /* ================================================================== */
 /* ================= VISUAL OVERHAUL v55 (У1+У2) ==================== */
 /* ================================================================== */
 
 /* ---- У1.1: Типографика ---- */
 :root {
-  --font-display: 'Cinzel', 'Georgia', serif;
-  --font-body: 'Crimson Text', 'Georgia', serif;
+  --font-display: 'Philosopher', 'Cinzel', 'Georgia', serif; /* кириллица + латиница (fonts/fonts.css) */
+  --font-body: 'Alegreya', 'Georgia', serif;
   --radius-card: 8px;
   --radius-btn: 6px;
   --radius-modal: 12px;
@@ -1050,62 +908,84 @@ textarea:focus-visible {
 html, body {
   font-family: var(--font-body) !important;
   font-size: 15px;
+  font-variant-numeric: lining-nums; /* Alegreya по умолчанию рисует «старые» цифры — для счётчиков и казны нужны ровные */
 }
+
+/* Органы управления по умолчанию НЕ наследуют шрифт (UA-стиль Arial/system-ui): главная CTA «Выполнить»,
+   тотемы, доктрины и стойки рисовались чужим шрифтом (аудит визуала D1). Элементный селектор слабее любых классовых правил. */
+button, input, select, textarea { font-family: inherit; }
+
+/* Числа, которые меняются на глазах, не должны «дышать» шириной */
+.gold-chip, .gold-chip b, #heroGoldVal, #heroXpCur, #heroXpMax, #heroMiniXpText, #progressVal,
+.float-number, .stat-value, .xp-val { font-variant-numeric: lining-nums tabular-nums; }
+
+/* Знак NEURODECK остаётся в Cinzel (латиница), всё остальное — Philosopher */
+.logo { font-family: 'Cinzel', var(--font-display) !important; }
 
 h1, h2, h3, .view-title, .modal-header h3,
 .sh-panel-title, .sh-prov-title, .sh-quest-title, .logo,
 .header, .tab, .demo-btn, .forge-btn, .goals-add {
   font-family: var(--font-display) !important;
-}
-
-/* Минимальный читаемый размер */
-.card-meta, .card-stats-line, .sh-meta, .sh-req,
-.goal-filter, .card-adaptation-tag, .stat-bar-label,
-.stat-attr-label, .sh-quest, .sh-build-meta {
+}.sh-req,
+.goal-filter,
+.stat-bar-label,
+.stat-attr-label,
+.sh-quest,
+.sh-build-meta {
   font-size: 13px !important;
 }
 
 .view-title { font-size: 20px !important; letter-spacing: 2px; }
-.view-subtitle { font-size: 13px !important; }
-.card-name { font-size: 15px !important; font-weight: 600; }
-.sh-name, .sh-build-name { font-size: 14px !important; }
-
-/* ---- У1.2: Скругления ---- */
-.card, .sh-card, .sh-prov, .stat-card, .goal-card, .task-card,
-.sh-quest-board, .sh-building, .tract-region {
+.view-subtitle { font-size: 13px !important; }.sh-build-name { font-size: 14px !important; }.sh-prov,
+.stat-card,
+.goal-card,
+.task-card,
+.sh-quest-board,
+.sh-building,
+.tract-region {
   border-radius: var(--radius-card) !important;
-}
-.demo-btn, .forge-btn, .goals-add, .goal-filter, .card-btn,
-.sh-assault, .sh-buy, .sh-mini, .task-btn, .tract-buy,
-.backpack-tab, .goal-btn, .tab {
+}.demo-btn,
+.forge-btn,
+.goals-add,
+.goal-filter,
+.sh-buy,
+.sh-mini,
+.task-btn,
+.tract-buy,
+.backpack-tab,
+.goal-btn,
+.tab {
   border-radius: var(--radius-btn) !important;
 }
 .modal, .confirm-modal, .onboarding-card {
   border-radius: var(--radius-modal) !important;
-}
-
-/* ---- У1.3: Глубина и слои ---- */
-.card, .sh-card, .stat-card, .goal-card, .task-card,
-.sh-quest-board, .sh-treasury, .sh-prov {
+}.stat-card,
+.goal-card,
+.task-card,
+.sh-quest-board,
+.sh-prov {
   box-shadow: var(--shadow-card) !important;
 }
 .modal, .confirm-modal {
   box-shadow: var(--shadow-modal) !important;
-}
-.card-progress-bar, .stat-bar-fill, .hero-xp-fill,
-.hero-mini-xp-fill, .stat-attr-progress, .map-progress-fill,
+}.stat-bar-fill,
+.hero-xp-fill,
+.hero-mini-xp-fill,
+.stat-attr-progress,
+.map-progress-fill,
 .tract-build-fill {
   box-shadow: 0 0 8px rgba(212,165,116,0.3);
-}
-
-/* ---- У1.4: Hover — карточки приподнимаются ---- */
-.card:hover, .sh-card:hover, .goal-card:hover, .task-card:hover,
-.stat-card:hover, .sh-prov:hover {
+}.goal-card:hover,
+.task-card:hover,
+.stat-card:hover,
+.sh-prov:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-card-hover) !important;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.card, .sh-card, .goal-card, .task-card, .stat-card, .sh-prov {
+}.goal-card,
+.task-card,
+.stat-card,
+.sh-prov {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -1119,25 +999,16 @@ h1, h2, h3, .view-title, .modal-header h3,
 .demo-btn.primary:hover, .forge-btn:hover, .goals-add:hover {
   background: linear-gradient(135deg, rgba(212,165,116,0.35), rgba(139,90,43,0.3)) !important;
   box-shadow: 0 0 16px rgba(212,165,116,0.3);
-}
-.card-complete-btn {
-  background: linear-gradient(135deg, rgba(212,165,116,0.18), rgba(139,90,43,0.1)) !important;
-  border: 1px solid var(--gold-bright) !important;
-  text-shadow: 0 0 6px rgba(212,165,116,0.3);
-}
-.card-complete-btn:hover {
-  background: linear-gradient(135deg, rgba(212,165,116,0.28), rgba(139,90,43,0.18)) !important;
-  box-shadow: 0 0 20px rgba(212,165,116,0.25);
-}
-
-/* ---- У1.6: Shimmer на прогресс-барах ---- */
-.card-progress-bar, .stat-bar-fill, .hero-xp-fill,
-.hero-mini-xp-fill, .stat-attr-progress {
+}.stat-bar-fill,
+.hero-xp-fill,
+.hero-mini-xp-fill,
+.stat-attr-progress {
   position: relative;
   overflow: hidden;
-}
-.card-progress-bar::after, .stat-bar-fill::after, .hero-xp-fill::after,
-.hero-mini-xp-fill::after, .stat-attr-progress::after {
+}.stat-bar-fill::after,
+.hero-xp-fill::after,
+.hero-mini-xp-fill::after,
+.stat-attr-progress::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1147,22 +1018,16 @@ h1, h2, h3, .view-title, .modal-header h3,
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
-}
-:root.perf-eco .card-progress-bar::after, :root.perf-eco .stat-bar-fill::after,
-:root.perf-eco .hero-xp-fill::after, :root.perf-eco .stat-attr-progress::after {
+}:root.perf-eco .stat-bar-fill::after,
+:root.perf-eco .hero-xp-fill::after,
+:root.perf-eco .stat-attr-progress::after {
   animation: none; display: none;
 }
-
-/* ---- У1.7: Спрайты крупнее ---- */
-.sh-icon img { width: 52px !important; height: auto !important; }
 .sh-build-icon img { width: 48px !important; height: auto !important; }
 .hero-avatar-img { width: 88px !important; height: 88px !important; }
 .hero-avatar { font-size: 64px !important; }
-.sh-icon { font-size: 32px; width: 52px; }
 
 /* ---- У2.1: Параллакс тумана (2 слоя, разные скорости) ---- */
-.mist-layer { will-change: transform; }
-.mist-layer svg { transition: transform 0.1s linear; }
 body::before {
   content: '';
   position: fixed;
@@ -1172,20 +1037,6 @@ body::before {
   background:
     radial-gradient(ellipse 80% 50% at 20% 30%, rgba(212,165,116,0.03), transparent),
     radial-gradient(ellipse 60% 40% at 80% 70%, rgba(199,62,77,0.02), transparent);
-}
-
-/* ---- У2.2: Свечения по редкости ---- */
-.card.rank-S, .card.rank-SS, .card.rank-SSS {
-  box-shadow: var(--shadow-card), 0 0 16px rgba(251,191,36,0.15) !important;
-}
-.card.rank-A, .card.rank-AA, .card.rank-AAA {
-  box-shadow: var(--shadow-card), 0 0 12px rgba(192,132,252,0.1) !important;
-}
-.card.rank-B, .card.rank-BB, .card.rank-BBB {
-  box-shadow: var(--shadow-card), 0 0 8px rgba(96,165,250,0.08) !important;
-}
-.card.rank-S:hover, .card.rank-SS:hover, .card.rank-SSS:hover {
-  box-shadow: var(--shadow-card-hover), 0 0 24px rgba(251,191,36,0.25) !important;
 }
 
 /* ---- У2.3: Золотые искры на фоне ---- */
@@ -1199,31 +1050,18 @@ body::before {
 }
 :root.perf-eco .view { animation: none; }
 
-/* ---- У2.5: SVG-иконки на ключевых кнопках ---- */
-.card-complete-btn svg, .card-btn svg { display: inline; vertical-align: middle; margin-right: 4px; }
-
 /* ---- Eco mode: отключить все новые анимации ---- */
-:root.perf-eco .sh-kingdom-path { animation: none; }
-:root.perf-eco .card:hover, :root.perf-eco .sh-card:hover,
-:root.perf-eco .goal-card:hover, :root.perf-eco .stat-card:hover {
+:root.perf-eco .sh-kingdom-path { animation: none; }:root.perf-eco .goal-card:hover,
+:root.perf-eco .stat-card:hover {
   transform: none;
 }
 
 /* ---- Мобильная адаптация ---- */
 @media (max-width: 400px) {
-  .card-name { font-size: 14px !important; }
-  .sh-icon img { width: 44px !important; }
   .sh-build-icon img { width: 40px !important; }
   .hero-avatar-img { width: 72px !important; height: 72px !important; }
   .view-title { font-size: 18px !important; }
 }
-
-/* ===================== КАРТОЧКА: кнопки рядом ===================== */
-.card-btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: stretch; } /* P2: перенос кнопок карточки при крупном шрифте вместо выезда за край */
-.card-btn-row .card-complete-btn { flex: 1; min-height: 44px; margin-top: 0; }
-.card-skip-btn { width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(139,38,53,0.3); border-radius: 6px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-.card-skip-btn:hover { color: var(--blood-bright); border-color: var(--blood-bright); background: rgba(139,38,53,0.1); }
-.card-skip-btn:active { transform: scale(0.95); }
 
 /* ===================== КАРТА КОРОЛЕВСТВА (баннер + провинции) ===================== */
 .kingdom-banner {
@@ -1244,18 +1082,7 @@ body::before {
 .sh-prov:nth-child(2) { border-top: 2px solid #4682b4; }
 .sh-prov:nth-child(3) { border-top: 2px solid #8b4513; }
 .sh-prov:nth-child(4) { border-top: 2px solid #800000; }
-
-/* Твердыня — карточка в карте */
-.sh-card { position: relative; overflow: hidden; }
-.sh-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.3)); pointer-events: none; }
-.sh-card.owned { border: 1px solid rgba(212,165,116,0.4); }
-.sh-card.owned .sh-icon { filter: drop-shadow(0 0 8px rgba(212,165,116,0.3)); }
-.sh-card.front { border: 1px solid var(--blood-bright); animation: shFrontPulse 2s ease-in-out infinite; }
-.sh-card.front .sh-icon { font-size: 36px; }
 @keyframes shFrontPulse { 0%,100% { box-shadow: 0 0 8px rgba(199,62,77,0.2); } 50% { box-shadow: 0 0 20px rgba(199,62,77,0.5); } }
-.sh-card.locked { opacity: 0.35; filter: grayscale(0.8) blur(0.5px); }
-.sh-card.locked::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
-:root.perf-eco .sh-card.front { animation: none; }
 
 /* Квесты — крупнее и заметнее */
 .sh-quest-board { border: 1px solid rgba(212,165,116,0.3); background: linear-gradient(180deg, rgba(30,20,10,0.6), rgba(10,10,15,0.8)); }
@@ -1280,26 +1107,6 @@ body::before {
 .digest-kp { height: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; margin: 8px 0 4px; }
 .digest-kp-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
 .digest-foot { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 10px; }
-
-/* ===== B2: галерея трофеев ===== */
-.ach-wrap { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); padding: 16px; margin-bottom: 20px; border-radius: 4px; }
-.ach-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-.ach-title { font-size: 12px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
-.ach-count { color: var(--gold-bright); font-size: 14px; font-weight: bold; }
-.ach-overall { height: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
-.ach-overall-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
-.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.ach-card { position: relative; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 14px 10px; border-radius: 6px; text-align: center; opacity: 0.55; }
-.ach-card.unlocked { opacity: 1; background: rgba(251, 191, 36, 0.08); border-color: rgba(251, 191, 36, 0.45); box-shadow: 0 0 14px rgba(251, 191, 36, 0.12); }
-.ach-icon { font-size: 26px; }
-.ach-card:not(.unlocked) .ach-icon { filter: grayscale(1); }
-.ach-name { font-size: 12px; color: var(--gold-bright); font-weight: bold; margin-top: 6px; letter-spacing: 0.5px; }
-.ach-card:not(.unlocked) .ach-name { color: var(--text-dim); }
-.ach-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-.ach-prog { height: 5px; background: rgba(0, 0, 0, 0.5); border-radius: 3px; overflow: hidden; margin-top: 8px; }
-.ach-prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
-.ach-prog-text { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
-.ach-card.unlocked::after { content: '✓'; position: absolute; top: 6px; right: 8px; color: var(--gold-bright); font-size: 12px; }
 .sh-trade { font-size: var(--fs-secondary); color: var(--text-dim); margin: 6px 0 10px; letter-spacing: 0.5px; }
 .sh-trade b { color: var(--gold-bright); }
 .sh-season { margin: 0 0 10px; }
@@ -1326,48 +1133,18 @@ body::before {
 /* ================================================================
    ФАЗА A «ТЁМНАЯ СТАЛЬ»: применение дизайн-токенов (панели, шрифт)
    ================================================================ */
-.header, .content, .tabs { box-shadow: var(--shadow-key); }
-.sh-treasury, .sh-quest-board, .sh-prov, .kingdom-banner { box-shadow: var(--shadow-key) !important; }
+.header, .content, .tabs { box-shadow: var(--shadow-key); }.sh-quest-board,
+.sh-prov,
+.kingdom-banner { box-shadow: var(--shadow-key) !important; }
 .view-title { letter-spacing: 5px; }
-.modal-header h3 { letter-spacing: 5px; }
-.progress-control .val, #progressVal, .sh-treasury, .goal-progress-label, .stat-bar-label,
-.hero-summary, .card-stats-line, .kb-sub, .dash-chip, .hero-mini-xp-wrap { font-variant-numeric: tabular-nums; }
-
-/* ================================================================
-   ФАЗА B «ТЁМНАЯ СТАЛЬ»: карточки колоды
-   ================================================================ */
-/* слоистая рамка: noise-фактура .05 + внешняя золотая hairline + внутренняя тёмная кайма.
-   !important + позиция в конце файла поверх v55 — ранговые глоу переобъявлены ниже */
-.card {
-  background: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 4px), linear-gradient(180deg, var(--surface-hi), var(--surface)) !important;
-  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55) !important;
-}
-.card.rank-B, .card.rank-BB, .card.rank-BBB {
-  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55), 0 0 8px rgba(96,165,250,0.08) !important;
-}
-.card.rank-A, .card.rank-AA, .card.rank-AAA {
-  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55), 0 0 12px rgba(192,132,252,0.1) !important;
-}
-.card.rank-S, .card.rank-SS, .card.rank-SSS {
-  box-shadow: var(--shadow-card), 0 0 0 1px var(--hairline), inset 0 0 0 1px rgba(5,3,2,0.55), 0 0 16px rgba(251,191,36,0.15) !important;
-}
-/* усиленный двойной глоу на hover для B+ */
-.card.rank-B:hover, .card.rank-BB:hover, .card.rank-BBB:hover,
-.card.rank-A:hover, .card.rank-AA:hover, .card.rank-AAA:hover,
-.card.rank-S:hover, .card.rank-SS:hover, .card.rank-SSS:hover {
-  box-shadow: var(--shadow-card-hover), 0 0 18px var(--rank-glow), 0 0 34px var(--rank-shadow) !important;
-}
-/* foil-шиммер S/SS УДАЛЁН (перф-митигация 2026-09-18): 6s-градиент на каждой S/SS-карте
-   валил fps main 28.5→16 / particles 28.6→8 (125 анимир. узлов в 500-карточной колоде).
-   Шиммер остался только на SSS (пре-живший sssShimmer, :209) — анимированных узлов в базовых колодах 0, как до оверхола. */
-/* метаряд: стата-тег и 🔥-стрик-чип на одной оси */
-.card-stat-tag, .card-adaptation-tag { vertical-align: middle; margin-bottom: 0; }
-/* кнопки 22px: бевел-градиент + press */
-.card-btn {
-  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(0,0,0,0.45));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.5);
-}
-.card-btn:active { transform: scale(0.96); }
+.modal-header h3 { letter-spacing: 5px; }.progress-control .val,
+#progressVal,
+.goal-progress-label,
+.stat-bar-label,
+.hero-summary,
+.kb-sub,
+.dash-chip,
+.hero-mini-xp-wrap { font-variant-numeric: tabular-nums; }
 
 /* ================================================================
    ФАЗА C «ТЁМНАЯ СТАЛЬ»: дашборд / Hero / bottom-nav
@@ -1460,10 +1237,10 @@ body::before {
 .km-lg-safe { background: rgba(52, 211, 153, 0.7); box-shadow: 0 0 6px rgba(52, 211, 153, 0.55); }
 .km-lg-trade { background: rgba(251, 191, 36, 0.75); box-shadow: 0 0 6px rgba(251, 191, 36, 0.6); }
 /* картуш и зоны */
-.km-cartouche text { fill: var(--gold-bright); font-family: Georgia, serif; font-size: 22px; letter-spacing: 8px; }
+.km-cartouche text { fill: var(--gold-bright); font-family: var(--font-display); font-size: 22px; letter-spacing: 8px; }
 .km-cartouche line { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1.5; }
 .km-corner path { fill: none; stroke: rgba(212, 165, 116, 0.55); stroke-width: 2; }
-.km-zone { fill: rgba(212, 165, 116, 0.6); font-size: 20px; letter-spacing: 5px; font-family: Georgia, serif; }
+.km-zone { fill: rgba(212, 165, 116, 0.6); font-size: 20px; letter-spacing: 5px; font-family: var(--font-display); }
 /* Г3: море/река/декор */
 .km-sea { fill: rgba(20, 42, 62, 0.4); stroke: rgba(96, 140, 170, 0.3); stroke-width: 1.5; }
 .km-wave { fill: none; stroke: rgba(150, 190, 220, 0.22); stroke-width: 2.5; stroke-linecap: round; }
@@ -1484,7 +1261,7 @@ body::before {
 .km-deco { stroke: rgba(180, 150, 100, 0.34); stroke-width: 2.5; fill: none; }
 .km-deco.km-trees circle { fill: rgba(96, 112, 62, 0.26); stroke: none; }
 .km-cross rect { fill: rgba(212, 165, 116, 0.85); stroke: rgba(0, 0, 0, 0.5); stroke-width: 1.5; }
-.km-zone { fill: rgba(212, 165, 116, 0.85); font-size: 44px; letter-spacing: 10px; font-family: Georgia, serif; }
+.km-zone { fill: rgba(212, 165, 116, 0.85); font-size: 44px; letter-spacing: 10px; font-family: var(--font-display); }
 .km-zone-sub { fill: rgba(212, 165, 116, 0.5); font-size: 22px; letter-spacing: 8px; }
 /* дороги: тёмный корпус + золотое полотно (захвачено) / пунктир (заперто) */
 .km-road-case { fill: none; stroke: rgba(0, 0, 0, 0.6); stroke-width: 8; stroke-linecap: round; }
@@ -1507,7 +1284,7 @@ body::before {
 .km-compass-ring { fill: rgba(10, 8, 6, 0.5); stroke: rgba(212, 165, 116, 0.35); stroke-width: 1; }
 .km-compass-hub { fill: rgba(212, 165, 116, 0.65); }
 .km-star { fill: rgba(212, 165, 116, 0.42); }
-.km-compass-n { fill: rgba(212, 165, 116, 0.65); font-size: 9px; font-family: Georgia, serif; }
+.km-compass-n { fill: rgba(212, 165, 116, 0.65); font-size: 9px; font-family: var(--font-display); }
 :root.perf-eco .km-connector.owned { animation: none !important; }
 /* Г3: полит-заливки территорий (сталь captured / штриховка front / кровь+fog locked) */
 .km-terr.km-captured { fill: rgba(70, 130, 180, 0.30); stroke: none; }
@@ -1543,7 +1320,7 @@ body::before {
 /* таблички имён */
 .km-plaque rect { fill: rgba(8, 6, 4, 0.85); stroke: rgba(212, 165, 116, 0.3); stroke-width: 1; }
 .km-plaque.km-captured rect, .km-plaque:not(.dim) rect { stroke: rgba(212, 165, 116, 0.45); }
-.km-name { font-size: 19px; fill: var(--text); letter-spacing: 2px; font-family: Georgia, serif; pointer-events: none; }
+.km-name { font-size: 19px; fill: var(--text); letter-spacing: 2px; font-family: var(--font-display); pointer-events: none; }
 .km-name.dim { fill: var(--text-dim); opacity: 0.55; }
 .km-count { font-size: 19px; font-style: italic; fill: var(--gold); letter-spacing: 2px; pointer-events: none; }
 .km-count.now { fill: var(--blood-bright); font-style: normal; font-weight: bold; }
@@ -1551,15 +1328,6 @@ body::before {
 .km-node:focus-visible .km-ring { stroke: var(--gold-5); stroke-width: 5; stroke-opacity: 1; }
 @keyframes kmPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 :root.perf-eco .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, :root.perf-eco .km-connector.owned { animation: none !important; }
-.km-front-card { margin: 0 0 12px; }
-/* Г4: стойки недели + эдикты + чипы провинций */
-.km-stance-row { display: flex; gap: 8px; margin: 0 0 12px; flex-wrap: wrap; }
-.km-stance { flex: 1 1 40%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: rgba(12, 10, 8, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; color: var(--text); }
-.km-stance.active { border-color: var(--gold); background: rgba(212, 165, 116, 0.12); }
-.km-stance:disabled { cursor: default; opacity: 0.75; }
-.km-stance-ico { font-size: 18px; }
-.km-stance-name { font-size: 13px; font-weight: 600; color: var(--gold-bright); }
-.km-stance-desc { font-size: 11px; color: var(--text-dim); }
 .km-edict-block { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; }
 .km-edict-warn { font-size: 12px; color: var(--blood-bright); margin: 4px 0 8px; }
 .km-edict-row { display: flex; flex-direction: column; gap: 6px; }
@@ -1570,14 +1338,14 @@ body::before {
 .km-edict-body b { font-size: 13px; color: var(--gold-bright); }
 .km-edict-body i { font-size: 11px; color: var(--text-dim); font-style: normal; }
 .km-edict-cost { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
-.km-prov-chip { fill: rgba(212, 165, 116, 0.7); font-size: 16px; font-family: Georgia, serif; letter-spacing: 1px; }
+.km-prov-chip { fill: rgba(212, 165, 116, 0.7); font-size: 16px; font-family: var(--font-display); letter-spacing: 1px; }
 .km-prov-chip.hot { fill: var(--blood-bright); }
 /* Г5-Ф: хроника кампании */
 .km-chron-btn { flex: 0 0 auto; border-style: dashed; }
 .km-chron-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); }
 .km-chron-ico { font-size: 17px; flex: 0 0 24px; text-align: center; }
 .km-chron-text { flex: 1; font-size: 13px; color: var(--text); }
-.km-chron-day { font-size: 11px; color: var(--text-dim); white-space: nowrap; font-family: Georgia, serif; }
+.km-chron-day { font-size: 11px; color: var(--text-dim); white-space: nowrap; font-family: var(--font-display); }
 /* Г5-Т: технологии провинций */
 .km-tech-note { font-size: 12px; color: var(--text-dim); margin: 0 0 10px; }
 .km-tech-row { display: flex; flex-direction: column; gap: 6px; }
@@ -1605,7 +1373,7 @@ body::before {
 .km-tree-edge { stroke: rgba(212, 165, 116, 0.2); stroke-width: 2.5; }
 .km-tree-edge.on { stroke: rgba(212, 165, 116, 0.7); }
 .km-tree-era { stroke: rgba(212, 165, 116, 0.4); stroke-width: 1.5; stroke-dasharray: 6 6; }
-.km-tree-era-label { text-anchor: middle; font-size: 15px; fill: rgba(212, 165, 116, 0.75); letter-spacing: 3px; font-family: Georgia, serif; }
+.km-tree-era-label { text-anchor: middle; font-size: 15px; fill: rgba(212, 165, 116, 0.75); letter-spacing: 3px; font-family: var(--font-display); }
 @media (prefers-reduced-motion: reduce) {
   .km-node.km-front .km-ring, :root.perf-eco .km-node.km-siege .km-ring, .km-connector.owned { animation: none !important; }
 }
@@ -1688,7 +1456,6 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .icn { width: 1em; height: 1em; display: inline-block; vertical-align: -0.14em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 .tab .icon .icn, .bnav-icon .icn { width: 19px; height: 19px; }
 .tab.active .icon .icn, .bnav-btn.active .icn { filter: drop-shadow(0 0 6px rgba(212, 165, 116, 0.55)); }
-.card-corner-actions .icn { width: 14px; height: 14px; }
 .stat-icon .icn { width: 22px; height: 22px; }
 
 /* --- Хедер: золото и осадная тревога --- */
@@ -1709,18 +1476,6 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .view.slide-prev { animation: viewSlidePrev 0.26s cubic-bezier(0.22, 0.8, 0.36, 1) both; }
 @keyframes viewSlideNext { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
 @keyframes viewSlidePrev { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
-
-/* --- Стаггер карточек колоды (кап 12 × 35 мс) --- */
-.cards .card { animation: cardRise 0.32s ease backwards; }
-.cards .card:nth-child(2) { animation-delay: 0.035s; }
-.cards .card:nth-child(3) { animation-delay: 0.07s; }
-.cards .card:nth-child(4) { animation-delay: 0.105s; }
-.cards .card:nth-child(5) { animation-delay: 0.14s; }
-.cards .card:nth-child(6) { animation-delay: 0.175s; }
-.cards .card:nth-child(7) { animation-delay: 0.21s; }
-.cards .card:nth-child(8) { animation-delay: 0.245s; }
-.cards .card:nth-child(9) { animation-delay: 0.28s; }
-.cards .card:nth-child(n + 10) { animation-delay: 0.315s; }
 @keyframes cardRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* --- Вход содержимого модалок --- */
@@ -1729,30 +1484,17 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .modal-overlay.show .modal > *:nth-child(3) { animation-delay: 0.08s; }
 .modal-overlay.show .modal > *:nth-child(4) { animation-delay: 0.12s; }
 .modal-overlay.show .modal > *:nth-child(n + 5) { animation-delay: 0.16s; }
-@keyframes dsRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
-/* --- eco-гейты: всё выше выключается без перезагрузки (контракт perf.test) --- */
-:root.perf-eco .view.slide-next, :root.perf-eco .view.slide-prev,
-:root.perf-eco .cards .card, :root.perf-eco .modal-overlay.show .modal > *,
-:root.perf-eco .gold-chip.gain, :root.perf-eco .siege-pill { animation: none; }
-@media (prefers-reduced-motion: reduce) {
-  .view.slide-next, .view.slide-prev, .cards .card, .modal-overlay.show .modal > *, .gold-chip.gain, .siege-pill { animation: none; }
+@keyframes dsRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }:root.perf-eco .view.slide-next,
+:root.perf-eco .view.slide-prev,
+:root.perf-eco .modal-overlay.show .modal > *,
+:root.perf-eco .gold-chip.gain,
+:root.perf-eco .siege-pill { animation: none; }
+@media (prefers-reduced-motion: reduce) {.view.slide-next,
+.view.slide-prev,
+.modal-overlay.show .modal > *,
+.gold-chip.gain,
+.siege-pill { animation: none; }
 }
-
-/* ===================================================================== */
-/* ============ Dark Steel 2.0 — часть 2: экраны (волна V2) ============ */
-/* ===================================================================== */
-
-/* --- Ранговые орнаменты карточек --- */
-.card-orn { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); pointer-events: none; opacity: 0.45; color: var(--rk, var(--text-dim)); z-index: 1; }
-.card.rank-C { --rk: #9ca3af; } .card.rank-CC { --rk: #9ca3af; } .card.rank-CCC { --rk: #9ca3af; }
-.card.rank-B, .card.rank-BBB { --rk: #60a5fa; }
-.card.rank-A, .card.rank-AAA { --rk: #c084fc; }
-.card.rank-S, .card.rank-SS, .card.rank-SSS { --rk: #fbbf24; }
-.card.rank-B .card-orn { opacity: 0.55; }
-.card.rank-A .card-orn { opacity: 0.65; }
-.card.rank-S .card-orn, .card.rank-SS .card-orn, .card.rank-SSS .card-orn { opacity: 0.85; }
-.card-rank { font-size: 16px !important; letter-spacing: 2.5px; text-shadow: 0 0 10px var(--rk, transparent); margin-bottom: 2px; }
 
 /* --- Аватар-чемпион --- */
 .champion { width: 100%; height: 100%; display: block; }
@@ -1777,18 +1519,14 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .st-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .st-kpi { background: linear-gradient(160deg, rgba(0,0,0,0.42), rgba(0,0,0,0.22)); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; text-align: center; position: relative; overflow: hidden; }
 .st-kpi::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--hairline), transparent); }
-.st-kpi-label { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.st-kpi-label { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
 .st-kpi-val { font-size: 24px; font-weight: bold; color: var(--gold-bright); margin-top: 6px; font-variant-numeric: tabular-nums; }
 .st-panel { background: linear-gradient(160deg, rgba(0,0,0,0.42), rgba(0,0,0,0.22)); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 16px; margin-bottom: 20px; }
 .st-panel-title { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
 .st-chart .st-bar { fill: url(#stBarGrad); }
-.st-chart .st-bar-label { font-size: 9px; fill: var(--text-dim); }
-.st-chart .st-bar-val { font-size: 9px; fill: var(--gold-bright); }
+.st-chart .st-bar-label { font-size: 10px; fill: var(--text-dim); }
+.st-chart .st-bar-val { font-size: 10px; fill: var(--gold-bright); }
 .st-chart .st-gridline { stroke: rgba(212,165,116,0.12); stroke-width: 1; }
-.ach-icon { display: flex; align-items: center; justify-content: center; }
-.ach-icon .icn { width: 30px; height: 30px; color: var(--text-dim); opacity: 0.55; }
-.ach-card.unlocked .ach-icon .icn { color: var(--gold-bright); opacity: 1; filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.5)); }
-.ach-card.unlocked { border-color: rgba(251, 191, 36, 0.4); }
 .st-rank-chip { background: var(--rc-bg); border: 1px solid var(--rc-border); padding: 6px 12px; border-radius: 6px; font-size: 12px; }
 .st-rank-chip b { color: var(--rc-color); }
 
@@ -1841,11 +1579,9 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 /* --- DS2.0: сезонный чип не переносит эмодзи за край экрана --- */
 .progress-control { flex-wrap: nowrap !important; }
 .progress-control .progress-track { width: auto !important; flex: 1 1 auto; min-width: 36px; }
-.progress-control #seasonChip { white-space: nowrap; flex-shrink: 0; }
-
-/* --- DS2.0: детерминизм харнессов — без входных анимаций в webdriver-контекстах --- */
-:root.nd-webdriver .cards .card, :root.nd-webdriver .modal-overlay.show .modal > *,
-:root.nd-webdriver .view.slide-next, :root.nd-webdriver .view.slide-prev { animation: none !important; }
+.progress-control #seasonChip { white-space: nowrap; flex-shrink: 0; }:root.nd-webdriver .modal-overlay.show .modal > *,
+:root.nd-webdriver .view.slide-next,
+:root.nd-webdriver .view.slide-prev { animation: none !important; }
 
 /* ===================================================================== */
 /* ====== DS2.0 часть 3: «Реликвии» — дорогой инвентарь (2026-09-28) ==== */
@@ -1905,11 +1641,11 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
   background: radial-gradient(circle at 50% 32%, var(--item-bg, rgba(212,165,116,0.15)), transparent 72%), linear-gradient(165deg, #1c1510, #0e0b08);
   box-shadow: inset 0 0 0 1.5px var(--item-color, var(--gold)), inset 0 0 20px var(--item-glow, transparent), 0 0 18px var(--item-glow, transparent), 0 4px 12px rgba(0, 0, 0, 0.5);
   text-shadow: 0 0 14px var(--item-glow, transparent), 0 2px 3px rgba(0, 0, 0, 0.85); }
-.item-preview-rank { border: 1px solid rgba(0, 0, 0, 0.5); border-radius: 4px; font-size: 9px; padding: 1px 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
+.item-preview-rank { border: 1px solid rgba(0, 0, 0, 0.5); border-radius: 4px; font-size: 10px; padding: 1px 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
 .item-name { font-family: var(--font-display) !important; letter-spacing: 1.2px; font-size: 15px !important; text-shadow: 0 0 12px var(--item-glow, transparent); }
 .item-lore { font-family: var(--font-body) !important; font-style: italic; color: var(--text-dim) !important; border-left: 2px solid var(--hairline) !important; padding-left: 10px !important; line-height: 1.55; }
 .item-bonuses { border: 1px solid var(--border); border-radius: var(--radius-card); background: rgba(0, 0, 0, 0.28); padding: 10px 12px !important; box-shadow: inset 0 1px 0 rgba(244, 200, 150, 0.06); }
-.item-bonuses-title { letter-spacing: 2px; text-transform: uppercase; font-size: 10px !important; color: var(--gold) !important; margin-bottom: 6px; }
+.item-bonuses-title { letter-spacing: 2px; text-transform: uppercase; font-size: 11px !important; color: var(--gold) !important; margin-bottom: 6px; }
 .item-bonus { border-bottom: 1px dashed rgba(212, 165, 116, 0.14); }
 .item-bonus:last-child { border-bottom: none; }
 .item-bonus-val { color: var(--gold-bright) !important; font-variant-numeric: tabular-nums; font-weight: bold; }
@@ -1963,7 +1699,6 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 .stat-icon .nd-art { width: 22px; height: 22px; color: var(--stat-color, var(--gold)); filter: drop-shadow(0 0 6px var(--stat-glow, transparent)); }
 .stat-chip .chip-art { width: 15px; height: 15px; display: inline-block; vertical-align: -3px; color: var(--gold-bright); }
 .stat-chip.selected .chip-art { color: #f6efe2; }
-.card-stat-tag .nd-art { width: 14px; height: 14px; display: inline-block; vertical-align: -2.5px; filter: brightness(1.25); }
 .totem-icon .nd-art { width: 30px; height: 30px; color: var(--gold-bright); filter: drop-shadow(0 0 6px rgba(212, 165, 116, 0.4)); }
 .totem-opt .nd-art { width: 22px; height: 22px; display: inline-block; vertical-align: -5px; color: var(--gold); }
 .view-title .icn { color: var(--gold); filter: drop-shadow(0 0 6px rgba(212, 165, 116, 0.35)); }
@@ -2011,4 +1746,425 @@ body.asc-3 { --gold: #a78bfa; --gold-bright: #c4b5fd; --gold-3: #a78bfa; --gold-
 :root.perf-eco .km-flag { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
 .km-snow circle, .km-mist ellipse, .km-cloud, .km-fire, .km-ship, .km-ship-bob, .km-flag { animation: none; }
+}
+
+/* Аудит R2 (M4): диалог подтверждения — выше любых модалок, иначе старт-колода/другие окна перекрывают его кнопки */
+#confirmOverlay { z-index: var(--z-confirm); }
+
+
+/* ================================================================
+   SHELL v3 (визуал-план, фаза 1): компактная шапка, навигация, центрированный контейнер.
+   Правила пишутся на токенах; прежние слои DS2.0 для шапки (.header/.progress-control/.siege-pill) ниже по файлу
+   не удалены, а перекрыты более специфичными селекторами `.app > .header`.
+   ================================================================ */
+@media (max-width: 900px) {
+  .app > .header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "hero gold sync" "prog siege siege";
+    align-items: center;
+    gap: var(--sp-1) var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+  }
+  .app > .header .logo { display: none; } /* бренд уже в шапке Telegram; освобождаем строку */
+  .app > .header .hero-mini { grid-area: hero; min-width: 0; }
+  .app > .header .hero-mini-info { min-width: 0; flex: 1; }
+  .app > .header .hero-mini-xp-wrap { display: flex; } /* раньше на ≤420 px прятался из-за тесноты */
+  .app > .header .hero-mini-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app > .header .gold-chip { grid-area: gold; }
+  .app > .header .sync-header-btn { grid-area: sync; padding: var(--sp-2); min-width: 44px; min-height: 44px; justify-content: center; }
+  .app > .header .progress-control { grid-area: prog; min-width: 0; font-size: var(--t-xs); letter-spacing: 1px; }
+  .app > .header .pc-label { display: inline-flex; align-items: center; gap: var(--sp-1); }
+  .app > .header .pc-label .icn { width: 15px; height: 15px; }
+  .app > .header .pc-text { display: none; } /* на телефоне — только значок замка: подпись съедала строку и налезала на плашку осады */
+  .app > .header .siege-pill { grid-area: siege; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* при прокрутке контента вторая строка (твердыни/сезон/осада) уходит: шапка ≈ 56 px */
+  .app.is-scrolled > .header .progress-control,
+  .app.is-scrolled > .header .siege-pill { display: none; }
+}
+
+/* нижняя навигация: подписи не капсом и без обрезки («Инв», «Стат» → слова), цель нажатия ≥ 44 px */
+@media (max-width: 1100px) {
+  .bottom-nav .bnav-btn {
+    min-height: 48px; padding: var(--sp-1) 2px; gap: 2px;
+    font-size: var(--t-xs); letter-spacing: 0.2px; text-transform: none;
+    font-family: var(--font-display);
+  }
+  .bottom-nav .bnav-btn .bnav-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 26px; border-radius: var(--r-pill); transition: background var(--dur-2) var(--ease-out); }
+  .bottom-nav .bnav-btn.active .bnav-icon { background: var(--mat-gilded-fill); }
+  .bottom-nav .bnav-btn.active { color: var(--mat-gilded-text); }
+}
+
+/* десктоп: контейнер по центру, а не прижат влево (пустая правая треть) */
+@media (min-width: 1101px) {
+  .app { max-width: 1280px; margin-inline: auto; }
+}
+
+/* ================================================================
+   CARD v3 — карточка привычки (визуал-план, фаза 2). Заменяет ~120 правил десяти слоёв (DS2.0 и ранее).
+   Печать ранга слева (материал iron → steel → arcane → gilded из токенов), имя/мета/теги/трек справа,
+   действия одним рядом снизу. Богатство орнамента задаёт --lvl (1…3 внутри материала).
+   Анимации — только при ndMotionOk()-эквиваленте: не eco/reduced-motion/low-effect и не авто-браузер.
+   ================================================================ */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--sp-3); }
+
+.card {
+  container: card / inline-size; /* узкая карточка перестраивает ряд действий (см. @container ниже) */
+  --m-edge: var(--mat-iron-edge); --m-glow: var(--mat-iron-glow); --m-fill: var(--mat-iron-fill); --m-text: var(--mat-iron-text); --lvl: 1;
+  position: relative; display: grid; overflow: hidden; cursor: pointer;
+  grid-template-columns: 52px minmax(0, 1fr); grid-template-areas: "seal main" "act act";
+  gap: var(--sp-2) var(--sp-3); padding: var(--sp-3);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--m-fill) 100%, var(--s3)), var(--s2));
+  border: 1px solid color-mix(in srgb, var(--m-edge) calc(22% + var(--lvl) * 12%), transparent);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-2), var(--inner-light), 0 0 calc(var(--lvl) * 5px) var(--m-glow);
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out);
+}
+.today { --m-edge: var(--mat-iron-edge); --m-glow: var(--mat-iron-glow); --m-fill: var(--mat-iron-fill); --m-text: var(--mat-iron-text); --lvl: 1; }
+:is(.card, .today):is(.rank-CC) { --lvl: 2; }
+:is(.card, .today):is(.rank-CCC) { --lvl: 3; }
+:is(.card, .today):is(.rank-B, .rank-BB, .rank-BBB) { --m-edge: var(--mat-steel-edge); --m-glow: var(--mat-steel-glow); --m-fill: var(--mat-steel-fill); --m-text: var(--mat-steel-text); --lvl: 1; }
+:is(.card, .today):is(.rank-A, .rank-AA, .rank-AAA) { --m-edge: var(--mat-arcane-edge); --m-glow: var(--mat-arcane-glow); --m-fill: var(--mat-arcane-fill); --m-text: var(--mat-arcane-text); --lvl: 1; }
+:is(.card, .today):is(.rank-S, .rank-SS, .rank-SSS) { --m-edge: var(--mat-gilded-edge); --m-glow: var(--mat-gilded-glow); --m-fill: var(--mat-gilded-fill); --m-text: var(--mat-gilded-text); --lvl: 1; }
+:is(.card, .today):is(.rank-BB, .rank-AA, .rank-SS) { --lvl: 2; }
+:is(.card, .today):is(.rank-BBB, .rank-AAA, .rank-SSS) { --lvl: 3; }
+
+/* свет, идущий за курсором (JS кладёт --mx/--my) — только на устройствах с наведением */
+.card::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), var(--m-glow), transparent 55%); transition: opacity var(--dur-3) var(--ease-out); }
+@media (hover: hover) { .card:hover::before { opacity: 0.55; } .card:hover { border-color: var(--m-edge); } }
+
+/* печать ранга */
+.card-seal { grid-area: seal; position: relative; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; z-index: var(--z-lift);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--m-edge) 38%, var(--s3)), var(--s1) 72%);
+  border: 2px solid var(--m-edge);
+  box-shadow: inset 0 0 0 3px var(--s1), inset 0 0 0 4px color-mix(in srgb, var(--m-edge) 45%, transparent), 0 0 calc(4px + var(--lvl) * 5px) var(--m-glow); }
+/* зубцы по ободу: 6 / 12 / 18 — читаются как «ступень» внутри материала */
+.card-seal::before { content: ''; position: absolute; inset: -5px; border-radius: 50%; opacity: 0.55; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, var(--m-edge) 0 2deg, transparent 2deg calc(60deg / var(--lvl)));
+  -webkit-mask: radial-gradient(circle, transparent 62%, black 63%); mask: radial-gradient(circle, transparent 62%, black 63%); }
+.card-rank { font-family: var(--font-display); font-weight: 700; font-size: var(--t-lg); line-height: 1; letter-spacing: 0.5px; color: var(--m-text); text-shadow: 0 0 10px var(--m-glow); }
+.card-rank[data-len="3"] { font-size: var(--t-sm); letter-spacing: 0; }
+.card-rank[data-len="2"] { font-size: var(--t-md); }
+
+/* содержимое */
+.card-main { grid-area: main; min-width: 0; display: grid; gap: 3px; align-content: start; z-index: var(--z-lift); }
+.card-name { font-family: var(--font-display); font-weight: 700; font-size: var(--t-md); line-height: 1.2; letter-spacing: 0.3px; color: var(--tx-1);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-meta { font-size: var(--t-sm); color: var(--tx-2); letter-spacing: 0.2px; white-space: nowrap; }
+.card-tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); } /* 4px и по горизонтали: на узком экране (336px) 4 чипа должны умещаться в одну строку — карточка ≤160px */
+.card-stat-tag, .card-adaptation-tag { display: inline-flex; align-items: center; gap: 3px; font-size: var(--t-xs); letter-spacing: 0.3px; padding: 1px var(--sp-2); border-radius: var(--r-pill); background: var(--s1); border: 1px solid var(--border); }
+.card-stat-tag .nd-art { width: 14px; height: 14px; display: inline-block; filter: brightness(1.25); }
+.card-adaptation-tag.streak-max { color: var(--ac-reward); border-color: color-mix(in srgb, var(--ac-reward) 50%, transparent); }
+.card-adaptation-tag.streak-high { color: var(--ac-success); border-color: color-mix(in srgb, var(--ac-success) 40%, transparent); }
+.card-adaptation-tag.streak-mid { color: var(--ac-reward); border-color: color-mix(in srgb, var(--ac-reward) 35%, transparent); }
+.card-adaptation-tag.streak-low { color: var(--tx-2); }
+.card-streak, .card-total { display: inline-flex; align-items: center; gap: 3px; font-size: var(--t-xs); color: var(--tx-2); font-variant-numeric: tabular-nums; }
+.card-streak .icn { color: var(--ac-reward); }
+.card-total .icn { color: var(--ac-success); }
+.card-streak b, .card-total b { font-weight: 700; color: var(--tx-1); }
+.card-track { display: flex; align-items: center; gap: var(--sp-2); margin-top: 2px; }
+.card-progress { flex: 1; height: 6px; border-radius: var(--r-pill); background: var(--s4); overflow: hidden; }
+.card-progress-bar { height: 100%; border-radius: var(--r-pill); background: linear-gradient(90deg, color-mix(in srgb, var(--m-edge) 65%, black), var(--m-edge)); box-shadow: 0 0 8px var(--m-glow); transition: width var(--dur-4) var(--ease-out); }
+.card-mastery { font-size: var(--t-xs); color: var(--tx-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.card-mastery b { color: var(--m-text); font-weight: 700; }
+
+/* действия */
+.card-btn-row { grid-area: act; display: flex; align-items: stretch; gap: var(--sp-2); z-index: var(--z-lift); }
+.card-complete-btn { flex: 1; min-height: 44px; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); padding: 0 var(--sp-3);
+  font-family: var(--font-display); font-weight: 700; font-size: var(--t-sm); letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer;
+  color: var(--ac-reward); background: linear-gradient(180deg, var(--mat-gilded-fill), var(--s1)); border: 1px solid color-mix(in srgb, var(--ac-reward) 60%, transparent);
+  border-radius: var(--r-md); box-shadow: var(--inner-light), var(--elev-1); transition: transform var(--dur-1) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), background var(--dur-2); }
+.card-complete-btn .icn { width: 16px; height: 16px; }
+.card-complete-btn:hover { box-shadow: var(--inner-light), 0 0 18px var(--mat-gilded-glow); }
+.card-complete-btn:active { transform: scale(0.97); }
+.card-complete-btn.done { color: var(--ac-success); cursor: default; background: color-mix(in srgb, var(--ac-success) 10%, var(--s1)); border-color: color-mix(in srgb, var(--ac-success) 50%, transparent); box-shadow: none; }
+.card-skip-btn { width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx-2);
+  background: var(--s1); border: 1px solid var(--border); border-radius: var(--r-md); transition: color var(--dur-2), border-color var(--dur-2), transform var(--dur-1); }
+.card-skip-btn:hover { color: var(--ac-threat); border-color: var(--ac-threat); }
+.card-skip-btn:active { transform: scale(0.95); }
+.card-corner-actions { display: flex; align-items: center; gap: var(--sp-1); margin-left: auto; }
+.card-btn { position: relative; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx-2);
+  background: var(--s1); border: 1px solid var(--border); border-radius: var(--r-sm); transition: color var(--dur-2), border-color var(--dur-2), background var(--dur-2); }
+.card-btn::after { content: ''; position: absolute; inset: -6px; } /* зона нажатия 44 px при видимых 32 */
+.card-btn .icn { width: 16px; height: 16px; }
+.card-btn:hover { color: var(--ac-reward); border-color: var(--ac-reward); }
+.card-btn.delete:hover { color: var(--ac-threat); border-color: var(--ac-threat); }
+.card-btn.prestige { color: var(--ac-reward); }
+
+/* бейджи */
+.day-card-badge { position: absolute; top: var(--sp-2); left: 46px; z-index: var(--z-lift2); width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--s0); background: linear-gradient(135deg, var(--ac-reward), var(--mat-gilded-glow)); box-shadow: var(--elev-1); }
+.day-card-badge .icn { width: 12px; height: 12px; fill: currentColor; stroke: none; }
+.card.day-card { border-color: color-mix(in srgb, var(--ac-reward) 55%, transparent); }
+.blood-oath-badge { position: absolute; top: var(--sp-2); right: var(--sp-2); z-index: var(--z-lift2); display: inline-flex; align-items: center; gap: 3px; padding: 1px var(--sp-2); border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 700; color: var(--tx-1); background: linear-gradient(135deg, var(--ac-threat), color-mix(in srgb, var(--ac-threat) 45%, black)); }
+.blood-oath-badge .icn { width: 12px; height: 12px; fill: currentColor; stroke: none; }
+.card.blood-oath { border-color: var(--ac-threat); box-shadow: var(--elev-2), 0 0 18px color-mix(in srgb, var(--ac-threat) 55%, transparent); }
+.card.blood-oath .card-name { padding-right: 84px; }
+
+/* выполнено сегодня: приглушено, но читаемо; действия остаются */
+.card.done-today .card-seal, .card.done-today .card-main { opacity: 0.6; }
+.card.done-today { border-color: color-mix(in srgb, var(--ac-success) 35%, transparent); }
+
+/* ранг-ап: вспышка рамки (JS добавляет .rankup-glow) */
+.card.rankup-glow { animation: cardGlowPulse 0.6s ease-in-out 3; }
+
+/* движение: только когда оно разрешено (не eco/reduced-motion/low-effect, не авто-браузер) */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .cards .card { animation: cardRise var(--dur-3) var(--ease-out) backwards; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .cards .card:nth-child(2) { animation-delay: 35ms; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .cards .card:nth-child(3) { animation-delay: 70ms; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .cards .card:nth-child(4) { animation-delay: 105ms; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .cards .card:nth-child(n + 5) { animation-delay: 140ms; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .card.blood-oath { animation: bloodOathPulse 1.5s ease-in-out infinite; }
+  /* позолота: медленный блик по печати у рангов S/SS/SSS, у SS и SSS ещё и дыхание свечения */
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) :is(.card, .today):is(.rank-S, .rank-SS, .rank-SSS) .card-seal::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(from 0deg, transparent 0 70%, var(--mat-gilded-glow) 85%, transparent 100%); animation: sealSweep 4s linear infinite; mix-blend-mode: screen; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .card:is(.rank-SS, .rank-SSS) .card-seal { animation: sealBreath 3s ease-in-out infinite; }
+}
+@keyframes sealSweep { to { transform: rotate(360deg); } }
+@keyframes sealBreath { 50% { box-shadow: inset 0 0 0 3px var(--s1), inset 0 0 0 4px color-mix(in srgb, var(--m-edge) 45%, transparent), 0 0 18px var(--m-glow); } }
+
+
+/* карточка уже ~340 px (телефон 360–390): кнопка действия без капса, чтобы весь ряд поместился в одну строку;
+   совсем узкая (< 276 px): служебные кнопки уходят второй строкой вправо */
+@container card (max-width: 330px) {
+  .card-complete-btn { letter-spacing: 0; text-transform: none; font-size: var(--t-md); padding: 0 var(--sp-2); }
+}
+@container card (max-width: 276px) {
+  .card-btn-row { flex-wrap: wrap; }
+  .card-corner-actions { order: 3; flex-basis: 100%; justify-content: flex-end; margin-left: 0; }
+}
+
+/* ================================================================
+   DECK v3 (визуал-план, фаза 1): «Приоритет дня» как героическая карточка, плитки-показатели, тулбар колоды
+   ================================================================ */
+.dashboard-bar { position: relative; display: grid; gap: var(--sp-3); padding: var(--sp-3); margin-bottom: var(--sp-3); background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--inner-light), var(--elev-1); font-size: var(--t-sm); line-height: 1.5; }
+.dash-help { position: absolute; top: var(--sp-2); right: var(--sp-2); z-index: var(--z-lift); }
+.dash-help::after { inset: -6px; } /* зона нажатия не выходит за край панели (иначе .content получал горизонтальный скролл) */
+.dash-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding-right: 36px; font-size: var(--t-sm); }
+.dash-event { color: var(--ac-reward); }
+.dash-mini-btn { min-height: 28px; padding: 0 var(--sp-2); font-size: var(--t-xs); color: var(--ac-reward); background: transparent; border: 1px solid color-mix(in srgb, var(--ac-reward) 55%, transparent); border-radius: var(--r-pill); cursor: pointer; }
+.dash-mini-btn.danger { color: var(--ac-threat); border-color: color-mix(in srgb, var(--ac-threat) 55%, transparent); }
+.dash-goalbar { display: inline-block; width: 72px; height: 6px; border-radius: var(--r-pill); background: var(--s4); overflow: hidden; vertical-align: middle; }
+.dash-goalbar > span { display: block; height: 100%; background: var(--ac-reward); }
+
+.today { display: grid; gap: var(--sp-2); padding: var(--sp-3); border-radius: var(--r-md); background: linear-gradient(135deg, var(--m-fill), var(--s1)); border: 1px solid color-mix(in srgb, var(--m-edge) 55%, transparent); box-shadow: var(--inner-light), 0 0 calc(var(--lvl) * 6px) var(--m-glow); }
+.today-kicker { font-family: var(--font-display); font-size: var(--t-xs); letter-spacing: 1.5px; color: var(--tx-2); }
+.today-row { display: flex; align-items: center; gap: var(--sp-3); }
+.today-info { display: grid; gap: 2px; min-width: 0; }
+.today-name { font-family: var(--font-display); font-size: var(--t-lg); line-height: 1.2; color: var(--tx-1); overflow-wrap: anywhere; }
+.today-sub { font-size: var(--t-sm); color: var(--tx-2); }
+.today-risk { font-size: var(--t-sm); color: var(--ac-reward); }
+.today-cta { width: 100%; }
+.today-foot { font-size: var(--t-xs); color: var(--tx-2); line-height: 1.4; }
+.today-foot b { color: var(--tx-1); }
+.today-line { font-size: var(--t-sm); color: var(--tx-1); }
+.today-line.ok { color: var(--ac-success); display: flex; align-items: center; gap: var(--sp-2); }
+.today-empty, .today-done { background: linear-gradient(135deg, var(--s2), var(--s1)); border-color: var(--border); box-shadow: var(--inner-light); }
+
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: var(--sp-2); }
+.dash-stat { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "ic val" "lab lab" "em em"; align-items: center; gap: 0 var(--sp-2); padding: var(--sp-2) var(--sp-3); text-align: left; font-size: var(--t-xs); color: var(--tx-2); background: var(--s1); border: 1px solid var(--border); border-radius: var(--r-md); }
+.dash-stat .icn { grid-area: ic; width: 16px; height: 16px; color: var(--ac-reward); }
+.dash-stat > span { grid-area: lab; }
+.dash-stat b { grid-area: val; text-align: right; font-size: var(--t-md); color: var(--tx-1); font-variant-numeric: tabular-nums; }
+.dash-stat b.gold { color: var(--ac-reward); }
+.dash-stat b.info { color: var(--ac-info); }
+.dash-stat.warn b { color: var(--ac-threat); }
+.dash-stat em { grid-area: em; font-style: normal; font-size: var(--t-xs); color: var(--tx-2); }
+.dash-stat em.up { color: var(--ac-success); }
+button.dash-stat { cursor: pointer; transition: border-color var(--dur-2) var(--ease-out); }
+button.dash-stat:hover { border-color: var(--ac-reward); }
+.dash-note { font-size: var(--t-xs); color: var(--tx-2); }
+.dash-begin { display: grid; gap: var(--sp-1); font-size: var(--t-sm); color: var(--tx-1); padding-right: 28px; }
+.dash-begin-head { color: var(--ac-reward); font-size: var(--t-sm); }
+.dash-begin-hint { font-size: var(--t-xs); color: var(--tx-2); }
+.dash-begin .ok { color: var(--ac-success); } .dash-begin .bad { color: var(--ac-threat); } .dash-begin .info { color: var(--ac-info); }
+
+.deck-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--border); }
+.deck-count { font-size: var(--t-xs); letter-spacing: 1.5px; color: var(--tx-2); }
+.deck-count b { color: var(--ac-reward); font-weight: 400; }
+
+/* телефон: плитки-показатели — значок и число в одну линию (подписи остаются для экранных читалок и в title):
+   так «Колода» отдаёт первый экран карточкам, а не сводке */
+@media (max-width: 480px) {
+  .dash-stats { grid-template-columns: repeat(3, 1fr); }
+  .dash-stat { position: relative; grid-template-areas: "ic val"; padding: var(--sp-2); }
+  .dash-stat > span, .dash-stat em { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+/* ================================================================
+   KINGDOM v3 (визуал-план, фаза 3): карта — первый объект экрана, затем фронт и действие; казна и якорь — чипы.
+   Заменяет легаси-правила sh-card, sh-treasury, km-stance и sh-assault (десять слоёв, !important).
+   ================================================================ */
+.sh-treasury { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2) var(--sp-4); padding: var(--sp-3); margin-bottom: var(--sp-3); font-size: var(--t-sm); color: var(--tx-2);
+  background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid color-mix(in srgb, var(--ac-reward) 40%, transparent); border-radius: var(--r-lg); box-shadow: var(--inner-light), var(--elev-1); font-variant-numeric: tabular-nums; }
+.tr-cell { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1); }
+.tr-cell b { color: var(--tx-1); }
+.tr-cell b.up { color: var(--ac-success); }
+.tr-cell b.down { color: var(--ac-threat); }
+.tr-gold { font-size: var(--t-lg); }
+.tr-gold .icn { width: 20px; height: 20px; color: var(--ac-reward); }
+.tr-gold b { color: var(--ac-reward); }
+.tr-cell .icn { width: 16px; height: 16px; }
+@media (min-width: 640px) { .sh-treasury { grid-template-columns: repeat(4, auto); justify-content: space-between; } }
+
+.sh-context-anchor { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.ctx { display: inline-flex; align-items: center; gap: var(--sp-1); padding: 3px var(--sp-3); font-size: var(--t-sm); color: var(--tx-2); background: var(--s2); border: 1px solid var(--border); border-radius: var(--r-pill); }
+.ctx b { color: var(--tx-1); }
+.ctx .icn { width: 15px; height: 15px; color: var(--ac-threat); }
+.ctx.warn { color: var(--ac-threat); border-color: color-mix(in srgb, var(--ac-threat) 45%, transparent); }
+.ctx.warn b { color: var(--ac-threat); }
+
+/* фронт: карточка цели со «штурмом» — главное действие экрана */
+.sh-card.km-front-card { display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ac-threat) 14%, var(--s2)), var(--s1)); border: 1px solid color-mix(in srgb, var(--ac-threat) 50%, transparent); box-shadow: var(--elev-2), var(--inner-light); }
+.km-front-card .sh-icon { display: grid; place-items: center; font-size: 32px; }
+.km-front-card .sh-icon img { width: 48px; height: auto; filter: drop-shadow(0 2px 3px black); }
+.km-front-card .sh-body { grid-column: 2 / -1; min-width: 0; }
+.km-front-card .sh-name { font-family: var(--font-display); font-size: var(--t-md); line-height: 1.25; color: var(--tx-1); }
+.km-front-card .sh-meta { margin-top: 2px; font-size: var(--t-sm); color: var(--tx-2); }
+.km-front-card .sh-req { color: var(--ac-threat); font-size: var(--t-xs); }
+.km-front-card > .sh-assault { grid-column: 1 / 3; }
+.km-front-card > .sh-assault:last-child { grid-column: 1 / -1; }
+.km-front-card > .sh-scout-btn { grid-column: 3; margin: 0; min-height: 44px; }
+
+.sh-assault { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); padding: 0 var(--sp-4); cursor: pointer;
+  font-family: var(--font-display); font-weight: 700; font-size: var(--t-sm); letter-spacing: 0.8px; text-transform: uppercase; color: var(--tx-1);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ac-threat) 55%, var(--s2)), color-mix(in srgb, var(--ac-threat) 28%, var(--s1)));
+  border: 1px solid var(--ac-threat); border-radius: var(--r-md); box-shadow: var(--inner-light); transition: box-shadow var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+.sh-assault .icn { width: 16px; height: 16px; }
+.sh-assault:hover { box-shadow: 0 0 16px color-mix(in srgb, var(--ac-threat) 55%, transparent); }
+.sh-assault:active { transform: scale(0.97); }
+
+/* стойки/подходы недели и «Хроника/Технологии»: тактические плитки */
+.km-stance-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.km-stance { display: grid; align-content: start; justify-items: start; gap: 2px; padding: var(--sp-3); text-align: left; cursor: pointer; color: var(--tx-1);
+  background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--inner-light); transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out); }
+.km-stance:hover:not(:disabled) { border-color: var(--ac-reward); }
+.km-stance.active { border-color: var(--ac-reward); background: linear-gradient(180deg, var(--mat-gilded-fill), var(--s1)); box-shadow: var(--inner-light), 0 0 12px var(--mat-gilded-glow); }
+.km-stance:disabled { cursor: default; }
+.km-stance-ico { font-size: var(--t-xl); line-height: 1; }
+.km-stance-name { font-family: var(--font-display); font-weight: 700; font-size: var(--t-md); color: var(--ac-reward); }
+.km-stance-desc { font-size: var(--t-xs); color: var(--tx-2); line-height: 1.35; }
+.km-chron-btn .km-stance-name { color: var(--tx-1); }
+
+/* медальон-силуэт: здания и юниты (game-icons, CC BY 3.0) — тон по категории/тиру, не по PNG-палитре */
+.nd-medal { --tone: var(--mat-iron-edge); position: relative; display: inline-grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--tone) 30%, var(--s3)), var(--s1) 75%); border: 2px solid var(--tone);
+  box-shadow: inset 0 0 0 3px var(--s1), 0 0 10px color-mix(in srgb, var(--tone) 35%, transparent); }
+.nd-medal::before { content: ''; width: 60%; height: 60%; background: color-mix(in srgb, var(--tone) 55%, white);
+  -webkit-mask: var(--art) center / contain no-repeat; mask: var(--art) center / contain no-repeat; }
+.nd-medal.tone-zh { --tone: var(--mat-gilded-edge); }
+.nd-medal.tone-ec { --tone: var(--ac-success); }
+.nd-medal.tone-df { --tone: var(--ac-info); }
+.nd-medal.tone-sp { --tone: var(--ac-arcane); }
+.nd-medal.tone-iron { --tone: var(--mat-iron-edge); }
+.nd-medal.tone-steel { --tone: var(--mat-steel-edge); }
+.nd-medal.tone-arcane { --tone: var(--mat-arcane-edge); }
+.nd-medal.tone-gilded { --tone: var(--mat-gilded-edge); }
+.sh-tile-icon, .sh-build-icon { display: grid; place-items: center; }
+.sh-tile.locked .nd-medal { filter: grayscale(0.9); opacity: 0.6; }
+.sh-build-icon .nd-medal { width: 38px; height: 38px; border-width: 1.5px; }
+.sh-tile-icon .nd-medal { width: 54px; height: 54px; }
+
+/* ================================================================
+   ATMOSPHERE v3 (визуал-план, фаза 4): туман — готовая текстура вместо полноэкранных SVG-фильтров; свет по вкладкам;
+   прогрессия «из мрака к свету» по числу захваченных твердынь (без новых данных в сейве).
+   ================================================================ */
+.mist-layer { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; opacity: var(--mist-opacity); transition: opacity 1.5s; mix-blend-mode: screen; }
+.mist-layer::before, .mist-layer::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; background: url(../img/fog.webp) 0 0 / 768px 768px repeat; }
+.mist-layer::before { width: calc(100% + 768px); opacity: 0.7; }
+.mist-layer::after { width: calc(100% + 1152px); background-size: 1152px 1152px; opacity: 0.45; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.effects-off) .mist-layer::before { animation: fogDriftA 140s linear infinite; }
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.effects-off) .mist-layer::after { animation: fogDriftB 220s linear infinite reverse; }
+}
+@keyframes fogDriftA { to { transform: translate3d(-768px, 0, 0); } }
+@keyframes fogDriftB { to { transform: translate3d(-1152px, 0, 0); } }
+
+/* свет по вкладкам: каждая комната — свой оттенок нижнего свечения (кузня / стол карт / алтарь / сокровищница) */
+body { --amb-h: 24; --amb-s: 60%; }
+body[data-view="strongholds"] { --amb-h: 212; --amb-s: 38%; }
+body[data-view="hero"] { --amb-h: 268; --amb-s: 34%; }
+body[data-view="inv"] { --amb-h: 42; --amb-s: 62%; }
+body[data-view="stats"] { --amb-h: 200; --amb-s: 18%; }
+body[data-view="quests"] { --amb-h: 32; --amb-s: 55%; }
+.app-wrap { background:
+  radial-gradient(ellipse at 50% 100%, hsla(calc(var(--amb-h) + var(--atmosphere-hue)), var(--amb-s), calc(8% + var(--atmosphere-light) * 0.15), 0.6), transparent 60%),
+  radial-gradient(ellipse at 20% 20%, hsla(calc(280 + var(--atmosphere-hue)), 40%, calc(6% + var(--atmosphere-light) * 0.1), 0.4), transparent 50%),
+  linear-gradient(180deg, var(--s1) 0%, var(--s0) 100%); }
+
+/* ================================================================
+   TROPHIES v3 (визуал-план, фазы 5–6): галерея — медальоны по 3 в ряд с уникальными силуэтами; пустые состояния; теплокарта
+   ================================================================ */
+.ach-wrap { padding: var(--sp-3); margin-bottom: var(--sp-4); background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--inner-light); }
+.ach-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.ach-title { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-display); font-size: var(--t-sm); letter-spacing: 2px; text-transform: uppercase; color: var(--tx-2); }
+.ach-title .icn { color: var(--ac-reward); }
+.ach-count { font-size: var(--t-sm); font-weight: 700; color: var(--ac-reward); }
+.ach-overall { height: 6px; margin-bottom: var(--sp-3); border-radius: var(--r-pill); background: var(--s4); overflow: hidden; }
+.ach-overall-fill { height: 100%; background: linear-gradient(90deg, var(--mat-gilded-edge), var(--mat-gilded-text)); }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: var(--sp-2); }
+.ach-card { position: relative; display: grid; justify-items: center; align-content: start; gap: 2px; padding: var(--sp-3) var(--sp-2); text-align: center; background: var(--s1); border: 1px solid var(--border); border-radius: var(--r-md); }
+.ach-card.unlocked { border-color: color-mix(in srgb, var(--mat-gilded-edge) 45%, transparent); background: linear-gradient(180deg, var(--mat-gilded-fill), var(--s1)); }
+.ach-card.unlocked::after { content: '✓'; position: absolute; top: var(--sp-1); right: var(--sp-2); font-size: var(--t-xs); color: var(--ac-reward); }
+.ach-icon { display: grid; place-items: center; margin-bottom: var(--sp-1); }
+.ach-icon .nd-medal { width: 52px; height: 52px; }
+.ach-card:not(.unlocked) .ach-icon { filter: grayscale(1); opacity: 0.55; }
+.ach-name { font-family: var(--font-display); font-weight: 700; font-size: var(--t-xs); line-height: 1.2; color: var(--ac-reward); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ach-card:not(.unlocked) .ach-name { color: var(--tx-2); }
+.ach-desc { font-size: var(--t-xs); line-height: 1.2; color: var(--tx-2); }
+.ach-prog { width: 100%; height: 4px; margin-top: var(--sp-1); border-radius: var(--r-pill); background: var(--s4); overflow: hidden; }
+.ach-prog-fill { height: 100%; background: linear-gradient(90deg, var(--mat-gilded-edge), var(--mat-gilded-text)); }
+.ach-prog-text { font-size: var(--t-xs); color: var(--tx-2); font-variant-numeric: tabular-nums; }
+
+.hm-grid { display: grid; grid-template-columns: repeat(auto-fill, 14px); gap: 3px; }
+.hm-cell { display: block; width: 14px; height: 14px; border-radius: 3px; background: var(--s3); }
+.hm-cell.l1 { background: color-mix(in srgb, var(--ac-success) 28%, var(--s3)); }
+.hm-cell.l2 { background: color-mix(in srgb, var(--ac-success) 52%, var(--s3)); }
+.hm-cell.l3 { background: color-mix(in srgb, var(--ac-success) 76%, var(--s3)); }
+.hm-cell.l4 { background: var(--ac-success); }
+.hm-legend { display: flex; align-items: center; gap: 6px; margin-top: var(--sp-2); font-size: var(--t-xs); color: var(--tx-2); }
+.hm-legend .hm-cell { width: 10px; height: 10px; }
+.st-empty { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3); font-size: var(--t-sm); color: var(--tx-2); border: 1px dashed var(--border-hi); border-radius: var(--r-md); }
+.st-empty .icn { flex-shrink: 0; width: 18px; height: 18px; color: var(--ac-reward); }
+
+/* ================================================================
+   CEREMONY v3 (визуал-план, фаза 5): единая печать для level-up и ранг-апа — тот же материал, что у карточек
+   ================================================================ */
+.cer-seal { --m-edge: var(--mat-gilded-edge); --m-glow: var(--mat-gilded-glow); --m-text: var(--mat-gilded-text); --lvl: 3;
+  position: relative; display: grid; place-items: center; width: 132px; height: 132px; margin: 0 auto var(--sp-3); border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--m-edge) 38%, var(--s3)), var(--s1) 72%);
+  border: 3px solid var(--m-edge);
+  box-shadow: inset 0 0 0 5px var(--s1), inset 0 0 0 7px color-mix(in srgb, var(--m-edge) 45%, transparent), 0 0 36px var(--m-glow), var(--elev-3); }
+.cer-seal::before { content: ''; position: absolute; inset: -9px; border-radius: 50%; opacity: 0.6; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, var(--m-edge) 0 2deg, transparent 2deg 20deg);
+  -webkit-mask: radial-gradient(circle, transparent 62%, black 63%); mask: radial-gradient(circle, transparent 62%, black 63%); }
+.levelup-banner .cer-seal .num { font-family: var(--font-display); font-size: var(--t-3xl); line-height: 1; color: var(--m-text); text-shadow: 0 0 18px var(--m-glow); }
+.rankup-banner .cer-seal .rank-text { margin: 0; font-family: var(--font-display); font-size: var(--t-3xl); letter-spacing: 1px; line-height: 1; }
+.rankup-banner .cer-seal { width: 112px; height: 112px; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .levelup-banner.show .cer-seal::before,
+  :root:not(.perf-eco):not(.nd-webdriver) body:not(.low-effect):not(.effects-off) .rankup-banner.show .cer-seal::before { animation: sealSweep 6s linear infinite; }
+}
+/* баннеры церемоний: тёмная подложка — текст не сливается с интерфейсом под ними */
+.levelup-banner, .rankup-banner { padding: var(--sp-8) var(--sp-10); background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--s0) 94%, transparent) 55%, transparent 100%); }
+
+/* ================================================================
+   A11Y v3 (визуал-план, фаза 7): цель нажатия ≥ 44 px у основных кнопок вкладок
+   ================================================================ */
+.forge-btn, .goals-add, .demo-btn, .backpack-tab, .sh-mini, .km-cam-reset { min-height: 44px; min-width: 44px; }
+.treasury-chip { min-height: 44px; }
+/* баннер церемонии затемняет весь экран (тень-«скрим» того же цвета, что край подложки — без видимого шва),
+   при reduced-motion анимации нет, но сама церемония видна (правило 19) */
+.levelup-banner, .rankup-banner { --cer-scrim: color-mix(in srgb, var(--s0) 74%, transparent); border-radius: 50%;
+  background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--s0) 94%, transparent) 55%, var(--cer-scrim) 100%); }
+.levelup-banner.show, .rankup-banner.show { box-shadow: 0 0 0 200vmax var(--cer-scrim); }
+body.reduced-motion .levelup-banner.show, body.reduced-motion .rankup-banner.show { opacity: 1; }
+/* шёпот духа: подложка, чтобы фраза читалась поверх карточек; без анимации — просто виден, снимается из JS */
+.spirit-msg { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-md); background: color-mix(in srgb, var(--s0) 86%, transparent); border: 1px solid var(--hairline); }
+body.reduced-motion .spirit-msg.show { animation: none; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { /* системный reduce без класса на body: анимации сокращены до 0.001 мс — конечный кадр не должен прятать церемонию */
+  .levelup-banner.show, .rankup-banner.show { animation: none; opacity: 1; transform: translate(-50%, -50%); }
+  .spirit-msg.show { animation: none; opacity: 1; }
 }

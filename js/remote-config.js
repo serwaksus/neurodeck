@@ -134,11 +134,17 @@
         opts = (opts && typeof opts === 'object') ? opts : {};
         var url = (typeof opts.url === 'string' && opts.url) ? opts.url : DEFAULT_URL;
         var nowMs = (typeof opts.now === 'number' && isFinite(opts.now)) ? opts.now : Date.now();
+        // Аудит R2 M6: `root` — параметр внешней UMD-обёртки, внутри фабрики он не виден, поэтому раньше
+        // fetch не находился никогда и лоадер в проде молча отвечал 'no-fetch'. Берём глобал напрямую.
+        var holder = (typeof globalThis !== 'undefined') ? globalThis : null;
         var fetchFn = (typeof opts.fetch === 'function') ? opts.fetch
-            : ((typeof root !== 'undefined' && typeof root.fetch === 'function') ? root.fetch : null);
+            : ((holder && typeof holder.fetch === 'function') ? holder.fetch.bind(holder) : null);
         if (!fetchFn) return Promise.resolve({ applied: false, reason: 'no-fetch' });
-        return Promise.resolve().then(function() {
-            return fetchFn(url, { cache: 'no-cache' });
+        var timeoutMs = (typeof opts.timeout === 'number' && opts.timeout > 0) ? opts.timeout : 8000;
+        return new Promise(function(resolve, reject) { // «висящий» запрос не должен держать лоадер вечно
+            var t = setTimeout(function() { reject(new Error('timeout')); }, timeoutMs);
+            Promise.resolve().then(function() { return fetchFn(url, { cache: 'no-cache' }); })
+                .then(function(r) { clearTimeout(t); resolve(r); }, function(e) { clearTimeout(t); reject(e); });
         }).then(function(res) {
             if (!res || typeof res.text !== 'function' || !res.ok) {
                 var code = (res && typeof res.ok === 'boolean') ? ('http ' + res.status) : 'не Response';

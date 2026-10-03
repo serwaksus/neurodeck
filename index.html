@@ -12,9 +12,11 @@
     <meta name="theme-color" content="#0a0a0f" />
     <title>NeuroDeck — Выкуй себя. Вырвись из тьмы.</title>
     <!-- Волна 3: шрифты self-host (fonts/fonts.css) — без fonts.googleapis/gstatic -->
+    <link rel="preload" href="fonts/Philosopher-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/Alegreya-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/cinzel-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="fonts/fonts.css?v=103" />
-    <link rel="stylesheet" href="css/style.css?v=103" />
+    <link rel="stylesheet" href="fonts/fonts.css?v=156" />
+    <link rel="stylesheet" href="css/style.css?v=156" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="img/icon-192.png" />
   </head>
@@ -46,69 +48,36 @@
       <symbol id="i-w-clear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 4v2M12 18v2M4 12h2M18 12h2"/></symbol>
       <symbol id="i-chest" viewBox="0 0 24 24"><path d="M4 11a8 8 0 0 1 16 0v8H4z"/><path d="M4 13h16"/><path d="M10.5 13h3v3h-3z"/></symbol>
       <symbol id="i-ghost" viewBox="0 0 24 24"><path d="M5 21V11a7 7 0 0 1 14 0v10l-2.3-1.8L14.4 21 12 19.2 9.6 21l-2.3-1.8z"/><circle cx="9.5" cy="11" r="0.8"/><circle cx="14.5" cy="11" r="0.8"/></symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c.6 3.4 4.6 5.4 4.6 10a4.6 4.6 0 0 1-9.2 0c0-2.3 1.2-3.7 2.5-4.9.2 1.7 1 2.7 2.1 3.1.4-3.1.1-5.7 0-8.2z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-sword" viewBox="0 0 24 24"><path d="M5 19L17 7"/><path d="M15 4l5 5-3 1-3-3z"/><path d="M6.5 17.5L4 20"/></symbol>
+      <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.5c3 4 5.5 6.8 5.5 10a5.5 5.5 0 0 1-11 0c0-3.2 2.5-6 5.5-10z"/></symbol>
       <symbol id="i-siege" viewBox="0 0 24 24"><path d="M3 17l9-9 9 9"/><path d="M12 8V3"/><path d="M10 3h4"/></symbol>
     </svg>
     <div class="app-wrap">
       <div class="dungeon-bg"></div>
       <div class="light-rays"></div>
-      <div class="mist-layer" id="mistLayer">
-        <svg preserveAspectRatio="none" viewBox="0 0 1920 1080">
-          <defs>
-            <filter id="mist">
-              <feTurbulence
-                type="fractalNoise"
-                baseFrequency="0.008"
-                numOctaves="3"
-                seed="5"
-              />
-              <feColorMatrix
-                values="0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.75  0 0 0 0.5 0"
-              />
-              <feGaussianBlur stdDeviation="20" />
-            </filter>
-            <filter id="mist2">
-              <feTurbulence
-                type="fractalNoise"
-                baseFrequency="0.004"
-                numOctaves="2"
-                seed="13"
-              />
-              <feColorMatrix
-                values="0 0 0 0 0.7  0 0 0 0 0.6  0 0 0 0 0.8  0 0 0 0.3 0"
-              />
-              <feGaussianBlur stdDeviation="30" />
-            </filter>
-          </defs>
-          <rect
-            id="mistRect1"
-            width="100%"
-            height="100%"
-            filter="url(#mist)"
-            opacity="0.5"
-          />
-          <rect
-            id="mistRect2"
-            width="100%"
-            height="100%"
-            filter="url(#mist2)"
-            opacity="0.3"
-          />
-        </svg>
-      </div>
+      <div class="mist-layer" id="mistLayer" aria-hidden="true"></div>
       <canvas id="dustCanvas"></canvas>
       <div class="torch-flicker"></div>
       <canvas id="particles"></canvas>
+      
+    </div>
+      <!-- Слой эффектов (тосты, баннеры level-up/ранг-апа, реплики духа, подсказки) — на уровне body, НЕ внутри .app-wrap:
+           .app-wrap (position: fixed) образует контекст наложения с z-index auto, и всё внутри него рисовалось ПОД .app (z-index 10) —
+           тосты и баннеры были невидимы (аудит визуала, 2026-10-02). -->
       <div class="levelup-overlay" id="lvlOverlay"></div>
       <div class="levelup-banner" id="lvlBanner">
         <div class="lbl">⚔ БРЕМЯ СТАЛО ЛЕГЧЕ ⚔</div>
-        <div class="num" id="lvlNum">2</div>
+        <div class="cer-seal"><div class="num" id="lvlNum">2</div></div>
         <div class="sub" id="lvlSub">Новый уровень</div>
         <div class="sub2" id="lvlSub2">+100 HP · Новые возможности открыты</div>
       </div>
       <div class="rankup-overlay" id="rankupOverlay"></div>
       <div class="rankup-banner" id="rankupBanner">
         <div class="lbl">⚔ Ранг повышен ⚔</div>
-        <div class="rank-text" id="rankupRankText">CC</div>
+        <div class="cer-seal"><div class="rank-text" id="rankupRankText">CC</div></div>
         <div class="sub" id="rankupSubText">Сила пробуждается</div>
         <div class="card-name-small" id="rankupCardName"></div>
         <div class="attr-hint" id="rankupAttrHint">+1 к пулу Силы (3/5)</div>
@@ -120,7 +89,6 @@
         <button type="button" class="t-action" style="display:none"></button>
       </div>
       <div class="tooltip" id="tooltip"></div>
-    </div>
       <div
         class="modal-overlay"
         role="dialog"
@@ -260,7 +228,7 @@
                   type="number"
                   id="forgeMastery"
                   value="5"
-                  min="2"
+                  min="5"
                   max="50"
                 />
               </div>
@@ -426,7 +394,7 @@
                 type="number"
                 id="editCardMastery"
                 value="7"
-                min="2"
+                min="5"
                 max="50"
               />
               <div class="form-hint" id="editCardAdaptHint">
@@ -454,6 +422,16 @@
             </button>
           </div>
           <div class="modal-body">
+            <div class="sync-section" id="undoImportSection" style="display: none">
+              <div class="sync-section-title">↩ Откат импорта</div>
+              <div class="sync-section-desc" id="undoImportDesc">Перед последним импортом прежнее состояние сохранено.</div>
+              <button class="demo-btn" data-action="undo-import">↩ Вернуть состояние до импорта</button>
+            </div>
+            <div class="sync-section" id="c3Section">
+              <div class="sync-section-title">🗺 Кампания 3.0 (бета)</div>
+              <div class="sync-section-desc">Четыре героя-сферы на общей карте, фракции пороков, тактики. Очки движения дают только твои дела. Включение перезапускает игру; прогресс беты хранится отдельно от твердынь 2.0.</div>
+              <button class="demo-btn" id="c3ToggleBtn" data-action="toggle-c3">Включить</button>
+            </div>
             <div class="sync-section" id="cloudSection">
               <div class="sync-section-title">☁ Облако Telegram</div>
               <div class="sync-section-desc">
@@ -985,6 +963,15 @@
               </div>
             </div>
           </div>
+          <div class="form-row" id="taskSphereRow" hidden>
+            <label class="form-label">Сфера жизни (очки движения героя на карте)</label>
+            <div id="taskSphereChips">
+              <div class="stat-chip" data-action="select-task-sphere" data-sphere="body">💪 Тело</div>
+              <div class="stat-chip selected" data-action="select-task-sphere" data-sphere="mind">🧠 Разум</div>
+              <div class="stat-chip" data-action="select-task-sphere" data-sphere="spirit">🕯 Дух</div>
+              <div class="stat-chip" data-action="select-task-sphere" data-sphere="ties">🤝 Связи</div>
+            </div>
+          </div>
           <div class="form-grid-2">
             <div class="form-row">
               <label class="form-label">📅 Дедлайн</label
@@ -1063,7 +1050,7 @@
             <svg class="icn" aria-hidden="true"><use href="#i-siege"/></svg><span id="siegePillText"></span>
           </button>
           <div class="progress-control">
-            <span>Твердыни</span>
+            <span class="pc-label"><svg class="icn" aria-hidden="true"><use href="#i-strongholds"/></svg><span class="pc-text">Твердыни</span></span>
             <div
               id="progressSlider"
               class="progress-track"
@@ -1126,47 +1113,13 @@
           <main class="content" tabindex="0" aria-label="Основная область прокрутки">
             <section class="view active" id="view-deck">
               <div class="view-title"><svg class="icn" aria-hidden="true"><use href="#i-deck"/></svg> Колода</div>
-              <div
-                id="dashboardBar"
-                style="
-                  background: rgba(0, 0, 0, 0.3);
-                  border: 1px solid var(--border);
-                  border-radius: 4px;
-                  padding: 8px 12px;
-                  margin-bottom: 12px;
-                  font-size: 11px;
-                  line-height: 1.8;
-                  position: relative;
-                "
-              ></div>
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  gap: 12px;
-                  margin-bottom: 14px;
-                  padding-bottom: 12px;
-                  border-bottom: 1px solid var(--border);
-                  flex-wrap: wrap;
-                "
-              >
-                <div
-                  style="
-                    font-size: 11px;
-                    color: var(--text-dim);
-                    letter-spacing: 1.5px;
-                  "
-                >
-                  Всего карточек:
-                  <b
-                    id="deckCount"
-                    style="color: var(--gold-bright); font-weight: normal"
-                    >0</b
-                  >
+              <div id="dashboardBar" class="dashboard-bar"></div>
+              <div class="deck-toolbar">
+                <div class="deck-count">
+                  Всего карточек: <b id="deckCount">0</b>
                 </div>
                 <button class="forge-btn" data-action="open-forge">
-                  🔨 Выковать карточку
+                  <svg class="icn" aria-hidden="true"><use href="#i-sword"/></svg> Выковать карточку
                 </button>
               </div>
               <div class="cards" id="cardGrid"></div>
@@ -1474,6 +1427,7 @@
                 4 провинции × 5 твердынь · штурмуй фронт, строй, нанимай ·
                 воскресная осада у стен
               </div>
+              <div id="c3Root" hidden></div>
               <div id="strongholdsRoot"></div>
             </section>
             <section class="view" id="view-stats">
@@ -1498,7 +1452,7 @@
             <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-hero"/></svg></span>Герой
           </button>
           <button class="bnav-btn" data-action="switch-view" data-view="inv">
-            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-inv"/></svg></span>Инв
+            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-inv"/></svg></span>Реликвии
           </button>
           <button
             class="bnav-btn"
@@ -1508,7 +1462,7 @@
             <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-strongholds"/></svg></span>Твердыни
           </button>
           <button class="bnav-btn" data-action="switch-view" data-view="stats">
-            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-stats"/></svg></span>Стат
+            <span class="bnav-icon"><svg class="icn" aria-hidden="true"><use href="#i-stats"/></svg></span>Дневник
           </button>
         </footer>
       </div>
@@ -1649,18 +1603,19 @@
         });
       }
     </script>
-    <script src="js/perf.js?v=103" defer></script>
-    <script src="js/perf-compat.js?v=103" defer></script>
-    <script src="js/event-bus.js?v=103" defer></script>
-    <script src="js/audio.js?v=103" defer></script>
-    <script src="js/telemetry.js?v=103" defer></script>
-    <script src="js/stronghold-data.js?v=103" defer></script>
-<script src="js/state-guards.js?v=103" defer></script>
-    <script src="js/storage.js?v=103" defer></script>
-    <script src="js/stronghold-model.js?v=103" defer></script>
-    <script src="js/state/store.js?v=103" defer></script>
-    <script src="js/remote-config.js?v=103" defer></script>
-    <script src="js/ui/strongholds.js?v=103" defer></script>
-    <script src="js/app.js?v=103" defer></script>
+    <script src="js/perf.js?v=156" defer></script>
+    <script src="js/perf-compat.js?v=156" defer></script>
+    <script src="js/event-bus.js?v=156" defer></script>
+    <script src="js/audio.js?v=156" defer></script>
+    <script src="js/telemetry.js?v=156" defer></script>
+    <script src="js/stronghold-data.js?v=156" defer></script>
+<script src="js/state-guards.js?v=156" defer></script>
+    <script src="js/storage.js?v=156" defer></script>
+    <script src="js/stronghold-model.js?v=156" defer></script>
+    <script src="js/state/store.js?v=156" defer></script>
+    <script src="js/remote-config.js?v=156" defer></script>
+    <script src="js/campaign3/c3-loader.js?v=156" defer></script>
+    <script src="js/ui/strongholds.js?v=156" defer></script>
+    <script src="js/app.js?v=156" defer></script>
   </body>
 </html>
