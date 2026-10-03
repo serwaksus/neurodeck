@@ -69,7 +69,7 @@
             heroes: SPHERES.map(function(sp, i) { return { node: D.TOWNS[i], lvl: 1, xp: 0, sk: 0, army: { t1: C.START_ARMY.t1, t3: C.START_ARMY.t3, t5: C.START_ARMY.t5 } }; }),
             own: own, seen: '0'.repeat(N), gar: gar,
             towns: SPHERES.map(function() { return { pool: { t1: C.START_POOL.t1, t3: C.START_POOL.t3, t5: C.START_POOL.t5 }, dw: { t3: 0, t5: 0 }, hall: 0 }; }),
-            fac: FAC.map(function() { return { sh: zeros(7), dead: 0, truce: 0 }; }),
+            fac: FAC.map(function() { return { sh: zeros(7), dead: 0, truce: 0, lost: [] }; }), // lost — узлы, взятые игроком на текущей неделе (контратака ИИ, чистится в weekEnd)
             sg: zeros(4), lz: { on: 0, left: C.LAZARET_DAYS },
             log: [], done: false
         };
@@ -275,6 +275,7 @@
         var n = NODES[id];
         if (out.win) {
             var prevOwner = s.own.charAt(id), pf = facOf(prevOwner);
+            if (pf >= 0 && id !== FAC[pf].bastion) (s.fac[pf].lost = s.fac[pf].lost || []).push(id); // фракция ответит контратакой на этой неделе
             s.own = strSet(s.own, id, '1'); s.gar[id] = 0; hero.node = id;
             var loot = D.LOOT[n.type] || {}, gold = Math.round((loot.g || 0) * (D.SKILL[SPHERES[h]].kind === null ? 1 + C.DIPLO_LOOT * hero.sk : 1));
             s.res.g += gold;
@@ -519,40 +520,115 @@
         for (var h = 0; h < 4; h++) if (s.heroes[h].node === i || ADJ[s.heroes[h].node].indexOf(i) >= 0) return true;
         return false;
     }
-    function factionTurn(s, f, ev) {
+    // Приоритеты ИИ по плану §3: (1) ответить на угрозу — контратака на узел, взятый игроком на этой неделе;
+    // (2) атака слабейшего соседнего узла игрока при сила/оборона > FAC_RATIO (отбитый натиск тратит ход);
+    // (3) занять нейтральный; (4) укрепиться — рост гарнизона: при герое рядом с владениями усиливается
+    // ближайший к угрозе узел («усиление ближайшего оплота»), иначе оплот фракции.
+    // Каждое действие — событие недели (строка в журнале). Сид = день + фракция: равные кандидаты
+    // развязываются сидированным mulberry32 (детерминизм C7).
+    // Особенности фракций (план §3): Лень тянется к шахтам Стали, Рассеянность бьёт по самой запущенной сфере
+    // и наводит туман (fogAround), Уныние первым делом осаждает Монастырь.
+    function factionTargets(s, f) { // соседние с владениями фракции нейтральные узлы и узлы игрока (узел с героем недосягаем)
+        var code = facCode(f), out = [], seenC = {}, occ = {};
+        s.heroes.forEach(function(h) { occ[h.node] = true; });
+        factionNodes(s, f).forEach(function(o) {
+            ADJ[o].forEach(function(c) {
+                if (seenC[c] || occ[c] || s.own.charAt(c) === code || c === LAIR) return;
+                seenC[c] = true;
+                var oc = s.own.charAt(c);
+                if (oc !== '0' && oc !== '1') return; // чужие фракции и цитадель не трогаем
+                out.push(c);
+            });
+        });
+        return out;
+    }
+    function weakestOf(s, list, rnd) { // слабейший по обороне; равные — по сиду (день + фракция)
+        var best = null, bestDef = Infinity, tie = [];
+        list.forEach(function(id) {
+            var d = nodeDefense(s, id);
+            if (d < bestDef) { bestDef = d; best = id; tie = [id]; }
+            else if (d === bestDef) tie.push(id);
+        });
+        return tie.length > 1 ? tie[Math.floor(rnd() * tie.length)] : best;
+    }
+    function fortify(s, f, id, ev, why) { // укрепиться: рост гарнизона до двойного исходного; false — потолок достигнут
+        var cap = 2 * (id === FAC[f].bastion ? NODES[id].gar : NODES[id].type === 'town' ? C.FAC_TOWN_GAR : C.FAC_NODE_GAR);
+        if (s.gar[id] >= cap) return false;
+        s.gar[id] = Math.min(cap, s.gar[id] + C.FAC_FORT_GROW);
+        ev.push({ f: f, kind: 'fortify', node: id, text: '«' + FAC[f].name + '» ' + why + ': гарнизон «' + NODES[id].name + '» ' + s.gar[id] });
+        return true;
+    }
+    function facAttack(s, f, id, power, ev, counter) { // натиск фракции на узел: отбит при сила/оборона ≤ FAC_RATIO; города — осадой
+        var n = NODES[id], isTown = n.type === 'town', t = isTown ? SPHERES.indexOf(n.sphere) : -1;
+        var def = nodeDefense(s, id);
+        if (def > 0 && power / def <= C.FAC_RATIO) {
+            if (isTown) s.sg[t] = 0;
+            ev.push({ f: f, kind: 'repelled', node: id, text: 'Натиск «' + FAC[f].name + '» на «' + n.name + '» отбит (' + power + ' vs ' + def + ')' });
+            return;
+        }
+        if (isTown) {
+            s.sg[t]++;
+            if (s.sg[t] >= C.SIEGE_WEEKS && townsOwned(s) > 1) {
+                s.sg[t] = 0; s.own = strSet(s.own, id, facCode(f)); s.gar[id] = C.FAC_TOWN_GAR;
+                ev.push({ f: f, kind: 'fall', node: id, text: '«' + FAC[f].name + '» взяла город «' + n.name + '»! Освободи его' });
+            } else ev.push({ f: f, kind: 'siege', node: id, text: 'Осада «' + n.name + '»: «' + FAC[f].name + '» (' + s.sg[t] + '/' + C.SIEGE_WEEKS + ')' + (townsOwned(s) <= 1 ? ' — последний город не падёт' : '') });
+            return;
+        }
+        s.own = strSet(s.own, id, facCode(f)); s.gar[id] = C.FAC_NODE_GAR;
+        if (FAC[f].id === 'distract') fogAround(s, id, function(i) { return playerSees(s, i); });
+        ev.push({ f: f, kind: 'take', node: id, text: '«' + FAC[f].name + '» ' + (counter ? 'возвращает «' + n.name + '» (ответ на угрозу)' : 'заняла «' + n.name + '»') });
+    }
+    function neglectedSphere(apWk) { var k = 0; for (var i = 1; i < 4; i++) if (apWk[i] < apWk[k]) k = i; return k; } // меньше всех дел за неделю
+    function threatPoint(s, f) { // узел фракции, ближайший к герою, стоящему рядом с её владениями (на узле фракции герой не оказывается: вход — бой)
+        var code = facCode(f), owned = factionNodes(s, f), best = -1, bestCost = Infinity;
+        s.heroes.forEach(function(h) {
+            if (s.own.charAt(h.node) === code) return;
+            if (!ADJ[h.node].some(function(c) { return s.own.charAt(c) === code; })) return;
+            owned.forEach(function(o) {
+                var sp = shortestPath(h.node, o);
+                if (!sp) return;
+                var cost = sp.cost + (o === FAC[f].bastion ? -0.5 : 0); // при равенстве расстояний усиливается оплот
+                if (cost < bestCost) { bestCost = cost; best = o; }
+            });
+        });
+        return best;
+    }
+    function facPick(s, f, mine, rnd, apWk) { // особый интерес фракции среди узлов игрока (план §3), иначе — слабейший
+        var pick = null;
+        if (FAC[f].id === 'gloom' && mine.indexOf(D.TOWNS[2]) >= 0) pick = D.TOWNS[2]; // Уныние осаждает Монастырь
+        else if (FAC[f].id === 'distract') {
+            var negl = mine.filter(function(id) { return NODES[id].sphere === SPHERES[neglectedSphere(apWk)]; });
+            if (negl.length > 0) pick = weakestOf(s, negl, rnd); // Рассеянность бьёт по самой запущенной сфере
+        } else if (FAC[f].id === 'sloth') {
+            var steel = mine.filter(function(id) { return NODES[id].type === 'mine' && NODES[id].sphere === 'body'; });
+            if (steel.length > 0) pick = weakestOf(s, steel, rnd); // Лень тянется к шахтам Стали
+        }
+        return pick || weakestOf(s, mine, rnd);
+    }
+    function factionTurn(s, f, ev, apWk) {
         var F = FAC[f], fs = s.fac[f], sum = facSum(s, f), truce = fs.truce === 1, kept = truce && sum === 0;
         fs.truce = 0;
         if (kept) { retreat(s, f, ev, 'Перемирие соблюдено: «' + F.name + '» отступает'); return; }
         if (sum < C.FAC_MIN_SHADOW) { if (sum === 0) retreat(s, f, ev, '«' + F.name + '» теряет силу и отступает'); return; }
         var power = facPower(s, f, truce); // truce здесь = обет нарушен
-        var owned = factionNodes(s, f), code = facCode(f), best = null, bestKey = Infinity, occ = {};
-        s.heroes.forEach(function(h) { occ[h.node] = true; });
-        var seenC = {};
-        owned.forEach(function(o) {
-            ADJ[o].forEach(function(c) {
-                if (seenC[c] || s.own.charAt(c) === code || c === LAIR || occ[c]) return;
-                seenC[c] = true;
-                var oc = s.own.charAt(c);
-                if (oc !== '0' && oc !== '1') return; // чужие фракции и цитадель не трогаем
-                var cat = oc === '1' ? (NODES[c].type === 'town' ? 0 : 1) : 2; // города — главная цель, затем узлы игрока, затем нейтрал
-                var key = cat * 100 + (NODES[c].sphere === F.sphere ? 0 : 50) + (oc === '1' ? nodeDefense(s, c) / 1000 : s.gar[c] / 1000) + c / 100000;
-                if (key < bestKey) { bestKey = key; best = c; }
-            });
-        });
-        if (best === null) return;
-        var def = nodeDefense(s, best), n = NODES[best], isTown = n.type === 'town', t = isTown ? SPHERES.indexOf(n.sphere) : -1;
-        if (def > 0 && power / def <= C.FAC_RATIO) { if (isTown) s.sg[t] = 0; ev.push({ f: f, kind: 'repelled', node: best, text: 'Натиск «' + F.name + '» на «' + n.name + '» отбит (' + power + ' vs ' + def + ')' }); return; }
-        if (isTown) {
-            s.sg[t]++;
-            if (s.sg[t] >= C.SIEGE_WEEKS && townsOwned(s) > 1) {
-                s.sg[t] = 0; s.own = strSet(s.own, best, code); s.gar[best] = C.FAC_TOWN_GAR;
-                ev.push({ f: f, kind: 'fall', node: best, text: '«' + F.name + '» взяла город «' + n.name + '»! Освободи его' });
-            } else ev.push({ f: f, kind: 'siege', node: best, text: 'Осада «' + n.name + '»: «' + F.name + '» (' + s.sg[t] + '/' + C.SIEGE_WEEKS + ')' + (townsOwned(s) <= 1 ? ' — последний город не падёт' : '') });
+        var rnd = mulberry32(hashStr(s.day + '|' + F.id)); // сид ИИ = день + фракция
+        var cand = factionTargets(s, f);
+        // 1) ответить на угрозу: контратака на слабейший из узлов, взятых игроком на этой неделе
+        var lost = (fs.lost || []).filter(function(id) { return s.own.charAt(id) === '1' && cand.indexOf(id) >= 0; });
+        if (lost.length > 0) { facAttack(s, f, weakestOf(s, lost, rnd), power, ev, true); return; }
+        var mine = cand.filter(function(id) { return s.own.charAt(id) === '1'; });
+        if (mine.length > 0) { // 2) атака слабейшего соседнего узла игрока (отбитый натиск тратит ход)
+            facAttack(s, f, facPick(s, f, mine, rnd, apWk), power, ev, false);
             return;
         }
-        s.own = strSet(s.own, best, code); s.gar[best] = C.FAC_NODE_GAR;
-        if (F.id === 'distract') fogAround(s, best, function(i) { return playerSees(s, i); });
-        ev.push({ f: f, kind: 'take', node: best, text: '«' + F.name + '» заняла «' + n.name + '»' });
+        if (cand.length > 0) { // 3) занять нейтральный — слабейшего; Лень прежде всего берёт шахту Стали
+            var steel = F.id === 'sloth' ? cand.filter(function(id) { return NODES[id].type === 'mine' && NODES[id].sphere === 'body'; }) : [];
+            facAttack(s, f, steel.length > 0 ? weakestOf(s, steel, rnd) : weakestOf(s, cand, rnd), power, ev, false);
+            return;
+        }
+        // 4) укрепиться: герой рядом с владениями — усиливается ближайший к угрозе узел, иначе оплот
+        var point = threatPoint(s, f);
+        if (!(point >= 0 && fortify(s, f, point, ev, 'отвечает на угрозу'))) fortify(s, f, F.bastion, ev, 'укрепляется');
     }
     function retreat(s, f, ev, text) { // самый далёкий от оплота узел фракции (кроме оплота) становится нейтральным
         var b = FAC[f].bastion, far = -1, best = -1, owned = factionNodes(s, f);
@@ -565,6 +641,7 @@
         var ev = [];
         s.wk++;
         var grow = 1 + C.HALL_GROW * hall(s, 'mind');
+        var apWk = s.apWeek.slice(0); // дела недели по сферам — до обнуления: Рассеянность бьёт по самой запущенной сфере
         for (var t = 0; t < 4; t++) {
             if (!townOwned(s, t)) continue; // город в руках фракции не растит армию
             var fgr = C.GROW_FLOOR + (1 - C.GROW_FLOOR) * Math.min(1, s.apWeek[t] / C.GROW_AP_FULL); // прирост города — от дел его сферы
@@ -577,11 +654,12 @@
         if (s.wk % C.SEASON_WEEKS === 0) { s.lz.left = C.LAZARET_DAYS; } // новый сезон — новый запас лазарета
         if (s.done) return { events: ev };
         if (!s.lz.on) {
-            for (var f = 0; f < 4; f++) if (!s.fac[f].dead) factionTurn(s, f, ev);
+            for (var f = 0; f < 4; f++) if (!s.fac[f].dead) factionTurn(s, f, ev, apWk);
         } else for (var f2 = 0; f2 < 4; f2++) s.fac[f2].truce = 0;
         for (var tt = 0; tt < 4; tt++) { // осада снимается, если рядом с городом нет узлов фракции
             if (!ADJ[D.TOWNS[tt]].some(function(a) { return facOf(s.own.charAt(a)) >= 0; })) s.sg[tt] = 0;
         }
+        for (var f3 = 0; f3 < 4; f3++) s.fac[f3].lost = []; // контратака отвечает только на узлы, взятые игроком на текущей неделе
         ev.forEach(function(e) { pushLog(s, e.text); });
         return { events: ev };
     }

@@ -475,7 +475,9 @@
         for (i = 0; i < 4; i++) {
             var fz = (Array.isArray(src.fac) && src.fac[i] && typeof src.fac[i] === 'object') ? src.fac[i] : {}, sh = [];
             for (var d = 0; d < 7; d++) sh.push(clampNumber(Array.isArray(fz.sh) ? fz.sh[d] : 0, 0, 100, 0));
-            facs.push({ sh: sh, dead: fz.dead ? 1 : 0, truce: (fz.truce && !fz.dead) ? 1 : 0 });
+            var lost = [];
+            (Array.isArray(fz.lost) ? fz.lost : []).forEach(function(x) { x = int(x, 0, N - 1, 0); if (lost.indexOf(x) < 0 && lost.length < 8) lost.push(x); }); // узлы, взятые игроком на текущей неделе (контратака ИИ)
+            facs.push({ sh: sh, dead: fz.dead ? 1 : 0, truce: (fz.truce && !fz.dead) ? 1 : 0, lost: lost });
         }
         var truces = 0; facs.forEach(function(f) { if (f.truce) { truces++; if (truces > 1) f.truce = 0; } }); // не больше одного обета
         var log = (Array.isArray(src.log) ? src.log : []).slice(-6).filter(function(e) { return e && typeof e === 'object'; }).map(function(e) {
