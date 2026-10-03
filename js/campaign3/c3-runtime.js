@@ -18,9 +18,9 @@
             getFlag: function() {
                 try {
                     var m = /[?&]c3=([01])\b/.exec(w.location.search || '');
-                    if (m) { if (m[1] === '1') w.localStorage.setItem(FLAG_KEY, '1'); else w.localStorage.removeItem(FLAG_KEY); }
-                    return w.localStorage.getItem(FLAG_KEY) === '1';
-                } catch (e) { return false; }
+                    if (m) w.localStorage.setItem(FLAG_KEY, m[1]);
+                    return w.localStorage.getItem(FLAG_KEY) !== '0'; // по умолчанию включена; явное выключение — '0'
+                } catch (e) { return true; }
             },
             dayKey: function() { return w.getMSKDayKey(); },
             takeStash: function() { var r = w.__ndC3Raw; w.__ndC3Raw = undefined; return r; },

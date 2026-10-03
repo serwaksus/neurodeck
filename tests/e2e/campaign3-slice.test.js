@@ -15,7 +15,7 @@ function SEED_IN_PAGE(arg) {
     localStorage.setItem('neurodeck_perf_mode', 'eco');
     localStorage.setItem('neurodeck_onboarding_done', '1');
     localStorage.setItem('neurodeck_starter_done', '1');
-    if (arg.flag) localStorage.setItem('nd_c3', '1');
+    if (arg.flag !== 'default') localStorage.setItem('nd_c3', arg.flag ? '1' : '0'); // 'default' — ключа нет: кампания включена по умолчанию, '0' — выключена явно
     localStorage.setItem('neurodeck_full_save', arg.save);
     localStorage.setItem('neurodeck_gen', '1');
 }
@@ -39,7 +39,7 @@ const openStrongholds = async (page) => { await page.click('.bnav-btn[data-view=
 const c3 = (page) => page.evaluate(() => JSON.parse(JSON.stringify(NDC3.getState())));
 const patch = (page, fn) => page.evaluate((src) => { const f = new Function('s', src); f(NDC3.getState()); renderCampaign3(); }, fn);
 
-test('флаг выключен: панели нет, состояние не создаётся, ключа c3 нет, выбор сферы задачи скрыт, отметка дела ничего не меняет', async ({ page }) => {
+test('флаг выключен (nd_c3=0): панели нет, состояние не создаётся, ключа c3 нет, выбор сферы задачи скрыт, отметка дела ничего не меняет', async ({ page }) => {
     await boot(page, false);
     await openStrongholds(page);
     await expect(page.locator('#c3Root')).toBeHidden();
@@ -294,7 +294,7 @@ test('дни без открытия приложения: молчание сч
     expect(r.body).toBeGreaterThanOrEqual(2); expect(r.mind).toBeGreaterThanOrEqual(2); expect(r.spirit).toBe(0);
 });
 
-test('ленивая загрузка: без флага модули c3 не запрашиваются, с флагом — подгружаются по порядку', async ({ page }) => {
+test('ленивая загрузка: при nd_c3=0 модули c3 не запрашиваются, с флагом — подгружаются по порядку', async ({ page }) => {
     const urls = [];
     page.on('request', (r) => { const u = r.url(); if (/campaign3|c3-/.test(u)) urls.push(u.split('/').pop().split('?')[0]); });
     await boot(page, false);
@@ -326,7 +326,7 @@ test('выключение беты не стирает прогресс c3: с�
     await boot(page, true);
     await complete(page, 1);
     await page.evaluate(() => saveGameState());
-    await page.evaluate(() => localStorage.removeItem('nd_c3'));
+    await page.evaluate(() => localStorage.setItem('nd_c3', '0'));
     await page.evaluate(() => sessionStorage.setItem('__ndSeeded', '1'));
     await page.reload();
     await page.waitForSelector('.app-wrap');
@@ -334,6 +334,20 @@ test('выключение беты не стирает прогресс c3: с�
     expect(await page.evaluate(() => typeof window.NDC3)).toBe('undefined');
     const kept = await page.evaluate(() => { saveGameState(); const c = JSON.parse(localStorage.getItem('neurodeck_full_save')).c3; return c ? c.ap : null; });
     expect(kept).toEqual([2, 0, 0, 0]);
+});
+
+test('по умолчанию (ключа nd_c3 нет) кампания 3.0 включена; ?c3=0 выключает и запоминает', async ({ page }) => {
+    await boot(page, 'default');
+    expect(await page.evaluate(() => localStorage.getItem('nd_c3'))).toBeNull();
+    expect(await page.evaluate(() => typeof window.NDC3)).toBe('object');
+    const p2 = await page.context().newPage();
+    await p2.route('**/telegram-web-app.js', (r) => r.abort());
+    await p2.addInitScript(SEED_IN_PAGE, { flag: 'default', save: JSON.stringify(seedSave({})) });
+    await p2.goto('/?c3=0');
+    await p2.waitForSelector('.app-wrap');
+    await p2.waitForTimeout(1500);
+    expect(await p2.evaluate(() => localStorage.getItem('nd_c3'))).toBe('0');
+    expect(await p2.evaluate(() => typeof window.NDC3)).toBe('undefined');
 });
 
 test('наследие твердынь 2.0: при создании карты бонусы применяются, панель «Наследие» показывает их', async ({ page }) => {

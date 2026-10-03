@@ -6,7 +6,7 @@ const PORT = Number(process.env.ND_E2E_PORT) || 8099; // ND_E2E_PORT — пар�
 const ROOT = path.join(__dirname, '..', '..');
 
 const server = http.createServer((req, res) => {
-  const file = req.url === '/' ? 'index.html' : req.url.split('?')[0].slice(1);
+  const file = req.url.split('?')[0].slice(1) || 'index.html'; // '/?c3=0' тоже отдаёт index.html
   const p = path.resolve(ROOT, file);
   if (!p.startsWith(ROOT)) { res.writeHead(403); res.end(); return; }
   try {
