@@ -1,0 +1,105 @@
+/* Фигура героя: вкладка «Герой» (.hf-av, бюст в медальоне) и «Реликвии» (.hf-pd, paperdoll). Строит js/app.js: heroFigureParts().
+   Только токены дизайн-системы. Аура — от ранга героя (t1..t6), силуэт — от пути (warrior/guard/ranger/wanderer). Анимаций нет, кроме
+   «дыхания» аватара (.champion-breathe) — оно уже гасится eco и reduced-motion в style.css. */
+.hf { --hf-aura: var(--mat-iron-edge); --hf-hi: var(--tx-3); --hf-mid: var(--s4); --hf-lo: var(--s2); overflow: visible; }
+.hf-av { overflow: hidden; }
+.hf-t2 { --hf-aura: var(--mat-steel-edge); }
+.hf-t3 { --hf-aura: var(--mat-arcane-edge); }
+.hf-t4 { --hf-aura: var(--ac-reward); }
+.hf-t5 { --hf-aura: var(--mat-gilded-edge); }
+.hf-t6 { --hf-aura: var(--ac-threat); }
+
+.hf-s0 { stop-color: var(--hf-hi); }
+.hf-s1 { stop-color: var(--hf-mid); }
+.hf-s2 { stop-color: var(--hf-lo); }
+.hf-c0 { stop-color: var(--s3); }
+.hf-c1 { stop-color: var(--s1); }
+.hf-a0 { stop-color: var(--hf-aura); stop-opacity: 0.38; }
+.hf-a1 { stop-color: var(--hf-aura); stop-opacity: 0.10; }
+.hf-a2 { stop-color: var(--hf-aura); stop-opacity: 0; }
+
+/* ---- общие части ---- */
+.hf .pf { stroke: var(--hf-aura); stroke-width: 1.4; stroke-linejoin: round; }
+.hf-av .pf { fill: url(#hfa-steel); }
+.hf .pf-cape { fill: url(#hfa-cloth); stroke-opacity: 0.6; }
+.hf-pd .pf-cape { fill: url(#hfp-cloth); }
+.hf .pf-legs, .hf .pf-tasset, .hf .pf-neck { stroke-opacity: 0.6; }
+.hf .pf-line { fill: none; stroke: var(--hf-aura); stroke-opacity: 0.35; stroke-width: 1; stroke-linecap: round; }
+.hf .pf-slit { fill: var(--s0); }
+.hf .pf-eye { fill: var(--hf-aura); }
+.hf .pf-trim { fill: none; stroke: var(--ac-reward); stroke-width: 1.6; stroke-linecap: round; }
+.hf .pf-buckle { fill: var(--ac-reward); stroke: var(--s0); stroke-width: 0.8; }
+.hf .pf-belt { stroke-opacity: 0.5; }
+.hf .pf-plume, .hf .pf-spike { fill: var(--hf-aura); stroke: var(--s0); stroke-width: 0.8; }
+.hf .pf-crown { fill: var(--ac-reward); stroke: var(--s0); stroke-width: 0.8; }
+.hf .pf-chain { fill: none; stroke: var(--ac-reward); stroke-width: 1.2; stroke-opacity: 0.8; }
+.hf .pf-amulet { fill: var(--ac-reward); stroke: var(--s0); stroke-width: 0.8; }
+.hf .pf-ring { fill: none; stroke: var(--ac-reward); stroke-width: 1.8; }
+.hf-av .pf-ring { display: none; }
+.hf .pf-weapon { stroke-width: 1.2; }
+.hf-av .pf-line { stroke-opacity: 0.5; }
+.hf-av .pf-pauld { stroke-width: 1.8; }
+.hf-av .pf-head { stroke-width: 2; }
+
+/* ---- аватар в медальоне ---- */
+.hero-avatar .champion { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; }
+.hero-avatar .hero-path { bottom: 26px !important; background: color-mix(in srgb, var(--s0) 82%, transparent); }
+
+/* ---- paperdoll: фигура + слоты по краям, связки к частям тела ---- */
+.paperdoll { position: relative; width: 270px; height: 372px; margin: 0 auto; }
+.paperdoll > .mannequin.hf-pd { position: absolute; left: 0; top: 0; transform: none; width: 100%; height: 100%; opacity: 1; filter: none; z-index: 0; }
+.hf-floor { fill: color-mix(in srgb, var(--s0) 70%, transparent); }
+.hf-plinth { fill: var(--s2); stroke: var(--border-hi); stroke-width: 1; }
+.hf-pd .pf-link { fill: none; stroke: var(--hairline); stroke-width: 1; stroke-dasharray: 2 3; }
+.hf-pd .pf-dot { fill: var(--s2); stroke: var(--hairline); stroke-width: 1; }
+
+.paperdoll .slot { width: 48px; height: 48px; transform: none; }
+.paperdoll .slot[data-slot="head"], .paperdoll .slot[data-slot="amulet"], .paperdoll .slot[data-slot="shield"], .paperdoll .slot[data-slot="ring2"] { left: 0; right: auto; }
+.paperdoll .slot[data-slot="cape"], .paperdoll .slot[data-slot="chest"], .paperdoll .slot[data-slot="ring1"], .paperdoll .slot[data-slot="weapon"] { right: 0; left: auto; }
+.paperdoll .slot[data-slot="head"], .paperdoll .slot[data-slot="cape"] { top: 6px; }
+.paperdoll .slot[data-slot="amulet"], .paperdoll .slot[data-slot="chest"] { top: 86px; }
+.paperdoll .slot[data-slot="shield"], .paperdoll .slot[data-slot="ring1"] { top: 166px; }
+.paperdoll .slot[data-slot="ring2"], .paperdoll .slot[data-slot="weapon"] { top: 246px; }
+.paperdoll .slot[data-slot="boots"] { top: 322px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%); }
+.paperdoll .slot:hover { transform: translateY(-2px); }
+.paperdoll .slot[data-slot="boots"]:hover { transform: translateX(-50%) translateY(-2px); }
+.paperdoll .slot .nd-art.slot-icon { width: 24px; height: 24px; }
+
+/* ---- не надето: призрак (пунктир), надето: сталь + цвет ранга предмета ---- */
+.hf-pd .pf { fill: var(--s2); fill-opacity: 0.55; stroke: var(--tx-3); stroke-opacity: 0.5; stroke-dasharray: 3 2; }
+.hf-pd .pf-legs, .hf-pd .pf-tasset, .hf-pd .pf-arms, .hf-pd .pf-bracer, .hf-pd .pf-hand, .hf-pd .pf-neck, .hf-pd .pf-belt { fill: url(#hfp-steel); fill-opacity: 1; stroke: var(--hf-aura); stroke-opacity: 0.55; stroke-dasharray: none; }
+.hf-pd .pf-line, .hf-pd .pf-slit, .hf-pd .pf-trim, .hf-pd .pf-chain, .hf-pd .pf-buckle, .hf-pd .pf-plume, .hf-pd .pf-spike, .hf-pd .pf-crown { opacity: 0.35; }
+.hf-pd .pf-ring, .hf-pd .pf-amulet { opacity: 0.25; }
+.hf-pd .pf-weapon, .hf-pd .pf-shield { stroke-dasharray: 3 2; }
+
+.has-head .pf-head, .has-chest .pf-torso, .has-chest .pf-pauld, .has-cape .pf-cape, .has-boots .pf-boots, .has-weapon .pf-weapon, .has-shield .pf-shield {
+  fill: url(#hfp-steel); fill-opacity: 1; stroke-dasharray: none; stroke-opacity: 1; }
+.has-cape .pf-cape { fill: url(#hfp-cloth); }
+.has-head .pf-head { stroke: var(--eq-head); }
+.has-chest .pf-torso, .has-chest .pf-pauld { stroke: var(--eq-chest); }
+.has-cape .pf-cape { stroke: var(--eq-cape); }
+.has-boots .pf-boots { stroke: var(--eq-boots); }
+.has-weapon .pf-weapon { stroke: var(--eq-weapon); }
+.has-shield .pf-shield { stroke: var(--eq-shield); }
+.has-head .pf-plume, .has-head .pf-crown, .has-head .pf-slit, .has-chest .pf-line, .has-chest .pf-buckle, .has-chest .pf-spike, .has-chest .pf-trim, .has-weapon .pf-line, .has-shield .pf-line, .has-shield .pf-buckle, .has-cape .pf-line, .has-boots .pf-line { opacity: 1; }
+.has-amulet .pf-amulet, .has-amulet .pf-chain, .has-ring1 .pf-ring1, .has-ring2 .pf-ring2 { opacity: 1; }
+
+.has-head .pf-link-head, .has-amulet .pf-link-amulet, .has-chest .pf-link-chest, .has-cape .pf-link-cape, .has-weapon .pf-link-weapon, .has-shield .pf-link-shield, .has-ring1 .pf-link-ring1, .has-ring2 .pf-link-ring2, .has-boots .pf-link-boots { stroke-dasharray: none; stroke-opacity: 1; }
+.has-head .pf-link-head, .has-head .pf-dot-head { stroke: var(--eq-head); }
+.has-amulet .pf-link-amulet, .has-amulet .pf-dot-amulet { stroke: var(--eq-amulet); }
+.has-chest .pf-link-chest, .has-chest .pf-dot-chest { stroke: var(--eq-chest); }
+.has-cape .pf-link-cape, .has-cape .pf-dot-cape { stroke: var(--eq-cape); }
+.has-weapon .pf-link-weapon, .has-weapon .pf-dot-weapon { stroke: var(--eq-weapon); }
+.has-shield .pf-link-shield, .has-shield .pf-dot-shield { stroke: var(--eq-shield); }
+.has-ring1 .pf-link-ring1, .has-ring1 .pf-dot-ring1 { stroke: var(--eq-ring1); }
+.has-ring2 .pf-link-ring2, .has-ring2 .pf-dot-ring2 { stroke: var(--eq-ring2); }
+.has-boots .pf-link-boots, .has-boots .pf-dot-boots { stroke: var(--eq-boots); }
+.has-head .pf-dot-head { fill: var(--eq-head); }
+.has-amulet .pf-dot-amulet { fill: var(--eq-amulet); }
+.has-chest .pf-dot-chest { fill: var(--eq-chest); }
+.has-cape .pf-dot-cape { fill: var(--eq-cape); }
+.has-weapon .pf-dot-weapon { fill: var(--eq-weapon); }
+.has-shield .pf-dot-shield { fill: var(--eq-shield); }
+.has-ring1 .pf-dot-ring1 { fill: var(--eq-ring1); }
+.has-ring2 .pf-dot-ring2 { fill: var(--eq-ring2); }
+.has-boots .pf-dot-boots { fill: var(--eq-boots); }

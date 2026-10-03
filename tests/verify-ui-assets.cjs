@@ -22,7 +22,7 @@ for (const rel of process.argv.slice(2)) {
         }
     } else if (rel.endsWith('.html')) {
         const pins = (src.match(/v=\d+/g) || []);
-        fileOk = fileOk && pins.length === 16 && new Set(pins).size === 1 && !src.includes('?v=80'); // кампания 3.0: +1 пин (js/campaign3/c3-loader.js; модули грузятся лениво); 15 было в P21
+        fileOk = fileOk && pins.length === 17 && new Set(pins).size === 1 && !src.includes('?v=80'); // кампания 3.0: +2 пина (css/hero-figure.css, js/campaign3/c3-loader.js; модули грузятся лениво); 15 было в P21
         checks.push('pins x' + pins.length + '/16 unique=' + new Set(pins).size);
         const totem = src.includes('id="totemCard"');
         fileOk = fileOk && totem;

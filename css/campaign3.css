@@ -2,7 +2,6 @@
 .c3 { margin: 0 0 var(--sp-4); padding: var(--sp-3); background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--border-hi); border-radius: var(--r-lg); box-shadow: var(--elev-1); }
 .c3-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .c3-title { font-family: var(--font-display); font-size: var(--t-lg); color: var(--gold-bright); letter-spacing: 1px; }
-.c3-beta { margin-left: var(--sp-1); padding: 1px var(--sp-2); font-size: var(--t-xs); color: var(--ac-arcane); border: 1px solid var(--ac-arcane); border-radius: var(--r-pill); letter-spacing: 0; }
 .c3-week { font-size: var(--t-sm); color: var(--tx-2); }
 
 .c3-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-2); margin-bottom: var(--sp-3); }
@@ -20,23 +19,56 @@
 .c3-hline b { color: var(--tx-1); }
 .c3-done { margin-bottom: var(--sp-3); padding: var(--sp-3); font-size: var(--t-sm); color: var(--ac-success); border: 1px solid var(--ac-success); border-radius: var(--r-md); background: color-mix(in srgb, var(--ac-success) 10%, var(--s1)); }
 
-.c3-mapwrap { overflow: auto; max-height: 440px; margin-bottom: var(--sp-3); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--s0); -webkit-overflow-scrolling: touch; }
-.c3-map { position: relative; width: max(100%, 560px); aspect-ratio: 1 / 1; background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--ac-threat) 10%, var(--s1)), var(--s0) 62%); }
+.c3-mapwrap { overflow: auto; max-height: 460px; margin-bottom: var(--sp-2); border: 1px solid var(--border-hi); border-radius: var(--r-md); background: var(--s0); box-shadow: inset 0 0 24px color-mix(in srgb, var(--s0) 80%, transparent); -webkit-overflow-scrolling: touch; }
+.c3-map { position: relative; width: max(100%, 640px); aspect-ratio: 1 / 1; background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--ac-threat) 14%, var(--s1)), var(--s0) 70%); }
 .c3-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.c3-edges line { stroke: var(--hairline); stroke-width: 2; stroke-dasharray: 4 4; }
+.c3-q { fill: var(--s0); fill-opacity: 0; }
+.c3-q-body { fill: var(--mat-steel-edge); fill-opacity: 0.07; }
+.c3-q-mind { fill: var(--mat-arcane-edge); fill-opacity: 0.08; }
+.c3-q-spirit { fill: var(--mat-gilded-edge); fill-opacity: 0.07; }
+.c3-q-ties { fill: var(--ac-success); fill-opacity: 0.06; }
+.c3-axis { fill: none; stroke: var(--hairline); stroke-width: 0.25; stroke-dasharray: 1.2 1.6; vector-effect: non-scaling-stroke; }
+.c3-ring { fill: none; stroke: var(--ac-threat); stroke-opacity: 0.22; stroke-width: 0.3; }
+.c3-roadbg path { fill: none; stroke: var(--s0); stroke-width: 7; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.c3-road { fill: none; stroke: var(--tx-3); stroke-width: 3; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.c3-road.is-dim { stroke: var(--s4); stroke-dasharray: 2 7; }
+.c3-road.is-own { stroke: var(--mat-gilded-edge); stroke-opacity: 0.85; }
+.c3-route { fill: none; stroke: var(--ac-info); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 8; vector-effect: non-scaling-stroke; }
+.c3-qname { position: absolute; padding: 2px var(--sp-2); font-family: var(--font-display); font-size: var(--t-xs); letter-spacing: 1px; text-transform: uppercase; color: var(--tx-2); background: color-mix(in srgb, var(--s0) 70%, transparent); border: 1px solid var(--hairline); border-radius: var(--r-pill); pointer-events: none; }
+.c3-qn-body { color: var(--mat-steel-text); }
+.c3-qn-mind { color: var(--mat-arcane-edge); }
+.c3-qn-spirit { color: var(--mat-gilded-edge); }
+.c3-qn-ties { color: var(--ac-success); }
+
 .c3-node { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; width: 48px; height: 48px; min-width: 44px; min-height: 44px; padding: 0; background: transparent; border: 0; border-radius: 50%; cursor: pointer; }
-.c3-node .nd-medal { width: 40px; height: 40px; }
-.c3-node.is-own .nd-medal { box-shadow: inset 0 0 0 3px var(--s1), 0 0 12px color-mix(in srgb, var(--mat-gilded-edge) 60%, transparent); }
-.c3-node.is-hostile .nd-medal { --tone: var(--ac-threat); }
-.c3-node .c3-hero { width: 44px; height: 44px; box-shadow: 0 0 0 3px var(--s1), 0 0 12px var(--tone); }
-.c3-node.is-active .c3-hero { box-shadow: 0 0 0 3px var(--s1), 0 0 0 5px var(--ac-reward); }
-.c3-node.is-sel .nd-medal { box-shadow: 0 0 0 3px var(--s1), 0 0 0 5px var(--ac-info); }
+.c3-node .nd-medal { width: 38px; height: 38px; background: var(--s1); box-shadow: 0 0 0 2px var(--s0), 0 0 0 3px var(--tx-3); }
+.c3-node.t-town { width: 60px; height: 60px; }
+.c3-node.t-town .nd-medal { width: 50px; height: 50px; box-shadow: 0 0 0 3px var(--s0), 0 0 0 4px var(--tone); }
+.c3-node.t-lair { width: 84px; height: 84px; }
+.c3-node.t-lair .nd-medal { width: 68px; height: 68px; --tone: var(--ac-threat); box-shadow: 0 0 0 4px var(--s0), 0 0 0 6px var(--ac-threat), 0 0 28px color-mix(in srgb, var(--ac-threat) 70%, transparent); }
+.c3-node.is-own .nd-medal { box-shadow: 0 0 0 3px var(--s0), 0 0 0 5px var(--mat-gilded-edge), 0 0 14px color-mix(in srgb, var(--mat-gilded-edge) 60%, transparent); }
+.c3-node.is-hostile .nd-medal { --tone: var(--ac-threat); box-shadow: 0 0 0 2px var(--s0), 0 0 0 4px var(--ac-threat); }
+.c3-node.is-fac .nd-medal { --tone: var(--ac-threat); box-shadow: 0 0 0 2px var(--s0), 0 0 0 4px var(--ac-threat), 0 0 12px color-mix(in srgb, var(--ac-threat) 55%, transparent); }
+.c3-node .c3-hero { width: 46px; height: 46px; background: var(--s2); box-shadow: 0 0 0 3px var(--s0), 0 0 0 5px var(--tone), 0 0 16px var(--tone); }
+.c3-node.is-active .c3-hero { box-shadow: 0 0 0 3px var(--s0), 0 0 0 6px var(--ac-reward), 0 0 20px var(--ac-reward); }
+.c3-node.is-sel .nd-medal { box-shadow: 0 0 0 3px var(--s0), 0 0 0 6px var(--ac-info), 0 0 16px var(--ac-info); }
+.c3-node.is-siege .nd-medal { box-shadow: 0 0 0 3px var(--s0), 0 0 0 5px var(--ac-reward); }
+.c3-nlabel { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; padding: 0 var(--sp-2); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-xs); line-height: 16px; color: var(--tx-1); background: color-mix(in srgb, var(--s0) 82%, transparent); border-radius: var(--r-sm); pointer-events: none; }
 .c3-count { position: absolute; right: 0; top: 0; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--t-xs); line-height: 18px; text-align: center; color: var(--s0); background: var(--ac-reward); border-radius: var(--r-pill); }
-.c3-node.is-fog { opacity: 0.45; cursor: default; }
-.c3-node.is-fog::after { content: '?'; position: absolute; font-size: var(--t-md); color: var(--tx-2); }
-.c3-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--tx-3); border: 2px solid var(--s1); }
-.c3-node.is-own .c3-dot { background: var(--mat-gilded-edge); }
+.c3-node.is-fog { cursor: default; }
+.c3-node.is-fog::before { content: '?'; display: grid; place-items: center; width: 30px; height: 30px; font-size: var(--t-sm); color: var(--tx-3); background: radial-gradient(circle, var(--s2), var(--s0)); border: 1px solid var(--s4); border-radius: 50%; }
+.c3-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--tx-3); border: 3px solid var(--s0); box-shadow: 0 0 0 1px var(--tx-3); }
+.c3-node.is-own .c3-dot { background: var(--mat-gilded-edge); box-shadow: 0 0 0 1px var(--mat-gilded-edge); }
 .c3-node:focus-visible { outline: 2px solid var(--ac-info); outline-offset: 2px; }
+
+.c3-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin-bottom: var(--sp-3); font-size: var(--t-xs); color: var(--tx-2); }
+.c3-legend span { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.c3-lg { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--tx-3); background: var(--s1); }
+.c3-lg-own { border-color: var(--mat-gilded-edge); }
+.c3-lg-hostile { border-color: var(--ac-threat); }
+.c3-lg-fac { border-color: var(--ac-threat); background: color-mix(in srgb, var(--ac-threat) 45%, var(--s1)); }
+.c3-lg-route { width: 18px; height: 0; border-radius: 0; border: 0; border-top: 3px dotted var(--ac-info); background: transparent; }
+.c3-lg-fog { border: 1px dashed var(--s4); }
 
 .c3-detail { margin-bottom: var(--sp-3); padding: var(--sp-3); font-size: var(--t-sm); color: var(--tx-1); background: var(--s1); border: 1px solid var(--hairline); border-radius: var(--r-md); }
 .c3-hint { color: var(--tx-2); }
@@ -54,10 +86,8 @@
 .c3-log i { font-style: normal; color: var(--tx-3); margin-right: var(--sp-1); }
 .c3-note { font-size: var(--t-xs); color: var(--tx-3); line-height: 1.4; }
 
-.c3-node.is-fac .nd-medal { --tone: var(--ac-threat); filter: saturate(0.9); }
 .c3-fbadge { position: absolute; left: -2px; bottom: -2px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--t-xs); font-weight: bold; line-height: 18px; text-align: center; color: var(--s0); background: var(--ac-threat); border-radius: var(--r-pill); }
 .c3-fbadge.c3-sg { left: auto; right: -4px; bottom: -2px; background: var(--ac-reward); }
-.c3-node.is-siege .nd-medal { box-shadow: 0 0 0 3px var(--s1), 0 0 0 5px var(--ac-reward); }
 
 .c3-facs { margin-bottom: var(--sp-3); background: var(--s1); border: 1px solid var(--hairline); border-radius: var(--r-md); }
 .c3-facs > summary { min-height: 44px; padding: var(--sp-3); font-size: var(--t-sm); color: var(--tx-1); cursor: pointer; list-style-position: inside; }
@@ -82,3 +112,4 @@
 .c3-tacfx { font-size: var(--t-xs); color: var(--tx-2); }
 
 .c3-node .c3-done-ob { opacity: 0.55; }
+.c3-node.is-fog .c3-dot { display: none; }
