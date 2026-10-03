@@ -24,6 +24,7 @@
             },
             dayKey: function() { return w.getMSKDayKey(); },
             takeStash: function() { var r = w.__ndC3Raw; w.__ndC3Raw = undefined; return r; },
+            takeEarly: function() { var r = w.__ndC3Early; w.__ndC3Early = null; return r; }, // срывы вчерашних суток, посчитанные до загрузки модулей
             legacySource: function() { // что осталось от твердынь 2.0 — для «Наследия» (читается один раз при создании карты)
                 try {
                     var cap = 0; (typeof strongholds !== 'undefined' && strongholds ? strongholds : []).forEach(function(x) { if (x && x.captured) cap++; });
@@ -79,6 +80,8 @@
             // ленивая загрузка: модули подгружены после старта игры — подхватить отложенный сейв (storage.js кладёт его в window.__ndC3Raw) и закрыть сутки
             boot: function() {
                 if (!state && env.takeStash) { var raw = env.takeStash(); if (raw) api.load(raw); }
+                var early = env.takeEarly ? env.takeEarly() : null; // checkDailyReset идёт раньше загрузки модулей — его срывы лежат в буфере
+                if (early && enabled()) early.forEach(function(e) { if (e[0] === 'onSilentMisses' || e[0] === 'onTaskOverdue') api[e[0]](e[1]); });
                 if (enabled() && state) api.dayEnd(env.dayKey());
                 env.render();
             },
@@ -94,6 +97,7 @@
             },
             // срывы суток копятся по сферам (массив [Тело, Разум, Дух, Связи] или сфера/стат + число)
             onHonestSkip: function(stat) { if (!ensure()) return; var i = D.SPHERES.indexOf(D.SPHERE_OF_STAT[stat]); if (i >= 0) state.pend.h[i]++; },
+            onUndoSkip: function(stat) { if (!ensure()) return; var i = D.SPHERES.indexOf(D.SPHERE_OF_STAT[stat]); if (i >= 0) state.pend.h[i] = Math.max(0, state.pend.h[i] - 1); },
             onSilentMisses: function(by) { if (ensure()) addPend(state.pend.s, by); },
             onTaskOverdue: function(by) { if (ensure()) addPend(state.pend.o, by); },
 

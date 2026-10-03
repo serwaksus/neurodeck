@@ -864,18 +864,25 @@ function ndSilentMisses(dayKey) { // карточки с историей, к к
     });
     return Math.min(SILENT_MISS_CAP, n);
 }
+function ndC3Pend(hook, by) { // кампания 3.0: срывы суток. Модули c3 грузятся лениво и checkDailyReset идёт раньше — до загрузки копим в window.__ndC3Early, NDC3.boot() отдаст рантайму до закрытия суток
+    if (window.NDC3 && NDC3.enabled()) { NDC3[hook](by); return; }
+    var on = false; try { on = localStorage.getItem('nd_c3') === '1'; } catch (e) {}
+    if (!on || window.NDC3) return;
+    (window.__ndC3Early = window.__ndC3Early || []).push([hook, by]);
+}
+var ND_SPHERE_OF_STAT = { str: 'body', end: 'body', agi: 'body', int: 'mind', wil: 'spirit', cha: 'ties' }; // копия c3-data.js SPHERE_OF_STAT (тест c3-guards сверяет)
 function ndSilentBySphere(dayKey) { // кампания 3.0: молчаливые пропуски по сферам (Сила/Стойкость/Ловкость→Тело, Интеллект→Разум, Воля→Дух, Харизма→Связи), не больше 3 на сферу
     var idx = { body: 0, mind: 1, spirit: 2, ties: 3 }, out = [0, 0, 0, 0];
     FORGED.forEach(function(c) {
         if (!c.firstCompletedAt || c.lastFailDay === dayKey) return;
         if (c.lastCompletedAt && getMSKDayKey(c.lastCompletedAt) === dayKey) return;
-        var sp = window.NeuroDeckC3Data ? window.NeuroDeckC3Data.SPHERE_OF_STAT[c.stat] : null;
+        var sp = ND_SPHERE_OF_STAT[c.stat]; // не из NeuroDeckC3Data: на момент checkDailyReset модули c3 ещё не загружены
         if (sp) out[idx[sp]] = Math.min(3, out[idx[sp]] + 1);
     });
     return out;
 }
 function applySilentMisses(dayKey) {
-    if (window.NDC3 && NDC3.enabled()) NDC3.onSilentMisses(ndSilentBySphere(dayKey)); // кампания 3.0: молчание сферы = тень её фракции
+    ndC3Pend('onSilentMisses', ndSilentBySphere(dayKey)); // кампания 3.0: молчание сферы = тень её фракции
     var n = ndSilentMisses(dayKey);
     if (n <= 0) return 0;
     siege.wkSkips = (siege.wkSkips || 0) + n;
@@ -926,6 +933,7 @@ card.streak = undo.streak;
 card.lastFailDay = null;
 HERO.dailySkips = Math.max(0, (HERO.dailySkips || 0) - 1);
 siege.wkHonest = Math.max(0, (siege.wkHonest || 0) - 1);
+if (window.NDC3 && NDC3.enabled()) NDC3.onUndoSkip(card.stat); // кампания 3.0: отменённый честный пропуск не даёт тень фракции
 HERO.streakShields = undo.shields;
 showToast('↩ Отменено', '«' + card.name + '» — стрик восстановлен, пошлина −1 💰', 'save');
 renderCards(); updateHeroUI(); renderDashboard(); saveGameState();
@@ -4656,7 +4664,7 @@ showToast('👻 Призрак ушёл', '«' + t.name + '» растворил
 });
 TASKS = TASKS.filter(function(t) { return t.status !== 'gone' && t.status !== 'chest_open'; });
 if (newGhosts > 0) siege.wkTaskFails = (siege.wkTaskFails || 0) + newGhosts;
-if (newGhosts > 0 && window.NDC3 && NDC3.enabled()) NDC3.onTaskOverdue([ghostSph.body, ghostSph.mind, ghostSph.spirit, ghostSph.ties]); // кампания 3.0: просрочка = тень фракции сферы задачи
+if (newGhosts > 0) ndC3Pend('onTaskOverdue', [ghostSph.body, ghostSph.mind, ghostSph.spirit, ghostSph.ties]); // кампания 3.0: просрочка = тень фракции сферы задачи
 if (ghostFree) return { ghostNights: 0, free: true }; // «Духи дремлют»: переходы и уходы работают, списаний нет
 var ghostNights = 0;
 TASKS.forEach(function(t) { if (t.status === 'ghost') ghostNights++; });

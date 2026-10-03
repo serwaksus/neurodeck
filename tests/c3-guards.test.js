@@ -211,3 +211,10 @@ test('Ф6: рантайм — обелиск и новая карта через
     assert.deepEqual(c3.act.newMap(), { ok: true });
     assert.equal(c3.getState().mp, 2); assert.equal(c3.getState().cyc, 1); assert.ok(calls.toasts.some((t) => t.startsWith('🗺 Карта 2')));
 });
+
+test('app.js: ND_SPHERE_OF_STAT совпадает с SPHERE_OF_STAT из c3-data (молчание считается до загрузки модулей c3)', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../js/app.js'), 'utf8');
+    const m = /var ND_SPHERE_OF_STAT = (\{[^}]*\});/.exec(src);
+    assert.ok(m, 'карта есть в app.js');
+    assert.deepStrictEqual(new Function('return ' + m[1])(), D.SPHERE_OF_STAT);
+});
