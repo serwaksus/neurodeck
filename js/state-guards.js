@@ -197,7 +197,25 @@
             dayFlags: (function(f) { // Ф0.5: флаги суток {day, chests, reroll, goal} — иначе null (создаётся лениво)
                 if (!f || typeof f !== 'object' || Array.isArray(f) || !/^\d{4}-\d{2}-\d{2}$/.test(String(f.day))) return null;
                 return { day: f.day, chests: Math.round(clampNumber(f.chests, 0, 1000, 0)), reroll: f.reroll === true, goal: f.goal === true };
-            })(hero.dayFlags)
+            })(hero.dayFlags),
+            pomodoro: (function(p) { // Ф0.5 (аудит 2026-10-03): помодоро в сейве {active: {id: конец-мс}, done: {"id_день": "день"}} — иначе null; капы чужих дней не храним
+                if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+                var active = {}, a = (p.active && typeof p.active === 'object' && !Array.isArray(p.active)) ? p.active : {};
+                Object.keys(a).slice(0, 20).forEach(function(id) { // живых таймеров ≤ числа карточек — 20 с запасом
+                    if (!/^\d{1,9}$/.test(id)) return;
+                    var end = Number(a[id]);
+                    if (!Number.isFinite(end) || end <= 0 || end >= 8.64e15) return; // битая дата — мусор; истёкший валиден, награду выдаст sweep
+                    active[id] = Math.round(end);
+                });
+                var today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); // МСК-день, как getMSKDayKey в app.js
+                var done = {}, dn = (p.done && typeof p.done === 'object' && !Array.isArray(p.done)) ? p.done : {};
+                Object.keys(dn).slice(0, 100).forEach(function(k) {
+                    var m = /^(\d{1,9})_(\d{4}-\d{2}-\d{2})$/.exec(k);
+                    if (!m || dn[k] !== m[2] || m[2] !== today) return; // ключ согласован со значением и это сегодня; вчерашние хвосты капов не нужны
+                    done[k] = m[2];
+                });
+                return (Object.keys(active).length || Object.keys(done).length) ? { active: active, done: done } : null;
+            })(hero.pomodoro)
         };
     }
 

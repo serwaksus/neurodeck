@@ -188,7 +188,7 @@ case 'sh-emergency-maint': requestEmergencyMaintenance(parseInt(el.dataset.idx))
 case 'reroll-event': rerollDailyEvent(); break;
 case 'treasury-info': showTreasuryBreakdown(); break;
 case 'pomodoro-toggle': togglePomodoro(parseInt(el.dataset.id)); break;
-case 'pomodoro-stop': (function(pid) { try { localStorage.removeItem('nd_pomodoro_' + pid); } catch (e) {} renderDashboard(); })(el.dataset.id); break;
+case 'pomodoro-stop': (function(pid) { delete pomodoroState().active[pid]; saveGameState(); renderDashboard(); })(el.dataset.id); break;
 case 'counter-siege': requestCounterSiege(); break;
 	case 'km-stance': requestStance(String(el.dataset.stance || '')); break; // Г4: стойка недели
 	case 'km-approach': requestApproach(String(el.dataset.approach || '')); break; // C4/P11: подход недели — пишется в сейв (siege.approach)
@@ -5121,55 +5121,73 @@ function toggleHelp(e) {
     }
 }
 
-var POMODORO_SECS = 25 * 60; // #65: помодоро 25:00 — таймер в localStorage, переживает reload
-function pomodoroKey(id) { return 'nd_pomodoro_' + id; }
+var POMODORO_SECS = 25 * 60; // #65: помодоро 25:00 — таймер в сейве, переживает reload
+// Ф0.5 (аудит 2026-10-03): флаги помодоро живут в сейве (HERO.pomodoro), не в localStorage —
+// чистка site data / старых ключей таймера больше не сбрасывает кап «1 награда/карта/день».
+function pomodoroState() {
+    if (!HERO.pomodoro || typeof HERO.pomodoro !== 'object') HERO.pomodoro = { active: {}, done: {} };
+    if (!HERO.pomodoro.active || typeof HERO.pomodoro.active !== 'object') HERO.pomodoro.active = {};
+    if (!HERO.pomodoro.done || typeof HERO.pomodoro.done !== 'object') HERO.pomodoro.done = {};
+    return HERO.pomodoro;
+}
 function activePomodoro() {
-    try {
-        var keys = Object.keys(localStorage), latest = null;
-        keys.forEach(function(k) {
-            if (k.indexOf('nd_pomodoro_') !== 0 || k.indexOf('nd_pomodoro_done_') === 0) return;
-            var end = parseInt(localStorage.getItem(k), 10);
-            if (!Number.isFinite(end)) return;
-            if (end <= Date.now()) { localStorage.removeItem(k); return; } // истёкший таймер снимаем (награда — в тике ниже)
-            var card = findCard(parseInt(k.replace('nd_pomodoro_', ''), 10));
-            if (!card) { localStorage.removeItem(k); return; } // карточка удалена — таймер мусор
-            if (!latest || end > latest.end) latest = { id: card.id, name: card.name, end: end };
-        });
-        return latest;
-    } catch (e) { return null; }
+    var st = pomodoroState(), latest = null, dirty = false;
+    Object.keys(st.active).forEach(function(id) {
+        var end = st.active[id];
+        if (!Number.isFinite(end) || end <= Date.now()) { delete st.active[id]; dirty = true; return; } // истёкший таймер снимаем (награда — в тике ниже)
+        var card = findCard(parseInt(id, 10));
+        if (!card) { delete st.active[id]; dirty = true; return; } // карточка удалена — таймер мусор
+        if (!latest || end > latest.end) latest = { id: card.id, name: card.name, end: end };
+    });
+    if (dirty) saveSoon();
+    return latest;
 }
 function togglePomodoro(id) { // #65: клик = старт/перезапуск/отмена; награда +5 XP кап 1/карта/день
     var card = findCard(id);
     if (!card) return;
-    var k = pomodoroKey(id), dk = 'nd_pomodoro_done_' + id + '_' + getMSKDayKey();
-    try {
-        if (localStorage.getItem(k)) { localStorage.removeItem(k); showToast('⏱ Помодоро отменён', '«' + esc(card.name) + '»', 'blood'); renderCards(); renderDashboard(); return; }
-        if (localStorage.getItem(dk)) { showToast('🍅 Уже был', 'Фокус за «' + esc(card.name) + '» сегодня получен', 'blood'); return; }
-        localStorage.setItem(k, String(Date.now() + POMODORO_SECS * 1000));
-        showToast('⏱ Помодоро пошёл', '«' + esc(card.name) + '» — 25 минут фокуса', 'save');
-    } catch (e) { showToast('⚠ Нет localStorage', 'Таймер недоступен', 'blood'); return; }
+    var st = pomodoroState(), dk = id + '_' + getMSKDayKey();
+    if (st.active[id]) { delete st.active[id]; saveGameState(); showToast('⏱ Помодоро отменён', '«' + esc(card.name) + '»', 'blood'); renderCards(); renderDashboard(); return; }
+    if (st.done[dk]) { showToast('🍅 Уже был', 'Фокус за «' + esc(card.name) + '» сегодня получен', 'blood'); return; }
+    st.active[id] = Date.now() + POMODORO_SECS * 1000;
+    showToast('⏱ Помодоро пошёл', '«' + esc(card.name) + '» — 25 минут фокуса', 'save');
     haptic('light');
+    saveGameState();
     renderCards(); renderDashboard();
 }
 function sweepExpiredPomodoros() { // награда за досидевший таймер (в т.ч. после reload)
+    var st = pomodoroState(), tk = getMSKDayKey(), dirty = false;
+    Object.keys(st.done).forEach(function(k) { if (st.done[k] !== tk) { delete st.done[k]; dirty = true; } }); // хвосты вчерашних капов
+    Object.keys(st.active).forEach(function(id) {
+        var end = st.active[id];
+        if (!Number.isFinite(end) || end > Date.now()) return;
+        delete st.active[id]; dirty = true;
+        var card = findCard(parseInt(id, 10));
+        if (!card) return;
+        var dk = id + '_' + tk;
+        if (st.done[dk]) return;
+        st.done[dk] = tk;
+        addXpReward(5);
+        showToast('🍅 Фокус завершён: +5 XP', '«' + esc(card.name) + '» — 25 минут выдержаны', 'crit');
+        haptic('success');
+    });
+    if (dirty) saveGameState();
+    renderDashboard();
+}
+function migratePomodoroFlags() { // Ф0.5: одноразовый перенос nd_pomodoro_* из localStorage в сейв; старые ключи удаляем в любой ветке
     try {
-        var tk = getMSKDayKey();
+        var st = pomodoroState(), moved = false;
         Object.keys(localStorage).forEach(function(k) {
-            if (k.indexOf('nd_pomodoro_done_') === 0 && localStorage.getItem(k) !== tk) localStorage.removeItem(k); // хвосты вчерашних капов
-            if (k.indexOf('nd_pomodoro_') !== 0 || k.indexOf('nd_pomodoro_done_') === 0) return;
-            var end = parseInt(localStorage.getItem(k), 10);
-            if (!Number.isFinite(end) || end > Date.now()) return;
-            localStorage.removeItem(k);
-            var id = parseInt(k.replace('nd_pomodoro_', ''), 10);
-            var card = findCard(id);
-            if (!card) return;
-            if (localStorage.getItem('nd_pomodoro_done_' + id + '_' + tk)) return;
-            localStorage.setItem('nd_pomodoro_done_' + id + '_' + tk, tk);
-            addXpReward(5);
-            showToast('🍅 Фокус завершён: +5 XP', '«' + esc(card.name) + '» — 25 минут выдержаны', 'crit');
-            haptic('success');
+            if (k.indexOf('nd_pomodoro_done_') === 0) {
+                var dk = k.slice('nd_pomodoro_done_'.length), day = localStorage.getItem(k);
+                if (st.done[dk] === undefined && /^\d+_\d{4}-\d{2}-\d{2}$/.test(dk) && day === dk.slice(dk.lastIndexOf('_') + 1)) st.done[dk] = day;
+                localStorage.removeItem(k); moved = true;
+            } else if (k.indexOf('nd_pomodoro_') === 0) {
+                var id = k.slice('nd_pomodoro_'.length), end = parseInt(localStorage.getItem(k), 10);
+                if (st.active[id] === undefined && /^\d+$/.test(id) && Number.isFinite(end) && end > 0) st.active[id] = end; // истёкший переносим как есть — награду выдаст sweep
+                localStorage.removeItem(k); moved = true;
+            }
         });
-        renderDashboard();
+        if (moved) saveGameState();
     } catch (e) {}
 }
 
@@ -6304,6 +6322,7 @@ try { if (navigator.webdriver) document.documentElement.classList.add('nd-webdri
 ensureStrongholdState();
 if (!dailyQuests || typeof dailyQuests !== 'object') dailyQuests = { day: getMSKDayKey(), done: {}, quests: [], progress: {} };
 loadGameState();
+migratePomodoroFlags(); // Ф0.5: одноразовая миграция флагов помодоро из localStorage в сейв (до чеков суток, чтобы sweep ниже уже работал с сейвом)
 applyAscensionPalette(); // Г2-5: палитра круга вознесения (body asc-1/2/3)
 checkCapturedRecovery(); // #49: следы потерянных крепостей — сразу после загрузки
 checkDailyReset();
