@@ -31,7 +31,7 @@
         var vis = visible(s, n.id), owner = s.own.charAt(n.id), hostile = vis && M.isHostile(s, n.id);
         var here = []; s.heroes.forEach(function(h, i) { if (h.node === n.id) here.push(i); });
         var fo = M.facOf(owner), sieged = n.type === 'town' && s.sg[SPH.indexOf(n.sphere)] > 0;
-        var cls = 'c3-node' + (fo >= 0 ? ' is-fac' : '') + (sieged ? ' is-siege' : '') + (owner === '1' ? ' is-own' : '') + (hostile ? ' is-hostile' : '') + (!vis ? ' is-fog' : '') + (selN === n.id ? ' is-sel' : '') + (here.indexOf(selH) >= 0 ? ' is-active' : '');
+        var cls = 'c3-node t-' + n.type + (fo >= 0 ? ' is-fac' : '') + (sieged ? ' is-siege' : '') + (owner === '1' ? ' is-own' : '') + (hostile ? ' is-hostile' : '') + (!vis ? ' is-fog' : '') + (selN === n.id ? ' is-sel' : '') + (here.indexOf(selH) >= 0 ? ' is-active' : '');
         var inner, label = vis ? n.name : 'Неизвестно';
         if (here.length) {
             var top = here.indexOf(selH) >= 0 ? selH : here[0];
@@ -44,16 +44,40 @@
         else inner = '<span class="c3-dot" aria-hidden="true"></span>';
         if (vis && fo >= 0) { inner += '<span class="c3-fbadge" aria-hidden="true">' + FAC_LETTER[fo] + '</span>'; label += ' — под властью «' + D.FACTIONS[fo].name + '»'; }
         if (sieged) { inner += '<span class="c3-fbadge c3-sg" aria-hidden="true">' + s.sg[SPH.indexOf(n.sphere)] + '/' + D.C.SIEGE_WEEKS + '</span>'; label += ' — осада'; }
+        var named = vis && (n.type === 'town' || n.type === 'lair' || here.length || selN === n.id || (n.type === 'bastion' && hostile));
+        if (named) inner += '<span class="c3-nlabel" aria-hidden="true">' + e(n.type === 'lair' ? 'Цитадель' : n.name) + '</span>';
         return '<button type="button" class="' + cls + '" data-c3="select" data-n="' + n.id + '" style="left:' + n.x + '%;top:' + n.y + '%" aria-label="' + e(label) + '"' + (!vis ? ' aria-disabled="true"' : '') + '>' + inner + '</button>';
     }
-    function edgesHtml(s) {
-        var out = '';
+    function terrainHtml(s) { // подложка карты: земли четырёх сфер, кольца вокруг цитадели, дороги и подсвеченный маршрут героя
+        var out = '', q = [['body', 0, 50], ['mind', 0, 0], ['spirit', 50, 0], ['ties', 50, 50]];
+        q.forEach(function(r) { out += '<rect class="c3-q c3-q-' + r[0] + '" x="' + r[1] + '" y="' + r[2] + '" width="50" height="50"/>'; });
+        out += '<path class="c3-axis" d="M50 0 V100 M0 50 H100"/>';
+        [15, 29, 43].forEach(function(r) { out += '<circle class="c3-ring" cx="50" cy="50" r="' + r + '"/>'; });
+        var roads = '', cased = '';
         D.EDGES.forEach(function(ed) {
-            if (!visible(s, ed[0]) && !visible(s, ed[1])) return;
-            var a = D.NODES[ed[0]], b = D.NODES[ed[1]];
-            out += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" vector-effect="non-scaling-stroke"/>';
+            var va = visible(s, ed[0]), vb = visible(s, ed[1]);
+            if (!va && !vb) return;
+            var a = D.NODES[ed[0]], b = D.NODES[ed[1]], own = s.own.charAt(ed[0]) === '1' && s.own.charAt(ed[1]) === '1';
+            var d = 'M' + a.x + ' ' + a.y + ' L' + b.x + ' ' + b.y;
+            cased += '<path d="' + d + '"/>';
+            roads += '<path class="c3-road' + (va && vb ? '' : ' is-dim') + (own ? ' is-own' : '') + '" d="' + d + '"/>';
         });
-        return '<svg class="c3-edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' + out + '</svg>';
+        out += '<g class="c3-roadbg">' + cased + '</g>' + roads;
+        if (selN !== null && visible(s, selN) && s.heroes[selH].node !== selN) {
+            var rt = M.route(s, selH, selN);
+            if (rt) {
+                var pts = [s.heroes[selH].node].concat(rt.steps); if (rt.battleNode !== null) pts.push(rt.battleNode);
+                if (pts.length > 1) out += '<polyline class="c3-route" points="' + pts.map(function(i) { return D.NODES[i].x + ',' + D.NODES[i].y; }).join(' ') + '"/>';
+            }
+        }
+        return '<svg class="c3-edges" viewBox="0 0 100 100" aria-hidden="true">' + out + '</svg>';
+    }
+    function qnamesHtml() {
+        var pos = { mind: 'left:1%;top:45%', body: 'left:1%;top:51%', spirit: 'right:1%;top:45%', ties: 'right:1%;top:51%' };
+        return SPH.map(function(sp) { return '<span class="c3-qname c3-qn-' + sp + '" style="' + pos[sp] + '" aria-hidden="true">' + e(D.SPHERE_NAME[sp]) + '</span>'; }).join('');
+    }
+    function legendHtml() {
+        return '<div class="c3-legend" aria-hidden="true"><span><i class="c3-lg c3-lg-own"></i>твоё</span><span><i class="c3-lg c3-lg-hostile"></i>враг</span><span><i class="c3-lg c3-lg-fac"></i>под пороком</span><span><i class="c3-lg c3-lg-route"></i>маршрут</span><span><i class="c3-lg c3-lg-fog"></i>туман</span></div>';
     }
 
     function btn(label, attrs, ok, why) {
@@ -181,15 +205,15 @@
         var tabs = SPH.map(function(sp, i) {
             return '<button type="button" class="c3-tab' + (i === selH ? ' is-active' : '') + '" data-c3="hero" data-h="' + i + '" aria-pressed="' + (i === selH) + '">' + medal(HERO_ART[sp], TONE[sp], 'c3-tabicon') + '<span class="c3-tabname">' + e(D.SPHERE_NAME[sp]) + '</span><span class="c3-tabap" title="Очки движения">' + s.ap[i] + ' ОД</span></button>';
         }).join('');
-        var html = '<section class="c3" aria-label="Кампания 3.0 (бета)">' +
-            '<div class="c3-head"><span class="c3-title">🗺 Кампания 3.0 <span class="c3-beta">бета</span></span><span class="c3-week">карта ' + s.mp + (s.cyc ? ' (+' + Math.round(D.C.CYC_K * 100 * s.cyc) + '%)' : '') + ' · логова ' + (5 - M.lairsLeft(s)) + '/5 · нед. ' + (s.wk + 1) + '/' + D.C.SEASON_WEEKS + '</span></div>' +
+        var html = '<section class="c3" aria-label="Кампания 3.0">' +
+            '<div class="c3-head"><span class="c3-title">🗺 Кампания 3.0</span><span class="c3-week">карта ' + s.mp + (s.cyc ? ' (+' + Math.round(D.C.CYC_K * 100 * s.cyc) + '%)' : '') + ' · логова ' + (5 - M.lairsLeft(s)) + '/5 · нед. ' + (s.wk + 1) + '/' + D.C.SEASON_WEEKS + '</span></div>' +
             '<div class="c3-tabs" role="group" aria-label="Герои">' + tabs + '</div>' +
-            '<div class="c3-stats">' + resChips(s) + '</div>' +
-            '<div class="c3-hline"><b>' + e(D.HERO_NAME[SPH[selH]]) + '</b> ур. ' + hero.lvl + ' · сила <b>' + M.armyPower(s, selH) + '</b> · ' + armyLine(hero.army) + ' · ОД сегодня +' + s.apDay[selH] + '/' + D.C.AP_CAP_DAY + '<br>' + skillLine(s, selH) + '</div>' +
             (s.done ? '<div class="c3-done">🏆 Все логова пали — карта пройдена! Дела всех четырёх сфер двигали армии.</div>' : '') +
             (M.seasonOver(s) ? '<div class="c3-done">' + (s.done ? 'Следующая карта сложнее на ' + Math.round(D.C.CYC_K * 100 * ((s.cyc || 0) + 1)) + '%, часть силы перенесётся.' : 'Сезон (' + D.C.SEASON_WEEKS + ' недель) закончился.') + ' <button type="button" class="c3-mini" data-c3="newmap">🗺 Новая карта</button></div>' : '') +
-            '<div class="c3-mapwrap"><div class="c3-map">' + edgesHtml(s) + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' +
+            '<div class="c3-mapwrap"><div class="c3-map">' + terrainHtml(s) + qnamesHtml() + D.NODES.map(function(n) { return nodeHtml(s, n); }).join('') + '</div></div>' + legendHtml() +
             detailHtml(s) +
+            '<div class="c3-stats">' + resChips(s) + '</div>' +
+            '<div class="c3-hline"><b>' + e(D.HERO_NAME[SPH[selH]]) + '</b> ур. ' + hero.lvl + ' · сила <b>' + M.armyPower(s, selH) + '</b> · ' + armyLine(hero.army) + ' · ОД сегодня +' + s.apDay[selH] + '/' + D.C.AP_CAP_DAY + '<br>' + skillLine(s, selH) + '</div>' +
             eotPanel(s) +
             restPanel(s) +
             facPanel(s) + legacyPanel(s) +

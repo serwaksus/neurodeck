@@ -1567,7 +1567,10 @@ saveGameState();
 });
 }
 function renderSlots() {
+renderPaperdollFigure();
+var _pd = document.querySelector('.paperdoll');
 document.querySelectorAll('.slot').forEach(slot => {
+if (_pd) { var _it = INVENTORY.equipped[slot.dataset.slot]; _pd.classList.toggle('has-' + slot.dataset.slot, !!_it); if (_it) _pd.style.setProperty('--eq-' + slot.dataset.slot, getRankColorInfo(_it.rank).color); else _pd.style.removeProperty('--eq-' + slot.dataset.slot); }
 const key = slot.dataset.slot;
 const item = INVENTORY.equipped[key];
 const defaultIcons = { head: '◇', amulet: '△', chest: '□', cape: '◁', weapon: '✕', shield: '◯', ring1: '○', ring2: '○', boots: '▽' };
@@ -2968,25 +2971,83 @@ function heroTierKey() {
     if (lvl <= 25) return 't5';
     return 't6';
 }
-function championSvg(tier) { // DS2.0 (волна V2): слоёный SVG-чемпион вместо пиксельного спрайта
-    var aura = { t1: '#9ca3af', t2: '#60a5fa', t3: '#c084fc', t4: '#fbbf24', t5: '#f4c896', t6: '#ff6b6b' }[tier] || '#9ca3af';
-    var uid = 'chg' + tier;
-    return '<svg class="champion" viewBox="0 0 120 120" aria-hidden="true">' +
-        '<defs><radialGradient id="' + uid + '" cx="50%" cy="42%" r="62%">' +
-        '<stop offset="0%" stop-color="' + aura + '" stop-opacity="0.42"/>' +
-        '<stop offset="62%" stop-color="' + aura + '" stop-opacity="0.10"/>' +
-        '<stop offset="100%" stop-color="' + aura + '" stop-opacity="0"/></radialGradient></defs>' +
-        '<circle cx="60" cy="52" r="52" fill="url(#' + uid + ')"/>' +
-        '<g class="champion-breathe">' +
-        '<path d="M34 100 C32 74 40 58 60 52 C80 58 88 74 86 100 Z" fill="#2b2138" stroke="' + aura + '" stroke-opacity="0.9" stroke-width="2"/>' + // плащ
-        '<path d="M46 60 L42 100 L54 100 L57 66 Z" fill="#3a2f4a"/>' + // складка плаща
-        '<path d="M48 54 L44 78 L52 74 L50 56 Z M72 54 L76 78 L68 74 L70 56 Z" fill="#251d33" stroke="' + aura + '" stroke-opacity="0.5" stroke-width="1.2"/>' + // наплечники
-        '<rect x="52" y="42" width="16" height="30" rx="6" fill="#382c4a" stroke="' + aura + '" stroke-opacity="0.7" stroke-width="1.6"/>' + // торс
-        '<path d="M50 40 Q50 26 60 26 Q70 26 70 40 L70 46 L50 46 Z" fill="#443655" stroke="' + aura + '" stroke-width="2"/>' + // шлем
-        '<path d="M60 30 L60 45" stroke="#0a0a0f" stroke-width="3"/>' + // визор T
-        '<path d="M60 26 L60 18" stroke="' + aura + '" stroke-width="2.4" stroke-linecap="round"/>' + // плюмаж-штырь
-        '<circle cx="60" cy="17" r="2.6" fill="' + aura + '"/>' +
-        '</g></svg>';
+// Фигура героя (вкладка «Герой» и инвентарь): путь (сила/стойкость/ловкость) задаёт силуэт, ранг — ауру и украшения.
+// Цвета — только классами/токенами в css/hero-figure.css; градиенты ссылаются на id с префиксом (hfa — аватар, hfp — инвентарь).
+function heroFigureKind() { var i = heroPathInfo(); return { '⚔': 'warrior', '🛡': 'guard', '🏹': 'ranger' }[i.icon] || 'wanderer'; }
+function hfMirror(d, cls, extra) { return '<path class="' + cls + '" d="' + d + '"' + (extra || '') + '/><path class="' + cls + '" d="' + d + '" transform="matrix(-1 0 0 1 120 0)"' + (extra || '') + '/>'; }
+function heroFigureParts(kind, tier) {
+    var n = parseInt(String(tier).slice(1), 10) || 1, o = '';
+    var cape = '<path class="pf pf-cape" d="M44 56 L76 56 C92 110 98 190 112 262 L8 262 C22 190 28 110 44 56 Z"/>' +
+        '<path class="pf-line" d="M60 70 L60 262 M46 74 C40 140 30 200 18 258 M74 74 C80 140 90 200 102 258"/>';
+    var legs = hfMirror('M61 128 L78 128 L80 176 L77 224 L74 262 L61 262 Z', 'pf pf-legs') + '<path class="pf-line" d="M70 176 L70 214 M50 176 L50 214"/>';
+    var boots = hfMirror('M59 254 L76 254 L79 272 L88 280 L88 290 L59 290 Z', 'pf pf-boots') + '<path class="pf-line" d="M62 276 L84 276 M36 276 L58 276"/>';
+    var tasset = '<path class="pf pf-tasset" d="M42 122 L78 122 L83 160 L60 172 L37 160 Z"/>';
+    var torso = '<path class="pf pf-torso" d="M42 58 C50 52 70 52 78 58 L83 84 L79 112 L76 128 L44 128 L41 112 L37 84 Z"/>' +
+        '<path class="pf-line" d="M60 58 L60 124 M46 74 C54 80 66 80 74 74 M45 98 C54 104 66 104 75 98"/>' +
+        '<path class="pf pf-belt" d="M42 122 L78 122 L78 130 L42 130 Z"/><circle class="pf-buckle" cx="60" cy="126" r="3.4"/>';
+    var arms = hfMirror('M85 70 L99 74 L102 118 L101 150 L91 150 L90 118 Z', 'pf pf-arms') + hfMirror('M88 112 L102 114 L101 140 L90 140 Z', 'pf pf-bracer') +
+        hfMirror('M95.5 150.5 m-5.5 0 a5.5 5.5 0 1 0 11 0 a5.5 5.5 0 1 0 -11 0', 'pf pf-hand');
+    var pauld = n >= 4 ? hfMirror('M65 55 C78 48 96 52 102 66 C104 78 98 88 88 90 L72 78 Z', 'pf pf-pauld') + hfMirror('M70 60 C80 56 92 58 97 66', 'pf-trim')
+        : hfMirror('M65 55 C78 49 95 53 100 66 C102 76 97 85 88 87 L72 77 Z', 'pf pf-pauld');
+    var spike = (kind === 'warrior' && n >= 3) ? hfMirror('M92 56 L100 40 L98 60 Z', 'pf pf-spike') : '';
+    var neck = '<rect class="pf pf-neck" x="54" y="42" width="12" height="16" rx="3"/>';
+    var head, crest = '';
+    if (kind === 'guard') {
+        head = '<path class="pf pf-head" d="M46 42 L46 12 L74 12 L74 42 L70 50 L50 50 Z"/><path class="pf-slit" d="M50 26 L70 26 L70 31 L50 31 Z M58 14 L62 14 L62 48 L58 48 Z"/><path class="pf-line" d="M46 20 L74 20"/>';
+        if (n >= 3) crest = '<path class="pf pf-plume" d="M54 12 L60 2 L66 12 Z"/>';
+    } else if (kind === 'ranger') {
+        head = '<path class="pf pf-head" d="M43 52 C41 28 49 8 60 2 C71 8 79 28 77 52 L69 46 L51 46 Z"/><path class="pf-slit" d="M51 26 C51 19 69 19 69 26 L68 40 L52 40 Z"/><circle class="pf-eye" cx="55.5" cy="30" r="1.8"/><circle class="pf-eye" cx="64.5" cy="30" r="1.8"/>';
+        if (n >= 3) crest = '<path class="pf-trim" d="M46 40 C44 26 50 12 60 6 C70 12 76 26 74 40"/>';
+    } else {
+        head = '<path class="pf pf-head" d="M47 36 C47 18 53 10 60 10 C67 10 73 18 73 36 L72 46 L66 50 L54 50 L48 46 Z"/><path class="pf-slit" d="M50 30 L70 30 L70 35 L50 35 Z"/><path class="pf-line" d="M60 10 L60 30"/>';
+        if (n >= 3) crest = '<path class="pf pf-plume" d="M60 10 C56 -2 66 -6 76 2 C69 3 64 6 62 12 Z"/>';
+    }
+    var crown = n >= 6 ? '<path class="pf-crown" d="M48 16 L50 5 L55 12 L60 3 L65 12 L70 5 L72 16 Z"/>' : '';
+    var amulet = '<path class="pf-chain" d="M50 60 C54 76 66 76 70 60"/><path class="pf pf-amulet" d="M60 72 L65 79 L60 88 L55 79 Z"/>';
+    var weapon, shield, rings = '<circle class="pf-ring pf-ring1" cx="101" cy="157" r="3.4"/><circle class="pf-ring pf-ring2" cx="19" cy="157" r="3.4"/>';
+    if (kind === 'guard') {
+        weapon = '<path class="pf pf-weapon" d="M97 150 L100 150 L100 236 L97 236 Z M93 190 L104 190 L106 206 L102 214 L95 214 L91 206 Z"/>';
+        shield = '<path class="pf pf-shield" d="M4 110 L38 110 L38 162 C38 184 24 196 21 200 C18 196 4 184 4 162 Z"/><circle class="pf-buckle" cx="21" cy="146" r="6"/><path class="pf-line" d="M21 112 L21 196 M6 140 L36 140"/>';
+    } else if (kind === 'ranger') {
+        weapon = '<path class="pf pf-weapon" d="M102 110 C122 146 122 196 102 232 L100 230 C116 194 116 148 100 112 Z"/><path class="pf-line" d="M102 111 L101 231"/>';
+        shield = '<path class="pf pf-shield" d="M14 112 L36 112 L36 150 L14 150 Z"/><path class="pf-line" d="M18 116 L18 146 M25 116 L25 146 M32 116 L32 146"/>'; // колчан-наруч
+    } else {
+        weapon = '<path class="pf pf-weapon" d="M96 160 L101 160 L101 238 L98.5 244 L96 238 Z M88 158 L109 158 L109 164 L88 164 Z"/><path class="pf-line" d="M98.5 166 L98.5 234"/>';
+        shield = '<path class="pf pf-shield" d="M8 114 L36 114 L36 160 C36 178 22 190 22 190 C22 190 8 178 8 160 Z"/><circle class="pf-buckle" cx="22" cy="146" r="5"/>';
+    }
+    return { cape: cape, legs: legs, boots: boots, tasset: tasset, torso: torso, arms: arms, pauld: pauld, spike: spike, neck: neck, head: head, crest: crest, crown: crown, amulet: amulet, weapon: weapon, shield: shield, rings: rings };
+}
+function heroFigureDefs(pre) {
+    return '<defs><linearGradient id="' + pre + '-steel" x1="0" y1="0" x2="1" y2="1"><stop class="hf-s0" offset="0"/><stop class="hf-s1" offset="0.55"/><stop class="hf-s2" offset="1"/></linearGradient>' +
+        '<linearGradient id="' + pre + '-cloth" x1="0" y1="0" x2="0" y2="1"><stop class="hf-c0" offset="0"/><stop class="hf-c1" offset="1"/></linearGradient>' +
+        '<radialGradient id="' + pre + '-aura" cx="50%" cy="42%" r="60%"><stop class="hf-a0" offset="0"/><stop class="hf-a1" offset="0.6"/><stop class="hf-a2" offset="1"/></radialGradient></defs>';
+}
+function championSvg(tier, kind) { // аватар: бюст героя в медальоне (viewBox режет фигуру по пояс)
+    kind = kind || heroFigureKind();
+    var P = heroFigureParts(kind, tier);
+    return '<svg class="champion hf hf-av hf-' + kind + ' hf-' + tier + '" data-hf="' + kind + '-' + tier + '" viewBox="6 -2 108 108" aria-hidden="true">' + heroFigureDefs('hfa') +
+        '<circle class="hf-halo" cx="60" cy="52" r="56" fill="url(#hfa-aura)"/>' +
+        '<g class="champion-breathe">' + P.cape + P.arms + P.weapon + P.torso + P.pauld + P.spike + P.neck + P.amulet + P.crest + P.head + P.crown + P.shield + '</g></svg>';
+}
+function paperdollFigureSvg(kind, tier) { // инвентарь: фигура в рост + линии-связки от слотов к частям тела
+    var P = heroFigureParts(kind, tier), K = 1.05, X0 = 72, Y0 = 10;
+    function pt(x, y) { return [Math.round((X0 + x * K) * 10) / 10, Math.round((Y0 + y * K) * 10) / 10]; }
+    var links = [ // слот → [точка на слоте, точка на фигуре]
+        ['head', [48, 30], pt(49, 28)], ['amulet', [48, 110], pt(60, 80)], ['shield', [48, 190], pt(20, 150)], ['ring2', [48, 270], pt(19, 157)],
+        ['cape', [222, 30], pt(100, 110)], ['chest', [222, 110], pt(80, 92)], ['ring1', [222, 190], pt(101, 157)], ['weapon', [222, 270], pt(100, 214)], ['boots', [135, 322], pt(67, 280)]
+    ].map(function(l) { return '<path class="pf-link pf-link-' + l[0] + '" d="M' + l[1][0] + ' ' + l[1][1] + ' L' + l[2][0] + ' ' + l[2][1] + '"/><circle class="pf-dot pf-dot-' + l[0] + '" cx="' + l[2][0] + '" cy="' + l[2][1] + '" r="2.6"/>'; }).join('');
+    return '<svg class="mannequin hf hf-pd hf-' + kind + ' hf-' + tier + '" data-hf="' + kind + '-' + tier + '" viewBox="0 0 270 372" aria-hidden="true">' + heroFigureDefs('hfp') +
+        '<ellipse class="hf-floor" cx="135" cy="318" rx="62" ry="12"/><path class="hf-plinth" d="M92 312 L178 312 L170 322 L100 322 Z"/>' +
+        '<circle class="hf-halo" cx="135" cy="150" r="130" fill="url(#hfp-aura)"/>' + links +
+        '<g transform="translate(' + X0 + ' ' + Y0 + ') scale(' + K + ')">' + P.cape + P.legs + P.boots + P.tasset + P.arms + P.weapon + P.torso + P.pauld + P.spike + P.neck + P.amulet + P.crest + P.head + P.crown + P.shield + P.rings + '</g></svg>';
+}
+function renderPaperdollFigure() { // идемпотентно: перерисовывает фигуру только при смене пути/ранга
+    var pd = document.querySelector('.paperdoll'); if (!pd) return;
+    var kind = heroFigureKind(), tier = heroTierKey(), key = kind + '-' + tier, cur = pd.querySelector('.mannequin');
+    if (cur && cur.getAttribute('data-hf') === key) return;
+    var html = paperdollFigureSvg(kind, tier);
+    if (cur) cur.outerHTML = html; else pd.insertAdjacentHTML('afterbegin', html);
+    var old = pd.querySelector('.paperdoll-silhouette'); if (old) old.remove();
 }
 function updateHeroAvatarSprites() {
     var tier = heroTierKey();
@@ -2994,11 +3055,11 @@ function updateHeroAvatarSprites() {
     if (av) {
         var old = av.querySelector('.hero-avatar-img');
         if (old) old.remove(); // DS2.0: пиксельный спрайт больше не лицом игры (в найме остаётся)
-        var svg = av.querySelector('.champion');
+        var svg = av.querySelector('.champion'), kind = heroFigureKind();
         if (!svg) {
-            av.insertAdjacentHTML('afterbegin', championSvg(tier));
-        } else if (!svg.innerHTML.includes('url(#chg' + tier + ')')) {
-            svg.outerHTML = championSvg(tier);
+            av.insertAdjacentHTML('afterbegin', championSvg(tier, kind));
+        } else if (svg.getAttribute('data-hf') !== kind + '-' + tier) {
+            svg.outerHTML = championSvg(tier, kind);
         }
     }
     var mini = document.getElementById('heroAvatarMini');
