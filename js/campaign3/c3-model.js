@@ -68,7 +68,7 @@
             res: { g: C.START_GOLD, st: 0, kn: 0, wl: 0, in: 0 },
             heroes: SPHERES.map(function(sp, i) { return { node: D.TOWNS[i], lvl: 1, xp: 0, sk: 0, army: { t1: C.START_ARMY.t1, t3: C.START_ARMY.t3, t5: C.START_ARMY.t5 } }; }),
             own: own, seen: '0'.repeat(N), gar: gar,
-            towns: SPHERES.map(function() { return { pool: { t1: C.START_POOL.t1, t3: C.START_POOL.t3, t5: C.START_POOL.t5 }, dw: { t3: 0, t5: 0 }, hall: 0 }; }),
+            towns: SPHERES.map(function() { return { pool: { t1: C.START_POOL.t1, t3: C.START_POOL.t3, t5: C.START_POOL.t5 }, dw: { t3: 0, t5: 0 }, hall: 0, gar: C.TOWN_GAR }; }),
             fac: FAC.map(function() { return { sh: zeros(7), dead: 0, truce: 0 }; }),
             sg: zeros(4), lz: { on: 0, left: C.LAZARET_DAYS },
             log: [], done: false
@@ -114,9 +114,24 @@
         D.UNIT_KEYS.forEach(function(k) { p += (hero.army[k] || 0) * D.UNITS[k].power; });
         return Math.round(p * (1 + C.HALL_ATK * hall(s, 'body')) * (1 + C.LVL_ATK * (hero.lvl - 1)));
     }
+    function townGar(s, t) { // собственный гарнизон города (ленивое поле towns[t].gar; старые сейвы без него — константа)
+        var g = s.towns[t] && Number(s.towns[t].gar);
+        return (isFinite(g) && g > 0) ? Math.round(g) : C.TOWN_GAR;
+    }
+    function heroDefPower(s, h) { // герой в защите города: сила армий с уровнем, но без наступательного зала Кузни
+        var hero = s.heroes[h], p = 0;
+        D.UNIT_KEYS.forEach(function(k) { p += (hero.army[k] || 0) * D.UNITS[k].power; });
+        return Math.round(p * (1 + C.LVL_ATK * (hero.lvl - 1)));
+    }
     function nodeDefense(s, id) {
         var o = s.own.charAt(id);
-        if (o === '1') return (NODES[id].type === 'town' ? C.TOWN_DEF : C.NODE_DEF) + C.HALL_DEF * hall(s, 'spirit');
+        if (o === '1') {
+            if (NODES[id].type !== 'town') return C.NODE_DEF + C.HALL_DEF * hall(s, 'spirit');
+            var t = SPHERES.indexOf(NODES[id].sphere), def = C.TOWN_DEF + C.HALL_DEF * hall(s, 'spirit') + townGar(s, t);
+            for (var hh = 0; hh < 4; hh++) if (s.heroes[hh].node === id) def += heroDefPower(s, hh); // герой в городе складывается с гарнизоном, а не заменяет его
+            if (freedLeft(s, t) > 0) def = Math.round(def * C.FREE_DEF); // «освобождение»: первые FREE_DAYS дней оборона −30%
+            return def;
+        }
         if (id === LAIR) return Math.round(s.gar[id] * lairMult(s) * cycMult(s));
         var f = facOf(o);
         if (f >= 0 && id === FAC[f].bastion) return Math.round(s.gar[id] * facMult(s, f) * cycMult(s));
@@ -296,7 +311,12 @@
             }
             if (loot.r && n.sphere) s.res[D.RES_KEY[n.sphere]] += loot.r;
             addXp(s, h, 3);
-            if (n.type === 'town') s.sg[SPHERES.indexOf(n.sphere)] = 0;
+            if (n.type === 'town') { // освобождение: осада снята, первые FREE_DAYS дней оборона города −30%
+                var lt = SPHERES.indexOf(n.sphere);
+                s.sg[lt] = 0;
+                if (!Array.isArray(s.lib)) s.lib = [0, 0, 0, 0];
+                s.lib[lt] = s.day;
+            }
             if (id === LAIR) {
                 if (allLairsFallen(s)) { s.done = true; pushLog(s, 'Победа! «' + n.name + '» пала — все логова взяты, карта пройдена'); }
                 else pushLog(s, '«' + n.name + '» пала; осталось логов: ' + lairsLeft(s) + '. Победа — когда падут все пять');
@@ -306,7 +326,7 @@
                 pushLog(s, D.HERO_NAME[SPHERES[h]] + ' разбил «' + FAC[pf].name + '»: оплот взят' + (gold ? ' (+' + gold + ' 💰)' : '') + ' · осталось логов: ' + lairsLeft(s));
                 if (allLairsFallen(s)) { s.done = true; pushLog(s, 'Победа! Оплот «' + FAC[pf].name + '» — последнее логово, карта пройдена'); }
             }
-            else pushLog(s, D.HERO_NAME[SPHERES[h]] + (n.type === 'town' ? ' освободил город: ' : ' взял: ') + n.name + (gold ? ' (+' + gold + ' 💰)' : ''));
+            else pushLog(s, D.HERO_NAME[SPHERES[h]] + (n.type === 'town' ? ' освободил город: ' : ' взял: ') + n.name + (n.type === 'town' ? ' (оборона −30% ещё ' + C.FREE_DAYS + ' дн.)' : '') + (gold ? ' (+' + gold + ' 💰)' : ''));
             markSeen(s);
         } else {
             pushLog(s, D.HERO_NAME[SPHERES[h]] + ': штурм «' + n.name + '» отбит (потери ' + Math.round(out.attritionPct * 100) + '%)');
@@ -405,7 +425,10 @@
         if (s.lz.on) { s.lz.left = Math.max(0, s.lz.left - 1); if (s.lz.left === 0) s.lz.on = 0; }
         if (s.deedsToday === 0) s.idle++; else s.idle = 0;
         for (var i = 0; i < 4; i++) s.ap[i] = Math.min(C.AP_CARRY, s.ap[i]); // сгорает; перенос ≤ AP_CARRY на героя (ОД не прибавляются)
-        s.res.g += C.GOLD_TOWN_DAY * townsOwned(s) + C.HALL_GOLD * hall(s, 'ties');
+        var inc = 0; // доход — по городам: осаждённый (sg>0) платит SIEGE_TOLL, включая золото зала Связей
+        for (var gt = 0; gt < 4; gt++) if (townOwned(s, gt))
+            inc += (C.GOLD_TOWN_DAY + (SPHERES[gt] === 'ties' ? C.HALL_GOLD * s.towns[gt].hall : 0)) * (s.sg[gt] > 0 ? C.SIEGE_TOLL : 1);
+        s.res.g += Math.round(inc);
         for (var m = 0; m < 4; m++) if (s.own.charAt(D.MINES[m]) === '1') s.res[D.RES_KEY[SPHERES[m]]] += C.MINE_DAY;
         for (var q = 0; q < 4; q++) s.stk[q] = s.apDay[q] > 0 ? Math.min(99, s.stk[q] + 1) : 0; // дней подряд с делами сферы (святилища)
         for (var w = 0; w < 4; w++) if (s.stk[w] === C.WEAKEN_STREAK && !s.fac[w].dead) pushLog(s, 'Серия ' + C.WEAKEN_STREAK + ' дней дел «' + D.SPHERE_NAME[SPHERES[w]] + '»: «' + FAC[w].name + '» ослаблена на ' + Math.round(C.WEAKEN_STREAK_PCT * 100) + '%'); // ровно 7 — событие пересечения; повторится только после обрыва и новой серии
@@ -414,6 +437,7 @@
         s.day = String(nextDay);
         delete s.eot; // «Закончить ход» живёт до смены суток; новый день — новый ход
         if (restArr(s).some(function(k) { return k < nextDay; })) s.rest = restArr(s).filter(function(k) { return k >= nextDay; }); // прошедшие дни вычищаются
+        if (Array.isArray(s.lib)) for (var ft = 0; ft < 4; ft++) { var fd = s.lib[ft]; if (fd && dayDiff(fd, nextDay) >= C.FREE_DAYS) s.lib[ft] = 0; } // «освобождение» истекло
         return { shadows: shadows };
     }
 
@@ -537,6 +561,11 @@
         s.log.forEach(function(l) { if (l.d === s.day && /взял: |освободил город|оплот взят|пала/.test(l.t)) taken++; });
         s.eot = s.day;
         return { ok: true, apLeft: apLeft, deeds: s.deedsToday, taken: taken, shadows: Math.round(pendSh * 10) / 10 };
+    // ---------- «освобождение» города (план: первые 7 дней после отбивания оборона −30%) ----------
+    // lib[t] — день освобождения города t (ленивое необязательное поле, как rest; 0 — штраф прошёл или город не освобождали)
+    function freedLeft(s, t) {
+        var d = Array.isArray(s.lib) ? s.lib[t] : 0;
+        return (typeof d === 'string' && DAY_RE.test(d) && DAY_RE.test(s.day)) ? Math.max(0, C.FREE_DAYS - dayDiff(d, s.day)) : 0;
     }
 
     // ---------- ход фракций (большой ход недели) ----------
@@ -579,7 +608,7 @@
             if (s.sg[t] >= C.SIEGE_WEEKS && townsOwned(s) > 1) {
                 s.sg[t] = 0; s.own = strSet(s.own, best, code); s.gar[best] = C.FAC_TOWN_GAR;
                 ev.push({ f: f, kind: 'fall', node: best, text: '«' + F.name + '» взяла город «' + n.name + '»! Освободи его' });
-            } else ev.push({ f: f, kind: 'siege', node: best, text: 'Осада «' + n.name + '»: «' + F.name + '» (' + s.sg[t] + '/' + C.SIEGE_WEEKS + ')' + (townsOwned(s) <= 1 ? ' — последний город не падёт' : '') });
+            } else ev.push({ f: f, kind: 'siege', node: best, text: 'Осада «' + n.name + '»: «' + F.name + '» (' + s.sg[t] + '/' + C.SIEGE_WEEKS + ', доход и прирост −' + Math.round((1 - C.SIEGE_TOLL) * 100) + '%)' + (townsOwned(s) <= 1 ? ' — последний город не падёт' : '') });
             return;
         }
         s.own = strSet(s.own, best, code); s.gar[best] = C.FAC_NODE_GAR;
@@ -599,7 +628,7 @@
         var grow = 1 + C.HALL_GROW * hall(s, 'mind');
         for (var t = 0; t < 4; t++) {
             if (!townOwned(s, t)) continue; // город в руках фракции не растит армию
-            var fgr = C.GROW_FLOOR + (1 - C.GROW_FLOOR) * Math.min(1, s.apWeek[t] / C.GROW_AP_FULL); // прирост города — от дел его сферы
+            var fgr = (C.GROW_FLOOR + (1 - C.GROW_FLOOR) * Math.min(1, s.apWeek[t] / C.GROW_AP_FULL)) * (s.sg[t] > 0 ? C.SIEGE_TOLL : 1); // прирост города — от дел его сферы; осада — SIEGE_TOLL
             D.UNIT_KEYS.forEach(function(k) {
                 if (k !== 't1' && !s.towns[t].dw[k]) return;
                 s.towns[t].pool[k] = Math.min(C.POOL_CAP[k], s.towns[t].pool[k] + Math.floor(C.POOL_GROW[k] * fgr * grow));
@@ -623,7 +652,7 @@
         newState: newState, legacyFromV14: legacyFromV14, carryLegacy: carryLegacy, newMap: newMap, seasonOver: seasonOver, lairsLeft: lairsLeft, allLairsFallen: allLairsFallen, cycMult: cycMult,
         obeliskAt: obeliskAt, obeliskLeft: obeliskLeft, obeliskActivate: obeliskActivate, obeliskClaim: obeliskClaim, pushLog: pushLog, markSeen: markSeen,
         hall: hall, townOwned: townOwned, townsOwned: townsOwned, facSum: facSum, facMult: facMult, lairMult: lairMult, facPower: facPower, playerShare: playerShare, facOf: facOf, facCode: facCode, streakWeak: streakWeak, weakenLairOnRankUp: weakenLairOnRankUp,
-        shadowSum: shadowSum, shadowMult: shadowMult, armyPower: armyPower, nodeDefense: nodeDefense, isHostile: isHostile, nodeSphere: nodeSphere,
+        shadowSum: shadowSum, shadowMult: shadowMult, armyPower: armyPower, nodeDefense: nodeDefense, isHostile: isHostile, nodeSphere: nodeSphere, townGar: townGar, freedLeft: freedLeft,
         rankBonus: rankBonus, deedAp: deedAp, applyDeed: applyDeed,
         shortestPath: shortestPath, route: route, travel: travel,
         tacticPower: tacticPower, skillBonus: skillBonus, offerTactics: offerTactics, forecast: forecast, engage: engage,

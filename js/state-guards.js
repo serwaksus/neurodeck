@@ -468,8 +468,10 @@
                 army: { t1: int(army.t1, 0, 1e6, 0), t3: int(army.t3, 0, 1e6, 0), t5: int(army.t5, 0, 1e6, 0) } });
             var t = (Array.isArray(src.towns) && src.towns[i] && typeof src.towns[i] === 'object') ? src.towns[i] : {};
             var pool = (t.pool && typeof t.pool === 'object') ? t.pool : {}, dw = (t.dw && typeof t.dw === 'object') ? t.dw : {};
-            towns.push({ pool: { t1: int(pool.t1, 0, 1000, 0), t3: int(pool.t3, 0, 1000, 0), t5: int(pool.t5, 0, 1000, 0) },
-                dw: { t3: dw.t3 ? 1 : 0, t5: (dw.t3 && dw.t5) ? 1 : 0 }, hall: int(t.hall, 0, 3, 0) });
+            var town = { pool: { t1: int(pool.t1, 0, 1000, 0), t3: int(pool.t3, 0, 1000, 0), t5: int(pool.t5, 0, 1000, 0) },
+                dw: { t3: dw.t3 ? 1 : 0, t5: (dw.t3 && dw.t5) ? 1 : 0 }, hall: int(t.hall, 0, 3, 0) };
+            if (t.gar !== undefined) town.gar = int(t.gar, 0, 100000, 40); // Кампания 3.0: собственный гарнизон города — ленивое поле (байт-стабильный раундтрип старых сейвов)
+            towns.push(town);
         }
         var facs = [];
         for (i = 0; i < 4; i++) {
@@ -500,6 +502,9 @@
             out.rest = rest.slice(-14); // при переполнении остаются самые поздние (будущие)
         }
         if (typeof src.eot === 'string' && DATE.test(src.eot) && src.eot === src.day) out.eot = src.eot; // Кампания 3.0: «Закончить ход» — ключ текущего дня, сбрасывается в dayEnd; ленивое поле — мусор и чужой день выбрасываются
+        if (src.lib !== undefined) { // Кампания 3.0: день освобождения города (0 или YYYY-MM-DD по 4 городам) — ленивое поле «освобождение»
+            out.lib = [0, 1, 2, 3].map(function(k) { var v = Array.isArray(src.lib) ? src.lib[k] : 0; return (typeof v === 'string' && DATE.test(v)) ? v : 0; });
+        }
         return out;
     }
 

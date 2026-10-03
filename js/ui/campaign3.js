@@ -61,6 +61,7 @@
     }
     function townHtml(s, h, t) {
         var town = s.towns[t], sp = SPH[t], key = D.RES_KEY[sp], hallInfo = D.HALL[sp], html = '', acts = '';
+        if (s.sg[t] > 0) html += '<div class="c3-dline c3-bad">🏰 Под осадой: доход золота и прирост города −' + Math.round((1 - D.C.SIEGE_TOLL) * 100) + '%</div>';
         html += '<div class="c3-dline">Пул недели: ' + D.UNIT_KEYS.map(function(k) { return D.UNITS[k].icon + ' ' + town.pool[k] + (k !== 't1' && !town.dw[k] ? ' (нет жилища)' : ''); }).join(' · ') + '</div>';
         html += '<div class="c3-dline">' + e(hallInfo.name) + ' ' + town.hall + '/' + D.C.HALL_MAX + ': ' + e(hallInfo.desc) + '</div>';
         D.UNIT_KEYS.forEach(function(k) {
@@ -116,9 +117,9 @@
             else { var rt = M.route(s, h, selN); html += '<div class="c3-dline">Подойди ближе' + (rt ? ' — путь ' + rt.cost + ' ОД' : '') + '.</div>'; if (rt && rt.steps.length) acts += btn('➜ Идти (' + rt.cost + ' ОД)', { data: 'data-c3="go" data-n="' + selN + '"' }, s.ap[h] >= 1, 'Нет очков движения'); }
         } else {
             var r2 = M.route(s, h, selN);
-            html += '<div class="c3-dline">' + (s.own.charAt(selN) === '1' ? 'Твой узел. Оборона ' + M.nodeDefense(s, selN) + '.' : 'Свободная земля.') + '</div>';
+            var tt = D.TOWNS.indexOf(selN), fl = tt >= 0 ? M.freedLeft(s, tt) : 0;
+            html += '<div class="c3-dline">' + (s.own.charAt(selN) === '1' ? 'Твой узел. Оборона ' + M.nodeDefense(s, selN) + (fl > 0 ? ' — ослаблена после освобождения (−30%, ещё ' + fl + ' дн.)' : '') + '.' : 'Свободная земля.') + '</div>';
             if (r2 && r2.steps.length) acts += btn('➜ Идти (' + r2.cost + ' ОД)', { primary: true, data: 'data-c3="go" data-n="' + selN + '"' }, s.ap[h] >= 1, 'Нет очков движения');
-            var tt = D.TOWNS.indexOf(selN);
             if (tt >= 0 && tt !== h) html += '<div class="c3-dline">' + e(D.HERO_NAME[SPH[tt]]) + ' живёт здесь; найм и постройки доступны любому герою в городе.</div>';
         }
         if (hero.node === selN && hereOthers.length) hereOthers.forEach(function(o) { acts += btn('🤝 Принять армию: ' + e(D.HERO_NAME[SPH[o]]) + ' (' + armyLine(s.heroes[o].army) + ')', { data: 'data-c3="gather" data-from="' + o + '"' }, true, ''); });
